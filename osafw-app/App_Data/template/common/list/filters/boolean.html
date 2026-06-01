@@ -1,0 +1,10 @@
+<div class="fw-column-filter" data-column-filter-type="boolean">
+  <input type="hidden" name="search[<~field_name>]" value="<~search_value>" data-column-filter-json>
+  <select class="form-select form-select-sm" data-column-filter-value>
+    <option value="">`all`</option>
+    <option value="1" <~/common/attr/selected ifeq="filter_value" value="1">>`yes`</option>
+    <option value="0" <~/common/attr/selected ifeq="filter_value" value="0">>`no`</option>
+    <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>`blank`</option>
+    <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
+  </select>
+</div>

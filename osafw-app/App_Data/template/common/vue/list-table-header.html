@@ -24,7 +24,8 @@
             <th></th>
             <th v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
             <th v-for="header in fwStore.list_headers" :key="header.field_name">
-                <input type="text" class="form-control form-control-sm"
+                <list-column-filter v-if="header.filter_type && (header.filter_type === 'none' || !isCalculatedField(header.field_name))" :header="header"></list-column-filter>
+                <input v-else type="text" class="form-control form-control-sm"
                        v-model="header.search_value"
                        :disabled="isCalculatedField(header.field_name)"
                        @change="fwStore.loadIndexDebounced"

@@ -89,8 +89,15 @@ public class MyFiltersController : FwAdminController
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         if (is_new || is_overwrite)
-            // read new filter data from session
-            itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
+        {
+            // Store standard list filters separately from per-column filters so both can be restored without mixing keys.
+            var icode = item["icode"].toStr();
+            itemdb["idesc"] = Utils.jsonEncode(new FwDict
+            {
+                ["f"] = fw.SessionDict("_filter_" + icode) ?? [],
+                ["search"] = fw.SessionDict("_filtersearch_" + icode) ?? [],
+            });
+        }
 
         id = this.modelAddOrUpdate(id, itemdb);
 

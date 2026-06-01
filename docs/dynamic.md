@@ -26,6 +26,7 @@ Common config keys include:
 - `is_dynamic_index` – enable dynamic list with `view_list_defaults` and `view_list_map`
 - `is_dynamic_index_edit` – allow inline editing (`list_edit`, `edit_list_defaults`)
 - `view_list_custom` – fields visible by default
+- `list_column_filters` – optional typed per-column filters for dynamic/Vue list tables
 - `is_dynamic_show` and `is_dynamic_showform` – enable dynamic screens
 - `form_tabs` – optional tab definitions
 - `route_return` – action to redirect after save
@@ -65,6 +66,41 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 - **filter_for / filter_by / filter_field**: wire dependent selects (example provided in the `select` type section).
 - **lookup_by_value**: for `autocomplete` fields, store the typed value instead of id.
 - **lookup_id / admin_url**: build links for `plaintext_link`.
+
+### List column filters
+
+`list_column_filters.enabled` opts a Dynamic or Vue list into typed per-column filters. The default is disabled, and simple controllers keep the legacy text-only `search[field]` behavior unless they explicitly call the shared helpers.
+
+```json
+"list_column_filters": {
+  "enabled": true,
+  "fields": {
+    "iname": { "type": "text" },
+    "fdate_pop": { "type": "date_range" },
+    "demo_dicts_id": {
+      "type": "multi_select",
+      "lookup_model": "DemoDicts"
+    },
+    "status": {
+      "type": "multi_select",
+      "lookup_tpl": "/common/sel/status.sel"
+    },
+    "ffloat": { "type": "number_conditions" },
+    "is_active": { "type": "boolean" },
+      "large_lookup_id": {
+        "type": "autocomplete",
+        "autocomplete_url": "/Admin/LargeLookups/(Autocomplete)?q="
+      },
+    "unsafe_calc": { "type": "none" }
+  }
+}
+```
+
+Supported types are `text`, `date_range`, `multi_select`, `autocomplete`, `number_conditions`, `boolean`, and `none`. Every type supports blank/not blank. Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`, `!abc`, comparisons, and `^abc` for starts-with) and also accept JSON such as `{"type":"text","op":"starts_with","value":"abc"}`. Typed filters submit JSON through the same `search[field]` key and are converted to parameterized SQL server-side.
+
+`filter_field` can point a visible list alias to the real list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
+
+For small custom behavior, override the controller hook `applyListColumnFilter(FwDict def, object rawValue)` and return `true` after appending a predicate. UI overrides can use `template` for a server-rendered filter cell partial or `component` for a Vue component name.
 
 ### Generated layout heuristics
 

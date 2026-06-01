@@ -428,6 +428,79 @@ window.fw={
       $(this).trigger('click');
     });
 
+    var format_filter_date = function (d) {
+      var month = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return d.getFullYear() + '-' + month + '-' + day;
+    };
+
+    var split_filter_values = function (value) {
+      if (!value) return [];
+      return value.split(',').map(function (v) { return v.trim(); }).filter(function (v) { return v.length > 0; });
+    };
+
+    var update_column_filter_value = function ($filter) {
+      var type = $filter.data('column-filter-type');
+      var $target = $filter.find('[data-column-filter-json]');
+      if (!$target.length) return;
+
+      var blankOp = $filter.find('[data-column-filter-blank]').val() || '';
+      var payload = null;
+      if (blankOp === 'blank' || blankOp === 'not_blank') {
+        payload = { type: blankOp };
+      } else if (type === 'text') {
+        var op = $filter.find('[data-column-filter-op]').val() || 'contains';
+        var value = $filter.find('[data-column-filter-value]').val() || '';
+        if (op === 'blank' || op === 'not_blank') payload = { type: op };
+        else if (value.length) payload = { type: 'text', op: op, value: value };
+      } else if (type === 'date_range') {
+        var from = $filter.find('[data-column-filter-from]').val() || '';
+        var to = $filter.find('[data-column-filter-to]').val() || '';
+        if (from || to) payload = { type: 'date_range', from: from, to: to };
+      } else if (type === 'multi_select' || type === 'autocomplete') {
+        var values = $filter.find('[data-column-filter-values]').val() || split_filter_values($filter.find('[data-column-filter-values-text]').val() || '');
+        if (values.length) payload = { type: type, values: values };
+      } else if (type === 'number_conditions') {
+        payload = { type: 'number_conditions' };
+        ['equal', 'gte', 'lte', 'from', 'to'].forEach(function (key) {
+          var value = $filter.find('[data-column-filter-' + key + ']').val() || '';
+          if (value.length) payload[key] = value;
+        });
+        var nbFrom = $filter.find('[data-column-filter-not-between-from]').val() || '';
+        var nbTo = $filter.find('[data-column-filter-not-between-to]').val() || '';
+        if (nbFrom.length) payload.not_between_from = nbFrom;
+        if (nbTo.length) payload.not_between_to = nbTo;
+        if (Object.keys(payload).length === 1) payload = null;
+      } else if (type === 'boolean') {
+        var boolValue = $filter.find('[data-column-filter-value]').val() || '';
+        if (boolValue === 'blank' || boolValue === 'not_blank') payload = { type: boolValue };
+        else if (boolValue.length) payload = { type: 'boolean', value: boolValue };
+      }
+
+      $target.val(payload ? JSON.stringify(payload) : '');
+    };
+
+    $(document).on('change input', '.fw-column-filter :input', function () {
+      update_column_filter_value($(this).closest('.fw-column-filter'));
+    });
+    $(document).on('autocomplete', '.fw-column-filter [data-column-filter-values-text]', function () {
+      update_column_filter_value($(this).closest('.fw-column-filter'));
+    });
+
+    $(document).on('click', '[data-column-filter-quick]', function () {
+      var $filter = $(this).closest('.fw-column-filter');
+      var quick = $(this).data('column-filter-quick');
+      var to = new Date();
+      var from = new Date(to.getTime());
+      if (quick === 'week') from.setDate(to.getDate() - 6);
+      else if (quick === 30 || quick === '30') from.setDate(to.getDate() - 29);
+      $filter.find('[data-column-filter-blank]').val('');
+      $filter.find('[data-column-filter-from]').val(format_filter_date(from));
+      $filter.find('[data-column-filter-to]').val(format_filter_date(to));
+      update_column_filter_value($filter);
+      $ffilter.trigger('submit');
+    });
+
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
           e.preventDefault();
@@ -445,9 +518,12 @@ window.fw={
         if ($fis.val()=='1'){
             //if search ON - add search fields to the form
             $f.find('.osafw-list-search').remove();
+            $('table.list:first .fw-column-filter').each(function () {
+              update_column_filter_value($(this));
+            });
             var html=[];
             $('table.list:first .search :input').each(function (i, el) {
-              if (el.value>''){
+              if (el.name && el.value>''){
                 html.push('<input class="osafw-list-search" type="hidden" name="'+el.name.replace(/"/g,'&quot;')+'" value="'+el.value.replace(/"/g,'&quot;')+'">');
               }
             });

@@ -64,6 +64,38 @@
         "id": "id"
     },
     "view_list_custom": "iname status demo_dicts_iname",
+    "list_column_filters": {
+        "enabled": true,
+        "fields": {
+            "demo_dicts_iname": {
+                "type": "text"
+            },
+            "iname": {
+                "type": "text"
+            },
+            "email": {
+                "type": "text"
+            },
+            "fdate_pop_str": {
+                "type": "date_range",
+                "filter_field": "fdate_pop",
+                "is_date_only": true,
+                "field_storage_type": "date"
+            },
+            "fdatetime_utc": {
+                "type": "date_range",
+                "field_storage_type": "datetime"
+            },
+            "fdatetime_local": {
+                "type": "date_range",
+                "field_storage_type": "datetime"
+            },
+            "status": {
+                "type": "multi_select",
+                "lookup_tpl": "/common/sel/status.sel"
+            }
+        }
+    },
 
     "is_dynamic_show": true,
     "form_tabs": [

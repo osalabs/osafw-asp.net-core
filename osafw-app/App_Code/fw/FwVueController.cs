@@ -509,7 +509,7 @@ public class FwVueController : FwDynamicController
     /// </summary>
     /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
     /// <returns>Combined list of field definitions across all tabs.</returns>
-    protected FwList collectFormFields(string prefix)
+    protected override FwList collectFormFields(string prefix)
     {
         var allFields = new FwList();
         if (config[prefix] is IList fields)

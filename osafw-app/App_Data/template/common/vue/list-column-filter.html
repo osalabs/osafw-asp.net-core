@@ -1,0 +1,216 @@
+<script type="text/x-template" id="list-column-filter-template">
+    <component v-if="header.filter_component" :is="header.filter_component" :header="header"></component>
+    <span v-else-if="filterType==='none'" class="text-muted">-</span>
+    <div v-else class="fw-column-filter-vue">
+        <template v-if="filterType==='text'">
+            <select class="form-select form-select-sm mb-1" v-model="op" @change="apply">
+                <option value="contains">`contains`</option>
+                <option value="equals">`=`</option>
+                <option value="not_equals">`!=`</option>
+                <option value="not_contains">`not contains`</option>
+                <option value="starts_with">`starts`</option>
+                <option value="ends_with">`ends`</option>
+                <option value="blank">`blank`</option>
+                <option value="not_blank">`not blank`</option>
+            </select>
+            <input type="text" class="form-control form-control-sm" v-model="value" @change="apply" @keyup.enter.stop="apply">
+        </template>
+        <template v-else-if="filterType==='date_range'">
+            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
+                <option value="">`date range`</option>
+                <option value="blank">`blank`</option>
+                <option value="not_blank">`not blank`</option>
+            </select>
+            <input type="date" class="form-control form-control-sm mb-1" v-model="from" @change="apply">
+            <input type="date" class="form-control form-control-sm mb-1" v-model="to" @change="apply">
+            <div class="btn-group btn-group-sm w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary" title="Today" @click="quick('today')">`Today`</button>
+                <button type="button" class="btn btn-outline-secondary" title="Last 7 days" @click="quick('week')">`Week`</button>
+                <button type="button" class="btn btn-outline-secondary" title="Last 30 days" @click="quick('30')">`30`</button>
+            </div>
+        </template>
+        <template v-else-if="filterType==='multi_select'">
+            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
+                <option value="">`values`</option>
+                <option value="blank">`blank`</option>
+                <option value="not_blank">`not blank`</option>
+            </select>
+            <select class="form-select form-select-sm" multiple v-model="values" @change="apply">
+                <option v-for="option in options" :key="option.id" :value="String(option.id)">{{ option.iname }}</option>
+            </select>
+        </template>
+        <template v-else-if="filterType==='autocomplete'">
+            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
+                <option value="">`values`</option>
+                <option value="blank">`blank`</option>
+                <option value="not_blank">`not blank`</option>
+            </select>
+            <autocomplete v-if="autocompleteUrl"
+                          v-model="valuesText"
+                          :url="autocompleteUrl"
+                          class="form-control-sm"
+                          @select="setAutocompleteValue"
+                          @enter="apply"></autocomplete>
+            <input v-else type="text" class="form-control form-control-sm" v-model="valuesText" @change="apply" @keyup.enter.stop="apply">
+        </template>
+        <template v-else-if="filterType==='number_conditions'">
+            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
+                <option value="">`number`</option>
+                <option value="blank">`blank`</option>
+                <option value="not_blank">`not blank`</option>
+            </select>
+            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="=" v-model="equal" @change="apply">
+            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder=">=" v-model="gte" @change="apply">
+            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="<=" v-model="lte" @change="apply">
+            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="from" v-model="from" @change="apply">
+            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="to" v-model="to" @change="apply">
+            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="not from" v-model="notBetweenFrom" @change="apply">
+            <input type="number" step="any" class="form-control form-control-sm" placeholder="not to" v-model="notBetweenTo" @change="apply">
+        </template>
+        <template v-else-if="filterType==='boolean'">
+            <select class="form-select form-select-sm" v-model="value" @change="apply">
+                <option value="">`all`</option>
+                <option value="1">`yes`</option>
+                <option value="0">`no`</option>
+                <option value="blank">`blank`</option>
+                <option value="not_blank">`not blank`</option>
+            </select>
+        </template>
+    </div>
+</script>
+
+<script type="module">
+    import { mapStores } from 'pinia';
+
+    fwApp.component('list-column-filter', {
+        template: '#list-column-filter-template',
+        props: {
+            header: {
+                type: Object,
+                required: true
+            }
+        },
+        data: () => ({
+            op: 'contains',
+            blankOp: '',
+            value: '',
+            from: '',
+            to: '',
+            values: [],
+            valuesText: '',
+            equal: '',
+            gte: '',
+            lte: '',
+            notBetweenFrom: '',
+            notBetweenTo: ''
+        }),
+        computed: {
+            ...mapStores(fwStore),
+            filterType() {
+                return this.header.filter_type || 'text';
+            },
+            options() {
+                return this.header.filter_options || [];
+            },
+            autocompleteUrl() {
+                return this.header.autocomplete_url || '';
+            }
+        },
+        mounted() {
+            this.loadInitialValue();
+        },
+        methods: {
+            loadInitialValue() {
+                const raw = this.header.search_value || '';
+                let parsed = null;
+                if (typeof raw === 'string' && raw.trim().startsWith('{')) {
+                    try { parsed = JSON.parse(raw); } catch { parsed = null; }
+                } else if (raw && typeof raw === 'object') {
+                    parsed = raw;
+                }
+
+                if (!parsed) {
+                    this.value = raw || '';
+                    return;
+                }
+
+                if (parsed.type === 'blank' || parsed.type === 'not_blank') this.blankOp = parsed.type;
+                this.op = parsed.op || this.op;
+                this.value = parsed.value || '';
+                this.from = parsed.from || '';
+                this.to = parsed.to || '';
+                this.values = (parsed.values || []).map(v => String(v));
+                this.valuesText = this.values.join(',');
+                this.equal = parsed.equal || parsed.value || '';
+                this.gte = parsed.gte || '';
+                this.lte = parsed.lte || '';
+                this.notBetweenFrom = parsed.not_between_from || '';
+                this.notBetweenTo = parsed.not_between_to || '';
+            },
+            apply() {
+                const payload = this.payload();
+                this.header.search_value = payload ? JSON.stringify(payload) : '';
+                this.fwStore.setFilters({});
+            },
+            payload() {
+                if (this.blankOp) return { type: this.blankOp };
+
+                if (this.filterType === 'text') {
+                    if (this.op === 'blank' || this.op === 'not_blank') return { type: this.op };
+                    return this.value ? { type: 'text', op: this.op, value: this.value } : null;
+                }
+
+                if (this.filterType === 'date_range') {
+                    return (this.from || this.to) ? { type: 'date_range', from: this.from, to: this.to } : null;
+                }
+
+                if (this.filterType === 'multi_select') {
+                    return this.values.length ? { type: 'multi_select', values: this.values } : null;
+                }
+
+                if (this.filterType === 'autocomplete') {
+                    const values = this.valuesText.split(',').map(v => v.trim()).filter(v => v.length);
+                    return values.length ? { type: 'autocomplete', values: values } : null;
+                }
+
+                if (this.filterType === 'number_conditions') {
+                    let payload = { type: 'number_conditions' };
+                    if (this.equal) payload.equal = this.equal;
+                    if (this.gte) payload.gte = this.gte;
+                    if (this.lte) payload.lte = this.lte;
+                    if (this.from) payload.from = this.from;
+                    if (this.to) payload.to = this.to;
+                    if (this.notBetweenFrom) payload.not_between_from = this.notBetweenFrom;
+                    if (this.notBetweenTo) payload.not_between_to = this.notBetweenTo;
+                    return Object.keys(payload).length > 1 ? payload : null;
+                }
+
+                if (this.filterType === 'boolean') {
+                    if (this.value === 'blank' || this.value === 'not_blank') return { type: this.value };
+                    return this.value !== '' ? { type: 'boolean', value: this.value } : null;
+                }
+
+                return null;
+            },
+            setAutocompleteValue(value) {
+                this.valuesText = value || this.valuesText;
+                this.apply();
+            },
+            quick(mode) {
+                const to = new Date();
+                const from = new Date(to.getTime());
+                if (mode === 'week') from.setDate(to.getDate() - 6);
+                if (mode === '30') from.setDate(to.getDate() - 29);
+                this.blankOp = '';
+                this.from = this.formatDate(from);
+                this.to = this.formatDate(to);
+                this.apply();
+            },
+            formatDate(d) {
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return d.getFullYear() + '-' + month + '-' + day;
+            }
+        }
+    });
+</script>

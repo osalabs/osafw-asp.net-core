@@ -24,6 +24,16 @@ public class FwDynamicController : FwController
         base.init(fw);
     }
 
+    /// <summary>
+    /// Enables typed list column filters only when a Dynamic/Vue controller explicitly opts in through config.
+    /// </summary>
+    /// <param name="controllerConfig">Controller config loaded from `config.json` or a virtual-controller payload.</param>
+    protected override void configureListColumnFilters(FwDict controllerConfig)
+    {
+        base.configureListColumnFilters(controllerConfig);
+        is_list_column_filters = list_column_filters["enabled"].toBool();
+    }
+
     #region Standard REST Actions - Index/Show/ShowForm/Save
 
     /// <summary>
@@ -829,6 +839,54 @@ public class FwDynamicController : FwController
             return new FwList(arr);
 
         return [];
+    }
+
+    /// <summary>
+    /// Collects fields from the base config and any tab-specific overrides.
+    /// </summary>
+    /// <param name="prefix">The config prefix, such as `show_fields` or `showform_fields`.</param>
+    /// <returns>Combined list of field definitions across all configured tabs.</returns>
+    protected virtual FwList collectFormFields(string prefix)
+    {
+        var allFields = new FwList();
+        if (config[prefix] is IList fields)
+            allFields.AddRange(new FwList(fields));
+
+        if (config["form_tabs"] is IList form_tabs)
+        {
+            foreach (FwDict tab in form_tabs)
+            {
+                var tabCode = tab["tab"].toStr();
+                if (tabCode.Length == 0)
+                    continue;
+
+                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
+                if (tabFields.Count > 0)
+                    allFields.AddRange(tabFields);
+            }
+        }
+
+        return allFields;
+    }
+
+    /// <summary>
+    /// Returns all reusable dynamic form field definitions keyed by field name for list column filter inference.
+    /// </summary>
+    /// <returns>Field-name keyed dynamic definitions from showform and show configs.</returns>
+    protected override FwDict getListColumnFilterFormFieldDefs()
+    {
+        var result = new FwDict();
+        foreach (var prefix in new[] { "showform_fields", "show_fields" })
+        {
+            foreach (FwDict def in collectFormFields(prefix))
+            {
+                var field = def["field"].toStr();
+                if (field.Length > 0 && !result.ContainsKey(field))
+                    result[field] = def;
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

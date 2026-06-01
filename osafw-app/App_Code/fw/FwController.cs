@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public abstract class FwController
+public abstract partial class FwController
 {
     public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. 0 (public access), 1(min logged level), 100(max admin level)
 
@@ -43,6 +43,9 @@ public abstract class FwController
     protected long list_count;                    // count of list rows returned from db
     protected FwList list_rows = [];               // list rows returned from db (array of hashes)
     protected FwList list_headers = [];            // list headers with misc meta info per column
+    protected bool is_list_column_filters = false; // true when typed per-column filters are enabled by a dynamic/vue controller
+    protected FwDict list_column_filters = [];     // list_column_filters config block
+    protected FwDict list_column_filter_defs = []; // cached typed filter definitions keyed by field name
     protected FwList list_pager = [];              // pager for the list from FormUtils.getPager
     protected int list_pagesize_export = 10000;  // max pagesize for export (to avoid memory issues on large exports), override in controller if needed
     protected string list_sortdef = string.Empty;               // required for Index, default list sorting: name asc|desc
@@ -270,6 +273,8 @@ public abstract class FwController
         is_dynamic_showform = config["is_dynamic_showform"].toBool();
 
         route_return = config["route_return"].toStr();
+
+        configureListColumnFilters(config);
     }
 
     /// <summary>
@@ -402,6 +407,7 @@ public abstract class FwController
         session_key ??= "_filter_" + fw.G["controller.action"];
 
         FwDict sfilter = fw.SessionDict(session_key) ?? [];
+        FwDict? saved_filter_search = null;
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -418,7 +424,17 @@ public abstract class FwController
             {
                 var uf = fw.model<UserFilters>().one(userfilters_id);
                 if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
-                    f = f1;
+                {
+                    if (f1["f"] is FwDict ff || f1.ContainsKey("search"))
+                    {
+                        f = f1["f"] as FwDict ?? [];
+                        saved_filter_search = f1["search"] as FwDict ?? [];
+                    }
+                    else
+                    {
+                        f = f1;
+                    }
+                }
                 if (!uf["is_system"].toBool())
                 {
                     f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
@@ -450,7 +466,12 @@ public abstract class FwController
         // advanced search
         string session_key_search = "_filtersearch_" + fw.G["controller.action"];
         list_filter_search = reqh("search");
-        if (list_filter_search.Count == 0 && !is_dofilter)
+        if (saved_filter_search != null)
+        {
+            list_filter_search = saved_filter_search;
+            fw.SessionDict(session_key_search, list_filter_search);
+        }
+        else if (list_filter_search.Count == 0 && !is_dofilter)
         {
             //read from session
             list_filter_search = fw.SessionDict(session_key_search) ?? [];
@@ -473,7 +494,9 @@ public abstract class FwController
         FwDict f = [];
         session_key ??= "_filter_" + fw.G["controller.action"];
         fw.SessionDict(session_key, f);
+        fw.SessionDict("_filtersearch_" + fw.G["controller.action"], []);
         this.list_filter = f;
+        this.list_filter_search = [];
     }
 
     /// <summary>
@@ -692,6 +715,8 @@ public abstract class FwController
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
+            if (is_list_column_filters && applyListColumnFilterSearch(fieldname, value))
+                continue;
 
             var qfieldname = db.qid(fieldname);
             var fieldname_sql = db.sqlTextExpr(qfieldname);
@@ -734,6 +759,7 @@ public abstract class FwController
                     "<" => $" < {qv}",
                     ">" => $" > {qv}",
                     "!" => $" NOT LIKE {db.q($"%{v}%")}",
+                    "^" => $" LIKE {db.q($"{v}%")}",
                     _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
                 },// then check for 1-char operators
             };
@@ -1423,6 +1449,7 @@ public abstract class FwController
             var fieldName = header["field_name"].toStr();
             header["search_value"] = list_filter_search?[fieldName];
         }
+        enrichListColumnFilterHeaders();
 
         if (is_cols)
         {
