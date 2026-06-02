@@ -675,6 +675,12 @@
       var form = resolveModalSubmitForm(modal, submitter);
       if (!modal || !form || !modal.contains(form)) return;
 
+      if (typeof form.reportValidity === 'function') {
+        if (!form.reportValidity()) return;
+      } else if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        return;
+      }
+        
       e.preventDefault();
       e.stopImmediatePropagation();
 
