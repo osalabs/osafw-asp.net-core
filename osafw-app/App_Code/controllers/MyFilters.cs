@@ -59,7 +59,7 @@ public class MyFiltersController : FwAdminController
     {
         form_new_defaults = new() { ["icode"] = related_id };
         var ps = base.ShowFormAction(id)!;
-        ps["is_admin"] = fw.userAccessLevel == Users.ACL_ADMIN;
+        ps["is_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_ADMIN);
         return ps;
     }
 
@@ -82,7 +82,7 @@ public class MyFiltersController : FwAdminController
         var item_old = model0.one(id);
 
         // also check that this filter is user's filter (cannot override system filter)
-        if (item_old.Count > 0 && item_old["is_system"].toInt() == 1)
+        if (item_old.Count > 0 && item_old["is_system"].toInt() == 1 && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
             throw new UserException("Cannot overwrite system filter");
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);

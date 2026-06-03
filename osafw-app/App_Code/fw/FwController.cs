@@ -417,6 +417,11 @@ public abstract class FwController
         session_key ??= "_filter_" + fw.G["controller.action"];
 
         FwDict sfilter = fw.SessionDict(session_key) ?? [];
+        void clearUserFilter()
+        {
+            f.Remove("userfilters_id");
+            f.Remove("userfilter");
+        }
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -424,6 +429,15 @@ public abstract class FwController
         {
             Utils.mergeHash(sfilter, f);
             f = sfilter;
+            if (f["userfilter"] is FwDict uf)
+            {
+                if (uf["is_system"].toBool() || uf["add_users_id"].toInt() != fw.userId)
+                    clearUserFilter();
+            }
+            else if (f["userfilters_id"].toInt() > 0)
+            {
+                clearUserFilter();
+            }
         }
         else
         {
@@ -431,13 +445,24 @@ public abstract class FwController
             var userfilters_id = reqi("userfilters_id");
             if (userfilters_id > 0)
             {
-                var uf = fw.model<UserFilters>().one(userfilters_id);
-                if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
-                    f = f1;
-                if (!uf["is_system"].toBool())
+                var uf = fw.model<UserFilters>().oneAvail(userfilters_id);
+                if (uf.Count > 0)
                 {
-                    f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
-                    f["userfilter"] = uf;
+                    if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
+                        f = f1;
+                    if (!uf["is_system"].toBool())
+                    {
+                        f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
+                        f["userfilter"] = uf;
+                    }
+                    else
+                    {
+                        clearUserFilter();
+                    }
+                }
+                else
+                {
+                    clearUserFilter();
                 }
             }
             else
@@ -447,8 +472,11 @@ public abstract class FwController
                 if (userfilters_id > 0)
                 {
                     // just ned info on this filter
-                    var uf = fw.model<UserFilters>().one(userfilters_id);
-                    f["userfilter"] = uf;
+                    var uf = fw.model<UserFilters>().oneAvail(userfilters_id);
+                    if (uf.Count > 0)
+                        f["userfilter"] = uf;
+                    else
+                        clearUserFilter();
                 }
             }
         }
