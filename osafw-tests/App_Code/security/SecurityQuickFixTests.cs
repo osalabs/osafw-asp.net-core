@@ -65,6 +65,11 @@ public class SecurityQuickFixTests
         public void UseModel(Users users) => model = users;
     }
 
+    private sealed class TestAssistantController : AssistantController
+    {
+        public bool ApplyAssistantResultForTest(AssistantResult result) => applyAssistantResult(result);
+    }
+
     [TestMethod]
     public void Constructor_DoesNotThrowForShortContentType()
     {
@@ -154,6 +159,33 @@ public class SecurityQuickFixTests
 
         Assert.AreEqual(0, users.ResetDeliveries);
         Assert.AreEqual("/Password/(Sent)", fw.response.Headers["Location"].ToString());
+    }
+
+    [TestMethod]
+    public void Assistant_UnsafeRedirectWithSqlFailsClosed()
+    {
+        var fw = createFw();
+        var users = new LoginUsers();
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
+        var controller = new TestAssistantController();
+        controller.init(fw);
+        var result = new AssistantResult
+        {
+            redirect_url = "https://evil.example.test/phish",
+            sql = "select 1",
+            title = "Unsafe response",
+            explanation = "This SQL must not be stored.",
+        };
+
+        Assert.ThrowsExactly<RedirectException>(() => controller.ApplyAssistantResultForTest(result));
+
+        Assert.AreEqual("/Assistant", fw.response.Headers["Location"].ToString());
+        Assert.AreEqual("", fw.G["llm_sql"].toStr());
+        Assert.AreEqual("", fw.G["llm_title"].toStr());
+        Assert.AreEqual("", fw.G["llm_explanation"].toStr());
+        var ps = controller.IndexAction();
+        Assert.IsFalse(ps.ContainsKey("is_sql_result"));
     }
 
     private static FW createPasswordFw(PasswordUsers users, string login)
