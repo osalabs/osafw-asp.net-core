@@ -248,10 +248,14 @@ public class AdminUsersController : FwDynamicController
         this.validateCheckResult();
     }
 
-    // cleanup session for current user and re-login as user from id
-    // check access - only users with higher level may login as lower leve
+    /// <summary>
+    /// Re-authenticates the current administrator as a lower-access user for support diagnostics.
+    /// </summary>
+    /// <param name="id">Target user ID to simulate.</param>
     public void SimulateAction(int id)
     {
+        enforcePost();
+
         var user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
@@ -265,19 +269,31 @@ public class AdminUsersController : FwDynamicController
         fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
+    /// <summary>
+    /// Sends a password reset link for the selected user from the admin form.
+    /// </summary>
+    /// <param name="id">User ID that should receive the password reset email.</param>
+    /// <returns>JSON response data with delivery status, error text, and a success message.</returns>
     public FwDict SendPwdAction(int id)
     {
+        enforcePost();
+
         FwDict ps = [];
 
         ps["success"] = model.sendPwdReset(id);
         ps["err_msg"] = fw.last_error_send_email;
+        ps["message"] = "Password reminder email sent";
         ps["_json"] = true;
         return ps;
     }
 
-    // for migration to hashed passwords
+    /// <summary>
+    /// Migrates legacy stored passwords to hashed values during controlled admin maintenance.
+    /// </summary>
     public void HashPasswordsAction()
     {
+        enforcePost();
+
         rw("hashing passwords");
         var rows = db.array(model.table_name, [], "id");
         foreach (var row in rows)
@@ -290,8 +306,14 @@ public class AdminUsersController : FwDynamicController
         rw("done");
     }
 
+    /// <summary>
+    /// Clears MFA enrollment for the selected user so they can re-enroll on next login.
+    /// </summary>
+    /// <param name="id">User ID whose MFA secret should be reset.</param>
     public void ResetMFAAction(int id)
     {
+        enforcePost();
+
         model.update(id, DB.h("mfa_secret", null));
         //fw.flash("success", "Multi-Factor Authentication ");
         fw.redirect($"{base_url}/ShowForm/{id}/edit");

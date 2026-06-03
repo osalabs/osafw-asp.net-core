@@ -80,14 +80,20 @@ public class AdminReportsController : FwController
         }
     }
 
+    /// <summary>
+    /// Generates the requested report output and emails it to validated recipients.
+    /// </summary>
+    /// <param name="id">Report code from the route.</param>
     public void SendEmailAction(string id)
     {
+        enforcePost();
+
         route_onerror = FW.ACTION_SHOW;
 
         var repcode = FwReports.cleanupRepcode(id);
 
         var f = reqh("f");
-        var to_emails = f["to_emails"].toStr();
+        var to_emails = validateReportRecipients(f["to_emails"].toStr());
 
         string mail_subject = "Report " + repcode;
         FwDict filenames = [];
@@ -118,5 +124,24 @@ public class AdminReportsController : FwController
             fw.flash("error", "Error sending email:" + fw.last_error_send_email);
 
         fw.redirect(base_url + "/" + repcode);
+    }
+
+    /// <summary>
+    /// Validates requested report email recipients before report generation or delivery.
+    /// </summary>
+    /// <param name="recipients">Raw recipient list submitted from the report email form.</param>
+    /// <returns>Semicolon-delimited recipient addresses normalized for <see cref="FW.sendEmail" />.</returns>
+    /// <exception cref="UserException">Thrown when the request has no recipients or contains an invalid address.</exception>
+    protected virtual string validateReportRecipients(string recipients)
+    {
+        var emails = Utils.splitEmails(recipients);
+        if (emails.Count == 0)
+            throw new UserException("Email recipient is required");
+
+        foreach (string email in emails)
+            if (!FormUtils.isEmail(email))
+                throw new UserException("Invalid email recipient");
+
+        return string.Join(";", emails);
     }
 }

@@ -85,14 +85,23 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
-    public void DeleteMenuItemsAction()
+    /// <summary>
+    /// Clears generated menu item rows during developer maintenance.
+    /// </summary>
+    /// <returns>JSON success payload for AJAX requests, otherwise redirects back to the developer manage page.</returns>
+    public FwDict? DeleteMenuItemsAction()
     {
-        fw.flash("success", "Menu Items cleared");
+        enforcePost();
 
         db.del("menu_items", []);
         FwCache.remove("menu_items");
 
+        if (fw.isJsonExpected())
+            return new FwDict { ["_json"] = new FwDict { ["message"] = "Menu Items cleared" } };
+
+        fw.flash("success", "Menu Items cleared");
         fw.redirect(base_url);
+        return null;
     }
 
     public void ReloadSessionAction()

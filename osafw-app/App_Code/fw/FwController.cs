@@ -391,6 +391,21 @@ public abstract class FwController
             throw new AuthException("XSS Error. Reload the page or try to re-login");
     }
 
+    /// <summary>
+    /// Enforces the POST method and validates the current XSS token for custom mutating actions.
+    /// </summary>
+    /// <remarks>
+    /// Custom action routes can otherwise be reached with GET, so callers should use this before performing side effects.
+    /// </remarks>
+    /// <exception cref="AuthException">Thrown when the request method is not POST or the XSS token is invalid.</exception>
+    public virtual void enforcePost()
+    {
+        if (!string.Equals(fw.route.method, "POST", StringComparison.OrdinalIgnoreCase))
+            throw new AuthException("POST required");
+
+        checkXSS();
+    }
+
     // return hashtable of filter values
     // NOTE: automatically set to defaults - pagenum=0 and pagesize=MAX_PAGE_ITEMS
     // NOTE: if request param 'dofilter' passed - session filters cleaned

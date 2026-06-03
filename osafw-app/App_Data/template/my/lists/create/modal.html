@@ -52,7 +52,15 @@
     $(document).on('click', '.on-toggle-userlist', function(e){
       e.preventDefault();
       var $this = $(this);
-      $.getJSON($this.prop('href'))
+      $.ajax({
+        url: $this.prop('href'),
+        type: 'POST',
+        dataType: 'json',
+        data: {
+          item_id: $this.data('item-id'),
+          XSS: $this.data('xss')
+        }
+      })
       .done(function (data, textStatus, jqXHR) {
         if (!data.error){
           if (data.action=='added'){

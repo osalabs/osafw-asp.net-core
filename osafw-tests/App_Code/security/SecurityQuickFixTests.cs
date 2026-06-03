@@ -70,6 +70,13 @@ public class SecurityQuickFixTests
         public bool ApplyAssistantResultForTest(AssistantResult result) => applyAssistantResult(result);
     }
 
+    private sealed class PostGuardController : FwController
+    {
+        public PostGuardController(FW fw) : base(fw) { }
+
+        public void EnforcePostForTest() => enforcePost();
+    }
+
     [TestMethod]
     public void Constructor_DoesNotThrowForShortContentType()
     {
@@ -188,6 +195,71 @@ public class SecurityQuickFixTests
         Assert.IsFalse(ps.ContainsKey("is_sql_result"));
     }
 
+    [TestMethod]
+    public void EnforcePost_RejectsGetEvenWithMatchingToken()
+    {
+        var fw = createFw();
+        fw.route.method = "GET";
+        setXssTokens(fw);
+        var controller = new PostGuardController(fw);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.EnforcePostForTest());
+    }
+
+    [TestMethod]
+    public void EnforcePost_RejectsPostWithMissingToken()
+    {
+        var fw = createFw();
+        fw.route.method = "POST";
+        fw.Session("XSS", "token");
+        var controller = new PostGuardController(fw);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.EnforcePostForTest());
+    }
+
+    [TestMethod]
+    public void EnforcePost_RejectsPostWithWrongToken()
+    {
+        var fw = createFw();
+        fw.route.method = "POST";
+        setXssTokens(fw, formToken: "wrong-token");
+        var controller = new PostGuardController(fw);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.EnforcePostForTest());
+    }
+
+    [TestMethod]
+    public void EnforcePost_AllowsPostWithMatchingToken()
+    {
+        var fw = createFw();
+        fw.route.method = "POST";
+        setXssTokens(fw);
+        var controller = new PostGuardController(fw);
+
+        controller.EnforcePostForTest();
+    }
+
+    [TestMethod]
+    [DataRow("")]
+    [DataRow("not-an-email")]
+    [DataRow("valid@example.test, bad-address")]
+    public void ReportSendEmail_RejectsEmptyOrInvalidRecipients(string recipients)
+    {
+        var fw = createFw();
+        fw.route.method = "POST";
+        setXssTokens(fw);
+        fw.FORM["f"] = new FwDict
+        {
+            ["to_emails"] = recipients,
+            ["email_as"] = "pdf"
+        };
+        TestHelpers.RegisterModel(fw, (Users)new LoginUsers());
+        var controller = new AdminReportsController();
+        controller.init(fw);
+
+        Assert.ThrowsExactly<UserException>(() => controller.SendEmailAction("Sample"));
+    }
+
     private static FW createPasswordFw(PasswordUsers users, string login)
     {
         var fw = createFw();
@@ -212,6 +284,13 @@ public class SecurityQuickFixTests
         var fw = TestHelpers.CreateFw(settings);
         fw.is_log_events = false;
         return fw;
+    }
+
+    private static void setXssTokens(FW fw, string sessionToken = "token", string? formToken = "token")
+    {
+        fw.Session("XSS", sessionToken);
+        if (formToken != null)
+            fw.FORM["XSS"] = formToken;
     }
 
     private static FwDict userRow(int status) => new()
