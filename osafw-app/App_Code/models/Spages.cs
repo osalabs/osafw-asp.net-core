@@ -300,7 +300,13 @@ public class Spages : FwModel<Spages.Row>
 
         var redirect_url = item["redirect_url"].toStr();
         if (!Utils.isEmpty(redirect_url))
-            fw.redirect(redirect_url);
+        {
+            // comment check for APP URL if you want to allow redirecting to any URL, but be careful with open redirect security issue
+            if (Utils.isAppUrl(redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+                fw.redirect(redirect_url);
+            else
+                fw.logger(LogLevel.WARN, "Ignoring unsafe static page redirect_url: ", redirect_url);
+        }
 
         var item_id = item["id"].toInt();
 

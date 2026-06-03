@@ -829,7 +829,7 @@ public class FW : IDisposable
             f[entry.Key] = entry.Value;
 
         // also parse json in request body if any
-        if (request.ContentType?[.."application/json".Length] == "application/json")
+        if (request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true)
         {
             postedJson = Utils.getPostedJson(this);
             // merge json into FORM, but all values should be stingified in FORM

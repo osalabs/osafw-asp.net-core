@@ -50,10 +50,8 @@ public class PasswordController : FwController
             throw new UserException("Please enter your Email");
 
         var user = model.oneByEmail(login);
-        if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE)
-            throw new UserException("Not a valid Email");
-
-        model.sendPwdReset(user["id"].toInt());
+        if (user.Count > 0 && user["status"].toInt() == Users.STATUS_ACTIVE)
+            model.sendPwdReset(user["id"].toInt());
 
         fw.redirect(base_url + "/(Sent)");
     }

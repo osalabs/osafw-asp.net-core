@@ -174,6 +174,10 @@ public class AdminSpagesController : FwAdminController
         if (result && model.isExistsByUrl(item["url"].toStr(), item["parent_id"].toInt(), id))
             fw.FormErrors["url"] = "EXISTS";
 
+        var redirect_url = item["redirect_url"].toStr();
+        if (result && !Utils.isEmpty(redirect_url) && !Utils.isAppUrl(redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+            fw.FormErrors["redirect_url"] = "APP_URL";
+
         if (result)
         {
             // Prevent setting parent_id to itself or its descendants

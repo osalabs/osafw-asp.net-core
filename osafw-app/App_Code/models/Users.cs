@@ -238,7 +238,7 @@ public class Users : FwModel<Users.Row>
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    public bool sendPwdReset(int id)
+    public virtual bool sendPwdReset(int id)
     {
         var pwd_reset_token = Utils.getRandStr(PWD_RESET_TOKEN_LEN);
 

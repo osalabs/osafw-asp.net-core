@@ -19,3 +19,4 @@
 /docs/agents/local_instructions.md
 /docs/agents/artifacts/*
 !/docs/agents/artifacts/.gitignore
+/codex-security-scans/**

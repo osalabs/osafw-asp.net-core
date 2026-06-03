@@ -205,7 +205,7 @@ public class LoginController : FwController
             model.createPermCookie(users_id);
 
         string url;
-        if (!string.IsNullOrEmpty(gourl) && !Regex.IsMatch(gourl, "^http", RegexOptions.IgnoreCase))
+        if (Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr()))
             url = gourl;
         else
             url = fw.config("LOGGED_DEFAULT_URL").toStr();

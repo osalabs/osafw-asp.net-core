@@ -235,8 +235,14 @@ public class AssistantController : FwController
             // If redirect, read "redirect_url" from JSON, do your fw.redirect. If done, just break.
             if (!string.IsNullOrEmpty(parsedResult.redirect_url))
             {
-                fw.redirect(parsedResult.redirect_url);
-                return;
+                if (Utils.isAppUrl(parsedResult.redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+                {
+                    fw.redirect(parsedResult.redirect_url);
+                    return;
+                }
+
+                logger(LogLevel.WARN, "Assistant returned unsafe redirect_url: ", parsedResult.redirect_url);
+                fw.flash("error", "Assistant returned an unsupported redirect.");
             }
 
             fw.G["llm_sql"] = parsedResult.sql;
