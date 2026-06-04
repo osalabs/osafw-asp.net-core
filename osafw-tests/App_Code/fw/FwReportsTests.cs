@@ -82,6 +82,44 @@ public class FwReportsTests
     }
 
     [TestMethod]
+    public void ParseParamDefinitions_PreservesModelLookupSource()
+    {
+        var defs = FwReportsModel.parseParamDefinitions(
+            "select * from users where id=@users_id",
+            """[{"name":"users_id","label":"User","type":"lookup","source":"model:Users"}]""");
+
+        Assert.AreEqual(1, defs.Count);
+        Assert.AreEqual("lookup", defs[0]["type"]);
+        Assert.AreEqual("model:Users", defs[0]["source"]);
+    }
+
+    [TestMethod]
+    public void ListIndexState_MarksNoParamReportsForAutorun()
+    {
+        var model = new FwReportsModel();
+        var rows = new DBList
+        {
+            new()
+            {
+                ["sql_template"] = "select 1 as score",
+                ["params_json"] = ""
+            },
+            new()
+            {
+                ["sql_template"] = "select * from users where email like @s",
+                ["params_json"] = """[{"name":"s","type":"text"}]"""
+            }
+        };
+
+        typeof(FwReportsModel)
+            .GetMethod("withIndexDisplayState", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(model, [rows]);
+
+        Assert.AreEqual("1", rows[0]["is_autorun"]);
+        Assert.AreEqual("", rows[1]["is_autorun"]);
+    }
+
+    [TestMethod]
     public void CleanupIcon_RemovesBootstrapPrefixAndUnsafeCharacters()
     {
         Assert.AreEqual("currency-dollar", FwReportsModel.cleanupIcon("bi bi-currency-dollar"));

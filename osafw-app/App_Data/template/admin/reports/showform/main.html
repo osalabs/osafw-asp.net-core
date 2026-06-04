@@ -54,17 +54,35 @@
 <section class="mt-4">
   <h2 class="h5">`Help`</h2>
   <div class="alert alert-info">
-    <p class="mb-3">`Use one SELECT or CTE query. Use @param placeholders for filters, then define optional parameter metadata as JSON. Supported parameter types are text, int, number, date, datetime, and lookup.`</p>
-    <h3 class="h6">`Example SQL`</h3>
+    <p class="mb-3">`Use one SELECT or CTE query. Use @param placeholders for filters, then define optional parameter metadata as JSON.`</p>
+    <h3 class="h6">`Supported Parameter Types`</h3>
+    <ul class="small mb-3">
+      <li><code>text</code> - `free text input`</li>
+      <li><code>int</code> - `whole number input`</li>
+      <li><code>number</code> - `decimal number input`</li>
+      <li><code>date</code> - `date input; defaults can use today or -30d`</li>
+      <li><code>datetime</code> - `date and time input`</li>
+      <li><code>lookup</code> - `select input from options, a built-in source, a model, or SQL`</li>
+    </ul>
+    <h3 class="h6">`Copyable SQL Example`</h3>
     <pre class="small mb-3"><code>SELECT id, fname, lname, email, access_level, add_time
 FROM users
 WHERE (@access_level IS NULL OR access_level = @access_level)
   AND (@s IS NULL OR email LIKE '%' + @s + '%' OR fname LIKE '%' + @s + '%' OR lname LIKE '%' + @s + '%')
 ORDER BY add_time DESC</code></pre>
-    <h3 class="h6">`Example Parameters JSON`</h3>
-    <pre class="small mb-0"><code>[
-  {"name":"access_level","label":"Access Level","type":"int"},
+    <h3 class="h6">`Copyable Parameters JSON Example`</h3>
+    <pre class="small mb-3"><code>[
+  {"name":"access_level","label":"Access Level","type":"lookup","options":{"80":"Employee","100":"Site Administrator"}},
   {"name":"s","label":"Search","type":"text"}
+]</code></pre>
+    <h3 class="h6">`Lookup Examples`</h3>
+    <pre class="small mb-0"><code>[
+  {"name":"users_id","label":"User","type":"lookup","source":"users"},
+  {"name":"users_id","label":"User","type":"lookup","source":"model:Users"},
+  {"name":"fwentities_id","label":"Entity","type":"lookup","source":"fwentities"},
+  {"name":"log_types_id","label":"Log Type","type":"lookup","source":"log_types"},
+  {"name":"status","label":"Status","type":"lookup","options":{"0":"Active","10":"Inactive"}},
+  {"name":"users_id","label":"User","type":"lookup","source":"sql:SELECT id, email AS iname FROM users WHERE status=0"}
 ]</code></pre>
   </div>
 </section>

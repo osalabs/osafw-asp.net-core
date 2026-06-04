@@ -260,14 +260,14 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
         }, "iname");
 
         if (fw.model<Users>().isSiteAdmin())
-            return rows;
+            return withIndexDisplayState(rows);
 
         var result = new DBList();
         foreach (var row in rows)
             if (isAccessible(row.toFwDict(), FW.ACTION_SHOW))
                 result.Add(row);
 
-        return result;
+        return withIndexDisplayState(result);
     }
 
     /// <summary>
@@ -465,6 +465,15 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
         if (source.Equals("log_types", StringComparison.OrdinalIgnoreCase))
             return fw.model<FwLogTypes>().listSelectOptions();
 
+        if (source.StartsWith("model:", StringComparison.OrdinalIgnoreCase))
+        {
+            var modelName = source[6..].Trim();
+            if (!Regex.IsMatch(modelName, @"^[A-Za-z][A-Za-z0-9_]*$"))
+                throw new UserException("Unsupported lookup source: " + source);
+
+            return fw.model(modelName).listSelectOptions();
+        }
+
         if (source.StartsWith("sql:", StringComparison.OrdinalIgnoreCase))
         {
             var sql = source[4..].Trim();
@@ -476,6 +485,29 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
         }
 
         throw new UserException("Unsupported lookup source: " + source);
+    }
+
+    /// <summary>
+    /// Adds list-screen-only flags used by report index templates without changing the persisted report fields.
+    /// </summary>
+    /// <param name="rows">Accessible custom report rows.</param>
+    /// <returns>The same row list with derived display flags attached.</returns>
+    private DBList withIndexDisplayState(DBList rows)
+    {
+        foreach (var row in rows)
+        {
+            try
+            {
+                var defs = parseParamDefinitions(row["sql_template"], row["params_json"]);
+                row["is_autorun"] = defs.Count == 0 ? "1" : "";
+            }
+            catch
+            {
+                row["is_autorun"] = "";
+            }
+        }
+
+        return rows;
     }
 
     /// <summary>

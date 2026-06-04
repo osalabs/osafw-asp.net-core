@@ -95,7 +95,7 @@ Lookup options can be static:
 }
 ```
 
-Lookup `source` can also be `users`, `fwentities`, `log_types`, or `sql:SELECT id, iname FROM ...`.
+Lookup `source` can also be `users`, `fwentities`, `log_types`, `model:Users`, or `sql:SELECT id, iname FROM ...`. Model-based lookups call the model's `listSelectOptions()` method, so use an existing model class name and keep the SQL placeholder aligned with the selected id field.
 
 ## Render Options
 

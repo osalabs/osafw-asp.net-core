@@ -36,7 +36,7 @@
         <~custom_list if="is_custom_reports_visible" inline>
         <div class="list-group">
             <~custom_reports repeat inline>
-                <a href="<~../url>/<~icode>" class="list-group-item">
+                <a href="<~../url>/<~icode><~autorun if="is_autorun" inline>?dofilter=1</~autorun>" class="list-group-item">
                     <~report_icon if="icon" inline><i class="bi bi-<~icon> me-1"></i></~report_icon>
                     <span><~iname></span>
                     <small class="d-block text-muted"><~idesc></small>
