@@ -95,6 +95,17 @@ public class FwReportsTests
     }
 
     [TestMethod]
+    public void ParseParamDefinitions_InfersDatetimeBeforeDate()
+    {
+        var defs = FwReportsModel.parseParamDefinitions(
+            "select * from users where add_time <= @to_datetime",
+            "");
+
+        Assert.AreEqual(1, defs.Count);
+        Assert.AreEqual("datetime", defs[0]["type"]);
+    }
+
+    [TestMethod]
     public void ParseParamDefinitions_AllowsSplitLookupTypes()
     {
         var defs = FwReportsModel.parseParamDefinitions(
@@ -200,11 +211,29 @@ public class FwReportsTests
         Assert.AreEqual("text-end", headers[0]["align_class"]);
         Assert.AreEqual("text-end", headers[1]["align_class"]);
         Assert.AreEqual("", headers[3]["align_class"]);
-        Assert.AreEqual("Totals", totals[0]["display_value"]);
+        Assert.IsTrue(totals[0]["is_first_cell"].toBool());
+        Assert.AreEqual("", totals[0]["display_value"]);
         Assert.AreEqual("", totals[0]["align_class"]);
         Assert.AreEqual("12.5", totals[1]["display_value"]);
         Assert.AreEqual("", totals[2]["display_value"]);
         Assert.IsTrue(report.ps["has_result_totals"].toBool());
+    }
+
+    [TestMethod]
+    public void CustomReportSqlParams_AcceptsDateOnlyValueForDatetime()
+    {
+        var model = new FwReportsModel();
+        var defs = FwReportsModel.parseParamDefinitions(
+            "select * from users where add_time <= @to_datetime",
+            """[{"name":"to_datetime","type":"datetime"}]""");
+
+        var values = model.buildSqlParams(
+            defs,
+            new FwDict { ["to_datetime"] = "06/17/2026" },
+            DateUtils.DATE_FORMAT_MDY,
+            DateUtils.TIME_FORMAT_12);
+
+        Assert.AreEqual(new DateTime(2026, 6, 17, 0, 0, 0), values["@to_datetime"]);
     }
 
     [TestMethod]

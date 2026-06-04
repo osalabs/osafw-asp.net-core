@@ -15,8 +15,8 @@
 
 <~hardcoded_reports if="is_hardcoded_reports_visible" inline>
 <div class="list-group reports-list-columns">
-    <a href="<~../url>/Sample" class="list-group-item report-list-item js-report-item" data-report-title="Sample Report">Sample Report</a>
-    <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item report-list-item js-report-item" data-report-title="<~tpl-title>"><~tpl-title></a></~tplcodegen>
+    <a href="<~../url>/Sample" class="list-group-item list-group-item-action rounded border mb-2 report-list-item js-report-item" data-report-title="Sample Report">Sample Report</a>
+    <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item list-group-item-action rounded border mb-2 report-list-item js-report-item" data-report-title="<~tpl-title>"><~tpl-title></a></~tplcodegen>
 </div>
 </~hardcoded_reports>
 
@@ -28,7 +28,7 @@
 <~custom_list if="is_custom_reports_visible" inline>
 <div class="list-group reports-list-columns">
     <~custom_reports repeat inline>
-        <a href="<~../url>/<~icode><~autorun if="is_autorun" inline>?dofilter=1</~autorun>" class="list-group-item report-list-item js-report-item" data-report-title="<~iname>">
+        <a href="<~../url>/<~icode><~autorun if="is_autorun" inline>?dofilter=1</~autorun>" class="list-group-item list-group-item-action rounded border mb-2 report-list-item js-report-item" data-report-title="<~iname>">
             <~report_icon if="icon" inline><i class="bi bi-<~icon> me-1"></i></~report_icon>
             <span><~iname></span>
             <small class="d-block text-muted"><~idesc></small>

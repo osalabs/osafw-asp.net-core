@@ -8,6 +8,7 @@
 - Applied the latest feedback for edit breadcrumbs linking back to the report run screen, no-param custom report autorun links, `Modify Report` action styling/placement, icon input prepend, expanded parameter Help, model-based lookup sources, and local seeded reports for UI coverage.
 - Applied the latest report index and runtime UI feedback: responsive multi-column report lists, client-side fuzzy report filtering, right-aligned Modify Report action, Bootstrap-styled result table header/footer/dividers, `Totals` footer label, split lookup parameter types, `.sel` template lookups, and custom report calendar loading.
 - Applied the latest follow-up feedback: removed the redundant onload wrapper, restored Bootstrap list-group styling while keeping report columns, and handled custom report SQL execution errors inline for preview and run screens with Site Admin-only detail.
+- Applied this follow-up feedback: report list items now keep independent rounded Bootstrap borders inside columns and use standard hover feedback, date-only values are accepted for custom `datetime` params as midnight, `Modify Report` is hidden in print media, and the totals label moved from C# into templates.
 ## Scope reviewed
 - Existing `AdminReportsController`, `FwReports`, sample report templates, report tests, DB helper parameter/limit behavior, RBAC resource checks, SQL schema scripts, and docs map.
 - Feedback pass also reviewed shared page-header/breadcrumb templates, report list layout, local SQL Server update path, Visual Studio launch behavior, and Playwright smoke flows on `https://localhost:44315`.
@@ -39,6 +40,10 @@
 - Fifth follow-up Playwright MCP smoke verified invalid SQL preview stays on `/Admin/Reports/new` and shows an inline detailed alert, invalid SQL run screen shows the detailed alert without the results table, `/Admin/Reports` renders custom reports as 3 Bootstrap list-group columns, fuzzy filter `testrep` visually leaves only `Test 1 report`, and the temporary invalid test report was soft-deleted through the UI.
 - Fifth follow-up review loop: reviewer sub-agent timed out twice and was closed; local review using `docs/agents/code_reviewer.md` found no remaining issues worth another loop.
 - Cleanup follow-up stopped the stray direct-run `dotnet`/`osafw-app` processes that were locking `bin\Debug\net10.0\osafw-app.exe`, then used Visual Studio MCP `build_project` and `debugger_launch_without_debugging` to build and restart the startup project through VS/IIS Express.
+- Sixth follow-up focused test `dotnet test osafw-tests\osafw-tests.csproj --filter FwReportsTests -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_test\` passed: 25 tests, 1 existing nullable warning in `ConvUtilsTests.cs`.
+- Sixth follow-up Visual Studio MCP `build_project` for `osafw-app` completed with `FailedProjects: 0`.
+- Sixth follow-up Playwright MCP smoke verified `/Admin/Reports` visual columns with rounded bordered action items, Bootstrap hover background change, the provided `qa_all_params` parameter shape without the stale XSS token no longer produces `Invalid date for @to_datetime`, `To Time` renders as `6/17/2026 12:00 AM`, and `Modify Report` computes `display:none` under print media.
+- Sixth follow-up review loop: independent reviewer sub-agent found no issues and said the review loop can stop.
 - `git diff --check` passed.
 - CRLF check passed for all files changed in this task.
 - Follow-up review loop: reviewer sub-agent timed out and was closed; local review using `docs/agents/code_reviewer.md` found no remaining issues worth another loop.
@@ -73,6 +78,8 @@
 - Combined `if`/`unless` on the custom report include did not suppress the no-rows results block after an execution error; added an explicit `is_report_results_visible` flag for normal result rendering.
 - Bootstrap `.list-group` is flex by default, so CSS columns did not apply until the report-specific list container was changed to `display:block` while retaining `list-group-item` styling.
 - Manual IIS Express launch from `.vs` config failed without Visual Studio's launcher environment variables; used `dotnet run --no-build --urls https://localhost:44315;http://localhost:57921` for the final browser smoke.
+- Report list columns and Bootstrap list groups conflict if one list-group spans multiple CSS columns; giving each item Bootstrap `rounded border mb-2 list-group-item-action` utilities preserves column flow and per-card borders with standard hover behavior.
+- Custom report datetime params originally required a full time string; accepting date-only input as midnight matches the datepicker behavior seen in the report filter UI.
 ## Risks / follow-ups
 - CTE queries are capped at the reader level, but SQL-level limiting is only added automatically for simple `SELECT`; admins should still include provider-specific limits for large CTEs to reduce database work.
 - Full test suite has unrelated failures in this environment; focused report tests passed.
@@ -85,5 +92,6 @@
 - Apply `osafw-app/App_Data/sql/updates/upd2026-06-03-custom-reports.sql` before using the UI against an existing SQL Server DB.
 - Run `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/` if normal output is locked.
 - Run `dotnet test osafw-tests/osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts/assistant_test/`.
+- For app rebuild/restart, prefer Visual Studio MCP `build_project` and `debugger_launch_without_debugging`; do not start a separate unmanaged `dotnet run` on the VS app port.
 ## Reflection
 The main slowdown was distinguishing template hot-reload from stale compiled C# in the VS-hosted IIS Express app. Future browser smoke after C# edits should prefer Visual Studio MCP build/restart, using `debugger_stop` only when VS reports an active debug session, and should not start an unmanaged `dotnet run` process on the same VS port. A reviewer sub-agent was useful in prior passes but timed out in this round; the local fallback review was enough for the narrow diff. No recurring instruction change is recommended yet; this task is too feature-specific.

@@ -86,6 +86,8 @@ Supported types:
 - `lookup_sql`
 - `lookup_tpl`
 
+`datetime` filters accept either a full user-formatted date/time or a date-only value; date-only values bind as midnight for that date.
+
 Lookup options can be static:
 
 ```json

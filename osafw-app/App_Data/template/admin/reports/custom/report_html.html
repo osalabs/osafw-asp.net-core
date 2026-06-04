@@ -13,11 +13,11 @@
       </~result_rows>
     </tbody>
     <~totals_footer if="has_result_totals" inline>
-    <tfoot class="table-group-divider">
-      <tr class="table-light">
-        <~result_totals repeat inline><td class="<~align_class> fw-semibold"><~display_value></td></~result_totals>
-      </tr>
-    </tfoot>
+      <tfoot class="table-group-divider">
+        <tr class="table-light">
+          <~result_totals repeat inline><td class="<~align_class> fw-semibold"><~totals_label if="is_first_cell" inline>`Totals`</~totals_label><~total_value unless="is_first_cell" inline><~display_value></~total_value></td></~result_totals>
+        </tr>
+      </tfoot>
     </~totals_footer>
   </table>
   <~empty unless="has_result_rows" inline>

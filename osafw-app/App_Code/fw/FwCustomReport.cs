@@ -256,7 +256,8 @@ public class FwCustomReport : FwReports
             {
                 ["field"] = field,
                 ["has_total"] = hasTotal,
-                ["display_value"] = isFirstCell ? "Totals" : hasTotal ? totalValues[field].ToString("0.##", CultureInfo.InvariantCulture) : string.Empty,
+                ["is_first_cell"] = isFirstCell,
+                ["display_value"] = hasTotal ? totalValues[field].ToString("0.##", CultureInfo.InvariantCulture) : string.Empty,
                 ["align_class"] = isFirstCell ? string.Empty : numericFields[field] ? "text-end" : string.Empty
             });
             isFirstCell = false;

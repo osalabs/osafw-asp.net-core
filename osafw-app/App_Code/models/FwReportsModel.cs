@@ -675,6 +675,8 @@ ORDER BY {db.qid("iname")}";
     private static string inferParamType(string name)
     {
         var lower = name.ToLowerInvariant();
+        if (lower.EndsWith("_datetime") || lower.Contains("datetime"))
+            return "datetime";
         if (lower.EndsWith("_date") || lower.Contains("date"))
             return "date";
         if (lower.EndsWith("_id") || lower == "id")
@@ -735,6 +737,12 @@ ORDER BY {db.qid("iname")}";
             case "date":
             case "datetime":
                 var sqlDate = DateUtils.Str2SQL(value, userDateFormat, userTimeFormat, type == "datetime");
+                if (type == "datetime" && string.IsNullOrEmpty(sqlDate))
+                {
+                    var dateOnly = DateUtils.Str2SQL(value, userDateFormat);
+                    if (!string.IsNullOrEmpty(dateOnly))
+                        sqlDate = dateOnly + " 00:00:00";
+                }
                 if (DateUtils.SQL2Date(sqlDate) is not DateTime dateValue)
                     throw new UserException("Invalid date for @" + name);
                 return dateValue;
