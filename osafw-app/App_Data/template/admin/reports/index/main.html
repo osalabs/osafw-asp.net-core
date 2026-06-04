@@ -1,6 +1,13 @@
-<h1 class="page-title"><~title></h1>
+<div class="page-header">
+  <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
+    <div class="page-header-title flex-grow-1">
+      <h1 class="page-title mb-0"><~title></h1>
+    </div>
+  </div>
+</div>
 <hr>
 
+<~hardcoded_reports if="can_view_hardcoded_reports" inline>
 <div class="row">
     <div class="col-sm-4">
         <!--h2>General</h2-->
@@ -17,6 +24,32 @@
     <div class="col-sm-4">
     </div>
 </div>
+</~hardcoded_reports>
+
+<~custom_block if="has_custom_reports_block" inline>
+<div class="d-flex align-items-center gap-2 mt-4 mb-2">
+    <h2 class="h4 mb-0 flex-grow-1">`Custom Reports`</h2>
+    <~create_btn if="is_site_admin" inline><a href="<~../url>/new" class="btn btn-primary btn-sm"><~/common/icons/plus-lg>`Create New Report`</a></~create_btn>
+</div>
+<div class="row">
+    <div class="col-sm-4">
+        <~custom_list if="has_custom_reports" inline>
+        <div class="list-group">
+            <~custom_reports repeat inline>
+                <a href="<~../url>/<~icode>" class="list-group-item">
+                    <~icon if="icon" inline><i class="bi bi-<~icon> me-1 text-muted"></i></~icon>
+                    <span><~iname></span>
+                    <small class="d-block text-muted"><~idesc></small>
+                </a>
+            </~custom_reports>
+        </div>
+        </~custom_list>
+        <~empty_custom unless="has_custom_reports" inline>
+          <div class="text-muted">`No custom reports yet.`</div>
+        </~empty_custom>
+    </div>
+</div>
+</~custom_block>
 
 <!--div class="row">
     <div class="col-sm-4">

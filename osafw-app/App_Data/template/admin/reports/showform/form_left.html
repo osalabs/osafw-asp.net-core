@@ -1,0 +1,35 @@
+<div class="row form-row">
+  <label class="col-form-label col-md-3 required" for="icode">`Code`</label>
+  <div class="col">
+    <input id="icode" name="item[icode]" maxlength="50" value="<~i[icode]>" type="text" class="form-control" required>
+    <p class="err-EXISTS">`This code already exists in our database`</p>
+    <~/common/form/showform/validation_errors if="error[details][icode]">
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3 required" for="iname">`Name`</label>
+  <div class="col">
+    <input id="iname" name="item[iname]" maxlength="255" value="<~i[iname]>" type="text" class="form-control" required autofocus>
+    <~/common/form/showform/validation_errors if="error[details][iname]">
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="idesc">`Description`</label>
+  <div class="col">
+    <textarea id="idesc" name="item[idesc]" rows="3" class="form-control"><~i[idesc]></textarea>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="icon">`Icon`</label>
+  <div class="col">
+    <input id="icon" name="item[icon]" maxlength="64" value="<~i[icon]>" type="text" class="form-control" placeholder="currency-dollar">
+    <div class="form-text">`Enter a Bootstrap Icons name without the bi prefix, for example currency-dollar.` <a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener">`Browse icons`</a></div>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3 required" for="sql_template">`SQL`</label>
+  <div class="col">
+    <textarea id="sql_template" name="item[sql_template]" rows="14" class="form-control font-monospace" required><~i[sql_template]></textarea>
+    <~/common/form/showform/validation_errors if="error[details][sql_template]">
+  </div>
+</div>

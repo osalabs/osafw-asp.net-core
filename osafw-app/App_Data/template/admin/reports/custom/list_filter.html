@@ -1,0 +1,39 @@
+<form method="GET" id="FFilter" name="FFilter" class="fw-card form-horizontal d-print-none"
+ data-list-filter data-autosubmit data-url-email="<~../url>/(SendEmail)/<~report_code>">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <input type="hidden" name="dofilter" value="1">
+
+  <~custom_params repeat inline>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3 col-lg-2" for="f<~name>">`<~label>`</label>
+      <div class="col col-lg-4">
+        <~input_lookup ifeq="type" value="lookup" inline>
+          <select name="f[<~name>]" id="f<~name>" class="form-select" <~/common/attr/required if="required">>
+            <option value="">- all -</option>
+            <~options select="value">
+          </select>
+        </~input_lookup>
+        <~input_date ifeq="type" value="date" inline>
+          <div class="input-group date">
+            <input id="f<~name>" name="f[<~name>]" maxlength="10" value="<~value date>" type="text" class="form-control" <~/common/attr/required if="required">>
+            <button class="btn btn-default" type="button"><~/common/icons/calendar3></button>
+          </div>
+        </~input_date>
+        <~input_datetime ifeq="type" value="datetime" inline>
+          <input id="f<~name>" name="f[<~name>]" value="<~value>" type="text" class="form-control" <~/common/attr/required if="required">>
+        </~input_datetime>
+        <~input_int ifeq="type" value="int" inline>
+          <input id="f<~name>" name="f[<~name>]" value="<~value>" type="number" step="1" class="form-control" <~/common/attr/required if="required">>
+        </~input_int>
+        <~input_number ifeq="type" value="number" inline>
+          <input id="f<~name>" name="f[<~name>]" value="<~value>" type="number" step="any" class="form-control" <~/common/attr/required if="required">>
+        </~input_number>
+        <~input_text ifeq="type" value="text" inline>
+          <input id="f<~name>" name="f[<~name>]" value="<~value>" type="text" class="form-control" <~/common/attr/required if="required">>
+        </~input_text>
+      </div>
+    </div>
+  </~custom_params>
+
+  <~/admin/reports/common/filter_buttons>
+</form>

@@ -1646,12 +1646,22 @@ public class DB : IDisposable
         return result;
     }
 
-    public DBList readArray(DbDataReader dbread)
+    /// <summary>
+    /// Materializes rows from a data reader and optionally stops after a caller-defined maximum.
+    /// </summary>
+    /// <param name="dbread">Open reader positioned before the first row.</param>
+    /// <param name="maxRows">Maximum rows to materialize; -1 means no explicit cap.</param>
+    /// <returns>Database rows converted through the normal DB value conversion path.</returns>
+    public DBList readArray(DbDataReader dbread, int maxRows = -1)
     {
         DBList result = new(DBList.DEFAULT_CAPACITY); //pre-allocate capacity
 
         while (dbread.Read())
+        {
             result.Add(readRow(dbread));
+            if (maxRows > -1 && result.Count >= maxRows)
+                break;
+        }
 
         closeQuery(dbread);
         return result;
@@ -1678,6 +1688,19 @@ public class DB : IDisposable
     {
         DbDataReader dbread = query(sql, @params);
         return readArray(dbread);
+    }
+
+    /// <summary>
+    /// read rows using parametrized query and stop materializing after a caller-defined maximum
+    /// </summary>
+    /// <param name="sql"></param>
+    /// <param name="params"></param>
+    /// <param name="maxRows">Maximum rows to materialize; -1 means no explicit cap. Use for user-authored read-only queries where SQL-level limiting is not portable.</param>
+    /// <returns></returns>
+    public virtual DBList arrayp(string sql, FwDict? @params, int maxRows)
+    {
+        DbDataReader dbread = query(sql, @params);
+        return readArray(dbread, maxRows);
     }
 
     /// <summary>

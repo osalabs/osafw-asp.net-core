@@ -418,6 +418,26 @@ CREATE TABLE menu_items (
   upd_users_id          INTEGER DEFAULT 0
 );
 
+/* Site Admin-managed custom reports */
+CREATE TABLE fwreports (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  icode                 TEXT NOT NULL,
+  iname                 TEXT NOT NULL DEFAULT '',
+  idesc                 TEXT,
+  icon                  TEXT NOT NULL DEFAULT '',
+  access_level          INTEGER NOT NULL DEFAULT 80,
+  sql_template          TEXT NOT NULL DEFAULT '',
+  params_json           TEXT,
+  render_options_json   TEXT,
+
+  status                INTEGER NOT NULL DEFAULT 0,
+  add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  add_users_id          INTEGER DEFAULT 0,
+  upd_time              DATETIME,
+  upd_users_id          INTEGER DEFAULT 0
+);
+CREATE UNIQUE INDEX UX_fwreports_icode ON fwreports (icode);
+
 CREATE TABLE user_filters (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   icode                 TEXT NOT NULL,

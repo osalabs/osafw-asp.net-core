@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using System.Reflection;
 
 namespace osafw.Tests;
 
@@ -31,6 +32,125 @@ public class FwReportsTests
         Assert.AreEqual(".json", FwReports.format2ext("json"));
         Assert.AreEqual(".json", FwReports.format2ext("JSON"));
         Assert.AreEqual(".html", FwReports.format2ext(null!));
+    }
+
+    [TestMethod]
+    public void ValidateSqlTemplate_AllowsSelectAndCte()
+    {
+        FwReportsModel.validateSqlTemplate("select id, iname from users where id=@users_id");
+        FwReportsModel.validateSqlTemplate("with active_users as (select id from users) select * from active_users");
+    }
+
+    [TestMethod]
+    [DataRow("update users set iname='x'")]
+    [DataRow("select * into report_tmp from users")]
+    [DataRow("select * from users; select * from settings")]
+    [DataRow("select * from xp_cmdshell")]
+    [DataRow("exec dbo.ReportProc")]
+    [DataRow("drop table users")]
+    public void ValidateSqlTemplate_RejectsUnsafeSql(string sql)
+    {
+        Assert.ThrowsExactly<UserException>(() => FwReportsModel.validateSqlTemplate(sql));
+    }
+
+    [TestMethod]
+    public void ParseParamDefinitions_AddsDefaultsForMissingMetadata()
+    {
+        var defs = FwReportsModel.parseParamDefinitions(
+            "select * from users where add_time>=@from_date and id=@users_id and email like @s",
+            """
+            {
+              "from_date": {"label":"From","type":"date","default":"-30d"}
+            }
+            """);
+
+        Assert.AreEqual(3, defs.Count);
+        Assert.AreEqual("from_date", defs[0]["name"]);
+        Assert.AreEqual("date", defs[0]["type"]);
+        Assert.AreEqual("users_id", defs[1]["name"]);
+        Assert.AreEqual("int", defs[1]["type"]);
+        Assert.AreEqual("s", defs[2]["name"]);
+        Assert.AreEqual("text", defs[2]["type"]);
+    }
+
+    [TestMethod]
+    public void ParseParamDefinitions_RejectsUnknownMetadataParam()
+    {
+        Assert.ThrowsExactly<UserException>(() => FwReportsModel.parseParamDefinitions(
+            "select * from users where id=@users_id",
+            """{"missing":{"type":"text"}}"""));
+    }
+
+    [TestMethod]
+    public void CleanupIcon_RemovesBootstrapPrefixAndUnsafeCharacters()
+    {
+        Assert.AreEqual("currency-dollar", FwReportsModel.cleanupIcon("bi bi-currency-dollar"));
+        Assert.AreEqual("graph-up", FwReportsModel.cleanupIcon("Graph Up!"));
+    }
+
+    [TestMethod]
+    public void CreateInstance_UsesHardcodedReportBeforeCustomLookup()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
+
+        var report = FwReports.createInstance(fw, "Sample", []);
+
+        Assert.IsInstanceOfType(report, typeof(SampleReport));
+    }
+
+    [TestMethod]
+    public void CustomReportAccess_RequiresConfiguredAccessLevel()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("access_level", Users.ACL_MEMBER.ToString());
+        var model = new FwReportsModel();
+        model.init(fw);
+        var report = new FwDict
+        {
+            ["icode"] = "sales",
+            ["status"] = FwModel.STATUS_ACTIVE,
+            ["access_level"] = Users.ACL_MANAGER
+        };
+
+        Assert.IsFalse(model.isAccessible(report, FW.ACTION_SHOW));
+
+        fw.Session("access_level", Users.ACL_MANAGER.ToString());
+
+        Assert.IsTrue(model.isAccessible(report, FW.ACTION_SHOW));
+    }
+
+    [TestMethod]
+    public void CustomReportResultTable_RightAlignsNumericColumnsAndTotalsMetrics()
+    {
+        var report = new FwCustomReport([]);
+        report.list_rows =
+        [
+            new FwDict { ["id"] = "1", ["amount"] = "10.50", ["status"] = "0", ["name"] = "Alpha" },
+            new FwDict { ["id"] = "2", ["amount"] = "2", ["status"] = "0", ["name"] = "Beta" }
+        ];
+
+        typeof(FwCustomReport)
+            .GetMethod("buildResultTable", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(report, null);
+
+        var headers = report.ps["result_headers"] as FwList ?? throw new AssertFailedException("Missing result headers");
+        var totals = report.ps["result_totals"] as FwList ?? throw new AssertFailedException("Missing result totals");
+
+        Assert.AreEqual("text-end", headers[0]["align_class"]);
+        Assert.AreEqual("text-end", headers[1]["align_class"]);
+        Assert.AreEqual("", headers[3]["align_class"]);
+        Assert.AreEqual("Total", totals[0]["display_value"]);
+        Assert.AreEqual("", totals[0]["align_class"]);
+        Assert.AreEqual("12.5", totals[1]["display_value"]);
+        Assert.AreEqual("", totals[2]["display_value"]);
+        Assert.IsTrue(report.ps["has_result_totals"].toBool());
+    }
+
+    [TestMethod]
+    public void AdminReportsController_AllowsLoggedUsersForCustomReportGate()
+    {
+        Assert.AreEqual(Users.ACL_MEMBER, AdminReportsController.access_level);
     }
 
     [TestMethod]

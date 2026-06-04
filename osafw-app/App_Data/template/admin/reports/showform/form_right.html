@@ -1,0 +1,28 @@
+<div class="row form-row">
+  <label class="col-form-label col-md-4" for="access_level">`Access Level`</label>
+  <div class="col">
+    <select id="access_level" name="item[access_level]" class="form-select">
+      <~/common/sel/access_level.sel select="i[access_level]">
+    </select>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-4" for="status">`Status`</label>
+  <div class="col">
+    <select id="status" name="item[status]" class="form-select">
+      <~/common/sel/status.sel select="i[status]">
+    </select>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-4" for="params_json">`Parameters JSON`</label>
+  <div class="col">
+    <textarea id="params_json" name="item[params_json]" rows="10" class="form-control font-monospace"><~i[params_json]></textarea>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-4" for="render_options_json">`Render Options JSON`</label>
+  <div class="col">
+    <textarea id="render_options_json" name="item[render_options_json]" rows="7" class="form-control font-monospace"><~i[render_options_json]></textarea>
+  </div>
+</div>

@@ -108,22 +108,68 @@ public class FwReports
     /// <returns></returns>
     public static FwReports createInstance(FW fw, string repcode, FwDict f)
     {
-        string report_class_name = repcodeToClass(repcode);
-        if (string.IsNullOrEmpty(report_class_name))
-            throw new UserException("Wrong Report Code");
+        var report = createHardcodedInstance(fw, repcode, f);
+        if (report == null)
+        {
+            var custom = fw.model<FwReportsModel>().oneActiveByIcode(repcode);
+            if (custom.Count > 0)
+            {
+                report = new FwCustomReport(custom.toFwDict());
+                report.init(fw, repcode, f);
+                report.checkAccess();
+            }
+        }
 
-        var reportType = Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true, true);
+        if (report == null)
+            throw new UserException("Report not found");
+
+        return report;
+    }
+
+    /// <summary>
+    /// Checks whether a route code resolves to a compiled report class before custom-report fallback.
+    /// </summary>
+    /// <param name="repcode">Cleaned report code.</param>
+    /// <returns>True when a matching report class exists.</returns>
+    public static bool isHardcodedReport(string repcode)
+    {
+        return resolveReportType(repcode) != null;
+    }
+
+    /// <summary>
+    /// Creates a compiled report instance without consulting database-backed custom reports.
+    /// </summary>
+    /// <param name="fw">Current framework request context.</param>
+    /// <param name="repcode">Cleaned report code.</param>
+    /// <param name="f">Submitted filters.</param>
+    /// <returns>Initialized report instance or null when no compiled report class exists.</returns>
+    protected static FwReports? createHardcodedInstance(FW fw, string repcode, FwDict f)
+    {
+        var reportType = resolveReportType(repcode);
         if (reportType == null)
-            throw new UserException("Report class not found");
+            return null;
 
         var instance = Activator.CreateInstance(reportType) as FwReports;
         if (instance == null)
             throw new UserException("Report initialization failed");
 
-        FwReports report = instance;
-        report.init(fw, repcode, f);
-        report.checkAccess();
-        return report;
+        instance.init(fw, repcode, f);
+        instance.checkAccess();
+        return instance;
+    }
+
+    /// <summary>
+    /// Resolves the compiled report class for a report code without throwing when it is absent.
+    /// </summary>
+    /// <param name="repcode">Cleaned report code.</param>
+    /// <returns>Report type or null when the report is not hardcoded.</returns>
+    private static Type? resolveReportType(string repcode)
+    {
+        string report_class_name = repcodeToClass(repcode);
+        if (string.IsNullOrEmpty(report_class_name))
+            throw new UserException("Wrong Report Code");
+
+        return Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, false, true);
     }
 
     /// <summary>
@@ -281,7 +327,7 @@ public class FwReports
         ps["IS_EXPORT_PDF"] = false;
         ps["IS_EXPORT_XLS"] = false;
 
-        string base_dir = TPL_BASE_DIR + '/' + report_code.ToLowerInvariant();
+        string base_dir = templateBaseDir();
         switch (this.format)
         {
             case "pdf":
@@ -376,6 +422,15 @@ public class FwReports
     protected bool isFileRender()
     {
         return render_to != TO_BROWSER && render_to != TO_STRING;
+    }
+
+    /// <summary>
+    /// Returns the ParsePage template directory for the current report so adapters can share templates.
+    /// </summary>
+    /// <returns>Report template base directory.</returns>
+    protected virtual string templateBaseDir()
+    {
+        return TPL_BASE_DIR + '/' + report_code.ToLowerInvariant();
     }
 
     // REPORT HELPERS

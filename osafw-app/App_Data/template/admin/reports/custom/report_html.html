@@ -1,0 +1,26 @@
+<div class="fw-card">
+  <table class="table table-sm table-bordered table-hover list">
+    <thead>
+      <tr>
+        <~result_headers repeat inline><th class="<~align_class>"><~iname></th></~result_headers>
+      </tr>
+    </thead>
+    <tbody>
+      <~result_rows repeat inline>
+        <tr>
+          <~cells repeat inline><td class="<~align_class>"><~value></td></~cells>
+        </tr>
+      </~result_rows>
+    </tbody>
+    <~totals_footer if="has_result_totals" inline>
+    <tfoot>
+      <tr>
+        <~result_totals repeat inline><td class="<~align_class> fw-semibold"><~display_value></td></~result_totals>
+      </tr>
+    </tfoot>
+    </~totals_footer>
+  </table>
+  <~empty unless="has_result_rows" inline>
+    <div class="p-3 text-muted">`No rows found`</div>
+  </~empty>
+</div>
