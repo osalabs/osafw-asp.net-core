@@ -183,7 +183,7 @@ public class MainController : FwController
         //{
         //    { "IS_SUPPRESS_TITLE", true }
         //};
-        //one["html"] = FwReports.createHtml(fw, "sample", f, ps_rep);
+        //one["html"] = FwReportsBase.createHtml(fw, "sample", f, ps_rep);
         //panes["htmldata"] = one;
 
         one = [];

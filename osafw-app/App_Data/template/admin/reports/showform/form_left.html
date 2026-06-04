@@ -3,6 +3,7 @@
   <div class="col">
     <input id="icode" name="item[icode]" maxlength="50" value="<~i[icode]>" type="text" class="form-control" required>
     <p class="err-EXISTS">`This code already exists in our database`</p>
+    <p class="err-HARDCODED">`This code is already used by a hardcoded report`</p>
     <~/common/form/showform/validation_errors if="error[details][icode]">
   </div>
 </div>

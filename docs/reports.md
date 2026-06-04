@@ -2,14 +2,14 @@
 
 The Reports module lives at `/Admin/Reports` and supports two report types:
 
-- hardcoded reports implemented as `FwReports` subclasses;
+- hardcoded reports implemented as `FwReportsBase` subclasses;
 - custom reports stored in `fwreports` and managed by Site Admins.
 
-Hardcoded reports are resolved first. If a report code does not match a compiled report class, the framework looks for an active custom report with the same `icode`.
+Hardcoded reports and custom reports share one route-code namespace. Hardcoded reports are resolved first, and custom report saves reject `icode` values that collide with a compiled report class.
 
 ## Hardcoded Reports
 
-Create a report class under `osafw-app/App_Code/models/Reports` and inherit from `FwReports`.
+Create a report class under `osafw-app/App_Code/models/Reports` and inherit from `FwReportsBase`.
 
 Common overrides:
 
@@ -24,7 +24,7 @@ Templates live under `osafw-app/App_Data/template/admin/reports/{code}`. A typic
 - `list_filter.html`
 - `report_html.html`
 
-The framework supports HTML, CSV, PDF, XLS, XLSX, and JSON through `FwReports.render()`, `FwReports.createHtml()`, and `FwReports.createFile()`.
+The framework supports HTML, CSV, PDF, XLS, XLSX, and JSON through `FwReportsBase.render()`, `FwReportsBase.createHtml()`, and `FwReportsBase.createFile()`.
 
 ## Custom Reports
 
@@ -41,7 +41,7 @@ Custom reports use:
 - `render_options_json`: optional row limits, timeout, and export options;
 - `status`: active, inactive, or deleted.
 
-Custom reports render through a generic table. They do not need per-report templates. Numeric columns are right-aligned, and the table footer sums numeric columns except identifier/status-style fields such as `id`, `*_id`, and `status`.
+Custom reports render through a generic table. They do not need per-report templates. Numeric columns are right-aligned, and the table footer sums numeric columns except identifier/status-style fields such as `id`, `*_id`, and `status`. Generic column sorting applies only to displayed/materialized rows after the configured row limit has been read.
 
 ## SQL Rules
 
@@ -52,11 +52,13 @@ Custom report SQL must:
 - use `@param` placeholders for dynamic values;
 - avoid write/admin statements such as `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `EXEC`, `GRANT`, `REVOKE`, `BACKUP`, `RESTORE`, `SELECT INTO`, and `sp_`/`xp_` system-proc style names.
 
-Runtime values are bound as DB parameters. Do not concatenate user input into SQL.
+Runtime values are bound as DB parameters. Do not concatenate user input into SQL. The read-only SQL contract is validated when a report is saved and again immediately before preview or runtime execution, so tampered stored SQL still cannot execute outside the SELECT/CTE subset.
 
-The runtime stops reading after the configured row limit for every custom report. Simple `SELECT` queries also receive a provider SQL limit. For CTE queries, include an explicit provider-specific limit when possible so the database can avoid extra work.
+Site Admin report authors may read any table reachable by the app DB connection and may choose render limits in `render_options_json`, but report SQL must remain read-only. The runtime stops reading after the configured row limit for every custom report. Simple `SELECT` queries also receive a provider SQL limit. For CTE queries, include an explicit provider-specific limit when possible so the database can avoid extra work.
 
 Runtime SQL errors are shown on the report screen instead of the framework error page. Site Admins see database error details; other users see a short contact-administrator message.
+
+Report output includes generated time, report code, applied non-empty parameters, rows shown, and the row-limit or preview-limit context so printed and exported results remain self-describing.
 
 ## Parameters
 

@@ -21,10 +21,3 @@ BEGIN
   CREATE UNIQUE INDEX UX_fwreports_icode ON fwreports(icode);
 END
 GO
-
-IF OBJECT_ID(N'dbo.fwreports', N'U') IS NOT NULL
-  AND COL_LENGTH(N'dbo.fwreports', N'icon') IS NULL
-BEGIN
-  ALTER TABLE fwreports ADD icon NVARCHAR(64) NOT NULL CONSTRAINT DF_fwreports_icon DEFAULT '';
-END
-GO

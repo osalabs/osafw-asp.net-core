@@ -35,25 +35,7 @@
 
 <~preview if="has_preview" inline>
   <h2 class="h4 mt-4">`Preview` <span class="badge badge-outline-secondary rounded-pill"><~preview_count></span></h2>
-  <div class="fw-card">
-    <table class="table table-sm table-bordered table-hover list">
-      <thead class="table-light">
-        <tr><~preview_headers repeat inline><th class="<~align_class>"><~iname></th></~preview_headers></tr>
-      </thead>
-      <tbody class="table-group-divider">
-        <~preview_rows repeat inline>
-          <tr><~cells repeat inline><td class="<~align_class>"><~value></td></~cells></tr>
-        </~preview_rows>
-      </tbody>
-      <~preview_totals_footer if="has_preview_totals" inline>
-      <tfoot class="table-group-divider">
-        <tr class="table-light">
-          <~preview_totals repeat inline><td class="<~align_class> fw-semibold"><~totals_label if="is_first_cell" inline>`Totals`</~totals_label><~total_value unless="is_first_cell" inline><~display_value></~total_value></td></~preview_totals>
-        </tr>
-      </tfoot>
-      </~preview_totals_footer>
-    </table>
-  </div>
+  <~/admin/reports/common/result_table>
 </~preview>
 
 <section class="mt-4">

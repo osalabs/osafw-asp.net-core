@@ -17,7 +17,7 @@ public class AdminReportsController : FwController
     {
         base.init(fw);
         base_url = "/Admin/Reports"; // base url for the controller
-        model0 = fw.model<FwReportsModel>();
+        model0 = fw.model<FwReports>();
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public class AdminReportsController : FwController
     public FwDict IndexAction()
     {
         FwDict ps = [];
-        var customReports = fw.model<FwReportsModel>().listAccessible();
+        var customReports = fw.model<FwReports>().listAccessible();
         var isSiteAdmin = fw.model<Users>().isSiteAdmin();
         ps["custom_reports"] = customReports;
         ps["is_site_admin"] = isSiteAdmin;
@@ -45,8 +45,8 @@ public class AdminReportsController : FwController
 
     public void ShowAction(string id)
     {
-        var repcode = FwReports.cleanupRepcode(id);
-        var filter_session_key = FwReports.filterSessionKey(fw, repcode);
+        var repcode = FwReportsBase.cleanupRepcode(id);
+        var filter_session_key = FwReportsBase.filterSessionKey(fw, repcode);
 
         if (reqb("doreset"))
         {
@@ -69,7 +69,7 @@ public class AdminReportsController : FwController
         if (requested_format == "json" && !is_send_email)
             is_run = true;
 
-        var report = FwReports.createInstance(fw, repcode, list_filter);
+        var report = FwReportsBase.createInstance(fw, repcode, list_filter);
         var customReport = report as FwCustomReport;
         try
         {
@@ -101,7 +101,7 @@ public class AdminReportsController : FwController
     {
         checkSiteAdmin();
 
-        var model = fw.model<FwReportsModel>();
+        var model = fw.model<FwReports>();
         FwDict item;
         if (string.IsNullOrEmpty(id))
         {
@@ -112,9 +112,9 @@ public class AdminReportsController : FwController
                 ["status"] = FwModel.STATUS_ACTIVE,
                 ["render_options_json"] = Utils.jsonEncode(new FwDict
                 {
-                    ["row_limit"] = FwReportsModel.DEFAULT_ROW_LIMIT,
-                    ["preview_limit"] = FwReportsModel.DEFAULT_PREVIEW_LIMIT,
-                    ["timeout_seconds"] = FwReportsModel.DEFAULT_TIMEOUT_SECONDS
+                    ["row_limit"] = FwReports.DEFAULT_ROW_LIMIT,
+                    ["preview_limit"] = FwReports.DEFAULT_PREVIEW_LIMIT,
+                    ["timeout_seconds"] = FwReports.DEFAULT_TIMEOUT_SECONDS
                 }, true)
             };
         }
@@ -150,12 +150,14 @@ public class AdminReportsController : FwController
                 report.setFilters();
                 report.getData();
 
-                ps["preview_headers"] = report.ps["result_headers"];
-                ps["preview_rows"] = report.ps["result_rows"];
-                ps["preview_totals"] = report.ps["result_totals"];
+                ps["result_headers"] = report.ps["result_headers"];
+                ps["result_rows"] = report.ps["result_rows"];
+                ps["result_totals"] = report.ps["result_totals"];
+                ps["has_result_rows"] = report.ps["has_result_rows"];
                 ps["preview_count"] = report.list_count;
                 ps["has_preview"] = true;
-                ps["has_preview_totals"] = report.ps["has_result_totals"];
+                ps["has_result_totals"] = report.ps["has_result_totals"];
+                ps["is_result_sortable"] = false;
             }
             catch (Exception ex)
             {
@@ -184,7 +186,7 @@ public class AdminReportsController : FwController
         checkSiteAdmin();
         route_onerror = FW.ACTION_SHOW_FORM;
 
-        var model = fw.model<FwReportsModel>();
+        var model = fw.model<FwReports>();
         var item = FormUtils.filter(reqh("item"), CustomReportSaveFields);
         var old = !string.IsNullOrEmpty(id) ? model.oneManageableByIcode(id).toFwDict() : [];
         if (!string.IsNullOrEmpty(id) && old.Count == 0)
@@ -193,7 +195,7 @@ public class AdminReportsController : FwController
         var oldId = old["id"].toInt();
 
         validateCustomReport(oldId, item);
-        model.normalizeForSave(item, oldId);
+        model.normalizeForSave(item);
 
         if (reqb("preview"))
         {
@@ -238,7 +240,7 @@ public class AdminReportsController : FwController
     {
         checkSiteAdmin();
 
-        var item = fw.model<FwReportsModel>().oneManageableByIcode(id).toFwDict();
+        var item = fw.model<FwReports>().oneManageableByIcode(id).toFwDict();
         if (item.Count == 0)
             throw new NotFoundException();
 
@@ -260,7 +262,7 @@ public class AdminReportsController : FwController
         checkXSS();
         checkSiteAdmin();
 
-        var model = fw.model<FwReportsModel>();
+        var model = fw.model<FwReports>();
         var item = model.oneManageableByIcode(id).toFwDict();
         if (item.Count == 0)
             throw new NotFoundException();
@@ -280,9 +282,9 @@ public class AdminReportsController : FwController
     {
         route_onerror = FW.ACTION_SHOW;
 
-        var repcode = FwReports.cleanupRepcode(id);
+        var repcode = FwReportsBase.cleanupRepcode(id);
 
-        var report = FwReports.createInstance(fw, repcode, reqh("f"));
+        var report = FwReportsBase.createInstance(fw, repcode, reqh("f"));
 
         if (report.saveChanges())
             fw.redirect(base_url + "/" + repcode + "?is_run=1");
@@ -301,10 +303,15 @@ public class AdminReportsController : FwController
     private void validateCustomReport(int id, FwDict item)
     {
         validateRequired(id, item, "icode iname sql_template");
-        item["icode"] = FwReportsModel.cleanupIcode(item["icode"].toStr());
+        item["icode"] = FwReportsBase.cleanupRepcode(item["icode"].toStr().Trim());
 
-        if (!string.IsNullOrEmpty(item["icode"].toStr()) && fw.model<FwReportsModel>().isExistsByField(item["icode"].toStr(), id, "icode"))
-            fw.FormErrors["icode"] = "EXISTS";
+        if (!string.IsNullOrEmpty(item["icode"].toStr()))
+        {
+            if (FwReportsBase.isHardcodedReport(item["icode"].toStr()))
+                fw.FormErrors["icode"] = "HARDCODED";
+            else if (fw.model<FwReports>().isExistsByField(item["icode"].toStr(), id, "icode"))
+                fw.FormErrors["icode"] = "EXISTS";
+        }
 
         validateCheckResult();
     }
@@ -328,7 +335,7 @@ public class AdminReportsController : FwController
 
         route_onerror = FW.ACTION_SHOW;
 
-        var repcode = FwReports.cleanupRepcode(id);
+        var repcode = FwReportsBase.cleanupRepcode(id);
 
         var f = reqh("f");
         var to_emails = validateReportRecipients(f["to_emails"].toStr());
@@ -340,7 +347,7 @@ public class AdminReportsController : FwController
         string mail_body;
         if (email_as == "pdf")
         {
-            var filepath = FwReports.createFile(fw, repcode, "pdf", f);
+            var filepath = FwReportsBase.createFile(fw, repcode, "pdf", f);
             filenames[repcode + ".pdf"] = filepath;
             mail_body = "Report pdf attached";
         }
@@ -349,7 +356,7 @@ public class AdminReportsController : FwController
             var ps = new FwDict {
                 { "_layout", fw.config("PAGE_LAYOUT_EMAIL") }
             };
-            var html = FwReports.createHtml(fw, repcode, f, ps);
+            var html = FwReportsBase.createHtml(fw, repcode, f, ps);
             mail_body = html;
         }
 

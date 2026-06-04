@@ -11,7 +11,7 @@ public class FwReportsTests
     [TestMethod]
     public void CleanupRepcode_StripsUnsafeCharacters()
     {
-        var cleaned = FwReports.cleanupRepcode("Sales Report#1/2025");
+        var cleaned = FwReportsBase.cleanupRepcode("Sales Report#1/2025");
 
         Assert.AreEqual("SalesReport12025", cleaned);
     }
@@ -22,7 +22,7 @@ public class FwReportsTests
         var fw = TestHelpers.CreateFw();
         fw.G["controller.action"] = "AdminReports.Index";
 
-        var sessionKey = FwReports.filterSessionKey(fw, "sales");
+        var sessionKey = FwReportsBase.filterSessionKey(fw, "sales");
 
         Assert.AreEqual("_filter_AdminReports.Index.sales", sessionKey);
     }
@@ -30,16 +30,16 @@ public class FwReportsTests
     [TestMethod]
     public void Format2Ext_ReturnsJsonExtension()
     {
-        Assert.AreEqual(".json", FwReports.format2ext("json"));
-        Assert.AreEqual(".json", FwReports.format2ext("JSON"));
-        Assert.AreEqual(".html", FwReports.format2ext(null!));
+        Assert.AreEqual(".json", FwReportsBase.format2ext("json"));
+        Assert.AreEqual(".json", FwReportsBase.format2ext("JSON"));
+        Assert.AreEqual(".html", FwReportsBase.format2ext(null!));
     }
 
     [TestMethod]
     public void ValidateSqlTemplate_AllowsSelectAndCte()
     {
-        FwReportsModel.validateSqlTemplate("select id, iname from users where id=@users_id");
-        FwReportsModel.validateSqlTemplate("with active_users as (select id from users) select * from active_users");
+        FwReports.validateSqlTemplate("select id, iname from users where id=@users_id");
+        FwReports.validateSqlTemplate("with active_users as (select id from users) select * from active_users");
     }
 
     [TestMethod]
@@ -51,13 +51,37 @@ public class FwReportsTests
     [DataRow("drop table users")]
     public void ValidateSqlTemplate_RejectsUnsafeSql(string sql)
     {
-        Assert.ThrowsExactly<UserException>(() => FwReportsModel.validateSqlTemplate(sql));
+        Assert.ThrowsExactly<UserException>(() => FwReports.validateSqlTemplate(sql));
+    }
+
+    [TestMethod]
+    [DataRow("update users set iname='x'")]
+    [DataRow("select * into report_tmp from users")]
+    [DataRow("select * from users; select * from settings")]
+    public void CustomReportRuntime_RejectsUnsafeSqlBeforeExecution(string sql)
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
+        var report = new FwCustomReport(new FwDict
+        {
+            ["icode"] = "unsafe",
+            ["iname"] = "Unsafe",
+            ["access_level"] = Users.ACL_SITEADMIN,
+            ["sql_template"] = sql,
+            ["params_json"] = "",
+            ["render_options_json"] = ""
+        });
+        report.init(fw, "unsafe", new FwDict { ["is_preview"] = true });
+
+        var ex = Assert.ThrowsExactly<UserException>(() => report.getData());
+
+        StringAssert.Contains(ex.Message, "Report SQL");
     }
 
     [TestMethod]
     public void ParseParamDefinitions_AddsDefaultsForMissingMetadata()
     {
-        var defs = FwReportsModel.parseParamDefinitions(
+        var defs = FwReports.parseParamDefinitions(
             "select * from users where add_time>=@from_date and id=@users_id and email like @s",
             """
             {
@@ -77,7 +101,7 @@ public class FwReportsTests
     [TestMethod]
     public void ParseParamDefinitions_RejectsUnknownMetadataParam()
     {
-        Assert.ThrowsExactly<UserException>(() => FwReportsModel.parseParamDefinitions(
+        Assert.ThrowsExactly<UserException>(() => FwReports.parseParamDefinitions(
             "select * from users where id=@users_id",
             """{"missing":{"type":"text"}}"""));
     }
@@ -85,7 +109,7 @@ public class FwReportsTests
     [TestMethod]
     public void ParseParamDefinitions_PreservesModelLookupSource()
     {
-        var defs = FwReportsModel.parseParamDefinitions(
+        var defs = FwReports.parseParamDefinitions(
             "select * from users where id=@users_id",
             """[{"name":"users_id","label":"User","type":"lookup","source":"model:Users"}]""");
 
@@ -97,7 +121,7 @@ public class FwReportsTests
     [TestMethod]
     public void ParseParamDefinitions_InfersDatetimeBeforeDate()
     {
-        var defs = FwReportsModel.parseParamDefinitions(
+        var defs = FwReports.parseParamDefinitions(
             "select * from users where add_time <= @to_datetime",
             "");
 
@@ -108,7 +132,7 @@ public class FwReportsTests
     [TestMethod]
     public void ParseParamDefinitions_AllowsSplitLookupTypes()
     {
-        var defs = FwReportsModel.parseParamDefinitions(
+        var defs = FwReports.parseParamDefinitions(
             "select * from users where demo_dicts_id=@demo_dicts_id and id=@users_id and status=@status and is_active=@is_active",
             """
             [
@@ -123,13 +147,13 @@ public class FwReportsTests
         Assert.AreEqual("lookup_model", defs[1]["type"]);
         Assert.AreEqual("lookup_sql", defs[2]["type"]);
         Assert.AreEqual("lookup_tpl", defs[3]["type"]);
-        Assert.IsTrue(FwReportsModel.isLookupParamType(defs[3]["type"].toStr()));
+        Assert.IsTrue(FwReports.isLookupParamType(defs[3]["type"].toStr()));
     }
 
     [TestMethod]
     public void ListIndexState_MarksNoParamReportsForAutorun()
     {
-        var model = new FwReportsModel();
+        var model = new FwReports();
         var rows = new DBList
         {
             new()
@@ -144,7 +168,7 @@ public class FwReportsTests
             }
         };
 
-        typeof(FwReportsModel)
+        typeof(FwReports)
             .GetMethod("withIndexDisplayState", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(model, [rows]);
 
@@ -155,8 +179,8 @@ public class FwReportsTests
     [TestMethod]
     public void CleanupIcon_RemovesBootstrapPrefixAndUnsafeCharacters()
     {
-        Assert.AreEqual("currency-dollar", FwReportsModel.cleanupIcon("bi bi-currency-dollar"));
-        Assert.AreEqual("graph-up", FwReportsModel.cleanupIcon("Graph Up!"));
+        Assert.AreEqual("currency-dollar", FwReports.cleanupIcon("bi bi-currency-dollar"));
+        Assert.AreEqual("graph-up", FwReports.cleanupIcon("Graph Up!"));
     }
 
     [TestMethod]
@@ -165,7 +189,7 @@ public class FwReportsTests
         var fw = TestHelpers.CreateFw();
         fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
 
-        var report = FwReports.createInstance(fw, "Sample", []);
+        var report = FwReportsBase.createInstance(fw, "Sample", []);
 
         Assert.IsInstanceOfType(report, typeof(SampleReport));
     }
@@ -175,7 +199,7 @@ public class FwReportsTests
     {
         var fw = TestHelpers.CreateFw();
         fw.Session("access_level", Users.ACL_MEMBER.ToString());
-        var model = new FwReportsModel();
+        var model = new FwReports();
         model.init(fw);
         var report = new FwDict
         {
@@ -217,13 +241,14 @@ public class FwReportsTests
         Assert.AreEqual("12.5", totals[1]["display_value"]);
         Assert.AreEqual("", totals[2]["display_value"]);
         Assert.IsTrue(report.ps["has_result_totals"].toBool());
+        Assert.IsTrue(report.ps["is_result_sortable"].toBool());
     }
 
     [TestMethod]
     public void CustomReportSqlParams_AcceptsDateOnlyValueForDatetime()
     {
-        var model = new FwReportsModel();
-        var defs = FwReportsModel.parseParamDefinitions(
+        var model = new FwReports();
+        var defs = FwReports.parseParamDefinitions(
             "select * from users where add_time <= @to_datetime",
             """[{"name":"to_datetime","type":"datetime"}]""");
 
@@ -270,6 +295,8 @@ public class FwReportsTests
 
         Assert.IsTrue(report.ps["has_report_error"].toBool());
         Assert.IsFalse(report.ps["is_report_results_visible"].toBool());
+        Assert.IsTrue(report.ps["has_run_context"].toBool());
+        Assert.AreEqual("Row limit: 1000", report.ps["row_limit_context"]);
         Assert.AreEqual("Invalid object name 'missing_table'.", report.ps["report_error_message"]);
         Assert.AreEqual("Bad Report", report.ps["title"]);
 
@@ -284,6 +311,28 @@ public class FwReportsTests
     public void AdminReportsController_AllowsLoggedUsersForCustomReportGate()
     {
         Assert.AreEqual(Users.ACL_MEMBER, AdminReportsController.access_level);
+    }
+
+    [TestMethod]
+    public void AdminReportsController_RejectsCustomCodeThatMatchesHardcodedReport()
+    {
+        var fw = TestHelpers.CreateFw();
+        var controller = new AdminReportsController();
+        controller.init(fw);
+        var item = new FwDict
+        {
+            ["icode"] = "Sample",
+            ["iname"] = "Sample Custom",
+            ["sql_template"] = "select 1 as id"
+        };
+        var method = typeof(AdminReportsController)
+            .GetMethod("validateCustomReport", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new AssertFailedException("validateCustomReport not found");
+
+        var ex = Assert.ThrowsExactly<TargetInvocationException>(() => method.Invoke(controller, [0, item]));
+
+        Assert.IsInstanceOfType(ex.InnerException, typeof(ValidationException));
+        Assert.AreEqual("HARDCODED", fw.FormErrors["icode"]);
     }
 
     [TestMethod]
@@ -319,7 +368,7 @@ public class FwReportsTests
         Assert.AreEqual("ready", filter["status"]);
     }
 
-    private sealed class JsonReportForTest : FwReports
+    private sealed class JsonReportForTest : FwReportsBase
     {
         public override void setFilters()
         {

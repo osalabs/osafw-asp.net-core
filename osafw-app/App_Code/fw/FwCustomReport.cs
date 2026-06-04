@@ -9,12 +9,12 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class FwCustomReport : FwReports
+public class FwCustomReport : FwReportsBase
 {
     private static readonly Regex NonTotalFieldRegex = new(@"(^id$|_id$|^status$|_status$|^access_level$|^icode$|^code$|^type$|^prio$|^att$|_user$|^is_|^has_|^ui_|_mode$|_theme$|_format$|^staff$|^phone$|^zip$|^color_codes$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly FwDict report;
-    private FwReportsModel reportModel = null!;
+    private FwReports reportModel = null!;
     private FwList paramDefs = [];
 
     public FwCustomReport(FwDict report)
@@ -23,7 +23,7 @@ public class FwCustomReport : FwReports
     }
 
     /// <summary>
-    /// Initializes a stored report while preserving the normal FwReports rendering contract.
+    /// Initializes a stored report while preserving the normal FwReportsBase rendering contract.
     /// </summary>
     /// <param name="fw">Current framework request context.</param>
     /// <param name="report_code">Route-safe report code.</param>
@@ -32,10 +32,10 @@ public class FwCustomReport : FwReports
     {
         base.init(fw, report_code, f);
 
-        reportModel = fw.model<FwReportsModel>();
+        reportModel = fw.model<FwReports>();
         access_level = report["access_level"].toInt();
 
-        var options = FwReportsModel.parseRenderOptions(report["render_options_json"].toStr());
+        var options = FwReports.parseRenderOptions(report["render_options_json"].toStr());
         foreach (var key in options.Keys)
             render_options[key] = options[key];
     }
@@ -64,15 +64,15 @@ public class FwCustomReport : FwReports
     {
         base.setFilters();
 
-        paramDefs = FwReportsModel.parseParamDefinitions(report["sql_template"].toStr(), report["params_json"].toStr());
+        paramDefs = FwReports.parseParamDefinitions(report["sql_template"].toStr(), report["params_json"].toStr());
         foreach (var def in paramDefs)
         {
             var name = def["name"].toStr();
             if (string.IsNullOrEmpty(f[name].toStr()))
-                f[name] = resolveFilterDefault(def);
+                f[name] = FwReports.resolveParamDefault(def, fw.userDateFormat);
 
             def["value"] = f[name].toStr();
-            if (FwReportsModel.isLookupParamType(def["type"].toStr()))
+            if (FwReports.isLookupParamType(def["type"].toStr()))
                 def["options"] = reportModel.listParamOptions(def);
         }
 
@@ -91,16 +91,15 @@ public class FwCustomReport : FwReports
             setFilters();
 
         var sql = report["sql_template"].toStr();
-        var rowLimit = optionInt("row_limit", FwReportsModel.DEFAULT_ROW_LIMIT);
-        if (f["is_preview"].toBool())
-            rowLimit = optionInt("preview_limit", FwReportsModel.DEFAULT_PREVIEW_LIMIT);
+        FwReports.validateSqlTemplate(sql);
+        var rowLimit = currentRowLimit();
 
         if (rowLimit > 0 && Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
             sql = db.limit(sql, rowLimit);
 
         var sqlParams = reportModel.buildSqlParams(paramDefs, f, fw.userDateFormat, fw.userTimeFormat);
         var oldTimeout = db.sql_command_timeout;
-        db.sql_command_timeout = optionInt("timeout_seconds", FwReportsModel.DEFAULT_TIMEOUT_SECONDS);
+        db.sql_command_timeout = optionInt("timeout_seconds", FwReports.DEFAULT_TIMEOUT_SECONDS);
         try
         {
             list_rows = db.arrayp(sql, sqlParams, rowLimit > 0 ? rowLimit : -1);
@@ -113,6 +112,7 @@ public class FwCustomReport : FwReports
         sortResultRows();
         list_count = list_rows.Count;
         buildResultTable();
+        addRunContext(rowLimit);
         ps["is_report_results_visible"] = true;
     }
 
@@ -134,6 +134,7 @@ public class FwCustomReport : FwReports
             : "Report doesn't work. Contact Site Administrator.";
 
         addTemplateState();
+        addRunContext(currentRowLimit());
     }
 
     /// <summary>
@@ -149,29 +150,16 @@ public class FwCustomReport : FwReports
     }
 
     /// <summary>
-    /// Resolves display defaults for generated filters before the report is run.
+    /// Returns the row limit that applies to the current full or preview execution.
     /// </summary>
-    /// <param name="def">Normalized parameter metadata row.</param>
-    /// <returns>Default filter value formatted for the current user.</returns>
-    private string resolveFilterDefault(FwDict def)
+    /// <returns>Configured row or preview limit, falling back to framework defaults.</returns>
+    private int currentRowLimit()
     {
-        var defaultValue = def["default"].toStr();
-        if (string.IsNullOrEmpty(defaultValue))
-            return string.Empty;
+        var rowLimit = optionInt("row_limit", FwReports.DEFAULT_ROW_LIMIT);
+        if (f["is_preview"].toBool())
+            rowLimit = optionInt("preview_limit", FwReports.DEFAULT_PREVIEW_LIMIT);
 
-        var type = def["type"].toStr();
-        if (type != "date" && type != "datetime")
-            return defaultValue;
-
-        var lower = defaultValue.ToLowerInvariant();
-        if (lower == "today")
-            return DateUtils.Date2Str(DateTime.Now, fw.userDateFormat);
-
-        var match = Regex.Match(lower, @"^([+-]?\d+)d$");
-        if (match.Success)
-            return DateUtils.Date2Str(DateTime.Now.AddDays(match.Groups[1].Value.toInt()), fw.userDateFormat);
-
-        return defaultValue;
+        return rowLimit;
     }
 
     /// <summary>
@@ -185,6 +173,40 @@ public class FwCustomReport : FwReports
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
         ps["has_custom_params"] = paramDefs.Count > 0;
         ps["title"] = report["iname"].toStr();
+    }
+
+    /// <summary>
+    /// Adds execution context that makes printed/exported custom report output self-describing.
+    /// </summary>
+    /// <param name="rowLimit">Configured limit for the current execution mode.</param>
+    private void addRunContext(int rowLimit)
+    {
+        var appliedParams = new FwList();
+        foreach (var def in paramDefs)
+        {
+            var name = def["name"].toStr();
+            var value = f[name].toStr();
+            if (string.IsNullOrEmpty(value))
+                continue;
+
+            appliedParams.Add(new FwDict
+            {
+                ["name"] = name,
+                ["label"] = def["label"].toStr(),
+                ["value"] = value
+            });
+        }
+
+        ps["generated_time"] = DateUtils.DateTime2Str(DateTime.Now, fw.userDateFormat, fw.userTimeFormat);
+        ps["applied_params"] = appliedParams;
+        ps["has_applied_params"] = appliedParams.Count > 0;
+        ps["row_limit"] = rowLimit;
+        ps["row_limit_context"] = rowLimit > 0
+            ? (f["is_preview"].toBool() ? "Preview limit: " : "Row limit: ") + rowLimit
+            : "No row limit";
+        ps["has_row_limit_context"] = true;
+        ps["sorting_context"] = "Sorting applies to displayed rows only.";
+        ps["has_run_context"] = true;
     }
 
     /// <summary>
@@ -268,6 +290,7 @@ public class FwCustomReport : FwReports
         ps["result_totals"] = totals;
         ps["has_result_rows"] = rows.Count > 0;
         ps["has_result_totals"] = rows.Count > 0 && hasTotals;
+        ps["is_result_sortable"] = true;
     }
 
     /// <summary>
