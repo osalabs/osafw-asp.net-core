@@ -1,11 +1,11 @@
 <div class="fw-card">
   <table class="table table-sm table-bordered table-hover list">
-    <thead>
+    <thead class="table-light">
       <tr <~/admin/reports/common/tr_sort unless="IS_PRINT_MODE">>
         <~result_headers repeat inline><th class="<~align_class>" data-sort="<~field>"><~iname></th></~result_headers>
       </tr>
     </thead>
-    <tbody>
+    <tbody class="table-group-divider">
       <~result_rows repeat inline>
         <tr>
           <~cells repeat inline><td class="<~align_class>"><~value></td></~cells>
@@ -13,8 +13,8 @@
       </~result_rows>
     </tbody>
     <~totals_footer if="has_result_totals" inline>
-    <tfoot>
-      <tr>
+    <tfoot class="table-group-divider">
+      <tr class="table-light">
         <~result_totals repeat inline><td class="<~align_class> fw-semibold"><~display_value></td></~result_totals>
       </tr>
     </tfoot>

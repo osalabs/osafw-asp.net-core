@@ -6,6 +6,8 @@
 - Moved custom report form Help examples into templates, removed controller-built form/help state, and changed Preview Run to reroute through `ShowFormAction`.
 - Applied follow-up feedback for report breadcrumbs without View/Edit labels, inline title count badges, title icons, custom report sort headers, preview count badge/totals, and clearer `Edit Custom Report` action text.
 - Applied the latest feedback for edit breadcrumbs linking back to the report run screen, no-param custom report autorun links, `Modify Report` action styling/placement, icon input prepend, expanded parameter Help, model-based lookup sources, and local seeded reports for UI coverage.
+- Applied the latest report index and runtime UI feedback: responsive multi-column report lists, client-side fuzzy report filtering, right-aligned Modify Report action, Bootstrap-styled result table header/footer/dividers, `Totals` footer label, split lookup parameter types, `.sel` template lookups, and custom report calendar loading.
+- Applied the latest follow-up feedback: removed the redundant onload wrapper, restored Bootstrap list-group styling while keeping report columns, and handled custom report SQL execution errors inline for preview and run screens with Site Admin-only detail.
 ## Scope reviewed
 - Existing `AdminReportsController`, `FwReports`, sample report templates, report tests, DB helper parameter/limit behavior, RBAC resource checks, SQL schema scripts, and docs map.
 - Feedback pass also reviewed shared page-header/breadcrumb templates, report list layout, local SQL Server update path, Visual Studio launch behavior, and Playwright smoke flows on `https://localhost:44315`.
@@ -28,11 +30,21 @@
 - Third follow-up Playwright MCP smoke verified `/Admin/Reports/new` breadcrumb/focus/defaults/help, `/Admin/Reports/rep1/edit` breadcrumb report-name link and icon prepend, `/Admin/Reports` custom report count/icon rendering/autorun URLs, `/Admin/Reports/test1?dofilter=1` title icon/count/Modify Report button/totals/sorting, parameter-heavy generated filters including `model:Users`, edit Preview Run totals above Help, render options row limiting, and hardcoded Sample breadcrumb/title behavior.
 - Third follow-up final build `dotnet build osafw-app\osafw-app.csproj` passed with 0 warnings/errors after stopping IIS Express.
 - Third follow-up focused test `dotnet test osafw-tests\osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts\assistant_test_build\` passed: 21 tests, 1 existing nullable warning in `ConvUtilsTests.cs`.
+- Fourth follow-up isolated build `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts\assistant_build\` passed with 0 warnings/errors.
+- Fourth follow-up focused test initially hit a locked app intermediate from IIS Express, then passed after stopping IIS Express: `dotnet test osafw-tests\osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts\assistant_test_build\` passed 22 tests with 1 existing nullable warning in `ConvUtilsTests.cs`.
+- Fourth follow-up normal build `dotnet build osafw-app\osafw-app.csproj` passed with 0 warnings/errors, then the app was relaunched through Visual Studio without debugging.
+- Fourth follow-up Playwright MCP smoke verified `/Admin/Reports` 3-column layout on wide viewport, fuzzy filter `testrep` leaving only `Test 1 report`, `/Admin/Reports/test1?dofilter=1` right-side Modify Report action and table header/body/footer styling, `/Admin/Reports/Sample?dofilter=1` hardcoded table styling, split lookup filters for table/model/sql/template sources, custom report calendar loading, and updated Help examples.
+- Fifth follow-up focused test `dotnet test osafw-tests\osafw-tests.csproj --filter FwReportsTests -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_test\` passed: 23 tests, 1 existing nullable warning in `ConvUtilsTests.cs`.
+- Fifth follow-up normal build `dotnet build osafw-app\osafw-app.csproj` passed with 0 warnings/errors after stopping IIS Express.
+- Fifth follow-up Playwright MCP smoke verified invalid SQL preview stays on `/Admin/Reports/new` and shows an inline detailed alert, invalid SQL run screen shows the detailed alert without the results table, `/Admin/Reports` renders custom reports as 3 Bootstrap list-group columns, fuzzy filter `testrep` visually leaves only `Test 1 report`, and the temporary invalid test report was soft-deleted through the UI.
+- Fifth follow-up review loop: reviewer sub-agent timed out twice and was closed; local review using `docs/agents/code_reviewer.md` found no remaining issues worth another loop.
+- Cleanup follow-up stopped the stray direct-run `dotnet`/`osafw-app` processes that were locking `bin\Debug\net10.0\osafw-app.exe`, then used Visual Studio MCP `build_project` and `debugger_launch_without_debugging` to build and restart the startup project through VS/IIS Express.
 - `git diff --check` passed.
 - CRLF check passed for all files changed in this task.
 - Follow-up review loop: reviewer sub-agent timed out and was closed; local review using `docs/agents/code_reviewer.md` found no remaining issues worth another loop.
 - Second follow-up review loop: reviewer sub-agent timed out and was closed; local review using `docs/agents/code_reviewer.md` found and fixed descending-sort empty-value ordering, then focused build/tests passed again.
 - Third follow-up review loop: local review using `docs/agents/code_reviewer.md` found no remaining issues worth another loop; independent reviewer sub-agent also found no issues and said the review loop can stop.
+- Fourth follow-up review loop: local review found no issues; independent reviewer sub-agent also found no blocking correctness/security/template-contract regressions.
 ## Decisions - why
 - Custom reports use a `FwCustomReport` adapter instead of duplicating report rendering/export logic in the controller.
 - `FwReports.createInstance()` now resolves hardcoded classes first, then active `fwreports` rows, so existing URLs and helper APIs keep working.
@@ -55,18 +67,23 @@
 - Custom report sorting is intentionally applied after the stored SQL returns rows, so it stays within the validated result shape and avoids rewriting Site Admin-authored SQL.
 - Local review fixed custom report descending sort so null/empty values remain last instead of moving to the top after descending reversal.
 - The report header metadata area inherited shared `margin-left:auto`; fixed the report-specific header with `ms-0` so `Modify Report` sits next to the title without changing shared form/list headers.
+- Later feedback wanted `Modify Report` back on the right side of the same header row, so the report-specific header returned to the standard flex-grow title plus auto-margin metadata layout.
 - IIS Express had to be stopped before rebuilding normal VS output; isolated builds alone did not update the live browser smoke target.
 - Generated build artifacts were removed after verification.
+- Combined `if`/`unless` on the custom report include did not suppress the no-rows results block after an execution error; added an explicit `is_report_results_visible` flag for normal result rendering.
+- Bootstrap `.list-group` is flex by default, so CSS columns did not apply until the report-specific list container was changed to `display:block` while retaining `list-group-item` styling.
+- Manual IIS Express launch from `.vs` config failed without Visual Studio's launcher environment variables; used `dotnet run --no-build --urls https://localhost:44315;http://localhost:57921` for the final browser smoke.
 ## Risks / follow-ups
 - CTE queries are capped at the reader level, but SQL-level limiting is only added automatically for simple `SELECT`; admins should still include provider-specific limits for large CTEs to reduce database work.
 - Full test suite has unrelated failures in this environment; focused report tests passed.
 - Browser/UI smoke used the local SQL Server `demo` DB after applying the additive update script.
 - Local UI smoke also applied an ignored agent-artifact seed script that created or updated 12 active custom reports in `demo`; this data is for verification, not shared schema/data setup.
+- The final browser smoke temporarily left the app running via a hidden `dotnet run --no-build` process on port 44315 because the VS-only IIS Express launcher environment was unavailable from the shell; that process was later stopped and the app relaunched through Visual Studio MCP.
 ## Heuristics (keep terse)
 - No shared heuristics added.
 ## Testing instructions
 - Apply `osafw-app/App_Data/sql/updates/upd2026-06-03-custom-reports.sql` before using the UI against an existing SQL Server DB.
 - Run `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/` if normal output is locked.
-- Run `dotnet test osafw-tests/osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts/assistant_test_build/`.
+- Run `dotnet test osafw-tests/osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts/assistant_test/`.
 ## Reflection
-The main slowdown was distinguishing template hot-reload from stale compiled C# in the VS-hosted IIS Express app. Future browser smoke after C# edits should stop IIS Express, run a normal project build, then launch without debugging before trusting the page. A reviewer sub-agent was requested for the feedback diff but timed out and was closed, so the final review used `docs/agents/code_reviewer.md` locally and found no remaining issues worth another loop. No recurring instruction change is recommended yet; this task is too feature-specific.
+The main slowdown was distinguishing template hot-reload from stale compiled C# in the VS-hosted IIS Express app. Future browser smoke after C# edits should prefer Visual Studio MCP build/restart, using `debugger_stop` only when VS reports an active debug session, and should not start an unmanaged `dotnet run` process on the same VS port. A reviewer sub-agent was useful in prior passes but timed out in this round; the local fallback review was enough for the narrow diff. No recurring instruction change is recommended yet; this task is too feature-specific.

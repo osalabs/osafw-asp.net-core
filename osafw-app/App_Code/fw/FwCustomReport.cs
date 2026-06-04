@@ -72,17 +72,12 @@ public class FwCustomReport : FwReports
                 f[name] = resolveFilterDefault(def);
 
             def["value"] = f[name].toStr();
-            if (def["type"].toStr() == "lookup")
+            if (FwReportsModel.isLookupParamType(def["type"].toStr()))
                 def["options"] = reportModel.listParamOptions(def);
         }
 
         f_data["custom_params"] = paramDefs;
-        ps["custom_report"] = report;
-        ps["custom_params"] = paramDefs;
-        ps["is_custom_report"] = true;
-        ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
-        ps["has_custom_params"] = paramDefs.Count > 0;
-        ps["title"] = report["iname"].toStr();
+        addTemplateState();
     }
 
     /// <summary>
@@ -118,6 +113,27 @@ public class FwCustomReport : FwReports
         sortResultRows();
         list_count = list_rows.Count;
         buildResultTable();
+        ps["is_report_results_visible"] = true;
+    }
+
+    /// <summary>
+    /// Prepares the generic report template to show a handled execution error instead of throwing to the framework error page.
+    /// </summary>
+    /// <param name="ex">Exception raised while building filters or executing the stored SQL.</param>
+    /// <param name="isDetailed">True when the current user may see the underlying SQL/database error text.</param>
+    public void setExecutionError(Exception ex, bool isDetailed)
+    {
+        list_rows = [];
+        list_count = 0;
+
+        ps["is_run"] = true;
+        ps["has_report_error"] = true;
+        ps["is_report_results_visible"] = false;
+        ps["report_error_message"] = isDetailed
+            ? reportErrorMessage(ex)
+            : "Report doesn't work. Contact Site Administrator.";
+
+        addTemplateState();
     }
 
     /// <summary>
@@ -156,6 +172,29 @@ public class FwCustomReport : FwReports
             return DateUtils.Date2Str(DateTime.Now.AddDays(match.Groups[1].Value.toInt()), fw.userDateFormat);
 
         return defaultValue;
+    }
+
+    /// <summary>
+    /// Adds common template values needed by normal and error rendering paths.
+    /// </summary>
+    private void addTemplateState()
+    {
+        ps["custom_report"] = report;
+        ps["custom_params"] = paramDefs;
+        ps["is_custom_report"] = true;
+        ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
+        ps["has_custom_params"] = paramDefs.Count > 0;
+        ps["title"] = report["iname"].toStr();
+    }
+
+    /// <summary>
+    /// Returns the most useful exception message without exposing a stack trace.
+    /// </summary>
+    /// <param name="ex">Exception raised during report execution.</param>
+    /// <returns>Base exception message for display to Site Admins.</returns>
+    public static string reportErrorMessage(Exception ex)
+    {
+        return (ex.GetBaseException().Message ?? ex.Message).toStr();
     }
 
     /// <summary>
@@ -217,7 +256,7 @@ public class FwCustomReport : FwReports
             {
                 ["field"] = field,
                 ["has_total"] = hasTotal,
-                ["display_value"] = isFirstCell ? "Total" : hasTotal ? totalValues[field].ToString("0.##", CultureInfo.InvariantCulture) : string.Empty,
+                ["display_value"] = isFirstCell ? "Totals" : hasTotal ? totalValues[field].ToString("0.##", CultureInfo.InvariantCulture) : string.Empty,
                 ["align_class"] = isFirstCell ? string.Empty : numericFields[field] ? "text-end" : string.Empty
             });
             isFirstCell = false;

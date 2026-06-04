@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.IO;
 using System.Reflection;
 
@@ -94,6 +95,27 @@ public class FwReportsTests
     }
 
     [TestMethod]
+    public void ParseParamDefinitions_AllowsSplitLookupTypes()
+    {
+        var defs = FwReportsModel.parseParamDefinitions(
+            "select * from users where demo_dicts_id=@demo_dicts_id and id=@users_id and status=@status and is_active=@is_active",
+            """
+            [
+              {"name":"demo_dicts_id","type":"lookup_table","source":"demo_dicts"},
+              {"name":"users_id","type":"lookup_model","source":"Users"},
+              {"name":"status","type":"lookup_sql","source":"SELECT id, iname FROM statuses"},
+              {"name":"is_active","type":"lookup_tpl","source":"/common/sel/yn.sel"}
+            ]
+            """);
+
+        Assert.AreEqual("lookup_table", defs[0]["type"]);
+        Assert.AreEqual("lookup_model", defs[1]["type"]);
+        Assert.AreEqual("lookup_sql", defs[2]["type"]);
+        Assert.AreEqual("lookup_tpl", defs[3]["type"]);
+        Assert.IsTrue(FwReportsModel.isLookupParamType(defs[3]["type"].toStr()));
+    }
+
+    [TestMethod]
     public void ListIndexState_MarksNoParamReportsForAutorun()
     {
         var model = new FwReportsModel();
@@ -178,7 +200,7 @@ public class FwReportsTests
         Assert.AreEqual("text-end", headers[0]["align_class"]);
         Assert.AreEqual("text-end", headers[1]["align_class"]);
         Assert.AreEqual("", headers[3]["align_class"]);
-        Assert.AreEqual("Total", totals[0]["display_value"]);
+        Assert.AreEqual("Totals", totals[0]["display_value"]);
         Assert.AreEqual("", totals[0]["align_class"]);
         Assert.AreEqual("12.5", totals[1]["display_value"]);
         Assert.AreEqual("", totals[2]["display_value"]);
@@ -206,6 +228,27 @@ public class FwReportsTests
         Assert.AreEqual("Gamma", report.list_rows[2]["name"]);
         Assert.AreEqual("amount", report.f["sortby"]);
         Assert.AreEqual("desc", report.f["sortdir"]);
+    }
+
+    [TestMethod]
+    public void CustomReportExecutionError_ShowsDetailOnlyWhenAllowed()
+    {
+        var fw = TestHelpers.CreateFw();
+        var report = new FwCustomReport(new FwDict { ["icode"] = "bad", ["iname"] = "Bad Report" });
+        report.init(fw, "bad", []);
+
+        report.setExecutionError(new ApplicationException("Invalid object name 'missing_table'."), true);
+
+        Assert.IsTrue(report.ps["has_report_error"].toBool());
+        Assert.IsFalse(report.ps["is_report_results_visible"].toBool());
+        Assert.AreEqual("Invalid object name 'missing_table'.", report.ps["report_error_message"]);
+        Assert.AreEqual("Bad Report", report.ps["title"]);
+
+        report.setExecutionError(new ApplicationException("Sensitive database details"), false);
+
+        Assert.IsTrue(report.ps["has_report_error"].toBool());
+        Assert.IsFalse(report.ps["is_report_results_visible"].toBool());
+        Assert.AreEqual("Report doesn't work. Contact Site Administrator.", report.ps["report_error_message"]);
     }
 
     [TestMethod]

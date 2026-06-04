@@ -3,26 +3,20 @@
     <div class="page-header-title flex-grow-1">
       <h1 class="page-title mb-0"><~title></h1>
     </div>
+    <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+      <div class="input-group input-group-sm reports-filter">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input id="reportsFilter" type="search" class="form-control" placeholder="type to filter..." autocomplete="off">
+      </div>
+    </div>
   </div>
 </div>
 <hr>
 
 <~hardcoded_reports if="is_hardcoded_reports_visible" inline>
-<div class="row">
-    <div class="col-sm-4">
-        <!--h2>General</h2-->
-
-        <div class="list-group">
-            <a href="<~../url>/Sample" class="list-group-item">Sample Report</a>
-            <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item"><~tpl-title></a></~tplcodegen>
-        </div>
-
-    </div>
-    <div class="col-sm-4">
-
-    </div>
-    <div class="col-sm-4">
-    </div>
+<div class="list-group reports-list-columns">
+    <a href="<~../url>/Sample" class="list-group-item report-list-item js-report-item" data-report-title="Sample Report">Sample Report</a>
+    <~tplcodegen if="0" inline><a href="<~../url>/<~tpl-code>" class="list-group-item report-list-item js-report-item" data-report-title="<~tpl-title>"><~tpl-title></a></~tplcodegen>
 </div>
 </~hardcoded_reports>
 
@@ -31,24 +25,20 @@
     <h2 class="h4 mb-0">`Custom Reports`</h2>
     <~create_btn if="is_site_admin" inline><a href="<~../url>/new" class="btn btn-primary btn-sm"><~/common/icons/plus-lg>`Create New Report`</a></~create_btn>
 </div>
-<div class="row">
-    <div class="col-sm-4">
-        <~custom_list if="is_custom_reports_visible" inline>
-        <div class="list-group">
-            <~custom_reports repeat inline>
-                <a href="<~../url>/<~icode><~autorun if="is_autorun" inline>?dofilter=1</~autorun>" class="list-group-item">
-                    <~report_icon if="icon" inline><i class="bi bi-<~icon> me-1"></i></~report_icon>
-                    <span><~iname></span>
-                    <small class="d-block text-muted"><~idesc></small>
-                </a>
-            </~custom_reports>
-        </div>
-        </~custom_list>
-        <~empty_custom unless="is_custom_reports_visible" inline>
-          <div class="text-muted">`No custom reports yet.`</div>
-        </~empty_custom>
-    </div>
+<~custom_list if="is_custom_reports_visible" inline>
+<div class="list-group reports-list-columns">
+    <~custom_reports repeat inline>
+        <a href="<~../url>/<~icode><~autorun if="is_autorun" inline>?dofilter=1</~autorun>" class="list-group-item report-list-item js-report-item" data-report-title="<~iname>">
+            <~report_icon if="icon" inline><i class="bi bi-<~icon> me-1"></i></~report_icon>
+            <span><~iname></span>
+            <small class="d-block text-muted"><~idesc></small>
+        </a>
+    </~custom_reports>
 </div>
+</~custom_list>
+<~empty_custom unless="is_custom_reports_visible" inline>
+  <div class="text-muted">`No custom reports yet.`</div>
+</~empty_custom>
 </~custom_block>
 
 <!--div class="row">

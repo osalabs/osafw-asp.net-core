@@ -56,6 +56,8 @@ Runtime values are bound as DB parameters. Do not concatenate user input into SQ
 
 The runtime stops reading after the configured row limit for every custom report. Simple `SELECT` queries also receive a provider SQL limit. For CTE queries, include an explicit provider-specific limit when possible so the database can avoid extra work.
 
+Runtime SQL errors are shown on the report screen instead of the framework error page. Site Admins see database error details; other users see a short contact-administrator message.
+
 ## Parameters
 
 Use `@param_name` placeholders in SQL. `params_json` can be omitted; missing metadata is generated automatically.
@@ -79,6 +81,10 @@ Supported types:
 - `date`
 - `datetime`
 - `lookup`
+- `lookup_table`
+- `lookup_model`
+- `lookup_sql`
+- `lookup_tpl`
 
 Lookup options can be static:
 
@@ -95,7 +101,18 @@ Lookup options can be static:
 }
 ```
 
-Lookup `source` can also be `users`, `fwentities`, `log_types`, `model:Users`, or `sql:SELECT id, iname FROM ...`. Model-based lookups call the model's `listSelectOptions()` method, so use an existing model class name and keep the SQL placeholder aligned with the selected id field.
+Use the split lookup types when options come from framework sources:
+
+```json
+[
+  {"name":"demo_dicts_id","label":"Demo Dict","type":"lookup_table","source":"demo_dicts"},
+  {"name":"users_id","label":"User","type":"lookup_model","source":"Users"},
+  {"name":"users_id","label":"User","type":"lookup_sql","source":"SELECT id, email AS iname FROM users WHERE status=0"},
+  {"name":"is_active","label":"Is Active","type":"lookup_tpl","source":"/common/sel/yn.sel"}
+]
+```
+
+`lookup_table` expects a table with `id` and `iname` columns. `lookup_model` calls the model's `listSelectOptions()` method. `lookup_sql` must be one safe read-only SQL statement returning `id` and `iname`. `lookup_tpl` reads an existing `.sel` template.
 
 ## Render Options
 

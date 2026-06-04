@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -200,6 +201,16 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
     {
         var defs = parseParamDefinitions(sql, paramsJson);
         return defs.Count == 0 ? string.Empty : Utils.jsonEncode(defs, true);
+    }
+
+    /// <summary>
+    /// Checks whether a normalized parameter type renders as a select control with option metadata.
+    /// </summary>
+    /// <param name="type">Normalized parameter type from params_json.</param>
+    /// <returns>True for lookup and lookup source variants.</returns>
+    public static bool isLookupParamType(string type)
+    {
+        return Utils.qw("lookup lookup_table lookup_model lookup_sql lookup_tpl").Contains((type ?? string.Empty).Trim().ToLowerInvariant());
     }
 
     /// <summary>
@@ -435,7 +446,7 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
                 continue;
             }
 
-            result["@" + name] = convertParamValue(name, type, value, userDateFormat, userTimeFormat);
+            result["@" + name] = convertParamValue(name, def, value, userDateFormat, userTimeFormat);
             f[name] = value;
         }
         return result;
@@ -454,9 +465,19 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
         if (def["options"] is FwDict optionsDict)
             return normalizeOptionDict(optionsDict);
 
+        var type = def["type"].toStr();
         var source = def["source"].toStr().Trim();
         if (string.IsNullOrEmpty(source))
             return [];
+
+        if (type == "lookup_table")
+            return listTableParamOptions(source);
+        if (type == "lookup_model")
+            return listModelParamOptions(source);
+        if (type == "lookup_sql")
+            return listSqlParamOptions(source);
+        if (type == "lookup_tpl")
+            return listTemplateParamOptions(source);
 
         if (source.Equals("users", StringComparison.OrdinalIgnoreCase))
             return fw.model<Users>().listSelectOptions();
@@ -485,6 +506,91 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
         }
 
         throw new UserException("Unsupported lookup source: " + source);
+    }
+
+    /// <summary>
+    /// Loads lookup rows from a table that exposes `id` and `iname` columns.
+    /// </summary>
+    /// <param name="source">Table name, optionally schema-qualified.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listTableParamOptions(string source)
+    {
+        validateLookupIdentifier(source);
+        var sql = $@"
+SELECT {db.qid("id")} AS id,
+       {db.qid("iname")} AS iname
+FROM {db.qid(source)}
+ORDER BY {db.qid("iname")}";
+        sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
+        return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+    }
+
+    /// <summary>
+    /// Loads lookup rows from an existing framework model by using its standard select-options method.
+    /// </summary>
+    /// <param name="source">Model class name without namespace.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listModelParamOptions(string source)
+    {
+        if (!Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*$"))
+            throw new UserException("Unsupported lookup source: " + source);
+
+        return fw.model(source).listSelectOptions();
+    }
+
+    /// <summary>
+    /// Loads lookup rows from an admin-authored read-only SQL statement returning id and iname.
+    /// </summary>
+    /// <param name="source">Read-only SQL statement.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listSqlParamOptions(string source)
+    {
+        var sql = source.Trim();
+        validateSqlTemplate(sql);
+        if (Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
+            sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
+
+        return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+    }
+
+    /// <summary>
+    /// Loads lookup rows from a ParsePage `.sel` template so existing static option files can be reused.
+    /// </summary>
+    /// <param name="source">Template path such as `/common/sel/yn.sel`.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listTemplateParamOptions(string source)
+    {
+        var normalizedSource = source.Trim().Replace('\\', '/').TrimStart('/');
+        if (!normalizedSource.EndsWith(".sel", StringComparison.OrdinalIgnoreCase) || normalizedSource.Contains(".."))
+            throw new UserException("Unsupported lookup source: " + source);
+
+        var templateRoot = Path.GetFullPath(fw.config("template").toStr());
+        if (!templateRoot.EndsWith(Path.DirectorySeparatorChar))
+            templateRoot += Path.DirectorySeparatorChar;
+
+        var fullPath = Path.GetFullPath(Path.Combine(templateRoot, normalizedSource.Replace('/', Path.DirectorySeparatorChar)));
+        if (!fullPath.StartsWith(templateRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+            throw new UserException("Unsupported lookup source: " + source);
+
+        var result = new FwList();
+        foreach (var line in File.ReadAllLines(fullPath))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
+                continue;
+
+            var separatorIndex = trimmed.IndexOf('|');
+            if (separatorIndex < 0)
+                continue;
+
+            result.Add(new FwDict
+            {
+                ["id"] = trimmed[..separatorIndex],
+                ["iname"] = cleanupSelLabel(trimmed[(separatorIndex + 1)..])
+            });
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -542,7 +648,7 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
         var type = meta["type"].toStr().Trim().ToLowerInvariant();
         if (string.IsNullOrEmpty(type))
             type = inferParamType(name);
-        if (!Utils.qw("text int number date datetime lookup").Contains(type))
+        if (!Utils.qw("text int number date datetime lookup lookup_table lookup_model lookup_sql lookup_tpl").Contains(type))
             throw new UserException("Unsupported parameter type for @" + name);
 
         meta["type"] = type;
@@ -599,15 +705,28 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
     /// <param name="userDateFormat">Current user's date format.</param>
     /// <param name="userTimeFormat">Current user's time format.</param>
     /// <returns>Typed value for a DB parameter.</returns>
-    private static object convertParamValue(string name, string type, string value, int userDateFormat, int userTimeFormat)
+    private static object convertParamValue(string name, FwDict def, string value, int userDateFormat, int userTimeFormat)
     {
+        var type = def["type"].toStr();
         switch (type)
         {
             case "int":
-            case "lookup":
+            case "lookup_table":
+            case "lookup_model":
+            case "lookup_sql":
                 if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
                     throw new UserException("Invalid number for @" + name);
                 return intValue;
+            case "lookup":
+                if (!string.IsNullOrEmpty(def["source"].toStr()) && def["options"] is not IList && def["options"] is not FwDict)
+                {
+                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lookupValue))
+                        throw new UserException("Invalid number for @" + name);
+                    return lookupValue;
+                }
+                return value;
+            case "lookup_tpl":
+                return value;
             case "number":
                 if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decimalValue)
                     && !decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out decimalValue))
@@ -702,5 +821,29 @@ public class FwReportsModel : FwModel<FwReportsModel.Row>
                 return value;
         }
         return string.Empty;
+    }
+
+    /// <summary>
+    /// Validates a schema/table identifier before it is quoted and embedded in lookup SQL.
+    /// </summary>
+    /// <param name="source">Table name, optionally schema-qualified.</param>
+    private static void validateLookupIdentifier(string source)
+    {
+        if (!Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)?$"))
+            throw new UserException("Unsupported lookup source: " + source);
+    }
+
+    /// <summary>
+    /// Removes ParsePage language markers from static select labels before rendering them as runtime options.
+    /// </summary>
+    /// <param name="label">Raw `.sel` label text.</param>
+    /// <returns>Display label without surrounding language backticks.</returns>
+    private static string cleanupSelLabel(string label)
+    {
+        var result = label.Trim();
+        if (result.Length >= 2 && result.StartsWith('`') && result.EndsWith('`'))
+            result = result[1..^1];
+
+        return result;
     }
 }

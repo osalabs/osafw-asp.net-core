@@ -3,6 +3,8 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System;
+
 namespace osafw;
 
 public class AdminReportsController : FwController
@@ -68,10 +70,20 @@ public class AdminReportsController : FwController
             is_run = true;
 
         var report = FwReports.createInstance(fw, repcode, list_filter);
-        report.setFilters(); // set filters data like select/lookups
+        var customReport = report as FwCustomReport;
+        try
+        {
+            report.setFilters(); // set filters data like select/lookups
 
-        if (is_run)
-            report.getData();
+            if (is_run)
+                report.getData();
+        }
+        catch (Exception ex) when (customReport != null)
+        {
+            customReport.setExecutionError(ex, fw.model<Users>().isSiteAdmin());
+            customReport.format = "html";
+            customReport.f["format"] = "html";
+        }
 
         // show or output report according format
         FwDict ps = [];
@@ -131,17 +143,25 @@ public class AdminReportsController : FwController
             if (string.IsNullOrEmpty(reportCode))
                 reportCode = "_preview";
 
-            var report = new FwCustomReport(item);
-            report.init(fw, reportCode, new FwDict { ["is_preview"] = true });
-            report.setFilters();
-            report.getData();
+            try
+            {
+                var report = new FwCustomReport(item);
+                report.init(fw, reportCode, new FwDict { ["is_preview"] = true });
+                report.setFilters();
+                report.getData();
 
-            ps["preview_headers"] = report.ps["result_headers"];
-            ps["preview_rows"] = report.ps["result_rows"];
-            ps["preview_totals"] = report.ps["result_totals"];
-            ps["preview_count"] = report.list_count;
-            ps["has_preview"] = true;
-            ps["has_preview_totals"] = report.ps["has_result_totals"];
+                ps["preview_headers"] = report.ps["result_headers"];
+                ps["preview_rows"] = report.ps["result_rows"];
+                ps["preview_totals"] = report.ps["result_totals"];
+                ps["preview_count"] = report.list_count;
+                ps["has_preview"] = true;
+                ps["has_preview_totals"] = report.ps["has_result_totals"];
+            }
+            catch (Exception ex)
+            {
+                ps["has_preview_error"] = true;
+                ps["preview_error_message"] = FwCustomReport.reportErrorMessage(ex);
+            }
         }
 
         return ps;
