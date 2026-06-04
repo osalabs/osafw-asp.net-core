@@ -29,6 +29,7 @@ Check in this order:
 ## Project-Specific Checks
 
 - Prefer app/example controllers, models, templates, or docs for app-specific behavior; edit `osafw-app/App_Code/fw` only for reusable framework behavior or framework contract bugs.
+- For security-sensitive diffs, check where relevant: custom mutating actions call `enforcePost()` before side effects; direct id reads/writes/deletes include object, owner/system, or parent predicates; redirects are app-local unless explicitly allowlisted; raw HTML/markdown/`v-html` paths are escaped, sanitized, or explicitly trusted; attachment link/serve/S3 paths authorize the parent object and handle active content safely; dev/admin tooling, generated SQL, assistant tools, and telemetry/logging use exposure gates, allowlists, resource checks, and redaction.
 - Review framework method names against `docs/naming.md`: prefer result-shape or side-effect prefixes, avoid generic `Get*`/`Set*` names when a clearer name exists, and do not request broad churn outside the touched scope.
 - `list*()` methods should return empty `FwList`/`DBList`; dictionary-backed `one*()` methods should return empty `FwDict`/`DBRow`; typed single-row methods (`DB.row<T>`, `DB.rowp<T>`, `oneT*`) should return `null` for missing records unless using `*OrFail`.
 - Schema changes should consider both `osafw-app/App_Data/sql/fwdatabase.sql` and an additive script under `osafw-app/App_Data/sql/updates/`.

@@ -1,6 +1,6 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2026-05-20
+Updated: 2026-06-03
 
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
@@ -14,6 +14,10 @@ Updated: 2026-05-20
 - 2026-05-19: Before adding custom UI CSS, check `docs/design_system.html` and prefer Bootstrap utilities, shared fragments, and framework/theme tokens.
 - 2026-05-19: Modal content that enables ID namespacing should use scoped selectors via `fw.scopeFromScript()` instead of global `#id` selectors.
 - Respect access control: set controller `access_level` and add route rules in `FwConfig.access_levels` when needed.
+- 2026-06-03: For custom mutating controller actions, call `enforcePost()` before side effects; update calling templates/forms so valid UI submissions use POST and carry the token.
+- 2026-06-03: Direct id loads, saves, deletes, attachment links, and dynamic child writes need authorization predicates at the target row boundary, not only list filtering.
+- 2026-06-03: Treat app-local redirects, raw HTML/markdown/`v-html`, attachment serving/S3 redirects, and active uploaded content as security review triggers.
+- 2026-06-03: Dev/admin tools, generated SQL, assistant tools, file/schema generators, and request/session telemetry need explicit exposure gates, allowlists, resource checks, and redaction.
 - For DB code, always parameterize via `DB` helper; avoid string concatenation.
 - Use `FwCache` for expensive lookups; cache keys should be namespaced and include input parameters.
 - Prefer `DateUtils` helpers for formatting and parsing with user timezone (`fw.userTimezone`).

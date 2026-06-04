@@ -105,6 +105,15 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - For SQL queries or SQL fragments in code, prefer one `$@"..."` string block over concatenated pieces.
 - For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types. Add inline comments only for complex logic blocks.
 
+## Security Guardrails
+
+- When adding or changing custom actions that mutate state, call `enforcePost()` before side effects and update forms/templates so valid submissions use POST and include the XSS token.
+- When loading, saving, or deleting by direct id, include object-level authorization in the read/write predicate; saved user records need owner-or-system checks, and dynamic child or attachment writes need parent-record checks.
+- Validate redirect targets with the app-local URL policy unless an explicit siteadmin-managed external redirect allowlist covers the destination.
+- Escape or sanitize stored/user/editor HTML and markdown before display; reserve `noescape`, raw markdown HTML, and Vue `v-html` for explicitly trusted server-controlled content.
+- For attachments, authorize against the parent business object before linking, serving, or issuing S3 redirects; block or force download for active content and enforce safe image decode limits.
+- Keep dev/admin tooling, generated SQL, assistant tool calls, and generated file/schema writes behind safe environment/exposure gates, explicit allowlists, normal resource checks, and sensitive request/session/Sentry redaction.
+
 ## Sub-Agent Delegation
 
 - The main agent owns the task outcome, user communication, integration, and final verification.
