@@ -1,0 +1,16 @@
+<~/common/form/page_header_custom>
+
+<form id="FDel" class="fw-card" method="post" action="<~/admin/reports/url>/<~i[icode]>">
+  <input type="hidden" name="_method" value="DELETE">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+
+  <fieldset>
+    <legend>`Confirm delete for report` <~i[iname]> (<~i[icode]>)</legend>
+    <div class="row form-row">
+      <div class="col">
+        <button type="submit" class="btn btn-danger">`Delete`</button>
+        <a class="btn btn-default" href="<~/admin/reports/url>/<~i[icode]>/edit">`Cancel`</a>
+      </div>
+    </div>
+  </fieldset>
+</form>

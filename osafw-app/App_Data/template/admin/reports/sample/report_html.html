@@ -6,7 +6,7 @@
 
 <div class="fw-card">
 <table class="table table-sm table-bordered table-hover list">
-    <thead>
+    <thead class="table-light">
         <tr <~/admin/reports/common/tr_sort unless="IS_PRINT_MODE">>
             <th data-sort="idate">Date/Time</th>
             <th data-sort="event_name">Event</th>
@@ -17,7 +17,7 @@
             <th data-sort="user">User</th>
         </tr>
     </thead>
-    <tbody>
+    <tbody class="table-group-divider">
         <~list_rows repeat inline>
             <tr>
                 <td><~idate date="long"></td>

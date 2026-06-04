@@ -454,6 +454,28 @@ CREATE TABLE menu_items (
   upd_users_id          INT DEFAULT 0
 );
 -- INSERT INTO menu_items (iname, url, icon, controller) VALUES ('Test Menu Item', '/Admin/Demos', 'list-ul', 'AdminDemos');
+
+/*Site Admin-managed custom reports*/
+DROP TABLE IF EXISTS fwreports;
+CREATE TABLE fwreports (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(50) NOT NULL,              -- report route code
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',  -- report title
+  idesc                 NVARCHAR(MAX),
+  icon                  NVARCHAR(64) NOT NULL DEFAULT '',
+  access_level          TINYINT NOT NULL DEFAULT 80,        -- min run access level
+  sql_template          NVARCHAR(MAX) NOT NULL DEFAULT '',  -- SELECT/CTE query with @params
+  params_json           NVARCHAR(MAX),                      -- parameter metadata JSON
+  render_options_json   NVARCHAR(MAX),                      -- row limits, timeout, export options
+
+  status                TINYINT NOT NULL DEFAULT 0,         /*0-active, 10-inactive, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_fwreports_icode UNIQUE (icode)
+);
 DROP TABLE IF EXISTS user_filters;
 CREATE TABLE user_filters (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,

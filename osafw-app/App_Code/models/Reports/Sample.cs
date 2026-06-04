@@ -6,7 +6,7 @@ using System;
 
 namespace osafw;
 
-public class SampleReport : FwReports
+public class SampleReport : FwReportsBase
 {
     public SampleReport() : base()
     {

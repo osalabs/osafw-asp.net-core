@@ -1,406 +1,846 @@
-// Reports Base class
+// Stored custom reports model
 //
-// (c) 2009-2024 Oleg Savchuk www.osalabs.com
-
-// Example usage from code:
-//
-// var repcode = "sample";
-// var filters = new FwRow();
-//
-// // get report data only, without rendering
-// var report = FwReports.createInstance(fw, repcode, filters);
-// report.setFilters(); // set filters data like select/lookups
-// report.getData(); // report.list_rows now contains data
-//
-// // get html string of the report (based on report_html template only)
-// var html = FwReports.createHtml(fw, repcode);
-
-// // supported formats: html(default), csv, pdf, xls, xlsx, json
-// // get report data, render to pdf file (temporary file created), output to browser, cleanup
-// var filepath = FwReports.createFile(fw, repcode, "pdf");
-// fw.fileResponse(filepath, "report.pdf");
-// Utils.cleanupTmpFiles();
-
+// Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 
 using System;
+using System.Collections;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class FwReports
+public class FwReports : FwModel<FwReports.Row>
 {
-    //template paths
-    public const string TPL_BASE_DIR = "/admin/reports";
-    //public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html"; //this is simplified template for wkhtmltopdf
-    public const string TPL_EXPORT_PDF = "/layout_print.html"; // normal print template with latest bootstrap styles, good with Playwright
-    public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
+    public const int DEFAULT_ROW_LIMIT = 1000;
+    public const int DEFAULT_PREVIEW_LIMIT = 50;
+    public const int DEFAULT_LOOKUP_LIMIT = 500;
+    public const int DEFAULT_TIMEOUT_SECONDS = 30;
 
-    public const string TO_BROWSER = "";
-    public const string TO_STRING = "string";
+    private static readonly Regex ParamRegex = new(@"(?<!@)@([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
+    private static readonly Regex ForbiddenSqlRegex = new(@"\b(insert|update|delete|merge|drop|alter|create|truncate|exec|execute|grant|revoke|backup|restore|into)\b|\b(?:sp_|xp_)\w*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    public string report_code = string.Empty;
-    public string format = string.Empty; // report format, if empty - html, other options: html, csv, pdf, xls, xlsx, json
-    public string render_to = ""; // output to: empty(browser), "string"(render returns string, for html only), "/file/path"(render saves to file)
-    public FwDict f = []; // report filters/options
-                        // render options for html to pdf/xls/etc... convertor
-    public FwDict f_data = []; //filters data, like dropdown options
-
-    public FwDict render_options = new()
+    public class Row
     {
-        {"cmd", "--page-size Letter --print-media-type"},
-        {"landscape", true},
-        //{"pdf_filename", "absolute path to save pdf to or just a filename (without extension) for browser output"} //define in report class
-    };
-
-    protected FW fw = null!;
-    protected DB db = null!;
-    public FwDict ps = []; // final data for template rendering
-    public long list_count;      // count of list rows returned from db
-    public FwList list_rows = [];  // list rows returned from db (array of hashes)
-
-    // access level for the report, default - Manager level.
-    // Note, if you lower it for the specific report - you may want to update AdminReports access level as well
-    protected int access_level = Users.ACL_MANAGER;
-    // for sorting by click on column headers, define in report class
-    protected string list_sortdef = string.Empty; // = "iname asc";
-    protected FwDict list_sortmap = []; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
-    protected string list_orderby = "1"; // sql for order by clause, set in getData() via setListSorting(), default by first column if no other sorting set
-
-    public static string cleanupRepcode(string repcode)
-    {
-        return Utils.routeFixChars(repcode);
+        public int id { get; set; }
+        public string icode { get; set; } = string.Empty;
+        public string iname { get; set; } = string.Empty;
+        public string idesc { get; set; } = string.Empty;
+        public string icon { get; set; } = string.Empty;
+        public int access_level { get; set; }
+        public string sql_template { get; set; } = string.Empty;
+        public string params_json { get; set; } = string.Empty;
+        public string render_options_json { get; set; } = string.Empty;
+        public int status { get; set; }
+        public DateTime add_time { get; set; }
+        public int add_users_id { get; set; }
+        public DateTime? upd_time { get; set; }
+        public int upd_users_id { get; set; }
     }
 
-    public static string filterSessionKey(FW fw, string repcode)
+    public FwReports() : base()
     {
-        return "_filter_" + fw.G["controller.action"] + "." + repcode;
+        db_config = "";
+        table_name = "fwreports";
+        field_iname = "iname";
+        field_icode = "icode";
     }
 
     /// <summary>
-    /// Convert report code into class name
+    /// Cleans a Bootstrap Icons suffix before it is rendered into a CSS class.
     /// </summary>
-    /// <param name="repcode">pax-something-summary or Sample</param>
-    /// <returns>code with "Report" suffix - PaxSomethingSummaryReport or SampleReport</returns>
-    /// <remarks></remarks>
-    public static string repcodeToClass(string repcode)
+    /// <param name="icon">Submitted icon name, optionally with a bi prefix.</param>
+    /// <returns>Safe Bootstrap Icons suffix, such as currency-dollar.</returns>
+    public static string cleanupIcon(string icon)
     {
-        string result = "";
-        if (repcode.Contains('-'))
+        var result = Regex.Replace((icon ?? string.Empty).Trim().ToLowerInvariant().Replace('_', '-'), @"\s+", "-");
+        while (result.StartsWith("bi-", StringComparison.OrdinalIgnoreCase))
+            result = result[3..];
+
+        result = Regex.Replace(result, @"[^a-z0-9-]+", "");
+        return result.Length > 64 ? result[..64] : result;
+    }
+
+    /// <summary>
+    /// Returns parameter placeholders from a stored SQL template so save, preview, and runtime binding agree.
+    /// </summary>
+    /// <param name="sql">Report SQL template.</param>
+    /// <returns>Unique parameter names without the leading at sign, in first-use order.</returns>
+    public static StrList extractParamNames(string sql)
+    {
+        var result = new StrList();
+        var stripped = stripSqlLiteralsAndComments(sql ?? string.Empty);
+        foreach (Match match in ParamRegex.Matches(stripped))
         {
-            //if repcode contains "-" then use code below (compatibility with legacy reports)
-            string[] pieces = repcode.Split("-");
-            foreach (string piece in pieces)
-                result += Utils.capitalize(piece);
+            var name = match.Groups[1].Value;
+            if (!result.Contains(name))
+                result.Add(name);
         }
-        else
+        return result;
+    }
+
+    /// <summary>
+    /// Validates that admin-authored report SQL stays in the read-only custom-report subset.
+    /// </summary>
+    /// <param name="sql">Report SQL template submitted by a Site Admin.</param>
+    /// <exception cref="UserException">Thrown when SQL is empty, not SELECT/CTE-shaped, or contains forbidden statements.</exception>
+    public static void validateSqlTemplate(string sql)
+    {
+        var trimmed = (sql ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(trimmed))
+            throw new UserException("Report SQL is required");
+
+        var stripped = stripSqlLiteralsAndComments(trimmed);
+        if (stripped.Contains(';'))
+            throw new UserException("Report SQL must contain one statement without semicolons");
+
+        if (!Regex.IsMatch(stripped, @"^\s*(select|with)\b", RegexOptions.IgnoreCase))
+            throw new UserException("Report SQL must start with SELECT or WITH");
+
+        if (ForbiddenSqlRegex.IsMatch(stripped))
+            throw new UserException("Report SQL can only read data");
+    }
+
+    /// <summary>
+    /// Parses and normalizes parameter metadata, adding default text params for placeholders with no metadata.
+    /// </summary>
+    /// <param name="sql">Report SQL template containing at-prefixed placeholders.</param>
+    /// <param name="paramsJson">Metadata JSON submitted for those placeholders.</param>
+    /// <returns>Normalized parameter rows with name, label, type, required, default, source, and options fields.</returns>
+    /// <exception cref="UserException">Thrown when the JSON shape is invalid or references unknown placeholders.</exception>
+    public static FwList parseParamDefinitions(string sql, string paramsJson)
+    {
+        var names = extractParamNames(sql);
+        var result = new FwList();
+        var byName = new FwDict(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(paramsJson))
         {
-            result = repcode;
+            object? decoded;
+            try
+            {
+                decoded = Utils.jsonDecode(paramsJson);
+            }
+            catch (Exception ex)
+            {
+                throw new UserException("Parameter JSON is invalid: " + ex.Message);
+            }
+
+            if (decoded is FwDict dict)
+            {
+                foreach (var key in dict.Keys)
+                {
+                    var meta = dict[key] is FwDict row ? new FwDict(row) : [];
+                    meta["name"] = key;
+                    addParamDefinition(byName, meta);
+                }
+            }
+            else if (decoded is IList list)
+            {
+                foreach (var item in list)
+                {
+                    if (item is not FwDict row)
+                        throw new UserException("Parameter JSON array items must be objects");
+                    addParamDefinition(byName, new FwDict(row));
+                }
+            }
+            else
+            {
+                throw new UserException("Parameter JSON must be an object or array");
+            }
         }
 
-        return result + "Report";
-    }
-
-    /// <summary>
-    /// Create instance of report class by repcode
-    /// </summary>
-    /// <param name="repcode">cleaned report code</param>
-    /// <param name="f">filters passed from request</param>
-    /// <returns></returns>
-    public static FwReports createInstance(FW fw, string repcode, FwDict f)
-    {
-        string report_class_name = repcodeToClass(repcode);
-        if (string.IsNullOrEmpty(report_class_name))
-            throw new UserException("Wrong Report Code");
-
-        var reportType = Type.GetType(FW.FW_NAMESPACE_PREFIX + report_class_name, true, true);
-        if (reportType == null)
-            throw new UserException("Report class not found");
-
-        var instance = Activator.CreateInstance(reportType) as FwReports;
-        if (instance == null)
-            throw new UserException("Report initialization failed");
-
-        FwReports report = instance;
-        report.init(fw, repcode, f);
-        report.checkAccess();
-        return report;
-    }
-
-    /// <summary>
-    /// return html string of the report (based on report_html template only)
-    /// </summary>
-    /// <param name="fw"></param>
-    /// <param name="repcode"></param>
-    /// <param name="f"></param>
-    /// <param name="ps"></param>
-    /// <returns></returns>
-    public static string createHtml(FW fw, string repcode, FwDict? f = null, FwDict? ps = null)
-    {
-        f ??= [];
-
-        var report = createInstance(fw, repcode, f);
-        report.setFilters(); // set filters data like select/lookups
-        report.getData();
-        report.render_to = TO_STRING;
-        return report.render(ps);
-    }
-
-    public static string createFile(FW fw, string repcode, string format = "", FwDict? f = null, FwDict? ps = null)
-    {
-        f ??= [];
-        f["format"] = format;
-
-        var report = createInstance(fw, repcode, f);
-        report.setFilters(); // set filters data like select/lookups
-        report.getData();
-
-        report.render_to = Utils.getTmpFilename() + format2ext(format);
-        report.render(ps);
-
-        return report.render_to;
-    }
-
-    public static string format2ext(string format)
-    {
-        string ext = (format ?? string.Empty).ToLowerInvariant() switch
+        foreach (string name in names)
         {
-            "pdf" => ".pdf",
-            "xls" => ".xls",
-            "csv" => ".csv",
-            "json" => ".json",
-            _ => ".html",
-        };
-        return ext;
+            FwDict meta;
+            if (byName[name] is FwDict existing)
+            {
+                meta = existing;
+            }
+            else
+            {
+                meta = new FwDict
+                {
+                    ["name"] = name,
+                    ["label"] = Utils.name2human(name),
+                    ["type"] = inferParamType(name),
+                    ["required"] = false,
+                    ["default"] = ""
+                };
+            }
+
+            normalizeParamDefinition(meta);
+            result.Add(meta);
+        }
+
+        foreach (string key in byName.Keys)
+            if (!names.Any(name => string.Equals(name, key, StringComparison.OrdinalIgnoreCase)))
+                throw new UserException("Parameter JSON defines @" + key + " but SQL does not use it");
+
+        return result;
     }
 
-    public FwReports()
+    /// <summary>
+    /// Serializes normalized parameter metadata so saved reports have explicit, stable parameter definitions.
+    /// </summary>
+    /// <param name="sql">Report SQL template.</param>
+    /// <param name="paramsJson">Submitted metadata JSON.</param>
+    /// <returns>Pretty JSON array of normalized metadata rows, or an empty string when no params exist.</returns>
+    public static string normalizeParamsJson(string sql, string paramsJson)
     {
-        // constructor
+        var defs = parseParamDefinitions(sql, paramsJson);
+        return defs.Count == 0 ? string.Empty : Utils.jsonEncode(defs, true);
     }
 
-    public virtual void init(FW fw, string report_code, FwDict f)
+    /// <summary>
+    /// Checks whether a normalized parameter type renders as a select control with option metadata.
+    /// </summary>
+    /// <param name="type">Normalized parameter type from params_json.</param>
+    /// <returns>True for lookup and lookup source variants.</returns>
+    public static bool isLookupParamType(string type)
     {
-        this.fw = fw;
-        this.db = fw.db;
-        this.report_code = report_code ?? string.Empty;
-        this.f = f ?? [];
-        this.format = this.f["format"].toStr().ToLowerInvariant();
+        return Utils.qw("lookup lookup_table lookup_model lookup_sql lookup_tpl").Contains((type ?? string.Empty).Trim().ToLowerInvariant());
     }
 
-    // called from createInstance to check if logged user has access to the report
-    public virtual void checkAccess()
+    /// <summary>
+    /// Parses report render options without letting malformed JSON break report listing.
+    /// </summary>
+    /// <param name="renderOptionsJson">Stored render options JSON.</param>
+    /// <returns>Options dictionary; empty when no options are configured.</returns>
+    /// <exception cref="UserException">Thrown when non-empty JSON is malformed or not an object.</exception>
+    public static FwDict parseRenderOptions(string renderOptionsJson)
     {
-        //check simple access level first
-        if (fw.userAccessLevel < access_level)
+        if (string.IsNullOrWhiteSpace(renderOptionsJson))
+            return [];
+
+        object? decoded;
+        try
+        {
+            decoded = Utils.jsonDecode(renderOptionsJson);
+        }
+        catch (Exception ex)
+        {
+            throw new UserException("Render options JSON is invalid: " + ex.Message);
+        }
+
+        if (decoded is not FwDict options)
+            throw new UserException("Render options JSON must be an object");
+
+        return options;
+    }
+
+    /// <summary>
+    /// Suggests the next `repN` code for the new custom report form.
+    /// </summary>
+    /// <returns>First unused code using the rep prefix and a positive integer suffix.</returns>
+    public string suggestNextIcode()
+    {
+        var codes = db.col(table_name, [], "icode");
+        var maxNumber = 0;
+        foreach (var code in codes)
+        {
+            var match = Regex.Match(code, @"^rep(\d+)$", RegexOptions.IgnoreCase);
+            if (match.Success)
+                maxNumber = Math.Max(maxNumber, match.Groups[1].Value.toInt());
+        }
+
+        return "rep" + (maxNumber + 1);
+    }
+
+    /// <summary>
+    /// Lists active custom reports the current user can run so the reports index only shows useful links.
+    /// </summary>
+    /// <returns>Rows from fwreports filtered by status, access level, and report-specific RBAC when enabled.</returns>
+    public DBList listAccessible()
+    {
+        var rows = db.array(table_name, new FwDict
+        {
+            ["status"] = STATUS_ACTIVE,
+            ["access_level"] = db.opLE(fw.userAccessLevel)
+        }, "iname");
+
+        if (fw.model<Users>().isSiteAdmin())
+            return withIndexDisplayState(rows);
+
+        var result = new DBList();
+        foreach (var row in rows)
+            if (isAccessible(row.toFwDict(), FW.ACTION_SHOW))
+                result.Add(row);
+
+        return withIndexDisplayState(result);
+    }
+
+    /// <summary>
+    /// Loads one active custom report by route code for runtime execution.
+    /// </summary>
+    /// <param name="icode">Route-safe report code.</param>
+    /// <returns>Report row or an empty row when no active report exists.</returns>
+    public DBRow oneActiveByIcode(string icode)
+    {
+        return db.row(table_name, new FwDict
+        {
+            ["icode"] = FwReportsBase.cleanupRepcode((icode ?? string.Empty).Trim()),
+            ["status"] = STATUS_ACTIVE
+        });
+    }
+
+    /// <summary>
+    /// Loads one non-deleted custom report by route code for Site Admin edit/delete screens.
+    /// </summary>
+    /// <param name="icode">Route-safe report code.</param>
+    /// <returns>Report row or an empty row when not found.</returns>
+    public DBRow oneManageableByIcode(string icode)
+    {
+        return db.row(table_name, new FwDict
+        {
+            ["icode"] = FwReportsBase.cleanupRepcode((icode ?? string.Empty).Trim()),
+            ["status"] = db.opNOT(STATUS_DELETED)
+        });
+    }
+
+    /// <summary>
+    /// Checks whether a loaded custom report can be used by the current user for the requested action.
+    /// </summary>
+    /// <param name="report">Loaded fwreports row.</param>
+    /// <param name="resourceAction">Framework route action being checked.</param>
+    /// <param name="resourceActionMore">Optional route action qualifier.</param>
+    /// <returns>True when access_level and RBAC allow the action.</returns>
+    public bool isAccessible(FwDict report, string resourceAction, string resourceActionMore = "")
+    {
+        if (report.Count == 0 || report["status"].toInt() != STATUS_ACTIVE)
+            return false;
+
+        if (fw.userAccessLevel < report["access_level"].toInt())
+            return false;
+
+        var currentUserLevel = fw.userAccessLevel;
+        if (currentUserLevel > Users.ACL_VISITOR && currentUserLevel < Users.ACL_SITEADMIN)
+        {
+            var resourceCode = reportResourceIcode(report["icode"].toStr());
+            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, resourceCode, resourceAction, resourceActionMore))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Throws the standard authorization exception when the current user cannot use a report.
+    /// </summary>
+    /// <param name="report">Loaded fwreports row.</param>
+    /// <param name="resourceAction">Framework route action being checked.</param>
+    /// <param name="resourceActionMore">Optional route action qualifier.</param>
+    public void checkReportAccess(FwDict report, string resourceAction, string resourceActionMore = "")
+    {
+        if (!isAccessible(report, resourceAction, resourceActionMore))
             throw new AuthException("Bad access - Not authorized to view the Report");
+    }
 
-        // then check access by roles (if enabled)
-        // note - report_code is used as resource icode
-        // fw.route.action - will be wither Show or Save
+    /// <summary>
+    /// Normalizes and validates submitted report fields before the controller saves them.
+    /// </summary>
+    /// <param name="item">Mutable submitted item dictionary.</param>
+    public void normalizeForSave(FwDict item)
+    {
+        item["icode"] = FwReportsBase.cleanupRepcode(item["icode"].toStr().Trim());
+        item["iname"] = item["iname"].toStr().Trim();
+        item["icon"] = cleanupIcon(item["icon"].toStr());
+        item["sql_template"] = item["sql_template"].toStr().Trim();
+        item["params_json"] = normalizeParamsJson(item["sql_template"].toStr(), item["params_json"].toStr());
 
-        // if user is logged and not SiteAdmin(can access everything)
-        // and user's access level is enough for the controller - check access by roles (if enabled)
-        int current_user_level = fw.userAccessLevel;
-        if (current_user_level > Users.ACL_VISITOR && current_user_level < Users.ACL_SITEADMIN)
+        var options = parseRenderOptions(item["render_options_json"].toStr());
+        item["render_options_json"] = options.Count == 0 ? string.Empty : Utils.jsonEncode(options, true);
+
+        validateSqlTemplate(item["sql_template"].toStr());
+    }
+
+    /// <summary>
+    /// Creates or updates the optional RBAC resource tied to a custom report.
+    /// </summary>
+    /// <param name="report">Saved fwreports row.</param>
+    public void saveReportResource(FwDict report)
+    {
+        if (!fw.model<Users>().isRoles())
+            return;
+
+        var resourceCode = reportResourceIcode(report["icode"].toStr());
+        var resources = fw.model<Resources>();
+        var existing = resources.oneByIcode(resourceCode);
+        var fields = new FwDict
         {
-            if (!fw.model<Users>().isAccessByRolesResourceAction(fw.userId, report_code + "Report", fw.route.action, fw.route.action_more))
-                throw new AuthException("Bad access - Not authorized to view the Report (2)");
+            ["icode"] = resourceCode,
+            ["iname"] = report["iname"].toStr(),
+            ["idesc"] = "Custom report",
+            ["status"] = STATUS_ACTIVE
+        };
+
+        if (existing.Count > 0)
+            resources.update(existing["id"].toInt(), fields);
+        else
+            resources.add(fields);
+    }
+
+    /// <summary>
+    /// Marks the optional RBAC resource inactive when a report is deleted or its code changes.
+    /// </summary>
+    /// <param name="icode">Report code whose resource should no longer be active.</param>
+    public void retireReportResource(string icode)
+    {
+        if (!fw.model<Users>().isRoles())
+            return;
+
+        var resourceCode = reportResourceIcode(icode);
+        var resources = fw.model<Resources>();
+        var existing = resources.oneByIcode(resourceCode);
+        if (existing.Count > 0)
+            resources.update(existing["id"].toInt(), new FwDict { ["status"] = STATUS_DELETED });
+    }
+
+    /// <summary>
+    /// Builds the report-specific RBAC resource code used by the existing report access checks.
+    /// </summary>
+    /// <param name="icode">Report code.</param>
+    /// <returns>Resource code stored in resources.icode.</returns>
+    public static string reportResourceIcode(string icode)
+    {
+        return FwReportsBase.cleanupRepcode((icode ?? string.Empty).Trim()) + "Report";
+    }
+
+    /// <summary>
+    /// Builds SQL parameters from filter input according to normalized parameter metadata.
+    /// </summary>
+    /// <param name="defs">Normalized parameter metadata rows.</param>
+    /// <param name="f">Current report filter values.</param>
+    /// <param name="userDateFormat">Date format used by the logged-in user.</param>
+    /// <param name="userTimeFormat">Time format used by the logged-in user.</param>
+    /// <returns>Dictionary suitable for DB.arrayp.</returns>
+    /// <exception cref="UserException">Thrown when a required or typed value is invalid.</exception>
+    public FwDict buildSqlParams(FwList defs, FwDict f, int userDateFormat, int userTimeFormat = DateUtils.TIME_FORMAT_24)
+    {
+        var result = new FwDict();
+        foreach (var def in defs)
+        {
+            var name = def["name"].toStr();
+            var type = def["type"].toStr();
+            var value = f[name].toStr();
+            if (string.IsNullOrEmpty(value))
+                value = resolveParamDefault(def, userDateFormat);
+
+            if (string.IsNullOrEmpty(value))
+            {
+                if (def["required"].toBool())
+                    throw new UserException("Report parameter is required: " + def["label"].toStr());
+                result["@" + name] = DBNull.Value;
+                continue;
+            }
+
+            result["@" + name] = convertParamValue(name, def, value, userDateFormat, userTimeFormat);
+            f[name] = value;
         }
-    }
-
-    public virtual void setListSorting()
-    {
-        string sortby = f["sortby"] as string ?? string.Empty;
-        string sortdir = f["sortdir"] as string ?? string.Empty;
-
-        string sortdef_field = string.Empty;
-        string sortdef_dir = string.Empty;
-        Utils.split2(" ", list_sortdef ?? string.Empty, ref sortdef_field, ref sortdef_dir);
-
-        list_sortmap ??= [];
-
-        // validation/mapping
-        if (string.IsNullOrEmpty(sortby) || string.IsNullOrEmpty(list_sortmap[sortby].toStr().Trim()))
-            sortby = sortdef_field; // use default if initial load or mapping not set
-        if (sortdir != "desc" && sortdir != "asc")
-            sortdir = sortdef_dir;
-
-        // save back to filter to render in template
-        f["sortby"] = sortby;
-        f["sortdir"] = sortdir;
-
-        list_orderby = FormUtils.sqlOrderBy(db, sortby, sortdir, list_sortmap);
+        return result;
     }
 
     /// <summary>
-    /// override to define info for report filters like dropdown options, etc
+    /// Loads dynamic lookup options declared in parameter metadata for generic custom-report filters.
     /// </summary>
-    public virtual void setFilters()
+    /// <param name="def">One normalized parameter definition.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    public FwList listParamOptions(FwDict def)
     {
-        // f_data("select_something")=fw.model(of Something).listSelectOptions()
-    }
+        if (def["options"] is IList options)
+            return normalizeOptions(options);
 
-    /// <summary>
-    /// override to define report data
-    /// </summary>
-    /// <returns></returns>
-    public virtual void getData()
-    {
-        // setListSorting();
-        // list_rows =db.array("select * from something where 1=1 " & where & " order by {list_sortby}")
-        // list_count = list_rows.Count();
-        // ps["totals"] = 123;
+        if (def["options"] is FwDict optionsDict)
+            return normalizeOptionDict(optionsDict);
 
-        ps["is_run"] = true; //show data in render
-    }
+        var type = def["type"].toStr();
+        var source = def["source"].toStr().Trim();
+        if (string.IsNullOrEmpty(source))
+            return [];
 
-    //override if report has inputs that needs to be saved to db
-    public virtual bool saveChanges()
-    {
-        return false;
-    }
+        if (type == "lookup_table")
+            return listTableParamOptions(source);
+        if (type == "lookup_model")
+            return listModelParamOptions(source);
+        if (type == "lookup_sql")
+            return listSqlParamOptions(source);
+        if (type == "lookup_tpl")
+            return listTemplateParamOptions(source);
 
-    /// <summary>
-    /// render report according to format
-    /// </summary>
-    /// <param name="ps_more">additional data for the template</param>
-    public virtual string render(FwDict? ps_more = null)
-    {
-        var result = "";
+        if (source.Equals("users", StringComparison.OrdinalIgnoreCase))
+            return fw.model<Users>().listSelectOptions();
+        if (source.Equals("fwentities", StringComparison.OrdinalIgnoreCase))
+            return fw.model<FwEntities>().listSelectOptions();
+        if (source.Equals("log_types", StringComparison.OrdinalIgnoreCase))
+            return fw.model<FwLogTypes>().listSelectOptions();
 
-        ps["report_code"] = report_code;
-        ps["f"] = f; // filter values
-        ps["filter"] = f_data; // filter data
-        ps["count"] = list_count;
-        ps["list_rows"] = list_rows;
-
-        if (ps_more != null)
-            // merge ps_more into ps
-            Utils.mergeHash(ps, ps_more);
-
-        ps["IS_EXPORT_PDF"] = false;
-        ps["IS_EXPORT_XLS"] = false;
-
-        string base_dir = TPL_BASE_DIR + '/' + report_code.ToLowerInvariant();
-        switch (this.format)
+        if (source.StartsWith("model:", StringComparison.OrdinalIgnoreCase))
         {
-            case "pdf":
-                {
-                    f["edit"] = false; // force any edit modes off
-                    ps["IS_EXPORT_PDF"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_PDF]> in templates
-                    string out_filename = Utils.isEmpty(render_options["pdf_filename"]) ? report_code : (render_options["pdf_filename"] as string ?? string.Empty);
-                    if (isFileRender())
-                        out_filename = render_to;
+            var modelName = source[6..].Trim();
+            if (!Regex.IsMatch(modelName, @"^[A-Za-z][A-Za-z0-9_]*$"))
+                throw new UserException("Unsupported lookup source: " + source);
 
-                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, out_filename, render_options);
-                    break;
-                }
+            return fw.model(modelName).listSelectOptions();
+        }
 
-            case "xls":
-                {
-                    ps["IS_EXPORT_XLS"] = true; //use as <~PARSEPAGE.TOP[IS_EXPORT_XLS]> in templates
-                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (render_options["xls_filename"] as string ?? string.Empty);
-                    if (isFileRender())
-                        out_filename = render_to;
+        if (source.StartsWith("sql:", StringComparison.OrdinalIgnoreCase))
+        {
+            var sql = source[4..].Trim();
+            validateSqlTemplate(sql);
+            if (Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
+                sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
 
-                    ConvUtils.parsePageExcelSimple(fw, base_dir, TPL_EXPORT_XLS, ps, out_filename);
-                    break;
-                }
+            return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+        }
 
-            case "xlsx":
-                {
-                    var out_filename = Utils.isEmpty(render_options["xls_filename"]) ? report_code : (render_options["xls_filename"] as string ?? string.Empty);
-                    // TODO make headers as array of readable values, not the same as fields names
-                    var headers = list_rows.Count > 0 ? list_rows[0].Keys.ToArray() : Array.Empty<string>();
-                    var fields = headers;
+        throw new UserException("Unsupported lookup source: " + source);
+    }
 
-                    ConvUtils.exportNativeExcel(fw, headers, fields, list_rows, out_filename);
-                    break;
-                }
-            case "csv":
-                {
-                    if (isFileRender())
-                    {
-                        //make csv and save to file
-                        var content = Utils.getCSVExport("", "", list_rows).ToString();
-                        Utils.setFileContent(render_to, ref content);
-                    }
-                    else
-                    {
-                        var response = fw.response ?? throw new InvalidOperationException("Response is not available");
-                        Utils.writeCSVExport(response, report_code + ".csv", "", "", list_rows);
-                    }
-                    break;
-                }
-            case "json":
-                {
-                    var content = Utils.jsonEncode(ps);
-                    if (isFileRender())
-                        Utils.setFileContent(render_to, ref content);
-                    else if (render_to == TO_STRING)
-                        result = content;
-                    else
-                        fw.parserJson(ps);
-                    break;
-                }
+    /// <summary>
+    /// Loads lookup rows from a table that exposes `id` and `iname` columns.
+    /// </summary>
+    /// <param name="source">Table name, optionally schema-qualified.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listTableParamOptions(string source)
+    {
+        validateLookupIdentifier(source);
+        var sql = $@"
+SELECT {db.qid("id")} AS id,
+       {db.qid("iname")} AS iname
+FROM {db.qid(source)}
+ORDER BY {db.qid("iname")}";
+        sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
+        return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+    }
 
-            default:
-                {
-                    // html
-                    if (render_to != TO_BROWSER)
-                    {
-                        ps["IS_PRINT_MODE"] = true;
+    /// <summary>
+    /// Loads lookup rows from an existing framework model by using its standard select-options method.
+    /// </summary>
+    /// <param name="source">Model class name without namespace.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listModelParamOptions(string source)
+    {
+        if (!Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*$"))
+            throw new UserException("Unsupported lookup source: " + source);
 
-                        var layout = fw.G["PAGE_LAYOUT_PRINT"] as string ?? string.Empty;
-                        if (ps.TryGetValue("_layout", out object? value))
-                            layout = value as string ?? layout;
+        return fw.model(source).listSelectOptions();
+    }
 
-                        result = fw.parsePage(base_dir, layout, ps);
+    /// <summary>
+    /// Loads lookup rows from an admin-authored read-only SQL statement returning id and iname.
+    /// </summary>
+    /// <param name="source">Read-only SQL statement.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listSqlParamOptions(string source)
+    {
+        var sql = source.Trim();
+        validateSqlTemplate(sql);
+        if (Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
+            sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
 
-                        if (render_to != TO_STRING)
-                            //this is render to file
-                            Utils.setFileContent(render_to, ref result);
-                    }
-                    else
-                    {
-                        // show report using templates from related report dir
-                        fw.parser(base_dir, ps);
-                    }
-                    break;
-                }
+        return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+    }
+
+    /// <summary>
+    /// Loads lookup rows from a ParsePage `.sel` template so existing static option files can be reused.
+    /// </summary>
+    /// <param name="source">Template path such as `/common/sel/yn.sel`.</param>
+    /// <returns>Select options with id and iname fields.</returns>
+    private FwList listTemplateParamOptions(string source)
+    {
+        var normalizedSource = source.Trim().Replace('\\', '/').TrimStart('/');
+        if (!normalizedSource.EndsWith(".sel", StringComparison.OrdinalIgnoreCase) || normalizedSource.Contains(".."))
+            throw new UserException("Unsupported lookup source: " + source);
+
+        var templateRoot = Path.GetFullPath(fw.config("template").toStr());
+        if (!templateRoot.EndsWith(Path.DirectorySeparatorChar))
+            templateRoot += Path.DirectorySeparatorChar;
+
+        var fullPath = Path.GetFullPath(Path.Combine(templateRoot, normalizedSource.Replace('/', Path.DirectorySeparatorChar)));
+        if (!fullPath.StartsWith(templateRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+            throw new UserException("Unsupported lookup source: " + source);
+
+        var result = new FwList();
+        foreach (var line in File.ReadAllLines(fullPath))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
+                continue;
+
+            var separatorIndex = trimmed.IndexOf('|');
+            if (separatorIndex < 0)
+                continue;
+
+            result.Add(new FwDict
+            {
+                ["id"] = trimmed[..separatorIndex],
+                ["iname"] = cleanupSelLabel(trimmed[(separatorIndex + 1)..])
+            });
         }
 
         return result;
     }
 
-    protected bool isFileRender()
+    /// <summary>
+    /// Adds list-screen-only flags used by report index templates without changing the persisted report fields.
+    /// </summary>
+    /// <param name="rows">Accessible custom report rows.</param>
+    /// <returns>The same row list with derived display flags attached.</returns>
+    private DBList withIndexDisplayState(DBList rows)
     {
-        return render_to != TO_BROWSER && render_to != TO_STRING;
-    }
-
-    // REPORT HELPERS
-
-    // add "perc" value for each row (percentage of row's "ctr" from sum of all ctr)
-    protected int _calcPerc(FwList rows)
-    {
-        int total_ctr = 0;
-        foreach (FwDict row in rows)
-            total_ctr += row["ctr"].toInt();
-        if (total_ctr > 0)
+        foreach (var row in rows)
         {
-            foreach (FwDict row in rows)
-                row["perc"] = row["ctr"].toInt() / (double)total_ctr * 100;
+            try
+            {
+                var defs = parseParamDefinitions(row["sql_template"], row["params_json"]);
+                row["is_autorun"] = defs.Count == 0 ? "1" : "";
+            }
+            catch
+            {
+                row["is_autorun"] = "";
+            }
         }
-        return total_ctr;
+
+        return rows;
     }
 
     /// <summary>
-    /// add " and status<>127" to reports where
+    /// Adds one metadata row to the case-insensitive definition map after normalizing its placeholder name.
     /// </summary>
-    /// <param name="alias">table alias with a dot, example: "t."</param>
-    /// <returns></returns>
-    protected string andNotDeleted(string alias = "")
+    /// <param name="byName">Mutable parameter definition map keyed by placeholder name.</param>
+    /// <param name="meta">Submitted metadata row.</param>
+    private static void addParamDefinition(FwDict byName, FwDict meta)
     {
-        return $" and {alias}status<>{db.qi(FwModel.STATUS_DELETED)}";
+        var name = cleanupParamName(meta["name"].toStr());
+        if (string.IsNullOrEmpty(name))
+            throw new UserException("Parameter JSON item is missing name");
+
+        meta["name"] = name;
+        if (byName[name] != null)
+            throw new UserException("Parameter JSON defines @" + name + " more than once");
+
+        byName[name] = meta;
+    }
+
+    /// <summary>
+    /// Normalizes parameter metadata so the renderer and SQL binder can use one stable shape.
+    /// </summary>
+    /// <param name="meta">Mutable parameter metadata row.</param>
+    private static void normalizeParamDefinition(FwDict meta)
+    {
+        var name = cleanupParamName(meta["name"].toStr());
+        meta["name"] = name;
+        if (string.IsNullOrEmpty(meta["label"].toStr()))
+            meta["label"] = Utils.name2human(name);
+
+        var type = meta["type"].toStr().Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(type))
+            type = inferParamType(name);
+        if (!Utils.qw("text int number date datetime lookup lookup_table lookup_model lookup_sql lookup_tpl").Contains(type))
+            throw new UserException("Unsupported parameter type for @" + name);
+
+        meta["type"] = type;
+        meta["required"] = meta["required"].toBool();
+        meta["default"] = meta["default"].toStr();
+        meta["source"] = meta["source"].toStr();
+    }
+
+    /// <summary>
+    /// Cleans a placeholder name without the leading at sign and strips route/SQL-unsafe characters.
+    /// </summary>
+    /// <param name="name">Submitted parameter name.</param>
+    /// <returns>Safe placeholder name.</returns>
+    private static string cleanupParamName(string name)
+    {
+        return Regex.Replace(name ?? string.Empty, @"^@|[^A-Za-z0-9_]+", "");
+    }
+
+    /// <summary>
+    /// Infers a conservative filter type from common placeholder naming conventions.
+    /// </summary>
+    /// <param name="name">Clean placeholder name.</param>
+    /// <returns>Default parameter type.</returns>
+    private static string inferParamType(string name)
+    {
+        var lower = name.ToLowerInvariant();
+        if (lower.EndsWith("_datetime") || lower.Contains("datetime"))
+            return "datetime";
+        if (lower.EndsWith("_date") || lower.Contains("date"))
+            return "date";
+        if (lower.EndsWith("_id") || lower == "id")
+            return "int";
+        return "text";
+    }
+
+    /// <summary>
+    /// Removes SQL literals and comments before validation so blocked keywords inside data values do not fail safe queries.
+    /// </summary>
+    /// <param name="sql">Original SQL template.</param>
+    /// <returns>SQL with string literals and comments replaced or removed.</returns>
+    private static string stripSqlLiteralsAndComments(string sql)
+    {
+        var result = Regex.Replace(sql, @"'([^']|'')*'", "''");
+        result = Regex.Replace(result, @"""([^""]|"""")*""", "\"\"");
+        result = Regex.Replace(result, @"--.*?$", "", RegexOptions.Multiline);
+        result = Regex.Replace(result, @"/\*.*?\*/", "", RegexOptions.Singleline);
+        return result;
+    }
+
+    /// <summary>
+    /// Converts submitted filter text into typed values before parameter binding.
+    /// </summary>
+    /// <param name="name">Placeholder name used in error messages.</param>
+    /// <param name="type">Normalized parameter type.</param>
+    /// <param name="value">Submitted filter value.</param>
+    /// <param name="userDateFormat">Current user's date format.</param>
+    /// <param name="userTimeFormat">Current user's time format.</param>
+    /// <returns>Typed value for a DB parameter.</returns>
+    private static object convertParamValue(string name, FwDict def, string value, int userDateFormat, int userTimeFormat)
+    {
+        var type = def["type"].toStr();
+        switch (type)
+        {
+            case "int":
+            case "lookup_table":
+            case "lookup_model":
+            case "lookup_sql":
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+                    throw new UserException("Invalid number for @" + name);
+                return intValue;
+            case "lookup":
+                if (!string.IsNullOrEmpty(def["source"].toStr()) && def["options"] is not IList && def["options"] is not FwDict)
+                {
+                    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lookupValue))
+                        throw new UserException("Invalid number for @" + name);
+                    return lookupValue;
+                }
+                return value;
+            case "lookup_tpl":
+                return value;
+            case "number":
+                if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decimalValue)
+                    && !decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out decimalValue))
+                    throw new UserException("Invalid decimal number for @" + name);
+                return decimalValue;
+            case "date":
+            case "datetime":
+                var sqlDate = DateUtils.Str2SQL(value, userDateFormat, userTimeFormat, type == "datetime");
+                if (type == "datetime" && string.IsNullOrEmpty(sqlDate))
+                {
+                    var dateOnly = DateUtils.Str2SQL(value, userDateFormat);
+                    if (!string.IsNullOrEmpty(dateOnly))
+                        sqlDate = dateOnly + " 00:00:00";
+                }
+                if (DateUtils.SQL2Date(sqlDate) is not DateTime dateValue)
+                    throw new UserException("Invalid date for @" + name);
+                return dateValue;
+            default:
+                return value;
+        }
+    }
+
+    /// <summary>
+    /// Resolves configured default values, including relative date defaults, before required checks run.
+    /// </summary>
+    /// <param name="def">Normalized parameter metadata row.</param>
+    /// <param name="userDateFormat">Current user's date format.</param>
+    /// <returns>Resolved default value or an empty string when none is configured.</returns>
+    public static string resolveParamDefault(FwDict def, int userDateFormat)
+    {
+        var defaultValue = def["default"].toStr();
+        if (string.IsNullOrEmpty(defaultValue))
+            return string.Empty;
+
+        var type = def["type"].toStr();
+        if (type != "date" && type != "datetime")
+            return defaultValue;
+
+        var lower = defaultValue.ToLowerInvariant();
+        if (lower == "today")
+            return DateUtils.Date2Str(DateTime.Now, userDateFormat);
+
+        var match = Regex.Match(lower, @"^([+-]?\d+)d$");
+        if (match.Success)
+            return DateUtils.Date2Str(DateTime.Now.AddDays(match.Groups[1].Value.toInt()), userDateFormat);
+
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// Converts lookup rows from SQL or JSON arrays into the select-option shape used by ParsePage templates.
+    /// </summary>
+    /// <param name="options">Lookup rows or option objects.</param>
+    /// <returns>Options with id and iname fields.</returns>
+    private static FwList normalizeOptions(IList options)
+    {
+        var result = new FwList();
+        foreach (var option in options)
+        {
+            if (option is IDictionary dict)
+            {
+                var row = new FwDict(dict);
+                result.Add(new FwDict
+                {
+                    ["id"] = firstValue(row, "id", "value", "icode"),
+                    ["iname"] = firstValue(row, "iname", "label", "name")
+                });
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Converts simple JSON object lookup definitions into the select-option shape used by ParsePage templates.
+    /// </summary>
+    /// <param name="options">Dictionary of value to display label.</param>
+    /// <returns>Options with id and iname fields.</returns>
+    private static FwList normalizeOptionDict(FwDict options)
+    {
+        var result = new FwList();
+        foreach (var key in options.Keys)
+            result.Add(new FwDict { ["id"] = key, ["iname"] = options[key].toStr() });
+        return result;
+    }
+
+    /// <summary>
+    /// Finds the first populated value across accepted lookup field aliases.
+    /// </summary>
+    /// <param name="row">Lookup row.</param>
+    /// <param name="keys">Candidate field names in priority order.</param>
+    /// <returns>First non-empty value or an empty string.</returns>
+    private static string firstValue(FwDict row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var value = row[key].toStr();
+            if (!string.IsNullOrEmpty(value))
+                return value;
+        }
+        return string.Empty;
+    }
+
+    /// <summary>
+    /// Validates a schema/table identifier before it is quoted and embedded in lookup SQL.
+    /// </summary>
+    /// <param name="source">Table name, optionally schema-qualified.</param>
+    private static void validateLookupIdentifier(string source)
+    {
+        if (!Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)?$"))
+            throw new UserException("Unsupported lookup source: " + source);
+    }
+
+    /// <summary>
+    /// Removes ParsePage language markers from static select labels before rendering them as runtime options.
+    /// </summary>
+    /// <param name="label">Raw `.sel` label text.</param>
+    /// <returns>Display label without surrounding language backticks.</returns>
+    private static string cleanupSelLabel(string label)
+    {
+        var result = label.Trim();
+        if (result.Length >= 2 && result.StartsWith('`') && result.EndsWith('`'))
+            result = result[1..^1];
+
+        return result;
     }
 }

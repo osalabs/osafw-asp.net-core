@@ -1,0 +1,30 @@
+.reports-filter {
+  max-width: 20rem;
+}
+
+.reports-list-columns {
+  display: block;
+  column-count: 1;
+  column-gap: 1rem;
+}
+
+.reports-list-columns + .reports-list-columns {
+  margin-top: .5rem;
+}
+
+.reports-list-columns .report-list-item {
+  display: block;
+  break-inside: avoid;
+}
+
+@media (min-width: 768px) {
+  .reports-list-columns {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1200px) {
+  .reports-list-columns {
+    column-count: 3;
+  }
+}
