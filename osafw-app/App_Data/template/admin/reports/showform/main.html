@@ -29,7 +29,7 @@
 </form>
 
 <~preview if="has_preview" inline>
-  <h2 class="h4 mt-4">`Preview` <small class="text-muted">(<~preview_count> `rows`)</small></h2>
+  <h2 class="h4 mt-4">`Preview` <span class="badge badge-outline-secondary rounded-pill"><~preview_count></span></h2>
   <div class="fw-card">
     <table class="table table-sm table-bordered table-hover list">
       <thead>
@@ -40,6 +40,13 @@
           <tr><~cells repeat inline><td class="<~align_class>"><~value></td></~cells></tr>
         </~preview_rows>
       </tbody>
+      <~preview_totals_footer if="has_preview_totals" inline>
+      <tfoot>
+        <tr>
+          <~preview_totals repeat inline><td class="<~align_class> fw-semibold"><~display_value></td></~preview_totals>
+        </tr>
+      </tfoot>
+      </~preview_totals_footer>
     </table>
   </div>
 </~preview>

@@ -115,6 +115,7 @@ public class FwCustomReport : FwReports
             db.sql_command_timeout = oldTimeout;
         }
 
+        sortResultRows();
         list_count = list_rows.Count;
         buildResultTable();
     }
@@ -227,6 +228,54 @@ public class FwCustomReport : FwReports
         ps["result_totals"] = totals;
         ps["has_result_rows"] = rows.Count > 0;
         ps["has_result_totals"] = rows.Count > 0 && hasTotals;
+    }
+
+    /// <summary>
+    /// Applies user-requested sorting to the materialized result rows after validating the field exists in the result shape.
+    /// </summary>
+    private void sortResultRows()
+    {
+        var sortby = f["sortby"].toStr();
+        if (string.IsNullOrEmpty(sortby) || list_rows.Count == 0 || !list_rows[0].ContainsKey(sortby))
+        {
+            f["sortby"] = string.Empty;
+            f["sortdir"] = string.Empty;
+            return;
+        }
+
+        var sortdir = f["sortdir"].toStr().ToLowerInvariant() == "desc" ? "desc" : "asc";
+        f["sortby"] = sortby;
+        f["sortdir"] = sortdir;
+
+        list_rows.Sort((left, right) => compareSortValues(left[sortby], right[sortby], sortdir));
+    }
+
+    /// <summary>
+    /// Compares report cell values in a stable way for generic custom-report sorting.
+    /// </summary>
+    /// <param name="left">Left cell value.</param>
+    /// <param name="right">Right cell value.</param>
+    /// <returns>Comparison result suitable for sorting result rows.</returns>
+    private static int compareSortValues(object? left, object? right, string sortdir)
+    {
+        var isLeftEmpty = left == null || left == DBNull.Value;
+        var isRightEmpty = right == null || right == DBNull.Value;
+        if (isLeftEmpty && isRightEmpty)
+            return 0;
+        if (isLeftEmpty)
+            return 1;
+        if (isRightEmpty)
+            return -1;
+
+        int result;
+        if (tryDecimal(left, out var leftDecimal) && tryDecimal(right, out var rightDecimal))
+            result = leftDecimal.CompareTo(rightDecimal);
+        else if (left is DateTime leftDate && right is DateTime rightDate)
+            result = leftDate.CompareTo(rightDate);
+        else
+            result = string.Compare(left.toStr(), right.toStr(), StringComparison.CurrentCultureIgnoreCase);
+
+        return sortdir == "desc" ? -result : result;
     }
 
     /// <summary>

@@ -138,8 +138,10 @@ public class AdminReportsController : FwController
 
             ps["preview_headers"] = report.ps["result_headers"];
             ps["preview_rows"] = report.ps["result_rows"];
+            ps["preview_totals"] = report.ps["result_totals"];
             ps["preview_count"] = report.list_count;
             ps["has_preview"] = true;
+            ps["has_preview_totals"] = report.ps["has_result_totals"];
         }
 
         return ps;

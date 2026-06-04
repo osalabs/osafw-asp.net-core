@@ -148,6 +148,29 @@ public class FwReportsTests
     }
 
     [TestMethod]
+    public void CustomReportResultRows_SortsByRequestedResultColumn()
+    {
+        var report = new FwCustomReport([]);
+        report.f = new FwDict { ["sortby"] = "amount", ["sortdir"] = "desc" };
+        report.list_rows =
+        [
+            new FwDict { ["name"] = "Alpha", ["amount"] = "10.50" },
+            new FwDict { ["name"] = "Beta", ["amount"] = "20" },
+            new FwDict { ["name"] = "Gamma", ["amount"] = "2" }
+        ];
+
+        typeof(FwCustomReport)
+            .GetMethod("sortResultRows", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(report, null);
+
+        Assert.AreEqual("Beta", report.list_rows[0]["name"]);
+        Assert.AreEqual("Alpha", report.list_rows[1]["name"]);
+        Assert.AreEqual("Gamma", report.list_rows[2]["name"]);
+        Assert.AreEqual("amount", report.f["sortby"]);
+        Assert.AreEqual("desc", report.f["sortdir"]);
+    }
+
+    [TestMethod]
     public void AdminReportsController_AllowsLoggedUsersForCustomReportGate()
     {
         Assert.AreEqual(Users.ACL_MEMBER, AdminReportsController.access_level);

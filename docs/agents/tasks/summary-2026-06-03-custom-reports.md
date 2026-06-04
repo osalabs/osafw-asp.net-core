@@ -4,6 +4,7 @@
 - Kept hardcoded report resolution first; custom reports are the fallback by active `fwreports.icode`.
 - Applied feedback for report breadcrumbs/header actions, default `repN` code, Site Admin default access, form focus/help placement, preview routing, optional icons, report count badges, and generic numeric alignment/totals.
 - Moved custom report form Help examples into templates, removed controller-built form/help state, and changed Preview Run to reroute through `ShowFormAction`.
+- Applied follow-up feedback for report breadcrumbs without View/Edit labels, inline title count badges, title icons, custom report sort headers, preview count badge/totals, and clearer `Edit Custom Report` action text.
 ## Scope reviewed
 - Existing `AdminReportsController`, `FwReports`, sample report templates, report tests, DB helper parameter/limit behavior, RBAC resource checks, SQL schema scripts, and docs map.
 - Feedback pass also reviewed shared page-header/breadcrumb templates, report list layout, local SQL Server update path, Visual Studio launch behavior, and Playwright smoke flows on `https://localhost:44315`.
@@ -15,13 +16,18 @@
 - Follow-up build `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts\assistant_build\` passed with 0 warnings/errors.
 - Follow-up focused test `dotnet test osafw-tests\osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts\assistant_test_build\` passed: 18 tests, 1 existing nullable warning in `ConvUtilsTests.cs`.
 - Follow-up normal build `dotnet build osafw-app\osafw-app.csproj` passed with 0 warnings/errors after stopping detached IIS Express and relaunching through Visual Studio without debugging.
+- Second follow-up build `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts\assistant_build\` passed with 0 warnings/errors.
+- Second follow-up focused test `dotnet test osafw-tests\osafw-tests.csproj --filter FwReportsTests -p:OutDir=artifacts\assistant_test_build\` passed: 19 tests.
+- Second follow-up normal build `dotnet build osafw-app\osafw-app.csproj` passed with 0 warnings/errors after stopping detached IIS Express and relaunching through Visual Studio without debugging.
 - Full `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_test_build\` compiled and ran but failed 8 existing/environment-sensitive tests outside reports: dynamic prev/next null setup, ParsePage date format, and login MFA redirect expectations.
 - Applied `osafw-app\App_Data\sql\updates\upd2026-06-03-custom-reports.sql` to local SQL Server `demo` via `sqlcmd` so Playwright could test the added `icon` column.
 - Playwright MCP smoke: logged in locally, verified `/Admin/Reports/new` breadcrumbs/default code/name focus/access/icon/help, preview rendering for new and edit forms, `/Admin/Reports/test1` view header/breadcrumb/Edit action, run table numeric alignment, and `/Admin/Reports` custom section create button placement.
 - Follow-up Playwright MCP smoke verified `/Admin/Reports/test1?dofilter=1` title row with separate record-count badge and inline Edit button, `/Admin/Reports` Create New Report beside the Custom Reports heading, `/Admin/Reports/new` Icon under Access Level and Preview above Help, `/Admin/Reports/test1/edit` preview staying on the edit URL, and `/Admin/Reports/Sample?dofilter=1` using a separate count badge instead of count text in the title.
+- Second follow-up Playwright MCP smoke verified custom and hardcoded report breadcrumbs without View/Edit text, title icon before the custom report title, inline title count badges, `Edit Custom Report` button text, Custom Reports list icon rendering through Bootstrap Icons, generated custom report column sorting via `f[sortby]`/`f[sortdir]`, and Preview count/totals footer with a metric query.
 - `git diff --check` passed.
 - CRLF check passed for all files changed in this task.
 - Follow-up review loop: reviewer sub-agent timed out and was closed; local review using `docs/agents/code_reviewer.md` found no remaining issues worth another loop.
+- Second follow-up review loop: reviewer sub-agent timed out and was closed; local review using `docs/agents/code_reviewer.md` found and fixed descending-sort empty-value ordering, then focused build/tests passed again.
 ## Decisions - why
 - Custom reports use a `FwCustomReport` adapter instead of duplicating report rendering/export logic in the controller.
 - `FwReports.createInstance()` now resolves hardcoded classes first, then active `fwreports` rows, so existing URLs and helper APIs keep working.
@@ -41,6 +47,8 @@
 - Final local review found no remaining issues worth another loop; review loop can stop.
 - Preview Run returned form state from `SaveAction`, so parser originally looked for `/admin/reports/save`; fixed first with a template-directory override, then replaced with `routeRedirect(FW.ACTION_SHOW_FORM)` so preview uses the normal form route without `_basedir`.
 - Form and delete actions now use report URL templates instead of controller-supplied URL values.
+- Custom report sorting is intentionally applied after the stored SQL returns rows, so it stays within the validated result shape and avoids rewriting Site Admin-authored SQL.
+- Local review fixed custom report descending sort so null/empty values remain last instead of moving to the top after descending reversal.
 - IIS Express had to be stopped before rebuilding normal VS output; isolated builds alone did not update the live browser smoke target.
 - Generated build artifacts were removed after verification.
 ## Risks / follow-ups
