@@ -1,6 +1,6 @@
 <~/common/form/page_header_custom>
 
-<form id="FEdit" class="fw-card" method="post" action="<~form_action>" data-check-changes data-errors="<~error[details] json>">
+<form id="FEdit" class="fw-card" method="post" action="<~new_url if="is_new" inline><~/admin/reports/url>/new</~new_url><~edit_url unless="is_new" inline><~/admin/reports/url>/<~i[icode]>/edit</~edit_url>" data-check-changes data-errors="<~error[details] json>">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
 
   <fieldset>
@@ -28,29 +28,36 @@
   </fieldset>
 </form>
 
-<section class="mt-4">
-  <h2 class="h5">`Help`</h2>
-  <div class="alert alert-info">
-    <p class="mb-3"><~custom_report_help></p>
-    <h3 class="h6">`Example SQL`</h3>
-    <pre class="small mb-3"><code><~custom_report_help_sql></code></pre>
-    <h3 class="h6">`Example Parameters JSON`</h3>
-    <pre class="small mb-0"><code><~custom_report_help_params></code></pre>
-  </div>
-</section>
-
 <~preview if="has_preview" inline>
   <h2 class="h4 mt-4">`Preview` <small class="text-muted">(<~preview_count> `rows`)</small></h2>
   <div class="fw-card">
     <table class="table table-sm table-bordered table-hover list">
       <thead>
-        <tr><~preview_headers repeat inline><th><~iname></th></~preview_headers></tr>
+        <tr><~preview_headers repeat inline><th class="<~align_class>"><~iname></th></~preview_headers></tr>
       </thead>
       <tbody>
         <~preview_rows repeat inline>
-          <tr><~cells repeat inline><td><~value></td></~cells></tr>
+          <tr><~cells repeat inline><td class="<~align_class>"><~value></td></~cells></tr>
         </~preview_rows>
       </tbody>
     </table>
   </div>
 </~preview>
+
+<section class="mt-4">
+  <h2 class="h5">`Help`</h2>
+  <div class="alert alert-info">
+    <p class="mb-3">`Use one SELECT or CTE query. Use @param placeholders for filters, then define optional parameter metadata as JSON. Supported parameter types are text, int, number, date, datetime, and lookup.`</p>
+    <h3 class="h6">`Example SQL`</h3>
+    <pre class="small mb-3"><code>SELECT id, fname, lname, email, access_level, add_time
+FROM users
+WHERE (@access_level IS NULL OR access_level = @access_level)
+  AND (@s IS NULL OR email LIKE '%' + @s + '%' OR fname LIKE '%' + @s + '%' OR lname LIKE '%' + @s + '%')
+ORDER BY add_time DESC</code></pre>
+    <h3 class="h6">`Example Parameters JSON`</h3>
+    <pre class="small mb-0"><code>[
+  {"name":"access_level","label":"Access Level","type":"int"},
+  {"name":"s","label":"Search","type":"text"}
+]</code></pre>
+  </div>
+</section>

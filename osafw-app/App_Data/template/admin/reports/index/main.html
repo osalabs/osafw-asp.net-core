@@ -7,7 +7,7 @@
 </div>
 <hr>
 
-<~hardcoded_reports if="can_view_hardcoded_reports" inline>
+<~hardcoded_reports if="is_hardcoded_reports_visible" inline>
 <div class="row">
     <div class="col-sm-4">
         <!--h2>General</h2-->
@@ -26,14 +26,14 @@
 </div>
 </~hardcoded_reports>
 
-<~custom_block if="has_custom_reports_block" inline>
+<~custom_block if="is_custom_reports_block_visible" inline>
 <div class="d-flex align-items-center gap-2 mt-4 mb-2">
-    <h2 class="h4 mb-0 flex-grow-1">`Custom Reports`</h2>
+    <h2 class="h4 mb-0">`Custom Reports`</h2>
     <~create_btn if="is_site_admin" inline><a href="<~../url>/new" class="btn btn-primary btn-sm"><~/common/icons/plus-lg>`Create New Report`</a></~create_btn>
 </div>
 <div class="row">
     <div class="col-sm-4">
-        <~custom_list if="has_custom_reports" inline>
+        <~custom_list if="is_custom_reports_visible" inline>
         <div class="list-group">
             <~custom_reports repeat inline>
                 <a href="<~../url>/<~icode>" class="list-group-item">
@@ -44,7 +44,7 @@
             </~custom_reports>
         </div>
         </~custom_list>
-        <~empty_custom unless="has_custom_reports" inline>
+        <~empty_custom unless="is_custom_reports_visible" inline>
           <div class="text-muted">`No custom reports yet.`</div>
         </~empty_custom>
     </div>

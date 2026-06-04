@@ -1,6 +1,6 @@
 <~/common/form/page_header_custom>
 
-<form id="FDel" class="fw-card" method="post" action="<~ROOT_URL><~base_url>/<~i[icode]>">
+<form id="FDel" class="fw-card" method="post" action="<~/admin/reports/url>/<~i[icode]>">
   <input type="hidden" name="_method" value="DELETE">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
 
@@ -9,7 +9,7 @@
     <div class="row form-row">
       <div class="col">
         <button type="submit" class="btn btn-danger">`Delete`</button>
-        <a class="btn btn-default" href="<~base_url>/<~i[icode]>/edit">`Cancel`</a>
+        <a class="btn btn-default" href="<~/admin/reports/url>/<~i[icode]>/edit">`Cancel`</a>
       </div>
     </div>
   </fieldset>

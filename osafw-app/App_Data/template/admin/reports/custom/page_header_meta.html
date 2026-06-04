@@ -1,1 +1,5 @@
 <~report_icon if="custom_report[icon]" inline><i class="bi bi-<~custom_report[icon]> fs-4 text-muted"></i></~report_icon>
+<~report_count if="is_run" inline><span class="badge badge-outline-secondary rounded-pill"><~count></span></~report_count>
+<~edit_btn if="is_site_admin" inline>
+  <a href="<~/admin/reports/url>/<~report_code>/edit" class="btn btn-default btn-sm"><~/common/icons/pencil-square>`Edit`</a>
+</~edit_btn>

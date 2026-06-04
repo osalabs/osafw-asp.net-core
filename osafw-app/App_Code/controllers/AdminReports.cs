@@ -34,9 +34,9 @@ public class AdminReportsController : FwController
         var isSiteAdmin = fw.model<Users>().isSiteAdmin();
         ps["custom_reports"] = customReports;
         ps["is_site_admin"] = isSiteAdmin;
-        ps["can_view_hardcoded_reports"] = fw.userAccessLevel >= Users.ACL_MANAGER;
-        ps["has_custom_reports_block"] = isSiteAdmin || customReports.Count > 0;
-        ps["has_custom_reports"] = customReports.Count > 0;
+        ps["is_hardcoded_reports_visible"] = fw.userAccessLevel >= Users.ACL_MANAGER;
+        ps["is_custom_reports_block_visible"] = isSiteAdmin || customReports.Count > 0;
+        ps["is_custom_reports_visible"] = customReports.Count > 0;
 
         return ps;
     }
@@ -114,14 +114,42 @@ public class AdminReportsController : FwController
         }
 
         Utils.mergeHash(item, reqh("item"));
-        return buildShowFormPs(id, item);
+
+        var isNew = string.IsNullOrEmpty(id);
+        var ps = new FwDict
+        {
+            ["id"] = item["icode"],
+            ["i"] = item,
+            ["title"] = isNew ? "Create New Report" : "Edit Report",
+            ["is_new"] = isNew,
+            ["return_url"] = return_url
+        };
+
+        if (reqb("is_preview_ready"))
+        {
+            var reportCode = item["icode"].toStr();
+            if (string.IsNullOrEmpty(reportCode))
+                reportCode = "_preview";
+
+            var report = new FwCustomReport(item);
+            report.init(fw, reportCode, new FwDict { ["is_preview"] = true });
+            report.setFilters();
+            report.getData();
+
+            ps["preview_headers"] = report.ps["result_headers"];
+            ps["preview_rows"] = report.ps["result_rows"];
+            ps["preview_count"] = report.list_count;
+            ps["has_preview"] = true;
+        }
+
+        return ps;
     }
 
     /// <summary>
     /// Saves custom report definitions while preserving the legacy editable-report POST path.
     /// </summary>
     /// <param name="id">Report code for edit routes; empty when creating a new custom report.</param>
-    /// <returns>Template data for preview requests; otherwise redirects.</returns>
+    /// <returns>Null because save redirects and preview reroutes through the normal form action.</returns>
     public FwDict? SaveAction(string id = "")
     {
         if (!fw.FORM.ContainsKey("item"))
@@ -147,10 +175,14 @@ public class AdminReportsController : FwController
 
         if (reqb("preview"))
         {
-            item["is_preview"] = true;
-            var ps = buildShowFormPs(id, item);
-            addPreview(ps, item);
-            return ps;
+            fw.FORM["item"] = item;
+            fw.FORM["is_preview_ready"] = 1;
+            if (string.IsNullOrEmpty(id))
+                fw.routeRedirect(FW.ACTION_SHOW_FORM);
+            else
+                fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
+
+            return null;
         }
 
         var savedId = modelAddOrUpdate(oldId, item);
@@ -192,7 +224,6 @@ public class AdminReportsController : FwController
         {
             ["i"] = item,
             ["id"] = item["icode"],
-            ["base_url"] = base_url,
             ["title"] = "Delete Report"
         };
     }
@@ -241,33 +272,6 @@ public class AdminReportsController : FwController
     }
 
     /// <summary>
-    /// Builds the shared form template state for create, edit, validation, and preview responses.
-    /// </summary>
-    /// <param name="id">Current route report code; empty for a new report.</param>
-    /// <param name="item">Submitted or stored report fields to display.</param>
-    /// <returns>Template data for the custom-report management form.</returns>
-    private FwDict buildShowFormPs(string id, FwDict item)
-    {
-        var title = string.IsNullOrEmpty(id) ? "Create New Report" : "Edit Report";
-        var formAction = string.IsNullOrEmpty(id) ? base_url + "/new" : base_url + "/" + FwReportsModel.cleanupIcode(id) + "/edit";
-
-        return new FwDict
-        {
-            ["_basedir"] = "/admin/reports/showform",
-            ["id"] = item["icode"],
-            ["i"] = item,
-            ["title"] = title,
-            ["base_url"] = base_url,
-            ["form_action"] = formAction,
-            ["is_new"] = string.IsNullOrEmpty(id),
-            ["return_url"] = return_url,
-            ["custom_report_help"] = buildCustomReportHelp(),
-            ["custom_report_help_sql"] = buildCustomReportHelpSql(),
-            ["custom_report_help_params"] = buildCustomReportHelpParams()
-        };
-    }
-
-    /// <summary>
     /// Validates route-level custom-report fields before deeper SQL and JSON normalization runs.
     /// </summary>
     /// <param name="id">Existing report id or 0 for new reports.</param>
@@ -284,76 +288,12 @@ public class AdminReportsController : FwController
     }
 
     /// <summary>
-    /// Executes an unsaved custom report definition with preview limits and attaches rows to the form response.
-    /// </summary>
-    /// <param name="ps">Form template data to augment.</param>
-    /// <param name="item">Normalized unsaved report fields.</param>
-    private void addPreview(FwDict ps, FwDict item)
-    {
-        var reportCode = item["icode"].toStr();
-        if (string.IsNullOrEmpty(reportCode))
-            reportCode = "_preview";
-
-        var report = new FwCustomReport(item);
-        report.init(fw, reportCode, new FwDict { ["is_preview"] = true });
-        report.setFilters();
-        report.getData();
-
-        ps["preview_headers"] = report.ps["result_headers"];
-        ps["preview_rows"] = report.ps["result_rows"];
-        ps["preview_count"] = report.list_count;
-        ps["has_preview"] = true;
-    }
-
-    /// <summary>
     /// Ensures only Site Admins can manage or preview unsaved custom report SQL.
     /// </summary>
     private void checkSiteAdmin()
     {
         if (!fw.model<Users>().isSiteAdmin())
             throw new AuthException("Bad access - Site Administrator required");
-    }
-
-    /// <summary>
-    /// Provides compact inline authoring help for Site Admins on the custom report form.
-    /// </summary>
-    /// <returns>Plain text instructions shown beside SQL and parameter metadata fields.</returns>
-    private static string buildCustomReportHelp()
-    {
-        return """
-Use one SELECT or CTE query. Use @param placeholders for filters, then define optional parameter metadata as JSON.
-Supported parameter types: text, int, number, date, datetime, lookup.
-Lookup source may be users, fwentities, log_types, static options, or sql:SELECT id, iname FROM table.
-""";
-    }
-
-    /// <summary>
-    /// Provides a copyable SQL example that runs on the default SQL Server schema.
-    /// </summary>
-    /// <returns>Example custom report SQL.</returns>
-    private static string buildCustomReportHelpSql()
-    {
-        return """
-SELECT id, fname, lname, email, access_level, add_time
-FROM users
-WHERE (@access_level IS NULL OR access_level = @access_level)
-  AND (@s IS NULL OR email LIKE '%' + @s + '%' OR fname LIKE '%' + @s + '%' OR lname LIKE '%' + @s + '%')
-ORDER BY add_time DESC
-""";
-    }
-
-    /// <summary>
-    /// Provides copyable parameter metadata matching the SQL help example.
-    /// </summary>
-    /// <returns>Example params_json content.</returns>
-    private static string buildCustomReportHelpParams()
-    {
-        return """
-[
-  {"name":"access_level","label":"Access Level","type":"int"},
-  {"name":"s","label":"Search","type":"text"}
-]
-""";
     }
 
     /// <summary>
