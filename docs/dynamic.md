@@ -83,6 +83,8 @@ Developer-generated and virtual controllers build a two-column `show_fields` / `
 
 - **att_category / att_post_prefix**: configure upload bucket and input prefix for `att*` fields.
 - **model / save_fields / save_fields_checkboxes / required_fields / is_by_linked**: configure `multi*` and `subtable*` blocks.
+- Dynamic `SaveAttFiles` and existing-row `subtable_edit` saves authorize against the current parent row before object-link side effects run; override the controller's row-loading scope for app-specific ownership rules.
+- Dynamic `att_links_edit` saves call `Att.checkAccess(att_id)` for every posted attachment id before changing `att_links`; tighten `Att.checkAccess` in an app when uploads must be owner-, tenant-, or object-scoped.
 
 ### Button addons (Dynamic and Vue)
 

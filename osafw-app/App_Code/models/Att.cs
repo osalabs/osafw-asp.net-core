@@ -317,20 +317,23 @@ public class Att : FwModel<Att.Row>
         }
     }
 
-    // check access rights for current user for the file by id
-    // generate exception
+    /// <summary>
+    /// Checks whether the current request may reference or transmit an attachment row.
+    /// </summary>
+    /// <param name="id">Attachment id to authorize.</param>
+    /// <param name="action">Optional action code for app-specific overrides.</param>
     public override void checkAccess(int id = 0, string action = "")
     {
         bool result = true;
         var item = one(id);
 
-        // int user_access_level = fw.userAccessLevel;
-        // If item("access_level") > user_access_level Then
-        // result = False
-        // End If
+        // Framework default: active uploads are selectable/referenceable.
+        // Apps can tighten this for their domain, for example:
+        // if (item["add_users_id"].toInt() != fw.userId) result = false; // owner-only uploads
+        // if (item["fwentities_id"].toInt() > 0) result = false; // disallow relinking object-bound files
 
         // file must have Active status
-        if (item["status"].toInt() != STATUS_ACTIVE)
+        if (item.Count == 0 || item["status"].toInt() != STATUS_ACTIVE)
             result = false;
 
         if (!result)

@@ -4,6 +4,7 @@
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections.Generic;
 
 namespace osafw;
 
@@ -76,6 +77,12 @@ public class AttLinks : FwModel<AttLinks.Row>
         is_under_bulk_update = false;
     }
 
+    /// <summary>
+    /// Replaces attachment links for one entity row after authorizing every posted attachment id.
+    /// </summary>
+    /// <param name="entity_icode">Entity/table code for the record receiving attachment links.</param>
+    /// <param name="item_id">Target entity row id.</param>
+    /// <param name="att_keys">Posted attachment id keys, usually from <c>att[ID]=1</c> fields.</param>
     public virtual void updateJunction(string entity_icode, int item_id, FwDict att_keys)
     {
         if (att_keys == null)
@@ -83,18 +90,27 @@ public class AttLinks : FwModel<AttLinks.Row>
 
         FwDict fields = [];
         FwDict where = [];
+        var att_ids = new List<int>();
+        foreach (string key in att_keys.Keys)
+        {
+            var att_id = key.toInt();
+            if (att_id == 0)
+                continue;
+
+            att_ids.Add(att_id);
+        }
+
+        var att_model = fw.model<Att>();
+        foreach (var att_id in att_ids)
+            att_model.checkAccess(att_id);
 
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
 
         // set all rows as under update
         setUnderUpdate(fwentities_id, item_id);
 
-        foreach (string key in att_keys.Keys)
+        foreach (var att_id in att_ids)
         {
-            var att_id = key.toInt();
-            if (att_id == 0)
-                continue; // skip non-id, ex prio_ID
-
             var item = oneByUK(att_id, fwentities_id, item_id);
             if (item.Count > 0)
             {

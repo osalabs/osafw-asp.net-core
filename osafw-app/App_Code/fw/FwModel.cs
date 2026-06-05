@@ -122,8 +122,16 @@ public abstract class FwModel : IDisposable
     }
 
     #region basic CRUD one, list, multi, add, update, delete and related helpers
+    /// <summary>
+    /// Loads one row by positive id while treating nonpositive ids as absent records.
+    /// </summary>
+    /// <param name="id">Positive row id to load from this model's table.</param>
+    /// <returns>Matching row data, or an empty <see cref="DBRow"/> when the id is nonpositive or no row exists.</returns>
     public virtual DBRow one(int id)
     {
+        if (id <= 0)
+            return [];
+
         var cache_key = this.cache_prefix + id;
         var itemObj = fw.cache.getRequestValue(cache_key);
         DBRow? item = itemObj is FwDict ht ? (DBRow)ht : null;

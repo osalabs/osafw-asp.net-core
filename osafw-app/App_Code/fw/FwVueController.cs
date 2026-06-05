@@ -531,6 +531,11 @@ public class FwVueController : FwDynamicController
         return allFields;
     }
 
+    /// <summary>
+    /// Saves a Vue dynamic controller row after checking update access to the target parent row.
+    /// </summary>
+    /// <param name="id">Existing parent row id to update, or zero for a new row.</param>
+    /// <returns>JSON-oriented save response with subtable reconciliation metadata when needed.</returns>
     public override FwDict? SaveAction(int id = 0)
     {
         if (this.save_fields == null)
@@ -539,6 +544,8 @@ public class FwVueController : FwDynamicController
             throw new Exception("Wrong use refresh=1 on Vue Controller");
 
         checkReadOnly();
+        if (id != 0)
+            modelOneOrFail(id);
 
         FwDict item = reqh("item");
         var success = true;

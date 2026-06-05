@@ -24,6 +24,15 @@ public class FwDynamicController : FwController
         base.init(fw);
     }
 
+    /// <summary>
+    /// Adds dynamic-only mutating actions to the role permission map before normal controller access checks run.
+    /// </summary>
+    public override void checkAccess()
+    {
+        access_actions_to_permissions["SaveAttFiles"] = Permissions.PERMISSION_EDIT;
+        base.checkAccess();
+    }
+
     #region Standard REST Actions - Index/Show/ShowForm/Save
 
     /// <summary>
@@ -240,6 +249,11 @@ public class FwDynamicController : FwController
         return id;
     }
 
+    /// <summary>
+    /// Saves a dynamic controller row and its configured dynamic child/link fields.
+    /// </summary>
+    /// <param name="id">Existing parent row id to update, or zero for a new row.</param>
+    /// <returns>Parsed response data or JSON metadata from <see cref="afterSave(bool, string, bool, string, string, FwDict?)"/>.</returns>
     public virtual FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
@@ -248,6 +262,9 @@ public class FwDynamicController : FwController
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
         checkReadOnly();
+        if (id != 0)
+            modelOneOrFail(id);
+
         if (reqb("refresh"))
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
@@ -436,8 +453,13 @@ public class FwDynamicController : FwController
         var hids = reqh("item-" + field);
         // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
         var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        if (!string.IsNullOrEmpty(del_id))
+            checkSubtableRowBelongsToParent(id, del_id, def, sub_model);
+
         foreach (string row_id in sorted_keys)
         {
+            checkSubtableRowBelongsToParent(id, row_id, def, sub_model);
+
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
@@ -756,15 +778,17 @@ public class FwDynamicController : FwController
 
     #region Att Files support
 
-    // upload one or many files to the Att storage and link to the current entity and id
-    // json only response
+    /// <summary>
+    /// Uploads files for a saved dynamic row after proving the target parent row is editable in this controller.
+    /// </summary>
+    /// <param name="id">Existing parent row id that the uploaded files will be attached to.</param>
+    /// <returns>JSON response describing the first uploaded attachment or an upload error.</returns>
     public virtual FwDict SaveAttFilesAction(int id)
     {
-        var item = reqh("item");
+        checkReadOnly();
+        modelOneOrFail(id);
 
-        // validation
-        if (id == 0)
-            throw new UserException("Invalid ID");
+        var item = reqh("item");
 
         var files = fw.request?.Form?.Files;
         if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
@@ -1467,16 +1491,22 @@ public class FwDynamicController : FwController
         //check if we delete specific row
         var del_id = subtable_del[field].toStr();
 
-        //mark all related records as under update (status=1)
-        sub_model.setUnderUpdateByMainId(id);
-
-        //update and add new rows
-
         // row ids submitted as: item-<~field>[<~id>]
         // input name format: item-<~field>#<~id>[field_name]
         var hids = reqh("item-" + field);
         // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
         var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        if (!string.IsNullOrEmpty(del_id))
+            checkSubtableRowBelongsToParent(id, del_id, def, sub_model);
+
+        foreach (string row_id in sorted_keys)
+            checkSubtableRowBelongsToParent(id, row_id, def, sub_model);
+
+        //mark all related records as under update (status=1)
+        sub_model.setUnderUpdateByMainId(id);
+
+        //update and add new rows
+
         var junction_field_status = sub_model.getJunctionFieldStatus();
         foreach (string row_id in sorted_keys)
         {
@@ -1517,12 +1547,12 @@ public class FwDynamicController : FwController
     /// <summary>
     /// modelAddOrUpdate for subtable with dynamic model
     /// </summary>
-    /// <param name="main_id">main entity id</param>
-    /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
-    /// <param name="fields">fields to save to db</param>
-    /// <param name="def">subable definition from config.json</param>
-    /// <param name="sub_model">optional subtable model, if not passed def[model] will be used</param>
-    /// <returns></returns>
+    /// <param name="main_id">Main entity id that must own any existing subtable row.</param>
+    /// <param name="row_id">Submitted row id; new rows use a <c>new-</c> prefix and existing rows must be numeric.</param>
+    /// <param name="fields">Fields to save to the subtable row.</param>
+    /// <param name="def">Subtable field definition from <c>config.json</c>.</param>
+    /// <param name="sub_model">Optional resolved subtable model; when omitted, <paramref name="def"/> supplies the model name.</param>
+    /// <returns>Persisted subtable row id, either newly inserted or the existing row id.</returns>
     protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, FwDict fields, FwDict def, FwModel? sub_model = null)
     {
         int id;
@@ -1540,11 +1570,40 @@ public class FwDynamicController : FwController
         }
         else
         {
+            checkSubtableRowBelongsToParent(main_id, row_id, def, sub_model);
+
             id = row_id.toInt();
             sub_model.update(id, fields);
         }
 
         return id;
+    }
+
+    /// <summary>
+    /// Blocks forged subtable row ids from updating or deleting children attached to another parent row.
+    /// </summary>
+    /// <param name="main_id">Parent row id submitted with the dynamic save.</param>
+    /// <param name="row_id">Submitted subtable row id, or a <c>new-</c> temporary id for inserts.</param>
+    /// <param name="def">Subtable field definition that names the child model when <paramref name="sub_model"/> is omitted.</param>
+    /// <param name="sub_model">Resolved child model whose <see cref="FwModel.junction_field_main_id"/> stores the parent id.</param>
+    /// <exception cref="AuthException">Thrown when an existing child row is missing, invalid, or belongs to another parent.</exception>
+    protected virtual void checkSubtableRowBelongsToParent(int main_id, string row_id, FwDict def, FwModel? sub_model = null)
+    {
+        if (string.IsNullOrEmpty(row_id) || row_id.StartsWith("new-"))
+            return;
+
+        var id = row_id.toInt();
+        if (id <= 0)
+            throw new AuthException("Bad access - Not authorized");
+
+        sub_model ??= fw.model(def["model"].toStr());
+        var parentField = sub_model.junction_field_main_id;
+        if (string.IsNullOrEmpty(parentField))
+            throw new AuthException("Bad access - Not authorized");
+
+        var row = sub_model.one(id);
+        if (row.Count == 0 || row[parentField].toInt() != main_id)
+            throw new AuthException("Bad access - Not authorized");
     }
 
 

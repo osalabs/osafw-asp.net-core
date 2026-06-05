@@ -47,23 +47,27 @@ public class SignupController : FwController
         return ps;
     }
 
+    /// <summary>
+    /// Creates a public signup user and rejects attempts to route signup into an existing-user update.
+    /// </summary>
+    /// <param name="id">Must be zero; nonzero ids are rejected because signup is create-only.</param>
     public void SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         var item = reqh("item");
+        if (id != 0 || item["id"].toInt() != 0)
+            throw new UserException("Wrong Request");
+
         Validate(item);
         // load old record if necessary
         // var itemdb = model.one(id);
 
         var itemdb = FormUtils.filter(item, Utils.qw("email pwd fname lname"));
+        itemdb["access_level"] = Users.ACL_VISITOR;
+        itemdb["add_users_id"] = 0;
 
-        if (id == 0)
-        {
-            item["access_level"] = 0;
-            item["add_users_id"] = 0;
-        }
-        id = modelAddOrUpdate(id, itemdb);
+        id = modelAddOrUpdate(0, itemdb);
 
         fw.sendEmailTpl(itemdb["email"].toStr(), "signup.txt", itemdb);
 
