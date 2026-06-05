@@ -16,7 +16,7 @@ Core Subdomains
   - Runtime `FwConfig` settings are the flat contents of JSON `appSettings`; callers read `db`, `SITE_NAME`, etc. directly, not through an `appSettings` child key.
 - Files / Attachments
   - `att`, `att_links`, `att_categories` for uploads; supports S3 and inline images. Linked to entities via `fwentities`.
-  - Dynamic attachment-link saves authorize posted attachment ids through `Att.checkAccess`; the framework default is active-row only and apps can tighten it for ownership or tenancy.
+  - Dynamic attachment-link saves authorize posted attachment ids through `Att.checkAccess(..., "link", fwentities_id, item_id)`; normal attachment view/download access remains active-row based.
 - Activity Logging
   - `activity_logs` capture actions with types, entity, item_id, payload of changed fields.
 - Dynamic CRUD

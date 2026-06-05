@@ -132,32 +132,24 @@ public class SecurityDynamicObjectLinkTests
         }
     }
 
-    private sealed class TestAtt : Att
-    {
-        private readonly HashSet<int> deniedIds;
-
-        public List<int> CheckedIds { get; } = [];
-
-        public TestAtt(params int[] deniedIds)
-        {
-            this.deniedIds = new HashSet<int>(deniedIds);
-        }
-
-        public override void checkAccess(int id = 0, string action = "")
-        {
-            CheckedIds.Add(id);
-            if (deniedIds.Contains(id))
-                throw new AuthException("Denied");
-        }
-    }
-
-    private sealed class DefaultAccessAtt : Att
+    private class DefaultAccessAtt : Att
     {
         public Dictionary<int, FwDict> Rows { get; } = [];
 
         public override DBRow one(int id)
         {
             return Rows.TryGetValue(id, out var row) ? new DBRow(new FwDict(row)) : new DBRow();
+        }
+    }
+
+    private sealed class LinkRecordingAtt : DefaultAccessAtt
+    {
+        public List<(int Id, string Action, int EntityId, int ItemId)> LinkChecks { get; } = [];
+
+        public override void checkAccess(int id, string action, int fwentities_id, int item_id)
+        {
+            LinkChecks.Add((id, action, fwentities_id, item_id));
+            base.checkAccess(id, action, fwentities_id, item_id);
         }
     }
 
@@ -168,10 +160,16 @@ public class SecurityDynamicObjectLinkTests
 
     private sealed class TestAttLinks : AttLinks
     {
+        public Dictionary<int, FwList> ActiveLinksByAtt { get; } = [];
         public List<(int EntityId, int ItemId)> UnderUpdateCalls { get; } = [];
         public List<(int EntityId, int ItemId)> DeleteUnderUpdateCalls { get; } = [];
 
         public override FwDict oneByUK(int att_id, int fwentities_id, int item_id) => [];
+
+        public override FwList listActiveByAtt(int att_id)
+        {
+            return ActiveLinksByAtt.TryGetValue(att_id, out var rows) ? rows : [];
+        }
 
         public override void setUnderUpdate(int fwentities_id, int item_id)
         {
@@ -345,12 +343,13 @@ public class SecurityDynamicObjectLinkTests
     }
 
     [TestMethod]
-    public void AttLinks_UpdateJunctionRejectsUnauthorizedAttachmentBeforeMutation()
+    public void AttLinks_UpdateJunctionRejectsDifferentTargetAttachmentBeforeMutation()
     {
         var db = new RecordingDb();
         var fw = createFw();
         fw.db = db;
-        var att = new TestAtt(42);
+        var att = new LinkRecordingAtt();
+        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE);
         att.init(fw);
         TestHelpers.RegisterModel(fw, (Att)att);
         var entities = new TestFwEntities();
@@ -358,10 +357,13 @@ public class SecurityDynamicObjectLinkTests
         TestHelpers.RegisterModel(fw, (FwEntities)entities);
         var links = new TestAttLinks();
         links.init(fw);
+        links.ActiveLinksByAtt[42] = [DB.h("att_id", 42, "fwentities_id", 8, "item_id", 5, "status", FwModel.STATUS_ACTIVE)];
+        TestHelpers.RegisterModel(fw, (AttLinks)links);
 
         Assert.ThrowsExactly<AuthException>(() => links.updateJunction("demos", 5, DB.h("42", 1)));
 
-        CollectionAssert.AreEqual(new[] { 42 }, att.CheckedIds);
+        Assert.AreEqual(1, att.LinkChecks.Count);
+        Assert.AreEqual((42, Att.ACCESS_ACTION_LINK, 7, 5), att.LinkChecks[0]);
         Assert.IsEmpty(links.UnderUpdateCalls);
         Assert.IsEmpty(links.DeleteUnderUpdateCalls);
         Assert.IsEmpty(db.Inserts);
@@ -369,12 +371,13 @@ public class SecurityDynamicObjectLinkTests
     }
 
     [TestMethod]
-    public void AttLinks_UpdateJunctionAllowsAuthorizedActiveAttachment()
+    public void AttLinks_UpdateJunctionAllowsUnboundActiveAttachment()
     {
         var db = new RecordingDb();
         var fw = createFw();
         fw.db = db;
-        var att = new TestAtt();
+        var att = new LinkRecordingAtt();
+        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE);
         att.init(fw);
         TestHelpers.RegisterModel(fw, (Att)att);
         var entities = new TestFwEntities();
@@ -382,10 +385,42 @@ public class SecurityDynamicObjectLinkTests
         TestHelpers.RegisterModel(fw, (FwEntities)entities);
         var links = new TestAttLinks();
         links.init(fw);
+        TestHelpers.RegisterModel(fw, (AttLinks)links);
 
         links.updateJunction("demos", 5, DB.h("42", 1));
 
-        CollectionAssert.AreEqual(new[] { 42 }, att.CheckedIds);
+        Assert.AreEqual(1, att.LinkChecks.Count);
+        Assert.AreEqual((42, Att.ACCESS_ACTION_LINK, 7, 5), att.LinkChecks[0]);
+        Assert.AreEqual(1, links.UnderUpdateCalls.Count);
+        Assert.AreEqual(1, links.DeleteUnderUpdateCalls.Count);
+        Assert.AreEqual(1, db.Inserts.Count);
+        Assert.AreEqual(42, db.Inserts[0]["att_id"].toInt());
+        Assert.AreEqual(5, db.Inserts[0]["item_id"].toInt());
+        Assert.AreEqual(7, db.Inserts[0]["fwentities_id"].toInt());
+    }
+
+    [TestMethod]
+    public void AttLinks_UpdateJunctionAllowsSameTargetActiveAttachment()
+    {
+        var db = new RecordingDb();
+        var fw = createFw();
+        fw.db = db;
+        var att = new LinkRecordingAtt();
+        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE);
+        att.init(fw);
+        TestHelpers.RegisterModel(fw, (Att)att);
+        var entities = new TestFwEntities();
+        entities.init(fw);
+        TestHelpers.RegisterModel(fw, (FwEntities)entities);
+        var links = new TestAttLinks();
+        links.init(fw);
+        links.ActiveLinksByAtt[42] = [DB.h("att_id", 42, "fwentities_id", 7, "item_id", 5, "status", FwModel.STATUS_ACTIVE)];
+        TestHelpers.RegisterModel(fw, (AttLinks)links);
+
+        links.updateJunction("demos", 5, DB.h("42", 1));
+
+        Assert.AreEqual(1, att.LinkChecks.Count);
+        Assert.AreEqual((42, Att.ACCESS_ACTION_LINK, 7, 5), att.LinkChecks[0]);
         Assert.AreEqual(1, links.UnderUpdateCalls.Count);
         Assert.AreEqual(1, links.DeleteUnderUpdateCalls.Count);
         Assert.AreEqual(1, db.Inserts.Count);

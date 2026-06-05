@@ -51,6 +51,21 @@ public class AttLinks : FwModel<AttLinks.Row>
         return db.row(table_name, where);
     }
 
+    /// <summary>
+    /// Lists active dynamic attachment bindings for link authorization.
+    /// </summary>
+    /// <param name="att_id">Attachment id whose active junction rows should be inspected.</param>
+    /// <returns>Active <c>att_links</c> rows for the attachment.</returns>
+    public virtual FwList listActiveByAtt(int att_id)
+    {
+        var where = new FwDict()
+        {
+            {junction_field_main_id, att_id},
+            {field_status, STATUS_ACTIVE},
+        };
+        return db.array(table_name, where);
+    }
+
     public virtual void deleteByAtt(int att_id)
     {
         var where = new FwDict()
@@ -100,11 +115,10 @@ public class AttLinks : FwModel<AttLinks.Row>
             att_ids.Add(att_id);
         }
 
+        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
         var att_model = fw.model<Att>();
         foreach (var att_id in att_ids)
-            att_model.checkAccess(att_id);
-
-        var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
+            att_model.checkAccess(att_id, Att.ACCESS_ACTION_LINK, fwentities_id, item_id);
 
         // set all rows as under update
         setUnderUpdate(fwentities_id, item_id);

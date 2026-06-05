@@ -35,6 +35,8 @@ public class Att : FwModel<Att.Row>
     public const string IMGURL_0 = "/img/0.gif";
     public const string IMGURL_FILE = "/img/att_file.png";
 
+    public const string ACCESS_ACTION_LINK = "link";
+
     const string URL_PREFIX = "/Att";
 
     const int MAX_THUMB_W_S = 180;
@@ -327,10 +329,9 @@ public class Att : FwModel<Att.Row>
         bool result = true;
         var item = one(id);
 
-        // Framework default: active uploads are selectable/referenceable.
+        // Framework default: active uploads are viewable/downloadable.
         // Apps can tighten this for their domain, for example:
         // if (item["add_users_id"].toInt() != fw.userId) result = false; // owner-only uploads
-        // if (item["fwentities_id"].toInt() > 0) result = false; // disallow relinking object-bound files
 
         // file must have Active status
         if (item.Count == 0 || item["status"].toInt() != STATUS_ACTIVE)
@@ -338,6 +339,42 @@ public class Att : FwModel<Att.Row>
 
         if (!result)
             throw new AuthException("Access Denied. You don't have enough rights to get this file");
+    }
+
+    /// <summary>
+    /// Checks attachment access with target context for action-specific operations such as dynamic link saves.
+    /// </summary>
+    /// <param name="id">Attachment id to authorize.</param>
+    /// <param name="action">Action code; <c>link</c> applies target binding checks.</param>
+    /// <param name="fwentities_id">Target entity id that will receive the link.</param>
+    /// <param name="item_id">Target item id that will receive the link.</param>
+    public virtual void checkAccess(int id, string action, int fwentities_id, int item_id)
+    {
+        if (!string.Equals(action, ACCESS_ACTION_LINK, StringComparison.OrdinalIgnoreCase))
+        {
+            checkAccess(id, action);
+            return;
+        }
+
+        checkAccess(id, action);
+
+        var item = one(id);
+        if (item.Count == 0 || item["status"].toInt() != STATUS_ACTIVE)
+            throw new AuthException("Access Denied. You don't have enough rights to link this file");
+
+        var boundEntityId = item["fwentities_id"].toInt();
+        var boundItemId = item["item_id"].toInt();
+        var isUnbound = boundEntityId == 0 && boundItemId == 0;
+        var isSameTarget = boundEntityId == fwentities_id && boundItemId == item_id;
+        if (!isUnbound && !isSameTarget)
+            throw new AuthException("Access Denied. You don't have enough rights to link this file");
+
+        foreach (var link in fw.model<AttLinks>().listActiveByAtt(id))
+        {
+            isSameTarget = link["fwentities_id"].toInt() == fwentities_id && link["item_id"].toInt() == item_id;
+            if (!isSameTarget)
+                throw new AuthException("Access Denied. You don't have enough rights to link this file");
+        }
     }
 
     // transimt file by id/size to user's browser, optional disposition - attachment(default)/inline
