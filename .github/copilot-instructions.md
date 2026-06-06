@@ -103,7 +103,7 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Keep ParsePage route literal templates such as `App_Data/template/**/url.html` on one line with no trailing newline byte.
 - Use `FormUtils` for filtering/validation, `DateUtils` for user timezone formatting, `FwLogger` for logs, and `FwCache` for memoization.
 - For SQL queries or SQL fragments in code, prefer one `$@"..."` string block over concatenated pieces.
-- For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types. Add inline comments only for complex logic blocks.
+- For new or updated C# methods, prefer concise XML docs that explain intent, framework contract, or non-obvious behavior. Use `<summary>` when it adds information beyond the method name/signature. Add `<param>` or `<returns>` only for loose types (`FwDict`, `FwList`, `object?`), complex formats, security/access expectations, side effects, null/empty/exception behavior, or public return shapes. Do not document obvious primitive parameters or restate the code. Add inline comments only for complex logic blocks.
 
 ## Security Guardrails
 
@@ -151,6 +151,7 @@ What slowed this task? What should future agents do differently? Were sub-agents
 ## Documentation Sync
 
 - Agent instruction sync set: `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, `docs/README.md`, and task-summary expectations.
+- Record every end-user-app breaking upgrade change in `docs/CHANGELOG.md` under the change date before closing the task. Breaking changes include public framework API/signature changes, route or template/include path changes, schema/update requirements, config/compile-symbol changes, storage key/URL changes, security/default behavior changes, and frontend asset/class/plugin contracts that app code or overrides may depend on; if no entry is needed, note that in the task summary.
 - `docs/templates.md` is the canonical templates and ParsePage doc.
 - When changing shared ParsePage behavior, shared layout fragments, standard dynamic-controller screen structure, schema/update process, public framework behavior, or agent workflow, review the related docs in the same task and note when no doc update was needed.
 - When schema changes are present, consider both the additive update path under `osafw-app/App_Data/sql/updates/` and the from-scratch schema reference in `osafw-app/App_Data/sql/fwdatabase.sql`.

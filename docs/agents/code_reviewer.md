@@ -22,7 +22,7 @@ Check in this order:
 3. Data integrity: Are DB writes, schema updates, defaults, nullable fields, linked records, money values, and date/time handling safe?
 4. Security and privacy: Are auth checks, access gates, XSS tokens, signed links, secrets, logs, and PII handling still correct?
 5. Project fit: Does the work follow osafw controller/model patterns, dynamic-controller conventions, ParsePage composition, and local naming/style?
-6. Simplicity: Flag shallow wrappers, unjustified defensive casts/defaults, duplicated logic, over-broad abstractions, and comments that describe obvious code.
+6. Simplicity: Flag shallow wrappers, unjustified defensive casts/defaults, duplicated logic, over-broad abstractions, XML docs that restate obvious signatures, and comments that describe obvious code.
 7. Tests and verification: Are checks appropriate for the risk? Flag missing regression coverage or verification for changed branches, serializers, auth gates, schema changes, and framework-sensitive flows.
 8. Documentation sync: If the change touches template conventions, schema/process docs, agent workflow, shared screen structure, or public framework behavior, verify related docs were updated or the task summary states why no update was needed.
 
@@ -33,6 +33,7 @@ Check in this order:
 - Review framework method names against `docs/naming.md`: prefer result-shape or side-effect prefixes, avoid generic `Get*`/`Set*` names when a clearer name exists, and do not request broad churn outside the touched scope.
 - `list*()` methods should return empty `FwList`/`DBList`; dictionary-backed `one*()` methods should return empty `FwDict`/`DBRow`; typed single-row methods (`DB.row<T>`, `DB.rowp<T>`, `oneT*`) should return `null` for missing records unless using `*OrFail`.
 - Schema changes should consider both `osafw-app/App_Data/sql/fwdatabase.sql` and an additive script under `osafw-app/App_Data/sql/updates/`.
+- Breaking end-user-app upgrade changes should have a dated entry in `docs/CHANGELOG.md`, or the task summary should state why no entry was needed. Check public APIs/signatures, routes/templates/includes, schema/update scripts, config/compile symbols, storage keys/URLs, security/default behavior, and frontend asset/class/plugin contracts.
 - SQL queries or `list_where` fragments should prefer single `$@"..."` blocks over concatenated string assembly when that improves whitespace, quoting, or reviewability.
 - ParsePage route literal templates such as `url.html` must stay single-line and must not gain a trailing newline byte.
 - ParsePage attributes such as `if`, `unless`, and `repeat` belong on ParsePage tags, not plain HTML tags.
