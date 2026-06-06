@@ -30,6 +30,8 @@ Use this file to find the right document quickly instead of searching the whole 
 - [agents/glossary.md](agents/glossary.md): project terms and framework vocabulary.
 - [agents/code_reviewer.md](agents/code_reviewer.md): review loop instructions for code reviewer agents.
 - [agents/mcp.md](agents/mcp.md): MCP usage and troubleshooting notes.
+- [agents/tasks/index.md](agents/tasks/index.md): compact task-history index to search before opening full task summaries.
+- [agents/tools/](agents/tools/): reusable helper scripts for scoped repo search and text normalization.
 
 ## Which Doc to Use
 
@@ -38,4 +40,4 @@ Use this file to find the right document quickly instead of searching the whole 
 - If the task changes models, queries, or save flows: start with `crud.md`, then `db.md`, then `datetime.md` if date fields are involved.
 - If the task changes report classes, report templates, exports, or custom report SQL behavior: read `reports.md`, then `db.md`, then `templates.md` if templates are involved.
 - If the task adds or renames framework methods, variables, constants, or generated module helpers: read `naming.md`.
-- If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`.
+- If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`; search `agents/tasks/index.md` before opening old summaries.

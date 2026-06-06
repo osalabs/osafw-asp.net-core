@@ -8,8 +8,9 @@ The reviewer is an independent quality gate. Review the final changed work as a 
 
 - Read `AGENTS.md` first. Read `docs/agents/local_instructions.md` when present, but do not expose its contents.
 - Read the active task summary under `docs/agents/tasks/` when the caller provides it or when it is obvious from the task.
+- For historical context, search `docs/agents/tasks/index.md` before opening full task summaries.
 - Review the current task diff with `git status --short`, `git diff --stat`, `git diff -- <paths>`, and targeted file reads. Include untracked task files by reading them directly.
-- Read nearby implementation, templates, SQL, tests, and docs needed to understand the changed contract. Avoid broad repo sweeps unless the diff touches shared framework behavior.
+- Read nearby implementation, templates, SQL, tests, and docs needed to understand the changed contract. Avoid broad repo sweeps unless the diff touches shared framework behavior; use `docs/agents/tools/Search-Repo.ps1` for broad searches when available.
 
 ## Review Priorities
 

@@ -12,8 +12,10 @@
 1. Scope and record the task.
    - Create or update `docs/agents/tasks/summary-<YYYY-MM-DD>-<TASK-ID>.md` unless the user explicitly asked for no file changes or a read-only review. Use one short kebab-case task id per task session, and keep updating the same summary for iterative feedback in that session.
    - If no task summary is created because the request is read-only, include the useful summary in the final response instead.
+   - Before reading old task summaries, search `docs/agents/tasks/index.md` when it exists; open full summaries only when the index points to relevant history or when continuing that exact task.
    - For non-trivial tasks, identify the critical path, safe parallel side work, and tightly coupled work that should stay local.
    - For files over 1 MB or known large drafts/logs/generated outputs, do not run whole-file reads such as `Get-Content <file>`. Start with `rg` for headings/section IDs or read only targeted ranges, and record the sections used in the task summary.
+   - For broad repo searches, prefer `docs/agents/tools/Search-Repo.ps1`; include drafts or task-history summaries only when they are directly relevant.
 
 2. Implement the requested change first.
    - Do not start test-only refactors or broad QA edits before the implementation pass is complete.
@@ -25,13 +27,14 @@
 
 4. Run a review-fix loop when risk justifies it.
    - For runtime-affecting source code, schema, templates, scripts, tests, configuration, or risky developer/agent workflow changes, review the final diff using `docs/agents/code_reviewer.md`.
-   - Prefer a code reviewer sub-agent. If sub-agents are unavailable, perform the same review yourself and record that fallback in the task summary.
+   - Prefer a code reviewer sub-agent for risky/shared/security changes. For small or already-verified diffs, or after one unproductive reviewer wait, perform the same review yourself and record that fallback in the task summary.
    - Fix findings in the main workspace and repeat until there are no issues or no improvement points worth another loop.
    - Documentation-only changes do not need this loop unless they alter runnable configuration or risky developer/agent workflow.
 
 5. Keep the task summary current.
    - Append useful notes as the task evolves, except `Testing instructions`, which should always reflect the final state.
-   - For code changes, list exact automated/manual checks run, affected flows, highest-risk follow-up checks not run, and setup caveats.
+   - Keep summaries compact. For code changes, list exact final automated/manual checks run, affected flows, highest-risk follow-up checks not run, and setup caveats.
+   - Do not paste long command output or repeat known unrelated full-suite failures. Put bulky logs or evidence under `docs/agents/artifacts/` or repo-root `artifacts/`, then summarize the relevant lines.
    - For docs-only or internal instruction changes, set `Testing instructions` to `N/A - docs/instructions only` or an equivalent concise statement.
 
 6. Close out knowledge capture.
@@ -131,7 +134,7 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Keep `docs/agents/artifacts/` gitignored; do not leave `tmp_*` scratch files at repo root or under `osafw-app/`.
 - Use repo-root `artifacts/` for build outputs and larger generated verification assets that do not belong under docs.
 - Keep machine-specific guidance in `docs/agents/local_instructions.md`; check it before implementation and keep it out of Git.
-- Put reusable agent/debug helpers under `docs/agents/tools/`.
+- Put reusable agent/debug helpers under `docs/agents/tools/`; use the search and text-normalization helpers there instead of ad hoc broad search or line-ending scripts when they fit.
 - Do not store secrets, DB backups, or large logs in any agent workspace folder.
 
 ## Documentation Entry Points
@@ -146,6 +149,8 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Agent docs:
   - `docs/agents/code_reviewer.md` - review loop instructions.
   - `docs/agents/mcp.md` - MCP usage and troubleshooting notes.
+  - `docs/agents/tasks/index.md` - compact task-history index; search this before opening old summaries.
+  - `docs/agents/tools/` - reusable agent search and text-normalization helpers.
   - `docs/agents/heuristics.md`, `docs/agents/domain.md`, and `docs/agents/glossary.md` - reusable project knowledge.
 
 ## Documentation Sync
@@ -158,10 +163,11 @@ What slowed this task? What should future agents do differently? Were sub-agents
 
 ## Testing Guidance
 
-- Prefer targeted build/test/manual checks before broad suites.
+- Prefer focused build/test/manual checks before broad suites.
+- When VS/IIS Express may be running or normal build output is locked, immediately use an absolute repo-root `OutDir` under `artifacts/assistant_*` for build/test instead of retrying `bin/Debug`.
 - If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary.
 - Build app: `dotnet build osafw-app/osafw-app.csproj`.
-- Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/`.
+- Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=$PWD\artifacts\assistant_build\`.
 - Do not set `BaseIntermediateOutputPath` for `osafw-app`; generated intermediate files can be picked up by the project compile glob and cause duplicate assembly attributes.
 - Build solution: `dotnet build osafw-asp.net-core.sln`.
 - Test: `dotnet test`.

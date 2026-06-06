@@ -1,0 +1,117 @@
+# Task Summary Index
+
+Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
+
+- `summary-2025-05-07-001.md` - Converted legacy VB-style comment snippets to idiomatic C# equivalents across controllers, framework helpers, and models.
+- `summary-2025-10-08-bootstrap.md` - Completed bootstrap: documented project in `AGENTS.md`, created `docs/agents/{heuristics,domain,glossary}.md`.
+- `summary-2025-10-21-typed-conversion-rename.md` - Renamed the generic conversion helpers to the `to`/`toList` naming pattern and updated docs and code samples accordingly.
+- `summary-2025-10-21-typed-models-consolidated.md` - Unified the typed DTO groundwork across `FwExtensions`, `DB`, and `FwModel<TRow>` so generics provide first-class CRUD, caching, and controller integration alongside existing ha...
+- `summary-2025-11-17-001.md` - Reverted app and test projects to target `net10.0` per review feedback.
+- `summary-2025-12-08-001.md` - Applied `DBNameAttribute` mapping when building readable member dictionary so member name lookups respect DB aliases for properties and fields.
+- `summary-2025-12-08-001-app.md` - Re-encoded `docs/dynamic.md` to UTF-8 and reorganized it with type-specific sections, examples, and a navigable reference for dynamic controllers.
+- `summary-2025-12-08-002.md` - Hardened FW, controllers, and helpers for nullable safety until the solution builds with zero nullable warnings.
+- `summary-2025-12-10-001.md` - Added template parsing and caching coverage to `FwSelfTest.configuration` so the self-test exercises templating and both cache layers.
+- `summary-2025-12-10-001-app.md` - Tracked DbDataReader and command in instance fields; disposal occurs via explicit `closeQuery()` calls or automatically when a new query starts (no wrapper pattern used).
+- `summary-2025-12-10-002.md` - Migrated framework collections to `FwRow`/`FwList` wrappers and replaced legacy collection usage across controllers, models, and tests.
+- `summary-2025-12-15-001.md` - Added guards and skips for DB-dependent tests and noted TODOs.
+- `summary-2025-12-15-001-app.md` - Added a reusable helper to reuse cached user view selections during list rendering and avoid duplicate lookups per request.
+- `summary-2025-12-15-003.md` - Implemented missing fw tests covering CSV export utilities, temporary file cleanup, comma-string parsing, and ImportSpreadsheet fallback behavior.
+- `summary-2025-12-16-001.md` - Added comprehensive unit tests covering additional fw core controllers, utilities, and helpers.
+- `summary-2025-12-16-001-app.md` - Simplified `FwConfig` host resolution helpers to build and fetch per-host buckets with a clear environment/default fallback and reduced branching.
+- `summary-2025-12-16-002.md` - Added comprehensive unit coverage for fw Utils-related helpers (Utils, FormUtils, UploadUtils, DateUtils) and new ImageUtils test suite.
+- `summary-2025-12-16-003.md` - Updated tests to use current FwConfig API and modern MSTest assertions, removing analyzer warnings.
+- `summary-2025-12-17-001.md` - Documented every Dynamic/Vue field type with options and dual JSON samples in `docs/dynamic.md`.
+- `summary-2025-12-22-001.md` - Updated framework docs and samples to reference `FwDict`/`FwList` instead of legacy Hashtable/ArrayList types.
+- `summary-2025-12-23-001.md` - Restored legacy `toHashtable`/`toArrayList` conversion helpers to keep existing API surface while promoting `FwDict`/`FwList`.
+- `summary-2025-12-24-001.md` - Added theme-friendly component tokens for cards, page layout spacing, file drop areas, badges, and dashboard cards, aligning defaults with existing styles across base, theme20, ...
+- `summary-2025-12-24-001-app.md` - Adopted shared page headers across list, view, and edit templates (admin and my areas), removing redundant local button overrides and aligning spacing.
+- `summary-2025-12-24-002.md` - Addressed feedback on page header rollout: renamed hide flag to `is_hide_page_header_actions_std`, moved its population into controllers, restored lookups index to original head...
+- `summary-2025-12-24-btn-primary.md` - Standardized primary button styling for CRUD entry points: list â€œAdd Newâ€ buttons now use `btn-primary`, view â€œEditâ€ buttons now use `btn-primary`, and Vue view delete u...
+- `summary-2025-12-26-001.md` - Updated Vue list/view/edit headers to use shared `.page-header` layout and slots, matching non-Vue templates and site.css styling.
+- `summary-2025-12-26-002.md` - Removed legacy page-header float overrides and refreshed header action partials (Vue and non-Vue) to align with the page header layout without compatibility CSS.
+- `summary-2025-12-26-003.md` - Moved list action buttons from table headers into filter forms and added a Print control alongside search/customize/density toggles.
+- `summary-2026-01-06-001.md` - Added optional compact list header templates (page header + combined filter/action row) with shared hidden filter field include, including `is_search`.
+- `summary-2026-01-06-002.md` - Refactored list filter templates so Export/Print actions render beside search controls while table buttons remain on the second row.
+- `summary-2026-01-08-001.md` - reintroduced enter handling in Vue autocomplete with a pending-enter guard
+- `summary-2026-01-08-attachments-empty-state.md` - Added empty-state markup for attachment/attachment list/file list templates across ParsePage and Vue form controls.
+- `summary-2026-01-08-att-layout-simplify.md` - Simplified attachment list templates to use direct cards without row/col wrappers.
+- `summary-2026-01-10-002.md` - fixed routeRedirect to handle non-string args safely
+- `summary-2026-01-10-autocomplete-separator.md` - Added XML docs and inline comments for autocomplete-related methods.
+- `summary-2026-01-10-fwadmin-prev-next.md` - added shared prev/next navigation helpers in FwController/FwModel and reused them in FwDynamicController
+- `summary-2026-01-12-001.md` - Moved class-only template partials into `App_Data/template/common/cl/`, renamed class files to match class names, and updated template references.
+- `summary-2026-01-12-001-app.md` - Added documentation for overall screen layout, CRUD headers, theming tokens, and extension points.
+- `summary-2026-01-12-002.md` - replaced list table wrappers to use the new fw-list-card class and added styling overrides so default theme stays flat while theme20/theme30 keep card-like list panes.
+- `summary-2026-01-12-01.md` - revised view-only field styling to rely on standard control sizing tokens and simplified view value tokens
+- `summary-2026-01-12-blue-theme30-css.md` - Updated theme30 blue theme button, badge, sidebar header, and table sort styling.
+- `summary-2026-01-12-dynamic-fieldset.md` - added fieldset structural support for dynamic show/showform configs with templates, JS toggle behavior, and styling
+- `summary-2026-01-12-template-cleanup.md` - Removed theme-hostile background/text utilities from sidebar templates and main sidebar layout wrapper.
+- `summary-2026-01-16-001.md` - adjusted ECharts doughnut configuration to control label/legend visibility per theme and added rounded corners for default/theme30
+- `summary-2026-01-16-001-app.md` - improved Vue item loading feedback with immediate progress tracking and success-colored line for view/edit forms.
+- `summary-2026-01-16-002.md` - Updated `fw.initComponent` to accept `assetsUrls` and inline `init` while keeping loader logic generic.
+- `summary-2026-01-16-002-app.md` - Added a standard modal component that loads remote content, executes inline scripts, and wires modal forms to ajaxForm submissions.
+- `summary-2026-01-16-admin-vue-date-time.md` - Added Vue date combo and time input handling in form controls and list editing, including a new list-cell-date-combo component and time helpers.
+- `summary-2026-01-17-001.md` - Added Vue form tab payloads in `FwVueController`, including tab-specific field mappings and tab-aware field collection for item payloads and lookups.
+- `summary-2026-01-17-activity-logs-vue.md` - Ensured Vue init payload includes is_activity_logs for view screen rendering.
+- `summary-2026-01-19-001.md` - Added last-login activity aggregation for admin users list to power a 7-day mini bar chart column, now using model table names in SQL.
+- `summary-2026-01-19-select2.md` - swapped bootstrap-select assets and template usage for Select2, including new common template and updated demo config
+- `summary-2026-01-20-003.md` - Updated status badge color mappings and badge markup to use Bootstrap `text-bg-*` classes, including Active status switching to `text-bg-success`.
+- `summary-2026-01-20-01.md` - Switched the Admin Users list last-login mini chart to a smooth line chart with subtle area fill.
+- `summary-2026-01-20-libman-cdnjs.md` - Updated `osafw-app/libman.json` to set `defaultProvider` to `cdnjs`.
+- `summary-2026-01-20-lookup-dropdown.md` - Added dropdown-capable append/prepend buttons for dynamic showform input groups, including modal-driven lookup add/edit flow and demo config updates.
+- `summary-2026-01-20-subtable-vue.md` - Added subtable row id tracking and Vue save payload for subtable refresh/id reconciliation.
+- `summary-2026-01-20-vue-refactor.md` - Added shared Vue app/store helper templates to centralize setup logic.
+- `summary-2026-04-13-date-input-timezone.md` - Fixed ParsePage date rendering so date-only values no longer get shifted across time zones during template formatting.
+- `summary-2026-04-14-date-only-timezone-docs.md` - Reviewed the uncommitted framework changes under `osafw-app/App_Code/fw` related to date-only rendering and per-user timezone conversion.
+- `summary-2026-04-15-001.md` - Fixed a ParsePage concurrency bug by replacing the shared per-language `FwDict` cache with a thread-safe nested concurrent dictionary.
+- `summary-2026-05-11-agent-instructions-cleanup.md` - Reworked `AGENTS.md` into shorter, checkable sections for non-negotiables, task workflow, project conventions, documentation sync, testing, commands, and MCP usage.
+- `summary-2026-05-11-db-generics-nullability.md` - Reviewed DB generic single-row nullability through the FPF lens: dictionary rows and typed DTO rows are separate bounded contexts with different honest absence signals.
+- `summary-2026-05-11-move-agent-docs.md` - Moved agent instructions and framework docs from `osafw-app/` to the repository root.
+- `summary-2026-05-11-naming-conventions.md` - Added `docs/naming.md` as the standard framework naming conventions guide.
+- `summary-2026-05-11-parsepage-recursion-protection.md` - Added ParsePage file-template recursion protection.
+- `summary-2026-05-12-cast-cleanup.md` - Removed redundant `.Cast` calls where the receiver is now strongly typed (`FwDict.Keys`, `FwList`, `StrList`, and parser logger `string[]`).
+- `summary-2026-05-12-devcodegen-tabs.md` - Dev Tools controller config generation now removes copied demo tab-specific field blocks (`show_fields_*`, `showform_fields_*`) before writing generated layouts.
+- `summary-2026-05-12-dynamic-att-files-showform.md` - Updated `FwDynamicController.prepareShowFormFields()` so classic dynamic ShowForm preparation loads attachment display data for readonly `att`, `att_links`, and `att_files` fiel...
+- `summary-2026-05-12-fwconfig-appsettings.md` - Cleaned up `FwConfig.settingsForEnvironment()` so startup config reads direct children of `appSettings` into a flat settings dictionary.
+- `summary-2026-05-12-fwupdates-layout.md` - Added `appSettings.is_fwupdates_auto_apply` with default `true`; `FwUpdates.checkApplyIfDev()` now skips the Home-page update redirect when the flag is disabled.
+- `summary-2026-05-12-modal-pjax-links.md` - Implemented `.on-fw-modal-link` handling in the shared modal component so links clicked inside a framework modal load into the same modal via the existing fetch/pjax modal conte...
+- `summary-2026-05-12-report-json-export.md` - Added internal report JSON export support for `f[format]=json`.
+- `summary-2026-05-13-demo-timezone-fields.md` - Added `demos` timezone sample columns: `fdatetime_utc`, `fdatetime_offset`, and `fdatetime_local` in SQL Server demo schema, MySQL compatibility schema, and an additive SQL Serv...
+- `summary-2026-05-13-inactive-records.md` - Added selected-aware lookup option handling so model-backed dropdowns return active rows by default plus the same-field selected inactive row on edit.
+- `summary-2026-05-13-patch-timezones.md` - Reimplemented PR #255 as framework-level timezone handling in `DB.cs`.
+- `summary-2026-05-14-db-array-limit-offset.md` - Implemented `offset` / `limit` support for `DB.array()` and `DB.array<T>()`, with consistent `offset, limit` parameter order.
+- `summary-2026-05-14-sqlite-provider-support.md` - Added SQLite as an optional provider: `DB.DBTYPE_SQLITE`, SQLite command/transaction/identity handling, identifier quoting, paging, `PRAGMA` foreign keys, schema/FK introspectio...
+- `summary-2026-05-15-timezone-review-feedback.md` - Addressed reviewer feedback for timezone handling:
+- `summary-2026-05-15-urlescape-case-preservation.md` - Fixed `Utils.urlescape()` so URL-encoded output is not lowercased after encoding.
+- `summary-2026-05-18-debug-sudden-logout.md` - Investigating sudden logout/session loss under Visual Studio/IIS Express.
+- `summary-2026-05-18-user-timezone-auto.md` - Made `/My/Settings` Time Zone `auto` a real empty preference and added explicit `UTC` under it.
+- `summary-2026-05-19-common-frontend-components.md` - Reworked `common/bootstrap_select.html` into the `fw.initComponent` pattern using the project reference version as the base.
+- `summary-2026-05-19-design-system.md` - Added `docs/design_system.html` as a static visual guide for framework UI conventions, active themes, tokens, and shared component examples.
+- `summary-2026-05-19-execmultiple-sql.md` - Kept `DB.splitMultiSQL()` as the simple semicolon/`GO` splitter for interactive/simple script use.
+- `summary-2026-05-19-initialize-db.md` - Fixed `/Dev/Configure/(InitDB)` so the development initializer includes `demo.sql` when present.
+- `summary-2026-05-19-ui-controls.md` - Added range and switch support to static, Dynamic, and Vue demo screens.
+- `summary-2026-05-20-agent-efficiency.md` - Updated `docs/agents/heuristics.md` with generalized efficiency heuristics for large-file reading, bounded sub-agents, MCP fallback discipline, and isolated builds.
+- `summary-2026-05-20-compile-symbols.md` - Centralized optional compile-time feature constants in `osafw-app/osafw-app.csproj`.
+- `summary-2026-05-20-fw-js-reportvalidity-guard.md` - Guarded `.on-submit` form submission in `fw.js` so missing/invalid form targets return without throwing.
+- `summary-2026-05-20-fw-session-cache.md` - Renamed the visible session-cache boundary from a SQLite-specific distributed-cache class to `FwSessionCache`, with provider-specific registration hidden behind `AddFwSessionCac...
+- `summary-2026-05-20-sqlite-only-test.md` - Enabled SQLite-only runtime for the app by defining `isSQLite`, switching base/Development/Beta DB config to `Data Source=App_Data/db/osafw.sqlite`, and removing active SQL Serv...
+- `summary-2026-05-20-sync-master.md` - Merged local `master` into `support-sqllite` and resolved conflicts.
+- `summary-2026-05-26-js-components-docs.md` - Added concise `fw.initComponent()` / `fw.registerComponent()` guidance to `docs/templates.md` near the common JavaScript component includes.
+- `summary-2026-05-26-lookups-navigation.md` - Fixed shared Vue history handling so initial screen state uses `replaceState`, normal in-app navigation uses `pushState`, and `popstate` updates the current screen without addin...
+- `summary-2026-05-26-modal-component-refactor.md` - Moved inline `common/modal.html` JavaScript to cacheable `wwwroot/assets/js/fw-modal.js`.
+- `summary-2026-05-27-static-icon-partials.md` - Migrated static Bootstrap icon tags in ParsePage templates to `common/icons/*` includes.
+- `summary-2026-06-01-deep-security-scan.md` - Started a repository-wide Codex Security Deep Security Scan.
+- `summary-2026-06-03-custom-reports.md` - Added Site Admin-managed custom reports on top of the existing `/Admin/Reports` module.
+- `summary-2026-06-03-security-agent-instruction-updates.md` - Added concise recurring security guardrails to `AGENTS.md`, `docs/agents/code_reviewer.md`, and `docs/agents/heuristics.md`; synced `.github/copilot-instructions.md` from `AGENT...
+- `summary-2026-06-03-security-post-token-small-actions.md` - Added `FwController.enforcePost()` to require POST and validate the existing XSS token for custom mutating actions.
+- `summary-2026-06-03-security-quick-local-fixes.md` - Replaced the JSON Content-Type slice in `FW.parseForm` with a safe `StartsWith` check.
+- `summary-2026-06-03-security-remediation-plan.md` - Created `docs/drafts/security2026-06.md` as a developer handoff checklist for the 42 reportable findings in the June 2026 security scan. The draft groups findings into smaller i...
+- `summary-2026-06-03-security-user-owned-preferences.md` - Added owner-aware `oneMine` and owner/system-aware `oneAvail` helpers to saved view/filter/list models.
+- `summary-2026-06-04-custom-reports-review.md` - Created `docs/drafts/custom_reports_review.md` with architecture, code, docs, security, template/UI, simplification, test-gap, and open-question findings for the custom reports ...
+- `summary-2026-06-04-custom-reports-review-fixes.md` - Renamed the report runtime/base class to `FwReportsBase` and moved the `fwreports` table model to `osafw-app/App_Code/fw/FwReports.cs` as `FwReports`.
+- `summary-2026-06-05-security-attachments.md` - Implemented Group 7 attachment hardening:
+- `summary-2026-06-05-security-dynamic-object-links.md` - Implemented dynamic parent/object-link authorization and public signup create-only behavior for CAN-R01-011, CAN-R01-012, CAN-R03-029, and CAN-R03-030.
+- `summary-2026-06-05-stored-rendering-hardening.md` - Completed Group 6 stored HTML/markdown rendering hardening.
+- `summary-2026-06-06-breaking-changelog.md` - Rebuilt `docs/CHANGELOG.md` into dated breaking-upgrade sections covering commits since 2025-06-01.
+- `summary-2026-06-06-method-comment-cleanup.md` - Reviewed 2,260 C# method-like declarations under `osafw-app/` and `osafw-tests/` using a Roslyn inventory, excluding `bin/`, `obj/`, and `osafw-app/App_Data/db/`.
+- `summary-2026-06-06-method-comments.md` - Updated agent coding-style guidance to prefer concise, contract-focused XML method docs instead of full param/return comments for obvious signatures.
+- `summary-2026-06-06-token-efficient-workflow.md` - Added reusable agent helper scripts for scoped repo search and CRLF/UTF-8 no-BOM normalization.
