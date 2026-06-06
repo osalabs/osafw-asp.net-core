@@ -110,7 +110,7 @@ Parses file templates and replaces <~tags> with values from dictionary
   default
   urlencode
   json (was var2js) - produces json-compatible string, example: {success:true, msg:""}
-  markdown      - convert markdown text to html using Markdig (optional). Note: may wrap tag with <p>
+  markdown      - convert markdown text to html using Markdig (optional). Raw HTML is disabled unless markdown="trusted". Note: may wrap tag with <p>
   noparse       - doesn't parse file and just include file by tag path as is, ignores all other attrs except if
 */
 
@@ -178,8 +178,11 @@ public class ParsePage
     private static string OutputTimezone = DATE_TIMEZONE_DEF;
 
     // for dynamic load of Markdig markdown converter
+    private const string MARKDOWN_EXTENSIONS_SAFE = "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks";
+    private const string MARKDOWN_EXTENSIONS_TRUSTED = MARKDOWN_EXTENSIONS_SAFE + "+customcontainers+attributes";
     private static System.Reflection.MethodInfo? mMarkdownToHtml;
-    private static object? MarkdownPipeline;
+    private static object? MarkdownPipelineSafe;
+    private static object? MarkdownPipelineTrusted;
 
     private readonly Func<FwDict> globalsGetter = () => [];
     private readonly ISession? session;
@@ -981,6 +984,37 @@ public class ParsePage
         return result;
     }
 
+    /// <summary>
+    /// Builds the Markdig pipeline used by ParsePage so untrusted markdown can keep normal
+    /// formatting while rejecting raw HTML and arbitrary markdown-generated attributes.
+    /// </summary>
+    /// <param name="pipelineBuilderType">Runtime Markdig <c>MarkdownPipelineBuilder</c> type loaded by reflection.</param>
+    /// <param name="markdownExtensionsType">Runtime Markdig <c>MarkdownExtensions</c> type that exposes extension methods.</param>
+    /// <param name="isTrusted">When true, enables the legacy raw HTML/attribute-capable pipeline for trusted templates.</param>
+    /// <returns>A Markdig pipeline instance, or <c>null</c> when required Markdig APIs are unavailable.</returns>
+    private static object? buildMarkdownPipeline(Type pipelineBuilderType, Type markdownExtensionsType, bool isTrusted)
+    {
+        var pipelineBuilder = Activator.CreateInstance(pipelineBuilderType);
+        var configureMethod = markdownExtensionsType.GetMethod("Configure", [pipelineBuilderType, typeof(string)]);
+        var buildMethod = pipelineBuilderType.GetMethod("Build", Type.EmptyTypes);
+
+        if (pipelineBuilder == null || configureMethod == null || buildMethod == null)
+            return null;
+
+        configureMethod.Invoke(null, [pipelineBuilder, isTrusted ? MARKDOWN_EXTENSIONS_TRUSTED : MARKDOWN_EXTENSIONS_SAFE]);
+
+        if (!isTrusted)
+        {
+            var disableHtmlMethod = markdownExtensionsType.GetMethod("DisableHtml", [pipelineBuilderType]);
+            if (disableHtmlMethod == null)
+                return null;
+
+            disableHtmlMethod.Invoke(null, [pipelineBuilder]);
+        }
+
+        return buildMethod.Invoke(pipelineBuilder, null);
+    }
+
     private void tag_replace(ref string hpage_ref, ref string tag_full_ref, ref string value_ref, FwDict hattrs, object? originalValue = null)
     {
         if (string.IsNullOrEmpty(hpage_ref))
@@ -1176,6 +1210,8 @@ public class ParsePage
                     // var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
                     // or var pipeline = new MarkdownPipelineBuilder().Configure("common+gfm-pipetables+emphasisextras+listextras+footers+citations+attributes+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks").Build();
                     // var result = Markdown.ToHtml(value, pipeline);
+                    var markdownInput = originalValue?.toStr() ?? value;
+                    bool isTrustedMarkdown = hattrs["markdown"].toStr().Equals("trusted", StringComparison.OrdinalIgnoreCase);
                     try
                     {
                         if (mMarkdownToHtml == null)
@@ -1196,32 +1232,31 @@ public class ParsePage
                             {
                                 mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
 
-                                var configureMethod = tMarkdownExtensions.GetMethod("Configure");
-
-                                var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
-                                var buildMethod = tMarkdownPipelineBuilder.GetMethod("Build");
-
-                                if (configureMethod == null || pipelineBuilder == null || buildMethod == null)
+                                MarkdownPipelineSafe = buildMarkdownPipeline(tMarkdownPipelineBuilder, tMarkdownExtensions, false);
+                                MarkdownPipelineTrusted = buildMarkdownPipeline(tMarkdownPipelineBuilder, tMarkdownExtensions, true);
+                                if (MarkdownPipelineSafe == null || MarkdownPipelineTrusted == null)
                                 {
                                     logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
                                     attr_count = 0;
                                 }
-                                else
-                                {
-                                    configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
-
-                                    MarkdownPipeline = buildMethod.Invoke(pipelineBuilder, null);
-                                }
                             }
                         }
 
-                        if (mMarkdownToHtml != null && MarkdownPipeline != null)
-                            value = mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]).toStr();
+                        var markdownPipeline = isTrustedMarkdown ? MarkdownPipelineTrusted : MarkdownPipelineSafe;
+                        if (mMarkdownToHtml != null && markdownPipeline != null)
+                        {
+                            var markdownSource = isTrustedMarkdown ? markdownInput : value;
+                            value = mMarkdownToHtml.Invoke(null, [markdownSource, markdownPipeline, null]).toStr();
+                        }
+                        else if (!isTrustedMarkdown)
+                            value = Utils.htmlescape(markdownInput);
                     }
                     catch (Exception ex)
                     {
                         logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
                         logger(LogLevel.DEBUG, ex.Message);
+                        if (!isTrustedMarkdown)
+                            value = Utils.htmlescape(markdownInput);
                     }
 
                     attr_count -= 1;

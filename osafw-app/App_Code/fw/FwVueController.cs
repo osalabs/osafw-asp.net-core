@@ -126,6 +126,7 @@ public class FwVueController : FwDynamicController
 
         ps["field_id"] = model0.field_id;
         ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
+        ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
 
         // add form tabs with tab-specific field definitions if configured
         if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)

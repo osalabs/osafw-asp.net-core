@@ -1,7 +1,19 @@
-<!-- component usage: include common/markdown_editor and add class="markdown" to textarea controls. -->
 <!--
-  Documentation is here:
-  https://www.jqueryscript.net/text/Easy-WYSIWYG-Markdown-Rditor-For-Bootstrap-Bootstrap-Markdown.html
+  component usage: include common/markdown_editor to enable Bootstrap Markdown editor on textarea.markdown controls.
+
+  1) Add /common/markdown_editor include to a load_script.html.
+  2) Add class="markdown" to textarea controls.
+     - Dynamic configs usually use class_control: "markdown autoresize".
+  3) Pasted clipboard HTML is converted to markdown with Turndown before insertion.
+  4) Preview uses markdown-it with safe defaults:
+     - Raw HTML is disabled.
+     - markdown-it container and attrs extensions are disabled.
+  5) Trusted preview for server-controlled or already-sanitized fields:
+     - Add data-markdown-trusted="1" or class "markdown-trusted" to the textarea.
+     - Enables raw HTML plus markdown-it container and attrs extensions in preview.
+  6) Default image/url toolbar buttons are hidden; the custom Add Link button validates app/http/mailto URLs.
+  7) Bootstrap Markdown docs:
+     https://www.jqueryscript.net/text/Easy-WYSIWYG-Markdown-Rditor-For-Bootstrap-Bootstrap-Markdown.html
 -->
 <style>
 /* emulate glyphicons classes from bootstrap icons */
@@ -130,47 +142,63 @@
       //   }
       // });
 
-      var mdOptions = {
-        html: true,
-        breaks: true,
-        linkify: true
+      var mdSafe;
+      var mdTrusted;
+      var isTruthyDataValue = function (value) {
+        return value === true || value === 1 || value === '1' || value === 'true';
       };
-      var md = window.markdownit(mdOptions)
-        .use(window.markdownitSub)
-        .use(window.markdownitSup)
-        .use(window.markdownitAbbr)
-        .use(window.markdownitIns)
-        .use(window.markdownitMark)
-        .use(window.markdownitContainer, 'foobar', {
-          validate: name => name.trim().length, // allow any container names
-          //add container token as a class + other class attrs
-          render: (tokens, idx) => {
-            if (tokens[idx].nesting === 1) {
-              // from tokens[idx].attrs array, get only elements where [0]=="class"
-              var class_name = tokens[idx].info.trim();
-              if (tokens[idx].attrs) {
-                var aclasses = tokens[idx].attrs.filter(function (el) {
-                  return el[0] == 'class';
-                });
-                class_name += ' ' + aclasses.map(function (el) {
-                  return el[1];
-                }).join(' ');
-              }
-              return '<div class="' + class_name + '">\n';
-            } else {
-              return '</div>\n';
-            }
-          }
-        })
-        .use(window.markdownItAttrs);
+      var buildMarkdownParser = function (isTrustedMarkdown) {
+        var mdOptions = {
+          html: isTrustedMarkdown,
+          breaks: true,
+          linkify: true
+        };
+        var parser = window.markdownit(mdOptions)
+          .use(window.markdownitSub)
+          .use(window.markdownitSup)
+          .use(window.markdownitAbbr)
+          .use(window.markdownitIns)
+          .use(window.markdownitMark);
 
-      //add bootstrap table class for tables
-      md.renderer.rules.table_open = function (tokens, idx) {
-        return '<table class="table">';
+        if (isTrustedMarkdown && window.markdownitContainer) {
+          parser.use(window.markdownitContainer, 'foobar', {
+            validate: name => name.trim().length, // allow any container names
+            // add container token as a class + other class attrs
+            render: (tokens, idx) => {
+              if (tokens[idx].nesting === 1) {
+                // from tokens[idx].attrs array, get only elements where [0]=="class"
+                var class_name = tokens[idx].info.trim();
+                if (tokens[idx].attrs) {
+                  var aclasses = tokens[idx].attrs.filter(function (el) {
+                    return el[0] == 'class';
+                  });
+                  class_name += ' ' + aclasses.map(function (el) {
+                    return el[1];
+                  }).join(' ');
+                }
+                return '<div class="' + class_name + '">\n';
+              } else {
+                return '</div>\n';
+              }
+            }
+          });
+        }
+        if (isTrustedMarkdown && window.markdownItAttrs) parser.use(window.markdownItAttrs);
+
+        // add bootstrap table class for tables
+        parser.renderer.rules.table_open = function (tokens, idx) {
+          return '<table class="table">';
+        };
+        return parser;
+      };
+      var isTrustedMarkdownField = function ($field) {
+        return $field.hasClass('markdown-trusted') || isTruthyDataValue($field.data('markdownTrusted'));
       };
 
       $fields.each(function () {
         var $field = $(this);
+        var isTrustedMarkdown = isTrustedMarkdownField($field);
+        var md = isTrustedMarkdown ? (mdTrusted || (mdTrusted = buildMarkdownParser(true))) : (mdSafe || (mdSafe = buildMarkdownParser(false)));
         $field
           .off('paste.fwMarkdown')
           .on('paste.fwMarkdown', function (e) {

@@ -1780,6 +1780,10 @@ END" + Environment.NewLine;
         }
     }
 
+    /// <summary>
+    /// Converts dynamic field definitions to ParsePage tags for extracted static templates.
+    /// </summary>
+    /// <param name="fields">Field definitions prepared from dynamic config; each item is updated with generated value tags and related display attributes.</param>
     public static void makeValueTags(FwList fields)
     {
         foreach (FwDict def in fields)
@@ -1807,7 +1811,8 @@ END" + Environment.NewLine;
 
                 case "markdown":
                     {
-                        def["value"] = tag + " markdown>";
+                        string markdownAttr = def["trusted"].toBool() ? " markdown=\"trusted\"" : " markdown";
+                        def["value"] = tag + markdownAttr + ">";
                         break;
                     }
 

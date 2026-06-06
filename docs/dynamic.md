@@ -26,6 +26,7 @@ Common config keys include:
 - `is_dynamic_index` – enable dynamic list with `view_list_defaults` and `view_list_map`
 - `is_dynamic_index_edit` – allow inline editing (`list_edit`, `edit_list_defaults`)
 - `view_list_custom` – fields visible by default
+- `view_list_custom_trusted` - subset of `view_list_custom` fields allowed to render `cellFormatter` HTML in Vue lists; other custom cells are escaped text by default
 - `is_dynamic_show` and `is_dynamic_showform` – enable dynamic screens
 - `form_tabs` – optional tab definitions
 - `route_return` – action to redirect after save
@@ -335,7 +336,7 @@ Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-
 
 #### type: markdown
 - Template: `/common/form/show/markdown.html`.
-- Options: markdown comes from `value`; respect common layout keys.
+- Options: markdown comes from `value`; respect common layout keys. Raw HTML is disabled by default. For classic, Vue, or extracted read-only markdown from server-controlled or already-sanitized content, set `"trusted": true` to allow raw HTML.
 - Common sample:
 ```json
 {
@@ -354,10 +355,22 @@ Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-
   "help_text": "Rendered server-side with links and formatting"
 }
 ```
+- Full sample for trusted snippets:
+```json
+{
+  "type": "markdown",
+  "field": "trusted_html_md",
+  "label": "Trusted Markdown",
+  "class_contents": "col-12",
+  "trusted": true,
+  "help_text": "Content is not sanitized here; ensure it is trusted upstream"
+}
+```
 
 #### type: noescape
 - Template: `/common/form/show/noescape.html`.
-- Options: renders raw HTML; combine with layout keys carefully.
+- Options: classic templates and Vue views render raw HTML.
+- Use only for server-controlled content or content already sanitized by a trusted upstream policy.
 - Common sample:
 ```json
 {
@@ -824,6 +837,7 @@ Lookup add/edit modals namespace loaded content IDs by default to avoid duplicat
 #### type: textarea
 - Template: `/common/form/showform/textarea.html`.
 - Options: `rows`, `maxlength`, `placeholder`, `class_control` (e.g., `markdown`, `fw-html-editor`), `attrs_control`.
+- Markdown editor preview disables raw HTML by default. For trusted server-controlled or already-sanitized markdown editor fields only, set `attrs_control` to include `data-markdown-trusted="1"` or add `markdown-trusted` to `class_control`.
 - Common sample:
 ```json
 {

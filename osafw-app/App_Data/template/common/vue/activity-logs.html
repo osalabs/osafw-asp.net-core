@@ -157,9 +157,9 @@
             },
             renderMarkdown(text) {
                 if (!window.markdownit) {
-                    return text ?? '';
+                    return AppUtils.htmlescape(text ?? '');
                 }
-                const mdOptions = { html: true, breaks: true, linkify: true };
+                const mdOptions = { html: false, breaks: true, linkify: true };
                 if (!this.mdInstance) {
                     this.mdInstance = window.markdownit(mdOptions);
                 }

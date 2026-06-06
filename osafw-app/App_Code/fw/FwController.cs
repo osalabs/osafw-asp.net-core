@@ -64,6 +64,7 @@ public abstract class FwController
     protected string view_list_defaults = "";    // qw list of default columns
     protected FwDict view_list_map = [];           // list of all available columns fieldname|visiblename
     protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
+    protected string view_list_custom_trusted = ""; // qw list of custom fields allowed to render trusted raw HTML
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
@@ -222,6 +223,7 @@ public abstract class FwController
                 view_list_map = Utils.qh(raw_view_list_map.toStr());
 
             view_list_custom = config["view_list_custom"].toStr();
+            view_list_custom_trusted = config["view_list_custom_trusted"].toStr();
         }
 
         is_dynamic_index_edit = config["is_dynamic_index_edit"].toBool();
@@ -1226,6 +1228,7 @@ public abstract class FwController
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
         ps["list_rows"] = this.list_rows;
+        ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
         ps["count"] = this.list_count;
         ps["pager"] = this.list_pager;
         ps["f"] = this.list_filter;
@@ -1470,6 +1473,7 @@ public abstract class FwController
         if (is_cols)
         {
             var hcustom = Utils.qh(view_list_custom);
+            var hcustomTrusted = Utils.qh(view_list_custom_trusted);
 
             // dynamic cols
             var afields = Utils.qw(fields);
@@ -1488,7 +1492,8 @@ public abstract class FwController
                         {"row",row},
                         {"field_name",fieldname},
                         {"data",data},
-                        {"is_custom",hcustom.ContainsKey(fieldname)}
+                        {"is_custom",hcustom.ContainsKey(fieldname)},
+                        {"is_custom_trusted",hcustomTrusted.ContainsKey(fieldname)}
                     });
                 }
                 row["cols"] = cols;

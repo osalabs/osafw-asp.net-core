@@ -110,6 +110,7 @@ let state = {
     return_title: '', // label for return_url breadcrumb
     field_id: 'id', // model's id field name
     view_list_custom: [], // used for cellFormatter
+    view_list_custom_trusted: [], // custom list fields allowed to render cellFormatter HTML
     list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
@@ -652,6 +653,9 @@ let actions = {
             return '<span class="badge ' + status.bgcolor + '" >'+AppUtils.htmlescape(status.iname)+'</span>';
         }
         return row[header.field_name] ?? '';
+    },
+    isTrustedListRenderer(header) {
+        return header.field_name == "status" || this.view_list_custom_trusted.hasOwnProperty(header.field_name);
     },
     async saveCell(row, col) {
         let id = row[this.field_id];
