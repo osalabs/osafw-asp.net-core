@@ -114,4 +114,5 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-06-breaking-changelog.md` - Rebuilt `docs/CHANGELOG.md` into dated breaking-upgrade sections covering commits since 2025-06-01.
 - `summary-2026-06-06-method-comment-cleanup.md` - Reviewed 2,260 C# method-like declarations under `osafw-app/` and `osafw-tests/` using a Roslyn inventory, excluding `bin/`, `obj/`, and `osafw-app/App_Data/db/`.
 - `summary-2026-06-06-method-comments.md` - Updated agent coding-style guidance to prefer concise, contract-focused XML method docs instead of full param/return comments for obvious signatures.
+- `summary-2026-06-06-search-repo-improvements.md` - Reverted the throwaway byte-size helper test-session feature files and improved `Search-Repo.ps1` for multi-path searches and lower-noise defaults.
 - `summary-2026-06-06-token-efficient-workflow.md` - Added reusable agent helper scripts for scoped repo search and CRLF/UTF-8 no-BOM normalization.
