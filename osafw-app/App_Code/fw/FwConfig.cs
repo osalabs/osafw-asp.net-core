@@ -90,7 +90,6 @@ public static class FwConfig
     /// init default settings
     /// </summary>
     /// <param name="context">can be null for offline execution</param>
-    /// <param name="host"></param>
     private static void initDefaults(HttpContext? context, string host, ref FwDict st)
     {
         st = new FwDict

@@ -515,7 +515,6 @@ public class DB : IDisposable
     ///  Example: db.row("table", h("id", 123)) => "select * from table where id=123"
     ///  </summary>
     ///  <param name="args">even number of args required</param>
-    ///  <returns></returns>
     public static FwDict h(params object?[] args)
     {
         if (args.Length == 0) return [];
@@ -789,7 +788,7 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// set optional context for request level cache storage (ex: HttpContext.Items)
+    /// Supplies request-scoped storage for connection and query caches, usually <see cref="HttpContext.Items"/>.
     /// </summary>
     public void setContext(HttpContext? context)
     {
@@ -891,9 +890,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// connect to DB server using connection string defined in web.config appSettings, key db|main|connection_string (by default)
+    /// Opens or reuses the configured provider connection and initializes database timezone handling.
     /// </summary>
-    /// <returns></returns>
     public DbConnection connect()
     {
         var cache_key = "DB#" + connstr;
@@ -942,10 +940,6 @@ public class DB : IDisposable
         this.conn?.Close();
     }
 
-    /// <summary>
-    /// return internal connection object
-    /// </summary>
-    /// <returns></returns>
     public DbConnection getConnection()
     {
         if (conn == null)
@@ -1148,12 +1142,9 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// query database with sql and optional parameters, return DbDataReader to read results from
+    /// Runs SQL with optional parameters and returns an open reader; list values expand for <c>IN</c> clauses.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params">param => value, value can be IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"</param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
+    /// <param name="params">Parameter map; values may be lists, for example <c>id IN (@ids)</c>.</param>
     public DbDataReader query(string sql, FwDict? in_params = null)
     {
         connect();
@@ -1259,7 +1250,6 @@ public class DB : IDisposable
     /// in case @params contains an IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"
     /// need to expand array into single params
     /// </summary>
-    /// <param name="sql"></param>
     /// <param name="params">if input params null - make empty hashtable</param>
     private static void expandParams(ref string sql, ref FwDict @params)
     {
@@ -1335,9 +1325,7 @@ public class DB : IDisposable
     /// <summary>
     /// Helper method to convert named parameters to positional placeholders
     /// </summary>
-    /// <param name="sql"></param>
     /// <param name="paramNames">ordered list (since order is important) of param names without "@"</param>
-    /// <returns></returns>
     private string convertNamedToPositional(string sql, out List<string> paramNames)
     {
         //logger(LogLevel.INFO, "SQL IN:", sql);
@@ -1466,7 +1454,6 @@ public class DB : IDisposable
     /// execute multiple sql statements from a single string (like file script)
     /// Important! Use only to execute trusted scripts
     /// </summary>
-    /// <param name="sql"></param>
     /// <param name="is_ignore_errors">if true - if error happened, it's ignored and next statements executed anyway</param>
     /// <returns>number of successfully executed statements</returns>
     public int execMultipleSQL(string sql, bool is_ignore_errors = false)
@@ -1589,12 +1576,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read signle irst row using table/where/orderby
+    /// Reads the first row from a helper-built table query.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="where"></param>
-    /// <param name="order_by"></param>
-    /// <returns></returns>
     public DBRow row(string table, FwDict where, string order_by = "")
     {
         var qp = buildSelect(table, where, order_by, limit: 1);
@@ -1616,11 +1599,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read single first row using parametrized sql query
+    /// Reads the first row from a parameterized SQL query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public DBRow rowp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1679,11 +1659,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read all rows using parametrized query
+    /// Reads all rows from a parameterized SQL query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public virtual DBList arrayp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1691,12 +1668,9 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read rows using parametrized query and stop materializing after a caller-defined maximum
+    /// Reads rows from a parameterized query and stops materializing after a caller-defined maximum.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
     /// <param name="limit">Maximum rows to materialize; -1 means no explicit cap. Use for user-authored read-only queries where SQL-level limiting is not portable.</param>
-    /// <returns></returns>
     public virtual DBList arrayp(string sql, FwDict? @params, int limit)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1704,11 +1678,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read all rows using parametrized query with generic type
+    /// Reads typed rows from a parameterized SQL query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public List<T> arrayp<T>(string sql, FwDict? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
@@ -1840,8 +1811,7 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// return all rows with all fields from the table based on coditions/order
-    /// array("table", where, "id asc", Utils.qh("field1|id field2|iname"))
+    /// Reads rows from a helper-built table query with optional field alias mapping and provider-aware paging.
     /// </summary>
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
@@ -1849,7 +1819,6 @@ public class DB : IDisposable
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
     /// <param name="offset">optional number of ordered rows to skip before returning results</param>
     /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
-    /// <returns></returns>
     public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1)
     {
         validatePaging(order_by, offset, limit);
@@ -1882,18 +1851,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// Build and execute raw select statement with offset/limit according to server type
-    /// !All parameters must be properly enquoted
+    /// Executes a caller-built SELECT statement with provider-aware paging; SQL fragments must already be quoted.
     /// </summary>
-    /// <param name="fields"></param>
-    /// <param name="from"></param>
-    /// <param name="where"></param>
-    /// <param name="where_params"></param>
-    /// <param name="orderby"></param>
-    /// <param name="offset"></param>
-    /// <param name="limit"></param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
     public DBList selectRaw(string fields, string from, string where, FwDict where_params, string orderby, int offset = 0, int limit = -1)
     {
         validatePaging(orderby, offset, limit);
@@ -1914,11 +1873,6 @@ public class DB : IDisposable
         return trimClientOffset(this.arrayp(sql, where_params), offset, limit);
     }
 
-    /// <summary>
-    /// read column helper
-    /// </summary>
-    /// <param name="dbread"></param>
-    /// <returns></returns>
     public List<string> readCol(DbDataReader dbread)
     {
         List<string> result = new(DBList.DEFAULT_CAPACITY);
@@ -1930,11 +1884,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read first column using parametrized query
+    /// Reads the first column from a parameterized query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public virtual List<string> colp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1942,14 +1893,13 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// return just one column values as arraylist
+    /// Reads one column from a helper-built table query, defaulting to the first selected field.
     /// </summary>
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
     /// <param name="field_name">optional field name, if empty - first field returned</param>
     /// <param name="order_by">optional order by (MUST be quoted)</param>
     /// <param name="limit">optional limit, if -1 - no limit applied</param>
-    /// <returns></returns>
     public virtual List<string> col(string table, FwDict where, string field_name, string order_by = "", int limit = -1)
     {
         field_name ??= "";
@@ -2013,11 +1963,7 @@ public class DB : IDisposable
     /// value("table", where, "count(*)")
     /// value("table", where, "MAX(id)")
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="where"></param>
     /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
-    /// <param name="order_by"></param>
-    /// <returns></returns>
     public virtual object? value(string table, FwDict where, string field_name = "", string order_by = "")
     {
         field_name ??= "";
@@ -2111,10 +2057,7 @@ public class DB : IDisposable
     ///    table => [table], "table", `table`
     ///    schema.table => [schema].[table], "schema"."table", `schema`.`table`
     /// </summary>
-    /// <param name="str"></param>
     /// <param name="is_force">if false - quoting won't be applied if there are only alphanumeric chars</param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
     public string qid(string str, bool is_force = true)
     {
         str ??= "";
@@ -2321,12 +2264,11 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// returns sql with TOP or LIMIT or FETCH accoring to server's method
+    /// Adds provider-specific TOP, LIMIT, or OFFSET/FETCH paging to a SELECT statement.
     /// </summary>
     /// <param name="sql">simple statement starting with SELECT; SQL Server offset paging requires an ORDER BY clause</param>
     /// <param name="limit">maximum number of rows to return</param>
     /// <param name="offset">optional number of rows to skip before returning results</param>
-    /// <returns></returns>
     public string limit(string sql, int limit, int offset = 0)
     {
         string result;
@@ -2364,9 +2306,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// returns sql string with function for current database time according to Server type
+    /// Returns the provider-specific SQL expression for current database time.
     /// </summary>
-    /// <returns></returns>
     public string sqlNOW()
     {
         return sql_now;
@@ -2375,7 +2316,6 @@ public class DB : IDisposable
     /// <summary>
     /// fetch current database time
     /// </summary>
-    /// <returns></returns>
     public DateTime Now()
     {
         var val = valuep($"SELECT {sqlNOW()}");
@@ -2388,11 +2328,8 @@ public class DB : IDisposable
     /// <summary>
     /// prepare query and parameters - parameters will be converted to types appropriate for the related fields
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="fields"></param>
     /// <param name="join_type">"where"(default), "update"(for SET), "insert"(for VALUES)</param>
     /// <param name="suffix">optional suffix to append to each param name</param>
-    /// <returns></returns>
     public DBQueryAndParams prepareParams(string table, IDictionary fields, string join_type = "where", string suffix = "")
     {
         connect();
@@ -2669,8 +2606,6 @@ public class DB : IDisposable
     /// Example: Dim rows = db.array("users", New FwRow From {{"status", db.opEQ(0)}})
     /// <![CDATA[ select * from users where status=0 ]]>
     /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
     public DBOperation opEQ(object value)
     {
         if (value == null || value == DBNull.Value)
@@ -2684,8 +2619,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"status", db.opNOT(127)}})
     ///  <![CDATA[ select * from users where status<>127 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opNOT(object value)
     {
         return new DBOperation(DBOps.NOT, value);
@@ -2696,8 +2629,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opLE(50)}})
     ///  <![CDATA[ select * from users where access_level<=50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opLE(object value)
     {
         return new DBOperation(DBOps.LE, value);
@@ -2708,8 +2639,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opLT(50)}})
     ///  <![CDATA[ select * from users where access_level<50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opLT(object value)
     {
         return new DBOperation(DBOps.LT, value);
@@ -2720,8 +2649,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opGE(50)}})
     ///  <![CDATA[ select * from users where access_level>=50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opGE(object value)
     {
         return new DBOperation(DBOps.GE, value);
@@ -2732,8 +2659,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opGT(50)}})
     ///  <![CDATA[ select * from users where access_level>50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opGT(object value)
     {
         return new DBOperation(DBOps.GT, value);
@@ -2743,7 +2668,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opISNULL()}})
     ///  select * from users where field IS NULL
     ///  </summary>
-    ///  <returns></returns>
     public DBOperation opISNULL()
     {
         return new DBOperation(DBOps.ISNULL);
@@ -2752,7 +2676,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opISNOTNULL()}})
     ///  select * from users where field IS NOT NULL
     ///  </summary>
-    ///  <returns></returns>
     public DBOperation opISNOTNULL()
     {
         return new DBOperation(DBOps.ISNOTNULL);
@@ -2761,8 +2684,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = DB.array("users", New FwRow From {{"address1", db.opLIKE("%Orlean%")}})
     ///  select * from users where address1 LIKE '%Orlean%'
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opLIKE(object value)
     {
         return new DBOperation(DBOps.LIKE, value);
@@ -2771,8 +2692,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = DB.array("users", New FwRow From {{"address1", db.opNOTLIKE("%Orlean%")}})
     ///  select * from users where address1 NOT LIKE '%Orlean%'
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opNOTLIKE(object value)
     {
         return new DBOperation(DBOps.NOTLIKE, value);
@@ -2786,8 +2705,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"id", db.opIN(1, 2)}})
     ///  select * from users where id IN (1,2)
     ///  </summary>
-    ///  <param name="args"></param>
-    ///  <returns></returns>
     public DBOperation opIN(params object[] args)
     {
         object values;
@@ -2816,8 +2733,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"id", db.opNOTIN(1, 2)}})
     ///  select * from users where id NOT IN (1,2)
     ///  </summary>
-    ///  <param name="args"></param>
-    ///  <returns></returns>
     public DBOperation opNOTIN(params object[] args)
     {
         object values;
@@ -2842,7 +2757,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opBETWEEN(10,20)}})
     ///  select * from users where field BETWEEN 10 AND 20
     ///  </summary>
-    ///  <returns></returns>
     public DBOperation opBETWEEN(object from_value, object to_value)
     {
         return new DBOperation(DBOps.BETWEEN, new object[] { from_value, to_value });
@@ -2883,9 +2797,7 @@ public class DB : IDisposable
     /// <summary>
     /// insert record into table
     /// </summary>
-    /// <param name="table"></param>
     /// <param name="fields">last inserted id</param>
-    /// <returns></returns>
     public virtual int insert(string table, IDictionary fields)
     {
         if (fields.Count < 1)
@@ -2903,9 +2815,7 @@ public class DB : IDisposable
     /// insert typed record into table
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="table"></param>
     /// <param name="data">last inserted id</param>
-    /// <returns></returns>
     public virtual int insert<T>(string table, T data)
     {
         if (data == null)
@@ -2917,12 +2827,10 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// update records in table
+    /// Updates records using dictionary fields and where predicates.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="fields">key => value</param>
-    /// <param name="where">key => value/opXX</param>
-    /// <returns></returns>
+    /// <param name="fields">Column values keyed by field name.</param>
+    /// <param name="where">Where predicates keyed by field name or operator expression.</param>
     public virtual int update(string table, IDictionary fields, IDictionary where)
     {
         var qp = buildUpdate(table, fields, where);
@@ -2935,12 +2843,9 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// update records in table
+    /// Updates records using a typed object converted to column values.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="data">typed object</param>
-    /// <param name="where">key => value/opXX</param>
-    /// <returns></returns>
+    /// <param name="where">Where predicates keyed by field name or operator expression.</param>
     public int update<T>(string table, T data, IDictionary where)
     {
         if (data == null)
@@ -2951,11 +2856,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// update records in table - alias for exec()
+    /// Executes a parameterized update statement through the shared SQL executor.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public int updatep(string sql, FwDict? @params = null)
     {
         return exec(sql, @params);
@@ -2974,11 +2876,10 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// delete records from table
+    /// Deletes records matching the provided predicates; an empty predicate deletes the whole table.
     /// </summary>
-    /// <param name="table">table name</param>
-    /// <param name="where">optional where, WARNING, if empty - DELETE ALL RECORDS in table</param>
-    /// <returns>number of affected rows</returns>
+    /// <param name="where">Where predicates; empty means delete all records in the table.</param>
+    /// <returns>Number of affected rows.</returns>
     public int del(string table, FwDict? where = null)
     {
         where ??= [];
@@ -2987,15 +2888,11 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// build SELECT sql string
+    /// Builds SELECT SQL and parameters from trusted table, where, order, paging, and field fragments.
     /// </summary>
-    /// <param name="table">table name</param>
-    /// <param name="where">where conditions</param>
-    /// <param name="order_by">optional order by string, MUST BE QUOTED</param>
-    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
-    /// <param name="limit">optional limit number of results</param>
-    /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
-    /// <returns></returns>
+    /// <param name="where">Where predicates keyed by field name or operator expression.</param>
+    /// <param name="order_by">Trusted ORDER BY body; SQL identifiers must already be quoted.</param>
+    /// <param name="select_fields">Trusted SELECT field list; SQL identifiers must already be quoted.</param>
     protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int offset = 0, int limit = -1, string select_fields = "*")
     {
         validatePaging(order_by, offset, limit);

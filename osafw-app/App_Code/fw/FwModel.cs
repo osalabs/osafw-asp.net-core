@@ -88,31 +88,25 @@ public abstract class FwModel : IDisposable
     }
 
     /// <summary>
-    /// return table name as quoted identifier to use in SQL queries
+    /// Returns this model's table name as a quoted SQL identifier.
     /// </summary>
-    /// <returns></returns>
     public virtual string qTable()
     {
         return db.qid(this.table_name);
     }
 
     /// <summary>
-    /// standard stub for check access for particular record
+    /// Default record-level authorization hook; models with object access rules should override it.
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="action">specific action code to check like view or edit</param>
-    /// <exception cref="NotImplementedException"></exception>
+    /// <param name="action">Optional action code such as <c>view</c> or <c>edit</c>.</param>
     public virtual bool isAccess(int id = 0, string action = "")
     {
         throw new NotImplementedException();
     }
 
     /// <summary>
-    /// shortcut for isAccess with throwing AuthException if no access
+    /// Throws when the record-level authorization hook denies access.
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="action"></param>
-    /// <exception cref="AuthException"></exception>
     public virtual void checkAccess(int id = 0, string action = "")
     {
         if (!isAccess(id, action))
@@ -1023,12 +1017,8 @@ ORDER BY {getOrderBy()}";
     // override in your specific models when necessary
 
     /// <summary>
-    /// list records from junction table by main_id
+    /// Lists junction rows for a main record id using this model's configured main-id field.
     /// </summary>
-    /// <param name="main_id"></param>
-    /// <param name="def"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
     public virtual DBList listByMainId(int main_id, FwDict? def = null)
     {
         if (string.IsNullOrEmpty(junction_field_main_id))
@@ -1048,7 +1038,6 @@ ORDER BY {getOrderBy()}";
     /// sort lookup rows so checked values will be at the top (is_checked desc)
     ///   AND then by [_link]prio field (if junction table has any) - using LINQ
     /// </summary>
-    /// <returns></returns>
     public virtual FwList sortByCheckedPrio(FwList lookup_rows)
     {
         FwList result = [];
@@ -1064,12 +1053,9 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    /// list LINKED (from junction_model_linked model) records by main id
-    /// called from withing junction model like UsersCompanies that links 2 tables
+    /// Lists linked-model lookup rows for a main id and marks selected junction rows with <c>is_checked</c>.
     /// </summary>
-    /// <param name="id">main table id</param>
-    /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
-    /// <returns></returns>
+    /// <param name="def">Dynamic field definition and lookup parameters passed through to the linked lookup.</param>
     public virtual FwList listLinkedByMainId(int main_id, FwDict? def = null)
     {
         if (junction_model_linked == null)
@@ -1107,12 +1093,9 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    /// list MAIN (from junction_model_main model) records by linked id
-    /// called from withing junction model like UsersCompanies that links 2 tables
+    /// Lists main-model lookup rows for a linked id and marks selected junction rows with <c>is_checked</c>.
     /// </summary>
-    /// <param name="linked_id">linked table id</param>
-    /// <param name="def">in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
-    /// <returns></returns>
+    /// <param name="def">Dynamic field definition and lookup parameters passed through to the main lookup.</param>
     public virtual FwList listMainByLinkedId(int linked_id, FwDict? def = null)
     {
         if (junction_model_main == null)
@@ -1186,11 +1169,10 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    /// list rows and add is_checked=True flag for selected ids, sort by is_checked desc
+    /// Lists lookup rows, marks selected ids with <c>is_checked</c>, and sorts checked rows first.
     /// </summary>
-    /// <param name="ids">selected ids from the list()</param>
-    /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
-    /// <returns></returns>
+    /// <param name="ids">Selected lookup ids.</param>
+    /// <param name="def">Dynamic field definition and lookup parameters.</param>
     public virtual FwList listWithChecked(StrList? ids, FwDict? def = null)
     {
         var rows = setMultiListChecked(this.listSelectOptions(def, ids), ids, def);
@@ -1198,11 +1180,9 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    /// list rows and add is_checked=True flag for selected ids, sort by is_checked desc
+    /// Lists lookup rows for comma-separated selected ids, marks them checked, and sorts checked rows first.
     /// </summary>
-    /// <param name="sel_ids">comma-separated selected ids from the list()</param>
-    /// <param name="def">def - in dynamic controller - field definition (also contains "i" and "ps", "lookup_params", ...) or you could use it to pass additional params</param>
-    /// <returns></returns>
+    /// <param name="def">Dynamic field definition and lookup parameters.</param>
     public virtual FwList listWithChecked(string sel_ids, FwDict? def = null)
     {
         StrList ids = Utils.isEmpty(sel_ids) ? [] : new(sel_ids.Split(","));
@@ -1210,19 +1190,15 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    ///     return array of LINKED ids for the MAIN id in junction table
+    /// Returns linked ids for a main id from this junction table.
     /// </summary>
-    /// <param name="main_id">main id</param>
-    /// <returns></returns>
     public virtual StrList colLinkedIdsByMainId(int main_id)
     {
         return db.col(table_name, DB.h(junction_field_main_id, main_id), db.qid(junction_field_linked_id));
     }
     /// <summary>
-    ///     return array of MAIN ids for the LINKED id in junction table
+    /// Returns main ids for a linked id from this junction table.
     /// </summary>
-    /// <param name="linked_id">linked id</param>
-    /// <returns></returns>
     public virtual StrList colMainIdsByLinkedId(int linked_id)
     {
         return db.col(table_name, DB.h(junction_field_linked_id, linked_id), db.qid(junction_field_main_id));
@@ -1314,7 +1290,9 @@ ORDER BY {getOrderBy()}";
         db.del(junction_table_name, where);
     }
 
-    // override to add set more additional fields
+    /// <summary>
+    /// Hook for adding extra junction fields while syncing linked ids for a main id.
+    /// </summary>
     public virtual void updateJunctionByMainIdAdditional(FwDict linked_keys, string link_id, FwDict fields)
     {
         if (!string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + link_id))
@@ -1322,13 +1300,9 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    /// updates junction table by MAIN id and linked keys (existing in db, but not present keys will be removed)
-    /// called from withing junction model like UsersCompanies that links 2 tables
-    /// usage example: fw.model<UsersCompanies>().updateJunctionByMainId(id, reqh("companies"));
-    /// html: <input type="checkbox" name="companies[123]" value="1" checked>
+    /// Syncs junction rows for a main id from posted linked-id checkbox keys, deleting rows omitted from the submission.
     /// </summary>
-    /// <param name="main_id">main id</param>
-    /// <param name="linked_keys">hashtable with keys as linked_id (as passed from web)</param>
+    /// <param name="linked_keys">Posted values keyed by linked id, for example <c>companies[123]=1</c>.</param>
     public virtual void updateJunctionByMainId(int main_id, FwDict linked_keys)
     {
         var link_table_field_status = getJunctionFieldStatus();
@@ -1362,7 +1336,9 @@ ORDER BY {getOrderBy()}";
         deleteUnderUpdateByMainId(main_id);
     }
 
-    // override to add set more additional fields
+    /// <summary>
+    /// Hook for adding extra junction fields while syncing main ids for a linked id.
+    /// </summary>
     public virtual void updateJunctionByLinkedIdAdditional(FwDict linked_keys, string main_id, FwDict fields)
     {
         if (string.IsNullOrEmpty(field_prio) && linked_keys.ContainsKey(field_prio + "_" + main_id))
@@ -1370,13 +1346,9 @@ ORDER BY {getOrderBy()}";
     }
 
     /// <summary>
-    /// updates junction table by LINKED id and linked keys (existing in db, but not present keys will be removed)
-    /// called from withing junction model like UsersCompanies that links 2 tables
-    /// usage example: fw.model<UsersCompanies>().updateJunctionByLinkedId(id, reqh("users"));
-    /// html: <input type="checkbox" name="users[123]" value="1" checked>
+    /// Syncs junction rows for a linked id from posted main-id checkbox keys, deleting rows omitted from the submission.
     /// </summary>
-    /// <param name="linked_id">linked id</param>
-    /// <param name="main_keys">hashtable with keys as main_id (as passed from web)</param>
+    /// <param name="main_keys">Posted values keyed by main id, for example <c>users[123]=1</c>.</param>
     public virtual void updateJunctionByLinkedId(int linked_id, FwDict main_keys)
     {
         FwDict fields = [];
@@ -1564,7 +1536,6 @@ ORDER BY {getOrderBy()}";
     /// <summary>
     /// to filter item for json output - remove sensitive fields, add calculated fields, etc
     /// </summary>
-    /// <param name="item"></param>
     public virtual void filterForJson(FwDict item)
     {
         //first, remove sensitive fields
@@ -1611,8 +1582,6 @@ ORDER BY {getOrderBy()}";
     /// <summary>
     /// filter list of items for json output
     /// </summary>
-    /// <param name="rows"></param>
-    /// <returns></returns>
     public virtual FwList filterListForJson(IList rows)
     {
         FwList result = [];
@@ -1629,7 +1598,6 @@ ORDER BY {getOrderBy()}";
     ///   id, iname, is_checked (if exists), prio (if exists)
     /// </summary>
     /// <param name="rows">list of <see cref="FwDict"/> entries</param>
-    /// <returns></returns>
     public virtual FwList filterListOptionsForJson(IList rows)
     {
         FwList result = [];

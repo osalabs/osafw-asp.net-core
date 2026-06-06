@@ -188,12 +188,10 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     /// <summary>
-    /// update default screen fields for logged user
+    /// Adds or updates the logged-in user's default view row for a screen.
     /// </summary>
-    /// <param name="icode">screen url</param>
-    /// <param name="fields">comma-separated fields</param>
-    /// <param name="iname">view title (for save new view)</param>
-    /// <returns>user_views.id</returns>
+    /// <param name="itemdb">Fields to persist on the default view row.</param>
+    /// <returns>The saved <c>user_views.id</c>.</returns>
     public int updateByIcode(string icode, FwDict itemdb)
     {
         var item = oneByIcode(icode);
@@ -217,23 +215,18 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     /// <summary>
-    /// update default screen fields for logged user
+    /// Replaces the logged-in user's default field list for a screen.
     /// </summary>
-    /// <param name="icode">screen url</param>
-    /// <param name="fields">comma-separated fields</param>
-    /// <param name="iname">view title (for save new view)</param>
-    /// <returns>user_views.id</returns>
+    /// <param name="fields">Comma-separated field list to store.</param>
+    /// <returns>The saved <c>user_views.id</c>.</returns>
     public int updateByIcodeFields(string icode, string fields)
     {
         return updateByIcode(icode, DB.h("fields", fields));
     }
 
     /// <summary>
-    /// list for select by icode(basically controller's base_url) and only for logged user OR active system views
-    /// iname>'' - because empty name is for default view, it's not visible in the list (use "Reset to Defaults" instead)
+    /// Lists named owner/system views for a screen; unnamed default views stay hidden from the selector.
     /// </summary>
-    /// <param name="icode"></param>
-    /// <returns></returns>
     public FwList listSelectByIcode(string icode)
     {
         var cacheKey = cacheKeySelect(icode);
@@ -253,9 +246,8 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     /// <summary>
-    /// list all icodes available for the user
+    /// Lists screen codes that have named owner or system views available to the user.
     /// </summary>
-    /// <returns></returns>
     public FwList listSelectIcodes()
     {
         return db.arrayp("select distinct icode as id, icode as iname from " + db.qid(table_name) +
@@ -268,8 +260,6 @@ public class UserViews : FwModel<UserViews.Row>
     /// <summary>
     /// replace current default view for icode using view in id
     /// </summary>
-    /// <param name="icode"></param>
-    /// <param name="id"></param>
     public void setViewForIcode(string icode, int id)
     {
         var item = oneByIcodeId(icode, id);

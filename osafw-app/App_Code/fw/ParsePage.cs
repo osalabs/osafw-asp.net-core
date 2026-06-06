@@ -461,7 +461,6 @@ public class ParsePage
     /// <summary>
     /// read precached file and split it into lines (ignores empty lines)
     /// </summary>
-    /// <param name="filename"></param>
     /// <returns>empty array if no content</returns>
     private string[] precache_file_lines(string filename)
     {

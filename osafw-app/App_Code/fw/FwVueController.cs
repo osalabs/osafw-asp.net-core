@@ -23,8 +23,7 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set list fields for db select, based on user-selected headers in list_headers
-    /// so we fetch from db only fields that are visible in the list + id field
+    /// Sets the Vue list DB select fields from active headers plus the record id field.
     /// </summary>
     protected override void setListFields()
     {
@@ -101,9 +100,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for initial scope for Vue controller
+    /// Populates initial Vue page state, including globals, headers, form config, and feature flags.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeInitial(FwDict ps)
     {
         ps["XSS"] = fw.Session("XSS");
@@ -156,9 +154,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for list_rows scope for Vue controller
+    /// Populates Vue list rows with sorting, filtering, paging, export, and JSON shaping applied.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeListRows(FwDict ps)
     {
         setListSorting();
@@ -185,9 +182,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for lookups scope for Vue controller
+    /// Populates Vue lookup data from configured form fields and optional user-list state.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeLookups(FwDict ps)
     {
         // userlists support if necessary

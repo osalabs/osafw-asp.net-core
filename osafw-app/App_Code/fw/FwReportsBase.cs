@@ -77,11 +77,9 @@ public class FwReportsBase
     }
 
     /// <summary>
-    /// Convert report code into class name
+    /// Converts a route report code into the compiled report class name.
     /// </summary>
-    /// <param name="repcode">pax-something-summary or Sample</param>
-    /// <returns>code with "Report" suffix - PaxSomethingSummaryReport or SampleReport</returns>
-    /// <remarks></remarks>
+    /// <returns>Class name with <c>Report</c> suffix, such as <c>PaxSomethingSummaryReport</c>.</returns>
     public static string repcodeToClass(string repcode)
     {
         string result = "";
@@ -101,11 +99,9 @@ public class FwReportsBase
     }
 
     /// <summary>
-    /// Create instance of report class by repcode
+    /// Creates a hardcoded or custom report instance for a cleaned report code.
     /// </summary>
-    /// <param name="repcode">cleaned report code</param>
-    /// <param name="f">filters passed from request</param>
-    /// <returns></returns>
+    /// <param name="f">Submitted report filters.</param>
     public static FwReportsBase createInstance(FW fw, string repcode, FwDict f)
     {
         var report = createHardcodedInstance(fw, repcode, f);
@@ -173,13 +169,8 @@ public class FwReportsBase
     }
 
     /// <summary>
-    /// return html string of the report (based on report_html template only)
+    /// Renders report HTML using the report template path without writing to the response.
     /// </summary>
-    /// <param name="fw"></param>
-    /// <param name="repcode"></param>
-    /// <param name="f"></param>
-    /// <param name="ps"></param>
-    /// <returns></returns>
     public static string createHtml(FW fw, string repcode, FwDict? f = null, FwDict? ps = null)
     {
         f ??= [];
@@ -289,7 +280,6 @@ public class FwReportsBase
     /// <summary>
     /// override to define report data
     /// </summary>
-    /// <returns></returns>
     public virtual void getData()
     {
         // setListSorting();
@@ -450,10 +440,8 @@ public class FwReportsBase
     }
 
     /// <summary>
-    /// add " and status<>127" to reports where
+    /// Returns the standard report predicate that excludes deleted rows for an optional table alias.
     /// </summary>
-    /// <param name="alias">table alias with a dot, example: "t."</param>
-    /// <returns></returns>
     protected string andNotDeleted(string alias = "")
     {
         return $" and {alias}status<>{db.qi(FwModel.STATUS_DELETED)}";

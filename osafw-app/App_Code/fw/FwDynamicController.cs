@@ -320,8 +320,6 @@ public class FwDynamicController : FwController
     /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
     /// If more complex validation required - just override this and call just necessary validation
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="item"></param>
     public virtual void Validate(int id, FwDict item)
     {
         bool result = validateRequiredDynamic(id, item);
@@ -481,7 +479,6 @@ public class FwDynamicController : FwController
     /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
     /// <param name="item">submitted row data from the form</param>
     /// <param name="def">subable definition from config.json</param>
-    /// <returns></returns>
     protected virtual bool validateSubtableRowDynamic(string row_id, FwDict item, FwDict def)
     {
         var result = true;
@@ -839,11 +836,9 @@ public class FwDynamicController : FwController
     #region HELPERS for dynamic fields
 
     /// <summary>
-    /// return config for show/showform fields by tab
+    /// Resolves configured show/showform fields for a form tab, defaulting to the active tab.
     /// </summary>
-    /// <param name="prefix">show_fields or showform_fields</param>
-    /// <param name="tab">optional tab code, if ommited - form_tab used</param>
-    /// <returns></returns>
+    /// <param name="prefix">Config prefix such as <c>show_fields</c> or <c>showform_fields</c>.</param>
     protected virtual FwList getConfigShowFormFieldsByTab(string prefix, string? tab = null)
     {
         tab ??= form_tab;
@@ -858,9 +853,6 @@ public class FwDynamicController : FwController
     /// <summary>
     /// prepare data for fields repeat in ShowAction based on config.json show_fields parameter
     /// </summary>
-    /// <param name="item"></param>
-    /// <param name="ps"></param>
-    /// <returns></returns>
     public virtual FwList prepareShowFields(FwDict item, FwDict ps)
     {
         var id = item[model0.field_id].toInt();
@@ -1608,11 +1600,8 @@ public class FwDynamicController : FwController
 
 
     /// <summary>
-    /// return first field definition by field name
+    /// Returns the first configured field definition with the requested field name.
     /// </summary>
-    /// <param name="fields"></param>
-    /// <param name="field_name"></param>
-    /// <returns></returns>
     protected FwDict? defByFieldname(string field_name, FwList fields)
     {
         foreach (FwDict def in fields)

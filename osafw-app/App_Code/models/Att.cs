@@ -95,9 +95,6 @@ public class Att : FwModel<Att.Row>
     /// <summary>
     /// upload file to the server and update att table with file information
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="file"></param>
-    /// <param name="is_new"></param>
     /// <returns> return hashtable with added files information id, fname, fsize, ext and filepath or null if upload failed or no files</returns>
     /// </returns>
     public FwDict? uploadOne(int id, IFormFile file, bool is_new = false)
@@ -237,12 +234,9 @@ public class Att : FwModel<Att.Row>
     }
 
     /// <summary>
-    /// return url of the uploaded file (by item)
-    ///   S3-backed files intentionally return the app route so the controller can authorize before redirecting.
+    /// Builds the app attachment URL for a row; S3-backed files still route through authorization before redirecting.
     /// </summary>
-    /// <param name="item"></param>
-    /// <param name="size">s,m,l or empty(original size)</param>
-    /// <returns></returns>
+    /// <param name="size">Optional image size code: <c>s</c>, <c>m</c>, <c>l</c>, or empty for original.</param>
     public string getUrl(FwDict item, string size = "")
     {
         string result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["icode"];
@@ -252,12 +246,9 @@ public class Att : FwModel<Att.Row>
     }
 
     /// <summary>
-    /// return url of the uploaded file (by id)
-    ///   S3-backed files intentionally return the app route so the controller can authorize before redirecting.
+    /// Builds the app attachment URL by id; S3-backed files still route through authorization before redirecting.
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="size">s,m,l or empty(original size)</param>
-    /// <returns></returns>
+    /// <param name="size">Optional image size code: <c>s</c>, <c>m</c>, <c>l</c>, or empty for original.</param>
     public string getUrl(int id, string size = "")
     {
         var item = one(id);
@@ -268,11 +259,8 @@ public class Att : FwModel<Att.Row>
     }
 
     /// <summary>
-    /// return absolute url (with https://domain) of the uploaded file (by id)
+    /// Builds an absolute attachment URL by adding the configured root domain to app-relative URLs.
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="size"></param>
-    /// <returns></returns>
     public string getUrlAbsolute(int id, string size = "")
     {
         var url = getUrl(id, size);
@@ -528,13 +516,8 @@ public class Att : FwModel<Att.Row>
     }
 
     /// <summary>
-    /// list all files linked to item_id via att_links, optionally filtered by is_image and category_icode
+    /// Lists attachments linked to an entity record, optionally filtered by image flag and category code.
     /// </summary>
-    /// <param name="entity_icode"></param>
-    /// <param name="item_id"></param>
-    /// <param name="is_image"></param>
-    /// <param name="category_icode"></param>
-    /// <returns></returns>
     public FwList listLinked(string entity_icode, int item_id, int is_image = -1, string category_icode = "")
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
@@ -568,12 +551,8 @@ public class Att : FwModel<Att.Row>
     }
 
     /// <summary>
-    /// return first linked file (or image) to item_id via att_links
+    /// Loads the first attachment linked to an entity record, optionally restricted to images.
     /// </summary>
-    /// <param name="entity_icode"></param>
-    /// <param name="item_id"></param>
-    /// <param name="is_image"></param>
-    /// <returns></returns>
     public FwDict oneFirstLinked(string entity_icode, int item_id, int is_image = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
@@ -698,8 +677,6 @@ public class Att : FwModel<Att.Row>
     /// <summary>
     /// move file from local file storage to S3
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
     public bool moveToS3(int id)
     {
         if (!S3.IS_ENABLED)
@@ -768,9 +745,6 @@ public class Att : FwModel<Att.Row>
     /// <summary>
     /// upload all posted files (fw.request.Form.Files) to S3 for the table
     /// </summary>
-    /// <param name="entity_icode"></param>
-    /// <param name="item_id"></param>
-    /// <param name="att_categories_id"></param>
     /// <param name="fieldnames">qw string of ONLY field names to upload</param>
     /// <returns>number of successuflly uploaded files</returns>
     /// <remarks>also set FLASH error if some files not uploaded</remarks>

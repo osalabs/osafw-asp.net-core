@@ -376,7 +376,7 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// returns format expected by client browser
+    /// Resolves the expected response format from request headers and route state.
     /// </summary>
     /// <returns>"pjax", "json" or empty (usual html page)</returns>
     public string getResponseExpectedFormat()
@@ -390,9 +390,8 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// return true if browser requests json response
+    /// Returns whether the current request expects a JSON response.
     /// </summary>
-    /// <returns></returns>
     public bool isJsonExpected()
     {
         return getResponseExpectedFormat() == "json";
@@ -403,10 +402,6 @@ public class FW : IDisposable
     /// if url is empty - use current request url and also set request_url property
     /// 
     /// </summary>
-    /// <param name="url"></param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
-    /// <exception cref="UserException"></exception>
     public FwRoute getRoute(string url = "")
     {
         var is_url_param = !string.IsNullOrEmpty(url);
@@ -1081,10 +1076,8 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// set route.controller and optionally route.action, updates G too
+    /// Updates the active route controller/action and the matching global route values.
     /// </summary>
-    /// <param name="controller"></param>
-    /// <param name="action"></param>
     public void setController(string controller, string action = "")
     {
         route.controller = controller;
@@ -1343,10 +1336,8 @@ public class FW : IDisposable
     /// <summary>
     /// output file to response with given content type and disposition
     /// </summary>
-    /// <param name="filepath"></param>
     /// <param name="attname">attachment name, all speсial chars replaced with underscore</param>
     /// <param name="ContentType">detected based on file extension or application/octet-stream</param>
-    /// <param name="ContentDisposition"></param>
     public void fileResponse(string filepath, string attname, string ContentType = "", string ContentDisposition = "attachment")
     {
         if (string.IsNullOrEmpty(ContentType))
@@ -1647,11 +1638,9 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// Return controller instance by controller class name
+    /// Creates a controller instance by class name and optionally enforces controller access.
     /// </summary>
     /// <param name="controller_name">controller </param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
     public FwController? controller(string controller_name, bool is_auth_check = true)
     {
         ////validate - name should end with "Controller"

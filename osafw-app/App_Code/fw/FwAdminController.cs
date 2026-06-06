@@ -77,14 +77,9 @@ public class FwAdminController : FwController
     }
 
     /// <summary>
-    /// Shows editable Form for adding or editing one entity row
+    /// Builds ParsePage data for adding or editing one entity row.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns>in FwRow:
-    /// id - id of the entity
-    /// i - hashtable of entity fields
-    /// </returns>
-    /// <remarks></remarks>
+    /// <returns>Template data containing <c>id</c> and <c>i</c> row fields.</returns>
     public virtual FwDict? ShowFormAction(int id = 0)
     {
         FwDict ps = [];

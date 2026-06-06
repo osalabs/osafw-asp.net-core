@@ -34,43 +34,32 @@ public class Settings : FwModel<Settings.Row>
     }
 
     /// <summary>
-    /// Return site setting by icode, simplified alias of getValue, use: fw.model(Of Settings).read('icode')
+    /// Reads a site setting value by icode.
     /// </summary>
-    /// <param name="icode"></param>
-    /// <returns></returns>
-    /// <remarks></remarks>
     public string read(string icode)
     {
         return this.getValue(icode);
     }
 
     /// <summary>
-    /// Read integer value from site settings
+    /// Reads a site setting as an integer.
     /// </summary>
-    /// <param name="icode"></param>
-    /// <returns></returns>
-    /// <remarks></remarks>
     public int readi(string icode)
     {
         return read(icode).toInt();
     }
 
     /// <summary>
-    /// Read date value from site settings
+    /// Reads a site setting as a nullable date.
     /// </summary>
-    /// <param name="icode"></param>
-    /// <returns></returns>
-    /// <remarks></remarks>
     public object? readd(string icode)
     {
         return read(icode).toDateOrNull();
     }
 
     /// <summary>
-    /// Change site setting by icode, static function for easier use: Settings.write('icode', value)
+    /// Writes a site setting value by icode.
     /// </summary>
-    /// <param name="icode"></param>
-    /// <remarks></remarks>
     public void write(string icode, string value)
     {
         this.setValue(icode, value);
