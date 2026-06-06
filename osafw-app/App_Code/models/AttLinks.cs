@@ -51,21 +51,6 @@ public class AttLinks : FwModel<AttLinks.Row>
         return db.row(table_name, where);
     }
 
-    /// <summary>
-    /// Lists active dynamic attachment bindings for link authorization.
-    /// </summary>
-    /// <param name="att_id">Attachment id whose active junction rows should be inspected.</param>
-    /// <returns>Active <c>att_links</c> rows for the attachment.</returns>
-    public virtual FwList listActiveByAtt(int att_id)
-    {
-        var where = new FwDict()
-        {
-            {junction_field_main_id, att_id},
-            {field_status, STATUS_ACTIVE},
-        };
-        return db.array(table_name, where);
-    }
-
     public virtual void deleteByAtt(int att_id)
     {
         var where = new FwDict()

@@ -373,65 +373,53 @@ public class Att : FwModel<Att.Row>
     }
 
     /// <summary>
-    /// Checks object-bound attachment access against linked parent business records.
+    /// Checks direct object-bound attachment access against its parent business record.
     /// </summary>
     /// <param name="item">Attachment row being served, redirected, or linked.</param>
     /// <param name="action">Attachment action requested by the caller.</param>
-    /// <returns><c>true</c> when the attachment is unbound or at least one complete parent binding is authorized.</returns>
+    /// <returns><c>true</c> when the attachment is reusable/unbound or its direct parent binding is authorized.</returns>
     protected virtual bool isParentAccessAllowed(FwDict item, string action)
     {
-        FwList bindings = [];
         var directEntityId = item["fwentities_id"].toInt();
         var directItemId = item["item_id"].toInt();
-        if (directEntityId > 0 || directItemId > 0)
-            bindings.Add(DB.h("fwentities_id", directEntityId, "item_id", directItemId));
-
-        foreach (FwDict link in fw.model<AttLinks>().listActiveByAtt(item["id"].toInt()))
-            bindings.Add(DB.h("fwentities_id", link["fwentities_id"].toInt(), "item_id", link["item_id"].toInt()));
-
-        if (bindings.Count == 0)
+        if (directEntityId <= 0)
             return true;
 
-        foreach (FwDict binding in bindings)
+        if (directItemId <= 0)
+            return false;
+
+        var entity = fw.model<FwEntities>().one(directEntityId);
+        var entityCode = entity["icode"].toStr();
+        if (string.IsNullOrEmpty(entityCode))
+            return false;
+
+        FwModel parentModel;
+        try
         {
-            var fwentities_id = binding["fwentities_id"].toInt();
-            var item_id = binding["item_id"].toInt();
-            if (fwentities_id <= 0 || item_id <= 0)
-                continue;
+            parentModel = fw.model(DevEntityBuilder.tablenameToModel(Utils.name2fw(entityCode)));
+        }
+        catch (ApplicationException)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
 
-            var entity = fw.model<FwEntities>().one(fwentities_id);
-            var entityCode = entity["icode"].toStr();
-            if (string.IsNullOrEmpty(entityCode))
-                continue;
-
-            FwModel parentModel;
-            try
-            {
-                parentModel = fw.model(DevEntityBuilder.tablenameToModel(Utils.name2fw(entityCode)));
-            }
-            catch (ApplicationException)
-            {
-                continue;
-            }
-            catch (InvalidOperationException)
-            {
-                continue;
-            }
-
-            try
-            {
-                parentModel.checkAccess(item_id, string.IsNullOrEmpty(action) ? ACCESS_ACTION_VIEW : action);
-                return true;
-            }
-            catch (AuthException)
-            {
-            }
-            catch (NotFoundException)
-            {
-            }
-            catch (NotImplementedException)
-            {
-            }
+        try
+        {
+            parentModel.checkAccess(directItemId, string.IsNullOrEmpty(action) ? ACCESS_ACTION_VIEW : action);
+            return true;
+        }
+        catch (AuthException)
+        {
+        }
+        catch (NotFoundException)
+        {
+        }
+        catch (NotImplementedException)
+        {
         }
 
         return false;
@@ -481,20 +469,14 @@ public class Att : FwModel<Att.Row>
 
         var boundEntityId = item["fwentities_id"].toInt();
         var boundItemId = item["item_id"].toInt();
-        var links = fw.model<AttLinks>().listActiveByAtt(id);
-        var isUnbound = boundEntityId == 0 && boundItemId == 0 && links.Count == 0;
+        if (boundEntityId <= 0)
+            return;
+
         var isSameTarget = boundEntityId == fwentities_id && boundItemId == item_id;
-        if ((boundEntityId != 0 || boundItemId != 0) && !isSameTarget)
+        if (!isSameTarget)
             throw new AuthException("Access Denied. You don't have enough rights to link this file");
 
-        foreach (var link in links)
-        {
-            isSameTarget = link["fwentities_id"].toInt() == fwentities_id && link["item_id"].toInt() == item_id;
-            if (!isSameTarget)
-                throw new AuthException("Access Denied. You don't have enough rights to link this file");
-        }
-
-        if (!isUnbound && !isParentAccessAllowed(item, action))
+        if (!isParentAccessAllowed(item, action))
             throw new AuthException("Access Denied. You don't have enough rights to link this file");
     }
 

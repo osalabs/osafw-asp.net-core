@@ -19,21 +19,6 @@ public class SecurityAttachmentTests
     private string tempRoot = null!;
     private string host = null!;
 
-    private sealed class EmptyAttLinks : AttLinks
-    {
-        public override FwList listActiveByAtt(int att_id) => [];
-    }
-
-    private sealed class TestAttLinks : AttLinks
-    {
-        public Dictionary<int, FwList> ActiveLinksByAtt { get; } = [];
-
-        public override FwList listActiveByAtt(int att_id)
-        {
-            return ActiveLinksByAtt.TryGetValue(att_id, out var rows) ? rows : [];
-        }
-    }
-
     private sealed class SecurityFwEntities : FwEntities
     {
         public Dictionary<int, string> Codes { get; } = [];
@@ -129,6 +114,31 @@ public class SecurityAttachmentTests
         }
     }
 
+    private sealed class SelectRecordingDb : DB
+    {
+        public string LastSql { get; private set; } = string.Empty;
+        public FwDict LastParams { get; private set; } = [];
+
+        public SelectRecordingDb() : base("", DBTYPE_SQLSRV, "recording")
+        {
+        }
+
+        public override DBList arrayp(string sql, FwDict? @params = null)
+        {
+            LastSql = sql;
+            LastParams = @params == null ? [] : new FwDict(@params);
+            return [];
+        }
+    }
+
+    private sealed class SelectAttCategories : AttCategories
+    {
+        public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
+        {
+            return [];
+        }
+    }
+
     [TestInitialize]
     public void SetUp()
     {
@@ -183,15 +193,11 @@ public class SecurityAttachmentTests
     }
 
     [TestMethod]
-    public void CheckAccess_LinkRejectsSameTargetAttachmentWhenParentDenied()
+    public void CheckAccess_LinkRejectsDirectBoundSameTargetAttachmentWhenParentDenied()
     {
         var fw = createFw();
         var att = createAtt(fw);
-        att.Rows[4] = DB.h("id", 4, "status", FwModel.STATUS_ACTIVE);
-        var links = new TestAttLinks();
-        links.ActiveLinksByAtt[4] = [DB.h("att_id", 4, "fwentities_id", 7, "item_id", 40, "status", FwModel.STATUS_ACTIVE)];
-        links.init(fw);
-        TestHelpers.RegisterModel(fw, (AttLinks)links);
+        att.Rows[4] = DB.h("id", 4, "status", FwModel.STATUS_ACTIVE, "fwentities_id", 7, "item_id", 40);
         var entities = createEntities(fw);
         entities.Codes[7] = "parent_access_rows";
         var parent = new ParentAccessRows();
@@ -201,6 +207,28 @@ public class SecurityAttachmentTests
         Assert.ThrowsExactly<AuthException>(() => att.checkAccess(4, Att.ACCESS_ACTION_LINK, 7, 40));
 
         CollectionAssert.Contains(parent.Checks, (40, Att.ACCESS_ACTION_LINK));
+    }
+
+    [TestMethod]
+    public void AdminSelect_FiltersOnlyDirectBoundAttachments()
+    {
+        var fw = createFw();
+        var db = new SelectRecordingDb();
+        fw.db = db;
+        var att = createAtt(fw);
+        var categories = new SelectAttCategories();
+        categories.init(fw);
+        TestHelpers.RegisterModel(fw, (AttCategories)categories);
+        var controller = new AdminAttController();
+        controller.init(fw);
+
+        controller.SelectAction();
+
+        StringAssert.Contains(db.LastSql, "a.status=@status");
+        StringAssert.Contains(db.LastSql, "a.fwentities_id is null or a.fwentities_id=0");
+        Assert.IsFalse(db.LastSql.Contains("att_links", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(db.LastSql.Contains("a.item_id", StringComparison.OrdinalIgnoreCase));
+        Assert.AreEqual(FwModel.STATUS_ACTIVE, db.LastParams["@status"]);
     }
 
     [TestMethod]
@@ -361,9 +389,6 @@ public class SecurityAttachmentTests
         var att = new TestAtt();
         att.init(fw);
         TestHelpers.RegisterModel(fw, (Att)att);
-        var links = new EmptyAttLinks();
-        links.init(fw);
-        TestHelpers.RegisterModel(fw, (AttLinks)links);
         return att;
     }
 

@@ -171,16 +171,10 @@ public class SecurityDynamicObjectLinkTests
 
     private sealed class TestAttLinks : AttLinks
     {
-        public Dictionary<int, FwList> ActiveLinksByAtt { get; } = [];
         public List<(int EntityId, int ItemId)> UnderUpdateCalls { get; } = [];
         public List<(int EntityId, int ItemId)> DeleteUnderUpdateCalls { get; } = [];
 
         public override FwDict oneByUK(int att_id, int fwentities_id, int item_id) => [];
-
-        public override FwList listActiveByAtt(int att_id)
-        {
-            return ActiveLinksByAtt.TryGetValue(att_id, out var rows) ? rows : [];
-        }
 
         public override void setUnderUpdate(int fwentities_id, int item_id)
         {
@@ -354,13 +348,13 @@ public class SecurityDynamicObjectLinkTests
     }
 
     [TestMethod]
-    public void AttLinks_UpdateJunctionRejectsDifferentTargetAttachmentBeforeMutation()
+    public void AttLinks_UpdateJunctionRejectsDirectBoundDifferentTargetAttachmentBeforeMutation()
     {
         var db = new RecordingDb();
         var fw = createFw();
         fw.db = db;
         var att = new LinkRecordingAtt();
-        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE);
+        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE, "fwentities_id", 8, "item_id", 5);
         att.init(fw);
         TestHelpers.RegisterModel(fw, (Att)att);
         var entities = new TestFwEntities();
@@ -368,7 +362,6 @@ public class SecurityDynamicObjectLinkTests
         TestHelpers.RegisterModel(fw, (FwEntities)entities);
         var links = new TestAttLinks();
         links.init(fw);
-        links.ActiveLinksByAtt[42] = [DB.h("att_id", 42, "fwentities_id", 8, "item_id", 5, "status", FwModel.STATUS_ACTIVE)];
         TestHelpers.RegisterModel(fw, (AttLinks)links);
 
         Assert.ThrowsExactly<AuthException>(() => links.updateJunction("demos", 5, DB.h("42", 1)));
@@ -411,13 +404,13 @@ public class SecurityDynamicObjectLinkTests
     }
 
     [TestMethod]
-    public void AttLinks_UpdateJunctionAllowsSameTargetActiveAttachment()
+    public void AttLinks_UpdateJunctionAllowsDirectBoundSameTargetAttachment()
     {
         var db = new RecordingDb();
         var fw = createFw();
         fw.db = db;
         var att = new LinkRecordingAtt();
-        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE);
+        att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE, "fwentities_id", 7, "item_id", 5);
         att.init(fw);
         TestHelpers.RegisterModel(fw, (Att)att);
         var parent = new ParentRows();
@@ -429,7 +422,6 @@ public class SecurityDynamicObjectLinkTests
         TestHelpers.RegisterModel(fw, (FwEntities)entities);
         var links = new TestAttLinks();
         links.init(fw);
-        links.ActiveLinksByAtt[42] = [DB.h("att_id", 42, "fwentities_id", 7, "item_id", 5, "status", FwModel.STATUS_ACTIVE)];
         TestHelpers.RegisterModel(fw, (AttLinks)links);
 
         links.updateJunction("demos", 5, DB.h("42", 1));
