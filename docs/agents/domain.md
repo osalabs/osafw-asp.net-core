@@ -1,6 +1,6 @@
 # Domain / Bounded Context
 
-Updated: 2026-06-05
+Updated: 2026-06-06
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
@@ -16,7 +16,7 @@ Core Subdomains
   - Runtime `FwConfig` settings are the flat contents of JSON `appSettings`; callers read `db`, `SITE_NAME`, etc. directly, not through an `appSettings` child key.
 - Files / Attachments
   - `att`, `att_links`, `att_categories` for uploads; supports S3 and inline images. Linked to entities via `fwentities`.
-  - Dynamic attachment-link saves authorize posted attachment ids through `Att.checkAccess(..., "link", fwentities_id, item_id)`; normal attachment view/download access remains active-row based.
+  - Dynamic attachment-link saves authorize posted attachment ids through `Att.checkAccess(..., "link", fwentities_id, item_id)`; object-bound attachment view/download/link decisions require parent-object authorization, while active unbound library attachments remain reusable.
 - Activity Logging
   - `activity_logs` capture actions with types, entity, item_id, payload of changed fields.
 - Dynamic CRUD

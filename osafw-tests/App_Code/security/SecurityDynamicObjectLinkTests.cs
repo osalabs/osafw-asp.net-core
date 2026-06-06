@@ -22,12 +22,12 @@ public class SecurityDynamicObjectLinkTests
     {
     }
 
-    private sealed class ParentRowsModel : FwModel
+    private sealed class ParentRows : FwModel
     {
         public Dictionary<int, FwDict> Rows { get; } = [];
         public int UpdateCalls { get; private set; }
 
-        public ParentRowsModel()
+        public ParentRows()
         {
             table_name = "parent_rows";
         }
@@ -35,6 +35,12 @@ public class SecurityDynamicObjectLinkTests
         public override DBRow one(int id)
         {
             return Rows.TryGetValue(id, out var row) ? new DBRow(new FwDict(row)) : new DBRow();
+        }
+
+        public override void checkAccess(int id = 0, string action = "")
+        {
+            if (!Rows.ContainsKey(id))
+                throw new AuthException();
         }
 
         public override bool update(int id, FwDict item)
@@ -83,9 +89,9 @@ public class SecurityDynamicObjectLinkTests
 
     private sealed class TestDynamicController : FwDynamicController
     {
-        private readonly ParentRowsModel parentModel;
+        private readonly ParentRows parentModel;
 
-        public TestDynamicController(ParentRowsModel parentModel)
+        public TestDynamicController(ParentRows parentModel)
         {
             this.parentModel = parentModel;
         }
@@ -115,9 +121,9 @@ public class SecurityDynamicObjectLinkTests
 
     private sealed class TestVueController : FwVueController
     {
-        private readonly ParentRowsModel parentModel;
+        private readonly ParentRows parentModel;
 
-        public TestVueController(ParentRowsModel parentModel)
+        public TestVueController(ParentRows parentModel)
         {
             this.parentModel = parentModel;
         }
@@ -156,6 +162,11 @@ public class SecurityDynamicObjectLinkTests
     private sealed class TestFwEntities : FwEntities
     {
         public override int idByIcodeOrAdd(string icode) => 7;
+
+        public override DBRow one(int id)
+        {
+            return id == 7 ? new DBRow(DB.h("id", id, "icode", "parent_rows", "status", STATUS_ACTIVE)) : [];
+        }
     }
 
     private sealed class TestAttLinks : AttLinks
@@ -265,7 +276,7 @@ public class SecurityDynamicObjectLinkTests
     [TestMethod]
     public void DynamicSubtable_CrossParentExistingRowUpdateIsRejectedBeforeMutation()
     {
-        var parentModel = new ParentRowsModel();
+        var parentModel = new ParentRows();
         parentModel.Rows[1] = DB.h("id", 1, "iname", "Parent 1");
         var childModel = new ChildRowsModel();
         childModel.Rows[20] = DB.h("id", 20, "parent_rows_id", 2, "iname", "Other parent row");
@@ -285,7 +296,7 @@ public class SecurityDynamicObjectLinkTests
     [TestMethod]
     public void DynamicSaveAction_NegativeRouteIdIsRejectedBeforeMutation()
     {
-        var parentModel = new ParentRowsModel();
+        var parentModel = new ParentRows();
         var childModel = new ChildRowsModel();
         var fw = createDynamicFw(parentModel, childModel);
         var controller = new TestDynamicController(parentModel);
@@ -298,7 +309,7 @@ public class SecurityDynamicObjectLinkTests
     [TestMethod]
     public void DynamicSubtable_SameParentExistingRowUpdateStillSucceeds()
     {
-        var parentModel = new ParentRowsModel();
+        var parentModel = new ParentRows();
         parentModel.Rows[1] = DB.h("id", 1, "iname", "Parent 1");
         var childModel = new ChildRowsModel();
         childModel.Rows[20] = DB.h("id", 20, "parent_rows_id", 1, "iname", "Same parent row");
@@ -318,7 +329,7 @@ public class SecurityDynamicObjectLinkTests
     [TestMethod]
     public void DynamicSaveAttFiles_RejectsUnauthorizedParentBeforeFileValidation()
     {
-        var parentModel = new ParentRowsModel();
+        var parentModel = new ParentRows();
         var childModel = new ChildRowsModel();
         var fw = createDynamicFw(parentModel, childModel);
         var controller = new TestDynamicController(parentModel);
@@ -330,7 +341,7 @@ public class SecurityDynamicObjectLinkTests
     [TestMethod]
     public void VueSaveAction_RejectsUnauthorizedParentBeforeMutation()
     {
-        var parentModel = new ParentRowsModel();
+        var parentModel = new ParentRows();
         var childModel = new ChildRowsModel();
         var fw = createDynamicFw(parentModel, childModel);
         fw.FORM["item"] = DB.h("iname", "forged");
@@ -409,6 +420,10 @@ public class SecurityDynamicObjectLinkTests
         att.Rows[42] = DB.h("id", 42, "status", FwModel.STATUS_ACTIVE);
         att.init(fw);
         TestHelpers.RegisterModel(fw, (Att)att);
+        var parent = new ParentRows();
+        parent.Rows[5] = DB.h("id", 5, "status", FwModel.STATUS_ACTIVE);
+        parent.init(fw);
+        TestHelpers.RegisterModel(fw, parent);
         var entities = new TestFwEntities();
         entities.init(fw);
         TestHelpers.RegisterModel(fw, (FwEntities)entities);
@@ -437,6 +452,10 @@ public class SecurityDynamicObjectLinkTests
         att.Rows[1] = DB.h("id", 1, "status", FwModel.STATUS_ACTIVE);
         att.Rows[2] = DB.h("id", 2, "status", FwModel.STATUS_DELETED);
         att.init(fw);
+        TestHelpers.RegisterModel(fw, (Att)att);
+        var links = new TestAttLinks();
+        links.init(fw);
+        TestHelpers.RegisterModel(fw, (AttLinks)links);
 
         att.checkAccess(1);
         Assert.ThrowsExactly<AuthException>(() => att.checkAccess(2));
@@ -477,7 +496,7 @@ public class SecurityDynamicObjectLinkTests
         Assert.IsFalse(users.UpdatedIds.Contains(123));
     }
 
-    private static FW createDynamicFw(ParentRowsModel parentModel, ChildRowsModel childModel)
+    private static FW createDynamicFw(ParentRows parentModel, ChildRowsModel childModel)
     {
         var fw = createFw();
         fw.route.method = "POST";

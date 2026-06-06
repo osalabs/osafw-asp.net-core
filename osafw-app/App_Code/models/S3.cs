@@ -79,7 +79,7 @@ public class S3 : FwModel
         return null;
     }
 
-    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000)
+    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000, string contentType = "", string disposition = "", string filename = "")
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return "";
@@ -177,13 +177,13 @@ public class S3 : FwModel
             FilePath = filepath,
             StorageClass = storage_class ?? S3StorageClass.Standard
         };
-        request.Headers["Content-Type"] = UploadUtils.mimeMapping(filepath);
+        request.Headers["Content-Type"] = UploadUtils.contentTypeForAttachment(filepath);
 
         if (!string.IsNullOrEmpty(disposition))
         {
             if (filename == "") filename = System.IO.Path.GetFileName(filepath);
             filename = filename.Replace("\"", "'"); // replace quotes
-            request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
+            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(filepath, disposition) + "; filename=\"" + filename + "\"";
         }
 
         var task = client.PutObjectAsync(request);
@@ -211,13 +211,13 @@ public class S3 : FwModel
             Key = this.root + key,
             InputStream = file.OpenReadStream()
         };
-        request.Headers["Content-Type"] = file.ContentType;
+        request.Headers["Content-Type"] = UploadUtils.contentTypeForAttachment(file.FileName, file.ContentType);
 
         if (!string.IsNullOrEmpty(disposition))
         {
             if (filename == "") filename = file.FileName;
             filename = filename.Replace("\"", "'"); // replace quotes
-            request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
+            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(file.FileName, disposition, file.ContentType) + "; filename=\"" + filename + "\"";
         }
 
         var task = client.PutObjectAsync(request);
@@ -273,13 +273,22 @@ public class S3 : FwModel
     /// TODO for cacheing use custom builder which will round current time to 10min (or 1h) and sign with "fixed" time instead current
     /// https://stackoverflow.com/questions/45213553/aws-s3-presigned-request-cache
     /// or cache signed urls on caller level (Att model)
-    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000)
+    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000, string contentType = "", string disposition = "", string filename = "")
     {
         if (max_age == 0)
             max_age = expires_minutes * 60;//special case to match max_age to expires
 
         var headers = new ResponseHeaderOverrides();
         headers.CacheControl = "private, max-age=" + max_age + ", immutable"; //max age=31536000 with immuatable avoids send revalidation request from browser to resource https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#avoiding_revalidation
+        if (!string.IsNullOrEmpty(contentType))
+            headers.ContentType = contentType;
+        if (!string.IsNullOrEmpty(disposition))
+        {
+            if (filename == "")
+                filename = System.IO.Path.GetFileName(key);
+            filename = filename.Replace("\"", "'");
+            headers.ContentDisposition = disposition + "; filename=\"" + filename + "\"";
+        }
 
         var request = new GetPreSignedUrlRequest()
         {

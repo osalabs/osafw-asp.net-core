@@ -36,6 +36,7 @@ public class Att : FwModel<Att.Row>
     public const string IMGURL_FILE = "/img/att_file.png";
 
     public const string ACCESS_ACTION_LINK = "link";
+    public const string ACCESS_ACTION_VIEW = "view";
 
     const string URL_PREFIX = "/Att";
 
@@ -45,6 +46,10 @@ public class Att : FwModel<Att.Row>
     const int MAX_THUMB_H_M = 512;
     const int MAX_THUMB_W_L = 1200;
     const int MAX_THUMB_H_L = 1200;
+
+    const long MAX_IMAGE_FILE_BYTES = 20L * 1024 * 1024;
+    const int MAX_IMAGE_DIMENSION = 12000;
+    const long MAX_IMAGE_PIXELS = 50000000;
 
     const int CACHE_DAYS = 30; // cache requests for 30 days
 
@@ -102,40 +107,65 @@ public class Att : FwModel<Att.Row>
         if (requestFiles == null || requestFiles.Count == 0 || file == null)
             return result;
 
+        validateUploadFile(file);
+
         if (uploadFile(id, out string filepath, file, true))
         {
-            logger("uploaded to [" + filepath + "]");
-            string ext = UploadUtils.getUploadFileExt(filepath);
-
-            // update db with file information
-            FwDict fields = [];
-            if (is_new)
-                fields["iname"] = file.FileName;
-
-            fields["iname"] = file.FileName;
-            fields["fname"] = file.FileName;
-            fields["fsize"] = Utils.fileSize(filepath);
-            fields["ext"] = ext;
-            fields["is_s3"] = 0; //reset S3 flag to overwrite the existing S3 file
-            fields["status"] = STATUS_ACTIVE; // finished upload - change status to active
-                                              // turn on image flag if it's an image
-            if (UploadUtils.isUploadImgExtAllowed(ext))
+            try
             {
-                // if it's an image - turn on flag and resize for thumbs
-                fields["is_image"] = "1";
+                logger("uploaded to [" + filepath + "]");
+                string ext = UploadUtils.getUploadFileExt(filepath);
 
-                ImageUtils.resize(filepath, getUploadImgPath(id, "s", ext), MAX_THUMB_W_S, MAX_THUMB_H_S);
-                ImageUtils.resize(filepath, getUploadImgPath(id, "m", ext), MAX_THUMB_W_M, MAX_THUMB_H_M);
-                ImageUtils.resize(filepath, getUploadImgPath(id, "l", ext), MAX_THUMB_W_L, MAX_THUMB_H_L);
+                // update db with file information
+                FwDict fields = [];
+                if (is_new)
+                    fields["iname"] = file.FileName;
+
+                fields["iname"] = file.FileName;
+                fields["fname"] = file.FileName;
+                fields["fsize"] = Utils.fileSize(filepath);
+                fields["ext"] = ext;
+                fields["is_image"] = "0";
+                fields["is_s3"] = 0; //reset S3 flag to overwrite the existing S3 file
+                fields["status"] = STATUS_ACTIVE; // finished upload - change status to active
+                // turn on image flag if it's an image
+                if (UploadUtils.isUploadImgExtAllowed(ext))
+                {
+                    ImageUtils.validateImageUpload(filepath, MAX_IMAGE_FILE_BYTES, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS);
+
+                    // if it's an image - turn on flag and resize for thumbs
+                    fields["is_image"] = "1";
+
+                    ImageUtils.resize(filepath, getUploadImgPath(id, "s", ext), MAX_THUMB_W_S, MAX_THUMB_H_S);
+                    ImageUtils.resize(filepath, getUploadImgPath(id, "m", ext), MAX_THUMB_W_M, MAX_THUMB_H_M);
+                    ImageUtils.resize(filepath, getUploadImgPath(id, "l", ext), MAX_THUMB_W_L, MAX_THUMB_H_L);
+                }
+
+                this.update(id, fields);
+                fields["filepath"] = filepath;
+                result = fields;
+
+                moveToS3(id);
             }
-
-            this.update(id, fields);
-            fields["filepath"] = filepath;
-            result = fields;
-
-            moveToS3(id);
+            catch
+            {
+                UploadUtils.removeUploadImg(fw, table_name, id);
+                throw;
+            }
         }
         return result;
+    }
+
+    /// <summary>
+    /// Validates upload metadata before the file is accepted for attachment processing.
+    /// </summary>
+    /// <param name="file">Posted file being stored as an attachment.</param>
+    /// <exception cref="UserException">Thrown when an image upload is too large to process safely.</exception>
+    protected virtual void validateUploadFile(IFormFile file)
+    {
+        var ext = UploadUtils.getUploadFileExt(file.FileName);
+        if (UploadUtils.isUploadImgExtAllowed(ext) && file.Length > MAX_IMAGE_FILE_BYTES)
+            throw new UserException("Uploaded image is too large");
     }
 
     // return id of the first successful upload
@@ -208,32 +238,22 @@ public class Att : FwModel<Att.Row>
 
     /// <summary>
     /// return url of the uploaded file (by item)
-    ///   IMPORTANT! call checkAccess before this function to check if user has access to the file
-    ///   because if case of S3 url - it's a direct url without additional checks
+    ///   S3-backed files intentionally return the app route so the controller can authorize before redirecting.
     /// </summary>
     /// <param name="item"></param>
     /// <param name="size">s,m,l or empty(original size)</param>
     /// <returns></returns>
     public string getUrl(FwDict item, string size = "")
     {
-        string result;
-        if (item["is_s3"].toBool())
-        {
-            result = fw.model<S3>().getSignedUrl(getS3KeyByID(item["icode"].toStr(), size));
-        }
-        else
-        {
-            result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["icode"];
-            if (!string.IsNullOrEmpty(size))
-                result += "?size=" + size;
-        }
+        string result = fw.config("ROOT_URL") + URL_PREFIX + "/" + item["icode"];
+        if (!string.IsNullOrEmpty(size))
+            result += "?size=" + size;
         return result;
     }
 
     /// <summary>
     /// return url of the uploaded file (by id)
-    ///   IMPORTANT! call checkAccess before this function to check if user has access to the file
-    ///   because if case of S3 url - it's a direct url without additional checks
+    ///   S3-backed files intentionally return the app route so the controller can authorize before redirecting.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="size">s,m,l or empty(original size)</param>
@@ -327,18 +347,117 @@ public class Att : FwModel<Att.Row>
     public override void checkAccess(int id = 0, string action = "")
     {
         bool result = true;
-        var item = one(id);
+        var item = oneActive(id);
 
-        // Framework default: active uploads are viewable/downloadable.
-        // Apps can tighten this for their domain, for example:
-        // if (item["add_users_id"].toInt() != fw.userId) result = false; // owner-only uploads
-
-        // file must have Active status
-        if (item.Count == 0 || item["status"].toInt() != STATUS_ACTIVE)
+        if (item.Count == 0)
             result = false;
+        else
+            result = isParentAccessAllowed(item, action);
 
         if (!result)
             throw new AuthException("Access Denied. You don't have enough rights to get this file");
+    }
+
+    /// <summary>
+    /// Loads an attachment only when it exists and has active status.
+    /// </summary>
+    /// <param name="id">Attachment id to load for access-sensitive operations.</param>
+    /// <returns>The active attachment row, or an empty row when missing or inactive.</returns>
+    protected virtual FwDict oneActive(int id)
+    {
+        var item = one(id);
+        if (item.Count == 0 || item["status"].toInt() != STATUS_ACTIVE)
+            return [];
+
+        return item;
+    }
+
+    /// <summary>
+    /// Checks object-bound attachment access against linked parent business records.
+    /// </summary>
+    /// <param name="item">Attachment row being served, redirected, or linked.</param>
+    /// <param name="action">Attachment action requested by the caller.</param>
+    /// <returns><c>true</c> when the attachment is unbound or at least one complete parent binding is authorized.</returns>
+    protected virtual bool isParentAccessAllowed(FwDict item, string action)
+    {
+        FwList bindings = [];
+        var directEntityId = item["fwentities_id"].toInt();
+        var directItemId = item["item_id"].toInt();
+        if (directEntityId > 0 || directItemId > 0)
+            bindings.Add(DB.h("fwentities_id", directEntityId, "item_id", directItemId));
+
+        foreach (FwDict link in fw.model<AttLinks>().listActiveByAtt(item["id"].toInt()))
+            bindings.Add(DB.h("fwentities_id", link["fwentities_id"].toInt(), "item_id", link["item_id"].toInt()));
+
+        if (bindings.Count == 0)
+            return true;
+
+        foreach (FwDict binding in bindings)
+        {
+            var fwentities_id = binding["fwentities_id"].toInt();
+            var item_id = binding["item_id"].toInt();
+            if (fwentities_id <= 0 || item_id <= 0)
+                continue;
+
+            var entity = fw.model<FwEntities>().one(fwentities_id);
+            var entityCode = entity["icode"].toStr();
+            if (string.IsNullOrEmpty(entityCode))
+                continue;
+
+            FwModel parentModel;
+            try
+            {
+                parentModel = fw.model(DevEntityBuilder.tablenameToModel(Utils.name2fw(entityCode)));
+            }
+            catch (ApplicationException)
+            {
+                continue;
+            }
+            catch (InvalidOperationException)
+            {
+                continue;
+            }
+
+            try
+            {
+                parentModel.checkAccess(item_id, string.IsNullOrEmpty(action) ? ACCESS_ACTION_VIEW : action);
+                return true;
+            }
+            catch (AuthException)
+            {
+            }
+            catch (NotFoundException)
+            {
+            }
+            catch (NotImplementedException)
+            {
+            }
+        }
+
+        return false;
+    }
+
+    private static string filenameForPolicy(FwDict item)
+    {
+        var filename = item["fname"].toStr();
+        var storedExt = UploadUtils.normalizeUploadExt(item["ext"].toStr());
+        var filenameExt = UploadUtils.normalizeUploadExt(Path.GetFileName(filename));
+
+        if (UploadUtils.isActiveContentExt(storedExt))
+            return "attachment" + storedExt;
+        if (UploadUtils.isActiveContentExt(filenameExt))
+            return "attachment" + filenameExt;
+        if (!string.IsNullOrEmpty(storedExt))
+            return "attachment" + storedExt;
+        if (!string.IsNullOrEmpty(filename))
+            return filename;
+
+        return "attachment";
+    }
+
+    private static string normalizeSize(string size)
+    {
+        return size == "s" || size == "m" ? size : "";
     }
 
     /// <summary>
@@ -356,25 +475,27 @@ public class Att : FwModel<Att.Row>
             return;
         }
 
-        checkAccess(id, action);
-
-        var item = one(id);
-        if (item.Count == 0 || item["status"].toInt() != STATUS_ACTIVE)
+        var item = oneActive(id);
+        if (item.Count == 0)
             throw new AuthException("Access Denied. You don't have enough rights to link this file");
 
         var boundEntityId = item["fwentities_id"].toInt();
         var boundItemId = item["item_id"].toInt();
-        var isUnbound = boundEntityId == 0 && boundItemId == 0;
+        var links = fw.model<AttLinks>().listActiveByAtt(id);
+        var isUnbound = boundEntityId == 0 && boundItemId == 0 && links.Count == 0;
         var isSameTarget = boundEntityId == fwentities_id && boundItemId == item_id;
-        if (!isUnbound && !isSameTarget)
+        if ((boundEntityId != 0 || boundItemId != 0) && !isSameTarget)
             throw new AuthException("Access Denied. You don't have enough rights to link this file");
 
-        foreach (var link in fw.model<AttLinks>().listActiveByAtt(id))
+        foreach (var link in links)
         {
             isSameTarget = link["fwentities_id"].toInt() == fwentities_id && link["item_id"].toInt() == item_id;
             if (!isSameTarget)
                 throw new AuthException("Access Denied. You don't have enough rights to link this file");
         }
+
+        if (!isUnbound && !isParentAccessAllowed(item, action))
+            throw new AuthException("Access Denied. You don't have enough rights to link this file");
     }
 
     // transimt file by id/size to user's browser, optional disposition - attachment(default)/inline
@@ -388,8 +509,7 @@ public class Att : FwModel<Att.Row>
 
         checkAccess(item["id"].toInt());
 
-        if (size != "s" && size != "m")
-            size = "";
+        size = normalizeSize(size);
 
         var max_age = (int)(new TimeSpan(CACHE_DAYS, 0, 0, 0).TotalSeconds);
         fw.response.Headers.CacheControl = $"private, max-age={max_age}"; // use public only if all uploads are public
@@ -414,12 +534,13 @@ public class Att : FwModel<Att.Row>
             return;
         }
 
-        fw.logger(LogLevel.INFO, "Transmit(", disposition, ") filepath [", filepath, "]");
+        var filenameForContentPolicy = filenameForPolicy(item);
+        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForContentPolicy, disposition);
+        fw.logger(LogLevel.INFO, "Transmit(", safeDisposition, ") filepath [", filepath, "]");
         string filename = item["fname"].toStr().Replace('"', '\'');
-        string ext = UploadUtils.getUploadFileExt(filename);
 
-        fw.response.Headers.ContentType = Utils.ext2mime(ext);
-        fw.response.Headers.ContentDisposition = disposition + $"; filename=\"{filename}\"";
+        fw.response.Headers.ContentType = UploadUtils.contentTypeForAttachment(filenameForContentPolicy);
+        fw.response.Headers.ContentDisposition = safeDisposition + $"; filename=\"{filename}\"";
 
         fw.response.SendFileAsync(filepath).Wait();
     }
@@ -573,12 +694,22 @@ public class Att : FwModel<Att.Row>
     //////////////////// S3 related functions - only works with S3 model if Amazon.S3 installed
 
     // generate signed url and redirect to it, so user download directly from S3
-    public void redirectS3(FwDict item, string size = "")
+    public void redirectS3(FwDict item, string size = "", string disposition = "attachment")
     {
-        if (fw.userId == 0)
-            throw new AuthException(); // denied for non-logged
+        if (item.Count == 0)
+            throw new UserException("No file specified");
 
-        var url = fw.model<S3>().getSignedUrl(getS3KeyByID(item["icode"].toStr(), size));
+        checkAccess(item["id"].toInt());
+
+        size = normalizeSize(size);
+        var filenameForContentPolicy = filenameForPolicy(item);
+        var filename = item["fname"].toStr().Replace('"', '\'');
+        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForContentPolicy, disposition);
+        var url = fw.model<S3>().getSignedUrl(
+            getS3KeyByID(item["icode"].toStr(), size),
+            contentType: UploadUtils.contentTypeForAttachment(filenameForContentPolicy),
+            disposition: safeDisposition,
+            filename: filename);
         fw.redirect(url);
     }
 
@@ -602,7 +733,8 @@ public class Att : FwModel<Att.Row>
         var model_s3 = fw.model<S3>();
         // model_s3.createFolder(Me.table_name)
         // upload all sizes if exists
-        // id=47 -> /47/47 /47/47_s /47/47_m /47/47_l
+        // icode=abc -> /abc/abc /abc/abc_s /abc/abc_m /abc/abc_l
+        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForPolicy(item), "inline");
         foreach (string size1 in Utils.qw("&nbsp; s m l"))
         {
             var size = size1.Trim();
@@ -610,7 +742,7 @@ public class Att : FwModel<Att.Row>
             if (!System.IO.File.Exists(filepath))
                 continue;
 
-            result = model_s3.uploadLocalFile(getS3KeyByID(item["icode"], size), filepath, "inline");
+            result = model_s3.uploadLocalFile(getS3KeyByID(item["icode"], size), filepath, safeDisposition, item["fname"].toStr());
             if (!result)
                 break;
         }
@@ -647,7 +779,7 @@ public class Att : FwModel<Att.Row>
             filepath = Utils.getTmpFilename() + item["ext"];
         }
 
-        return fw.model<S3>().download(getS3KeyByID(id.ToString(), size), filepath);
+        return fw.model<S3>().download(getS3KeyByID(item["icode"].toStr(), size), filepath);
     }
 
 
@@ -700,7 +832,10 @@ public class Att : FwModel<Att.Row>
         // upload files to S3
         foreach (IFormFile file in afiles)
         {
+            validateUploadFile(file);
+
             // first - save to db so we can get att_id
+            var ext = UploadUtils.getUploadFileExt(file.FileName);
             FwDict attitem = [];
             attitem["att_categories_id"] = att_categories_id;
             attitem["fwentities_id"] = fwentities_id;
@@ -709,12 +844,14 @@ public class Att : FwModel<Att.Row>
             attitem["status"] = "1";
             attitem["fname"] = file.FileName;
             attitem["fsize"] = file.Length;
-            attitem["ext"] = UploadUtils.getUploadFileExt(file.FileName);
+            attitem["ext"] = ext;
+            attitem["is_image"] = UploadUtils.isUploadImgExtAllowed(ext) ? "1" : "0";
             var att_id = fw.model<Att>().add(attitem);
+            var att_icode = attitem["icode"].toStr(att_id.ToString());
 
             try
             {
-                model_s3.uploadPostedFile(getS3KeyByID(att_id.ToString()), file, "inline");
+                model_s3.uploadPostedFile(getS3KeyByID(att_icode), file, UploadUtils.dispositionForAttachment(file.FileName, "inline", file.ContentType));
 
                 // TODO check response for 200 and if not - error/delete?
                 // once uploaded - mark in db as uploaded

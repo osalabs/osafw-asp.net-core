@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Breaking: S3-backed attachments now use `att.icode` in S3 object keys (`att/{icode}/{icode}[_{size}]`) instead of numeric `att.id`; existing S3 objects stored under id-based keys need migration or copying before those attachments will serve after upgrade.
+- Breaking: `Att.getUrl()` now returns the framework `/Att/{icode}` route for S3-backed attachments so signed S3 redirects are issued only after attachment authorization; app code expecting an immediate presigned S3 URL from `getUrl()` must call through the authorized attachment route or explicitly sign after its own access check.
+- Breaking: object-bound attachments now require authorization through the parent model's `checkAccess()` before local serving, S3 redirect, preview fallback, or link/use decisions; apps with bound attachments must implement parent object access for those models.
+- Breaking: the default attachment pipeline now serves inline only for safe raster image uploads; PDFs, text files, browser-active types such as HTML/SVG/JavaScript/XML/CSS/WASM/XHTML, and other non-image uploads are forced to download with inert content metadata unless an app implements a separate trusted-serving path.
+- Breaking: image uploads are rejected before thumbnail work when file size, dimensions, pixel count, or image headers exceed safe decode limits; apps that intentionally accepted very large images must resize before upload or adjust the framework limits.
+- Changed: S3 upload and signed redirect metadata now use server-selected attachment content type and disposition instead of trusting browser-supplied upload MIME for active content.
 - Breaking: renamed the report runtime/base class from `FwReports` to `FwReportsBase`; hardcoded reports must inherit `FwReportsBase`, and helper callers must use `FwReportsBase.createInstance()`, `FwReportsBase.createHtml()`, and `FwReportsBase.createFile()`.
 - Breaking: `FwReports` is now the framework table model for the `fwreports` table. Existing apps upgrading custom reports must apply `osafw-app/App_Data/sql/updates/upd2026-06-03-custom-reports.sql`, copy the new report templates, and update app-specific hardcoded report classes/callers for the `FwReportsBase` rename.
 - Added Site Admin-managed custom SQL reports stored in `fwreports`, with runtime SELECT/CTE-only validation, bound parameters, generic table output, preview support, report output context, and manual RBAC resource support.
