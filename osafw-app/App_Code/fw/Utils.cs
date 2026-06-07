@@ -98,6 +98,23 @@ public class Utils
         return string.Join(" ", result);
     }
 
+    public static bool tryGetValueIgnoreCase(IDictionary<string, object?> values, string key, out object? value)
+    {
+        if (values.TryGetValue(key, out value))
+            return true;
+
+        foreach (var kv in values)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                value = kv.Value;
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
 
     // remove elements from dictionary, leave only those which keys passed
     public static void hashFilter(FwDict hash, string[] keys)
@@ -1538,7 +1555,7 @@ public class Utils
             if (!string.IsNullOrEmpty(json))
             {
                 result = Utils.jsonDecode(json) as FwDict ?? [];
-                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
+                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", fw.config("log_pii").toBool() ? result : new StrList(result.Keys));
             }
         }
         catch (Exception ex)

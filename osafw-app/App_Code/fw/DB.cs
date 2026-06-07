@@ -261,6 +261,7 @@ public class DB : IDisposable
 
     public string db_name = "";
     public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL, SQLite=SQLite
+    public bool is_log_pii = false; // log parameter values only when explicitly enabled for local debugging
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     protected readonly FwDict conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
@@ -1280,15 +1281,21 @@ public class DB : IDisposable
     private void logQueryAndParams(string sql, FwDict @params)
     {
         if (@params.Count > 0)
+        {
             if (@params.Count == 1) // one param - just include inline for easier log reading
             {
                 var pname = @params.Keys.First();
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", pname, "=", @params[pname], " }");
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", pname, "=", is_log_pii ? @params[pname] : "[hidden]", " }");
             }
             else
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
+            {
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, is_log_pii ? @params : " params=" + string.Join(", ", @params.Keys));
+            }
+        }
         else
+        {
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
+        }
     }
 
     public void closeQuery(DbDataReader? dbread = null)

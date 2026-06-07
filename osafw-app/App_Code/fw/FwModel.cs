@@ -349,7 +349,7 @@ public abstract class FwModel : IDisposable
     }
 
     // return count of all non-deleted or with specified statuses
-    public virtual long getCount(IList? statuses = null, int? since_days = null)
+    public virtual long getCount(IList? statuses = null, int? since_days = null, int userId = 0, string userField = "")
     {
         FwDict where = [];
         if (!string.IsNullOrEmpty(field_status))
@@ -362,6 +362,12 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_add_time) && since_days != null)
         {
             where[field_add_time] = db.opGT(DateTime.Now.AddDays((int)since_days));
+        }
+        if (userId != 0)
+        {
+            var field = string.IsNullOrEmpty(userField) ? field_add_users_id : userField;
+            if (!string.IsNullOrEmpty(field))
+                where[field] = userId;
         }
         return db.value(table_name, where, "count(*)").toLong();
     }
@@ -628,6 +634,7 @@ public abstract class FwModel : IDisposable
                 vars[field_upd_users_id] = fw.userId;
 
             db.update(table_name, vars, where);
+            this.removeCache(id);
         }
         if (is_log_changes)
             fw.logActivity(FwLogTypes.ICODE_DELETED, table_name, id);

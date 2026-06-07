@@ -79,6 +79,7 @@ public class DevManageController : FwController
         fw.flash("success", "Application Caches cleared");
 
         FwCache.clear();
+        fw.model<FwControllers>().removeCacheAll();
         db.clearSchemaCache();
         fw.parsePageInstance().clear_cache();
 

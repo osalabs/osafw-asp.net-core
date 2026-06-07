@@ -212,7 +212,7 @@ public class FwActivityLogs : FwModel
         return result;
     }
 
-    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null)
+    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null, int userId = 0)
     {
         var sql = $@"SELECT count(*)
                     from {db.qid(table_name)} al
@@ -229,6 +229,11 @@ public class FwActivityLogs : FwModel
         {
             sql += " and al.add_time > @since_cutoff";
             p["since_cutoff"] = DateTime.UtcNow.AddDays(since_days.Value);
+        }
+        if (userId != 0)
+        {
+            sql += " and al.users_id=@users_id";
+            p["users_id"] = userId;
         }
 
         return db.valuep(sql, p).toLong();

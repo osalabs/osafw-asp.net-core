@@ -31,7 +31,7 @@ public class Permissions : FwModel<Permissions.Row>
     public const string PERMISSION_DELETE = "del";
     public const string PERMISSION_DELETE_PERMANENT = "del_perm";
 
-    protected FwDict MAP_ACTIONS_PERMISSIONS = new()
+    protected FwDict MAP_ACTIONS_PERMISSIONS = new(StringComparer.OrdinalIgnoreCase)
     {
         { FW.ACTION_INDEX, PERMISSION_LIST },
         { FW.ACTION_SHOW, PERMISSION_VIEW },

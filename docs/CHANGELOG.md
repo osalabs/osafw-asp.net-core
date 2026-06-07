@@ -4,6 +4,12 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-06-07
 
+- Breaking: framework route/action authorization now treats URL controller/action casing case-insensitively; apps cannot rely on duplicate controllers, actions, virtual-controller icodes, route rules, or access rules that differ only by case.
+- Breaking: sample configuration now uses `appSettings.access_levels`, and framework XSS exclusion now honors `appSettings.no_xss_prefixes`; apps carrying typoed `accesss_levels` or `no_xss_prefixes_prefixes` keys should rename them.
+- Breaking: the default member dashboard only shows global user/activity/page/upload counts to Site Admins; lower-access users see the same demo panes scoped to their own user/activity rows, with existing pane links still relying on normal access checks when clicked.
+- Breaking: active framework request/session/body/DB logging no longer writes raw form/session/JSON payloads, email bodies, or DB parameter values unless `appSettings.log_pii=true`; production and shared configs should keep the default `false`.
+- Compatibility: the sample `Development` config override sets `appSettings.log_pii=true` so local debug logs include full SQL parameters and other guarded debug context.
+- Breaking: sample Sentry defaults now disable `SendDefaultPii` and request-body capture (`MaxRequestBodySize=None`) so deployments must opt in explicitly if they need richer Sentry request context.
 - Compatibility: S3-backed attachments still default to `att.icode` object keys (`att/{icode}/{icode}[_{size}]`), but apps with existing id-based buckets can set `S3.IS_ATT_KEY_BY_ID` to keep using legacy `att/{id}/{id}[_{size}]` keys during framework upgrades.
 - Compatibility: the default attachment "Open" path now serves trusted PDF uploads inline for browser preview; explicit `/Att/Download/{icode}` links still force download, and browser-active uploads such as HTML/SVG/JavaScript/XML/CSS/WASM/XHTML still use inert download metadata.
 
