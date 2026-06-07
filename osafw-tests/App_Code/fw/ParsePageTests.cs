@@ -670,6 +670,27 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void parse_string_date_options_do_not_leak_between_instances()
+        {
+            var ps = new FwDict
+            {
+                ["AAA"] = new DateTime(2026, 12, 5, 19, 1, 0, DateTimeKind.Utc),
+            };
+            var customParser = new ParsePage(new ParsePageOptions
+            {
+                DateFormat = "d/M/yyyy",
+                DateFormatShort = "d/M/yyyy H:mm",
+                DateFormatLong = "d/M/yyyy H:mm:ss",
+            });
+
+            Assert.AreEqual("5/12/2026 19:01", customParser.parse_string("<~AAA date=\"short\">", ps));
+
+            var defaultParser = new ParsePage(null);
+
+            Assert.AreEqual("12/5/2026 19:01", defaultParser.parse_string("<~AAA date=\"short\">", ps));
+        }
+
+        [TestMethod()]
         public void parse_string_date_uses_explicit_user_formats_only()
         {
             var parser = new ParsePage(new ParsePageOptions

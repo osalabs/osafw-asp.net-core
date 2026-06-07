@@ -123,6 +123,7 @@ public class SecurityQuickFixTests
         });
         fw.is_log_events = false;
         fw.config()["LOGGED_DEFAULT_URL"] = "/Main";
+        fw.config()["is_mfa_enforced"] = false;
         fw.FORM["gourl"] = gourl;
         fw.FORM["item"] = new FwDict
         {

@@ -170,13 +170,6 @@ public class ParsePage
     public const int MAX_TEMPLATE_RECURSION_DEPTH = 100; // high enough for real trees, low enough to avoid process-killing runaway recursion
     // "d M yyyy HH:mm"
 
-    // current date formats - may be changed in constructor based on user settings
-    private static string DateFormat = DATE_FORMAT_DEF;
-    private static string DateFormatShort = DATE_FORMAT_SHORT;
-    private static string DateFormatLong = DATE_FORMAT_LONG;
-    private static string InputTimezone = DATE_TIMEZONE_DEF;
-    private static string OutputTimezone = DATE_TIMEZONE_DEF;
-
     // for dynamic load of Markdig markdown converter
     private const string MARKDOWN_EXTENSIONS_SAFE = "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks";
     private const string MARKDOWN_EXTENSIONS_TRUSTED = MARKDOWN_EXTENSIONS_SAFE + "+customcontainers+attributes";
@@ -187,6 +180,11 @@ public class ParsePage
     private readonly Func<FwDict> globalsGetter = () => [];
     private readonly ISession? session;
     private readonly Action<LogLevel, string[]> loggerAction = (_, _) => { };
+    private readonly string dateFormat = DATE_FORMAT_DEF;
+    private readonly string dateFormatShort = DATE_FORMAT_SHORT;
+    private readonly string dateFormatLong = DATE_FORMAT_LONG;
+    private readonly string inputTimezone = DATE_TIMEZONE_DEF;
+    private readonly string outputTimezone = DATE_TIMEZONE_DEF;
     // checks if template files modifies and reload them, depends on config's "log_level"
     // true if level at least DEBUG, false for production as on production there are no tempalte file changes (unless during update, which leads to restart App anyway)
     private readonly bool is_check_file_modifications = false;
@@ -212,17 +210,12 @@ public class ParsePage
             session = options.Session;
             loggerAction = options.Logger ?? ((level, messages) => { }); // by default - no logging
 
-            // set date formats based on user settings
-            if (!string.IsNullOrEmpty(options.DateFormat))
-                DateFormat = options.DateFormat;
-            if (!string.IsNullOrEmpty(options.DateFormatShort))
-                DateFormatShort = options.DateFormatShort;
-            if (!string.IsNullOrEmpty(options.DateFormatLong))
-                DateFormatLong = options.DateFormatLong;
-            if (!string.IsNullOrEmpty(options.InputTimezone))
-                InputTimezone = options.InputTimezone;
-            if (!string.IsNullOrEmpty(options.OutputTimezone))
-                OutputTimezone = options.OutputTimezone;
+            // Date/time display settings are request-specific and must not leak between parser instances.
+            dateFormat = string.IsNullOrEmpty(options.DateFormat) ? DATE_FORMAT_DEF : options.DateFormat;
+            dateFormatShort = string.IsNullOrEmpty(options.DateFormatShort) ? DATE_FORMAT_SHORT : options.DateFormatShort;
+            dateFormatLong = string.IsNullOrEmpty(options.DateFormatLong) ? DATE_FORMAT_LONG : options.DateFormatLong;
+            inputTimezone = string.IsNullOrEmpty(options.InputTimezone) ? DATE_TIMEZONE_DEF : options.InputTimezone;
+            outputTimezone = string.IsNullOrEmpty(options.OutputTimezone) ? DATE_TIMEZONE_DEF : options.OutputTimezone;
 
             if (!LANG_CACHE.ContainsKey(lang) && !string.IsNullOrEmpty(TMPL_PATH))
                 load_lang();
@@ -1083,19 +1076,19 @@ public class ParsePage
                     {
                         case "":
                             {
-                                dformat = DateFormat;
+                                dformat = dateFormat;
                                 break;
                             }
 
                         case "short":
                             {
-                                dformat = DateFormatShort;
+                                dformat = dateFormatShort;
                                 break;
                             }
 
                         case "long":
                             {
-                                dformat = DateFormatLong;
+                                dformat = dateFormatLong;
                                 break;
                             }
 
@@ -1114,7 +1107,7 @@ public class ParsePage
                     DateTime? parsedDate = originalValue as DateTime?;
                     parsedDate ??= DateUtils.SQL2Date(value);
                     if (parsedDate == null
-                        && DateTime.TryParseExact(value, [DateFormat, DateFormatShort, DateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
+                        && DateTime.TryParseExact(value, [dateFormat, dateFormatShort, dateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
                     {
                         // Parse user-formatted dates explicitly so date-only inputs keep their original semantics.
                         parsedDate = exactDate;
@@ -1122,7 +1115,7 @@ public class ParsePage
 
                     if (parsedDate != null)
                     {
-                        var dt = convertTimezone(parsedDate.Value, InputTimezone, OutputTimezone, originalValue, value);
+                        var dt = convertTimezone(parsedDate.Value, inputTimezone, outputTimezone, originalValue, value);
                         value = dt.ToString(dformat, DateTimeFormatInfo.InvariantInfo);
                     }
 
@@ -1647,7 +1640,7 @@ public class ParsePage
     {
         var originalDateTime = originalValue as DateTime?;
         // Date-only values should render as the same day for every user, so skip timezone math for those cases.
-        if (DateUtils.isDateOnlyDisplayValue(originalDateTime ?? dt, rawValue, DateFormat))
+        if (DateUtils.isDateOnlyDisplayValue(originalDateTime ?? dt, rawValue, dateFormat))
             return dt;
 
         if (from_tz == to_tz)
