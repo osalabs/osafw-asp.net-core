@@ -20,6 +20,8 @@ namespace osafw;
 
 public static class Program
 {
+    private const bool ALLOW_PLAINTEXT_DP_KEYS = false;
+
     public static void Main(string[] args)
     {
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
@@ -71,7 +73,11 @@ public static class Program
         // Data Protection
         // repository used for keys storage in the DB
         var repository = new FwKeysXmlRepository(new DB(connStr, dbType, "main"));
-        builder.Services.AddDataProtection().SetApplicationName(appName);
+        var dataProtectionBuilder = builder.Services.AddDataProtection().SetApplicationName(appName);
+        if (OperatingSystem.IsWindows())
+            dataProtectionBuilder.ProtectKeysWithDpapi(protectToLocalMachine: true);
+        else if (!ALLOW_PLAINTEXT_DP_KEYS)
+            throw new ApplicationException("Data Protection key encryption requires Windows DPAPI or an explicit local/dev plaintext fallback.");
         builder.Services.Configure<KeyManagementOptions>(options =>
             {
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"

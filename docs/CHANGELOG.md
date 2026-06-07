@@ -4,6 +4,9 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-06-07
 
+- Breaking: AdminUsers privileged mutations now enforce hierarchy; non-Site Admins cannot save, delete, restore, reset, or bulk-delete users with equal/higher access and cannot grant equal/higher `access_level`.
+- Breaking: user-submitted activity-log comments now derive `users_id` from the current session and require model-level view access to the target record; forms or API callers that posted another `users_id` can no longer impersonate comment authors. The built-in `demos` sample entity remains commentable through an explicit default allowlist.
+- Breaking: Data Protection key XML persisted in `fwkeys` is now protected with Windows DPAPI by default; non-Windows deployments must intentionally enable the source-level local/dev plaintext fallback or add a platform key-protection strategy before startup.
 - Breaking: in test mode, non-empty `appSettings.test_email` now takes priority over the logged-in user's session email as the delivery sink; leave `test_email` blank to keep routing test emails to the current session user.
 - Breaking: framework route/action authorization now treats URL controller/action casing case-insensitively; apps cannot rely on duplicate controllers, actions, virtual-controller icodes, route rules, or access rules that differ only by case.
 - Breaking: sample configuration now uses `appSettings.access_levels`, and framework XSS exclusion now honors `appSettings.no_xss_prefixes`; apps carrying typoed `accesss_levels` or `no_xss_prefixes_prefixes` keys should rename them.

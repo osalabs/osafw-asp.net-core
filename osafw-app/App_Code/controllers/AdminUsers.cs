@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -196,6 +197,8 @@ public class AdminUsersController : FwDynamicController
         item["email"] = item["ehack"]; // just because Chrome autofills fields too agressively
 
         Validate(id, item);
+        var rolesLink = reqh("roles_link");
+        model.checkAdminUserMutationAccess(id, item);
         // load old record if necessary
         // var itemOld = model0.one(id);
 
@@ -208,7 +211,7 @@ public class AdminUsersController : FwDynamicController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        model.updateLinkedRoles(id, reqh("roles_link"));
+        model.updateLinkedRoles(id, rolesLink);
 
         if (fw.userId == id)
             model.reloadSession(id);
@@ -277,6 +280,7 @@ public class AdminUsersController : FwDynamicController
     public FwDict SendPwdAction(int id)
     {
         enforcePost();
+        model.checkAdminUserMutationAccess(id);
 
         FwDict ps = [];
 
@@ -293,6 +297,7 @@ public class AdminUsersController : FwDynamicController
     public void HashPasswordsAction()
     {
         enforcePost();
+        model.checkAccessLevel(Users.ACL_SITEADMIN);
 
         rw("hashing passwords");
         var rows = db.array(model.table_name, [], "id");
@@ -313,9 +318,46 @@ public class AdminUsersController : FwDynamicController
     public void ResetMFAAction(int id)
     {
         enforcePost();
+        model.checkAdminUserMutationAccess(id);
 
         model.update(id, DB.h("mfa_secret", null));
         //fw.flash("success", "Multi-Factor Authentication ");
         fw.redirect($"{base_url}/ShowForm/{id}/edit");
+    }
+
+    public override void ShowDeleteAction(int id)
+    {
+        model.checkAdminUserMutationAccess(id);
+        base.ShowDeleteAction(id);
+    }
+
+    public override FwDict? DeleteAction(int id)
+    {
+        model.checkAdminUserMutationAccess(id);
+        return base.DeleteAction(id);
+    }
+
+    public override FwDict? RestoreDeletedAction(int id)
+    {
+        model.checkAdminUserMutationAccess(id);
+        return base.RestoreDeletedAction(id);
+    }
+
+    protected override int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        if (keys == null)
+            return 0;
+
+        if (is_delete)
+        {
+            foreach (string id1 in keys)
+            {
+                var id = id1.toInt();
+                if (id > 0)
+                    model.checkAdminUserMutationAccess(id);
+            }
+        }
+
+        return base.saveMultiRows(keys, is_delete, user_lists_id, remove_user_lists_id);
     }
 }

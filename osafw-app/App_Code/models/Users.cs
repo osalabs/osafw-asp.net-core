@@ -445,6 +445,35 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
+    /// Enforces the hierarchy rule for privileged AdminUsers mutations.
+    /// </summary>
+    /// <param name="targetUsersId">Existing target user id, or zero for a new user.</param>
+    /// <param name="fields">Submitted user fields that may include <c>access_level</c>.</param>
+    public virtual void checkAdminUserMutationAccess(int targetUsersId, FwDict? fields = null)
+    {
+        if (isSiteAdmin())
+            return;
+
+        var currentAccessLevel = fw.userAccessLevel;
+
+        if (targetUsersId > 0)
+        {
+            var target = one(targetUsersId);
+            if (target.Count == 0)
+                throw new NotFoundException("Wrong User ID");
+            if (target["access_level"].toInt() >= currentAccessLevel)
+                throw new AuthException("Access Denied. Cannot modify user with equal or higher access level");
+        }
+
+        if (fields != null
+            && fields.ContainsKey("access_level")
+            && fields["access_level"].toInt() >= currentAccessLevel)
+        {
+            throw new AuthException("Access Denied. Cannot grant equal or higher access level");
+        }
+    }
+
+    /// <summary>
     /// Checks whether the target user, or the current user by default, is read-only.
     /// </summary>
     public virtual bool isReadOnly(int id = -1)
