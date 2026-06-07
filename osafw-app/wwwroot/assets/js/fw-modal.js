@@ -1,4 +1,5 @@
 (function () {
+    // Prevent duplicate listeners when modal partials are rendered more than once.
     if (document.documentElement.hasAttribute('data-fw-modal-inited')) return;
     document.documentElement.setAttribute('data-fw-modal-inited', '1');
 
@@ -9,6 +10,7 @@
       + '<div class="fw-semibold">Loading...</div>'
       + '</div>';
 
+    // Resolve optional framework helpers without making load order fragile.
     function getFw() {
       return window.fw || null;
     }
@@ -34,6 +36,7 @@
       }
     }
 
+    // Shows server-side form errors inside the current modal content.
     function renderInlineError(container, message) {
       if (!container) return;
 
@@ -61,6 +64,7 @@
       }
     }
 
+    // Assigns a stable id so generated modals can reference their trigger.
     function ensureTriggerId(trigger) {
       var triggerId = trigger.getAttribute('data-fw-modal-trigger-id');
       if (!triggerId) {
@@ -71,6 +75,7 @@
       return triggerId;
     }
 
+    // Finds the input/select that receives a lookup modal save result.
     function resolveLookupTarget(trigger) {
       var targetSelector = trigger.getAttribute('data-fw-lookup-target');
       if (targetSelector) {
@@ -83,6 +88,7 @@
       return group.querySelector('select, input, textarea');
     }
 
+    // Captures lookup metadata carried from open through save.
     function buildLookupContext(trigger) {
       var lookupMode = trigger.getAttribute('data-fw-lookup');
       if (!lookupMode) return null;
@@ -94,6 +100,7 @@
       };
     }
 
+    // Expands lookup placeholder URLs from the current target value.
     function buildLookupUrl(trigger, lookup) {
       var url = trigger.getAttribute('data-url') || trigger.getAttribute('href');
       if (!url) return url;
@@ -112,6 +119,7 @@
       return url;
     }
 
+    // Forces server-rendered modal layout for remote modal requests.
     function ensureModalLayout(url) {
       if (!url) return url;
       var parsedUrl = new URL(url, window.location.href);
@@ -121,6 +129,7 @@
       return parsedUrl.toString();
     }
 
+    // Lets fw.js clean up widgets before modal content is replaced or removed.
     function disposeModalContent(scope) {
       var fw = getFw();
       if (fw && typeof fw.disposeComponents === 'function') {
@@ -128,6 +137,7 @@
       }
     }
 
+    // Copies Bootstrap modal options from trigger to generated modal root.
     function copyBootstrapAttributes(trigger, modal) {
       var excludedAttributes = {
         'data-bs-toggle': true,
@@ -142,6 +152,7 @@
       });
     }
 
+    // Creates a disposable Bootstrap modal shell for fetched content.
     function buildModal(trigger) {
       modalCounter += 1;
 
@@ -174,6 +185,7 @@
       document.body.appendChild(modal);
 
       modal.addEventListener('hidden.bs.modal', function () {
+        // Wait for Bootstrap's hidden event before disposing plugins and DOM.
         var instance = typeof bootstrap !== 'undefined' && bootstrap.Modal
           ? bootstrap.Modal.getInstance(modal)
           : null;
@@ -187,6 +199,7 @@
       return modal;
     }
 
+    // Re-executes scripts inserted through innerHTML.
     function executeModalScripts(container) {
       Array.from(container.querySelectorAll('script')).forEach(function (oldScript) {
         var newScript = document.createElement('script');
@@ -206,6 +219,7 @@
       });
     }
 
+    // Prefixes modal content ids so lookup modals do not collide with the page.
     function namespaceModalContentIds(modal, container) {
       if (!modal || !container || modal.dataset.fwModalNamespaceIds !== '1') return;
 
@@ -224,6 +238,7 @@
 
       if (!Object.keys(idMap).length) return;
 
+      // Rewrite direct id references.
       ['for', 'form', 'list'].forEach(function (attrName) {
         Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
           var value = el.getAttribute(attrName);
@@ -233,6 +248,7 @@
         });
       });
 
+      // Rewrite space-delimited ARIA id references.
       ['aria-controls', 'aria-describedby', 'aria-labelledby', 'aria-owns', 'aria-activedescendant'].forEach(function (attrName) {
         Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
           el.setAttribute(attrName, (el.getAttribute(attrName) || '').split(/\s+/).map(function (id) {
@@ -241,6 +257,7 @@
         });
       });
 
+      // Rewrite Bootstrap and local hash targets.
       ['data-bs-target', 'data-target'].forEach(function (attrName) {
         Array.from(container.querySelectorAll('[' + attrName + ']')).forEach(function (el) {
           var value = el.getAttribute(attrName);
@@ -258,6 +275,7 @@
       });
     }
 
+    // Replaces modal content and runs any loaded initializers.
     function setModalContent(modal, html) {
       var content = modal.querySelector('.modal-content');
       if (!content) return;
@@ -280,12 +298,14 @@
       showToastError(message || 'Failed to load modal content.');
     }
 
+    // Fetches text while preserving status and headers for callers.
     async function fetchText(url, init) {
       var response = await fetch(url, init);
       var text = await response.text();
       return { response: response, text: text };
     }
 
+    // Parses optional JSON without hiding the original text response.
     async function fetchJson(url, init) {
       var response = await fetch(url, init);
       var text = await response.text();
@@ -302,6 +322,7 @@
       return { response: response, text: text, data: data };
     }
 
+    // Loads remote HTML into the modal using the framework modal layout.
     async function loadModalContent(modal, url) {
       var modalUrl = ensureModalLayout(url);
       var content = modal.querySelector('.modal-content');
@@ -329,11 +350,13 @@
       }
     }
 
+    // Includes the clicked submit button value, matching native form posts.
     function appendSubmitterValue(collection, submitter) {
       if (!submitter || !submitter.name) return;
       collection.append(submitter.name, submitter.value || '');
     }
 
+    // Ensures framework request fields override stale existing values.
     function ensureCollectionValue(collection, key, value) {
       if (!collection.has(key)) {
         collection.append(key, value);
@@ -347,6 +370,7 @@
       return submitter.getAttribute(attrName) || '';
     }
 
+    // Resolves which form a modal submitter should post.
     function resolveModalSubmitForm(modal, submitter) {
       if (!modal || !submitter) return null;
 
@@ -368,6 +392,25 @@
       return submitter.closest('form');
     }
 
+    // Preserves browser validation semantics before AJAX modal submits.
+    function canSubmitForm(form, submitter) {
+      if (form.noValidate) return true;
+      if (submitter && (submitter.formNoValidate || (typeof submitter.hasAttribute === 'function' && submitter.hasAttribute('formnovalidate')))) {
+        return true;
+      }
+
+      if (typeof form.reportValidity === 'function') {
+        return form.reportValidity();
+      }
+
+      if (typeof form.checkValidity === 'function') {
+        return form.checkValidity();
+      }
+
+      return true;
+    }
+
+    // Detects server-rendered HTML returned from fetch responses.
     function isHtmlResponse(result) {
       if (!result || !result.response) return false;
 
@@ -383,6 +426,7 @@
         || text.indexOf('<section') === 0;
     }
 
+    // Renders HTML responses in-place and falls back to an inline error.
     function renderHtmlResultOrError(modal, result, fallbackMessage) {
       if (isHtmlResponse(result) && result.text) {
         setModalContent(modal, result.text);
@@ -393,6 +437,7 @@
       return false;
     }
 
+    // Shows a small spinner inside submit buttons that opt in.
     function startSubmitterSpinner(submitter) {
       if (!(submitter instanceof HTMLElement)) return null;
       if (!submitter.hasAttribute('data-spinner')) return null;
@@ -433,6 +478,7 @@
       return state;
     }
 
+    // Restores submitter state after the modal request finishes.
     function stopSubmitterSpinner(submitter) {
       if (!(submitter instanceof HTMLElement)) return;
 
@@ -452,6 +498,7 @@
       delete submitter._fwModalSpinnerState;
     }
 
+    // Builds the fetch request while honoring submitter overrides.
     function buildFormRequest(form, submitter) {
       var submitterMethod = getSubmitterOverride(submitter, 'formmethod');
       var submitterAction = getSubmitterOverride(submitter, 'formaction');
@@ -494,6 +541,7 @@
       };
     }
 
+    // Writes successful lookup saves back to the source input/select.
     function updateLookupTarget(lookup, data, form, modal) {
       if (!lookup || !lookup.target || !data || data.id == null || data.id === '') return;
 
@@ -554,6 +602,7 @@
       lookup.target.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
+    // Closes the modal through Bootstrap so cleanup events still fire.
     function hideModal(modal) {
       if (typeof bootstrap === 'undefined' || !bootstrap.Modal) return;
       var instance = bootstrap.Modal.getInstance(modal);
@@ -562,6 +611,7 @@
       }
     }
 
+    // Submits lookup modals as JSON so the opener can update in place.
     async function submitLookupForm(modal, form, submitter, lookup) {
       startSubmitterSpinner(submitter);
       cleanFormErrors(form);
@@ -614,6 +664,7 @@
       }
     }
 
+    // Submits normal modal forms and replaces the modal with returned HTML.
     async function submitHtmlForm(modal, form, submitter) {
       startSubmitterSpinner(submitter);
       Array.from(form.querySelectorAll('.fw-modal-inline-error')).forEach(function (el) {
@@ -635,6 +686,7 @@
       }
     }
 
+    // Only intercept plain same-origin links that can render inside a modal.
     function shouldLoadLinkInModal(e, trigger, url) {
       if (!url || e.defaultPrevented) return false;
       if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
@@ -653,6 +705,7 @@
       }
     }
 
+    // Load eligible modal links into the current modal.
     document.addEventListener('click', function (e) {
       var trigger = e.target.closest('.on-fw-modal-link');
       if (!trigger) return;
@@ -667,6 +720,7 @@
       loadModalContent(modal, url);
     });
 
+    // Capture modal submitter clicks before the shared .on-submit handler.
     document.addEventListener('click', function (e) {
       var submitter = e.target.closest('.fw-modal .on-fw-modal-submit, .fw-modal .on-submit[data-target="modal"]');
       if (!submitter) return;
@@ -678,6 +732,9 @@
       e.preventDefault();
       e.stopImmediatePropagation();
 
+      if (!canSubmitForm(form, submitter)) return;
+
+      // Preserve refresh/button parameters that native form submission would include.
       if (submitter.hasAttribute('data-refresh')) {
         var refreshInput = Array.from(form.elements).find(function (el) {
           return el.name === 'refresh';
@@ -710,6 +767,7 @@
       submitHtmlForm(modal, form, submitter);
     }, true);
 
+    // Opens remote modal content from standard framework triggers.
     document.addEventListener('click', function (e) {
       var trigger = e.target.closest('.on-fw-modal');
       if (!trigger) return;
@@ -742,6 +800,7 @@
       instance.show();
     });
 
+    // Native form submits inside modals use the same AJAX paths.
     document.addEventListener('submit', function (e) {
       var form = e.target;
       if (!(form instanceof HTMLFormElement)) return;
@@ -750,6 +809,7 @@
       if (!modal) return;
 
       e.preventDefault();
+      if (!canSubmitForm(form, e.submitter || null)) return;
 
       var lookup = modal._fwLookup || null;
       if (lookup) {
