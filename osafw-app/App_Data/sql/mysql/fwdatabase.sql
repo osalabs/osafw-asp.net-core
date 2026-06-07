@@ -40,7 +40,7 @@ CREATE TABLE att (
   table_name            VARCHAR(128) NOT NULL DEFAULT '',
   item_id               INT NOT NULL DEFAULT 0,
 
-  is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - see config: $S3Bucket/$S3Root/att/att_id */
+  is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - default key att/{icode}, S3.IS_ATT_KEY_BY_ID uses att/{id} */
   is_inline             TINYINT DEFAULT 0, /* if uploaded with wysiwyg */
   is_image              TINYINT DEFAULT 0, /* 1 if this is supported image */
 

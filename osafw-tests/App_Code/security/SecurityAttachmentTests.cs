@@ -300,6 +300,65 @@ public class SecurityAttachmentTests
     }
 
     [TestMethod]
+    public void GetS3Key_UsesConfiguredAttachmentKeyToken()
+    {
+        var fw = createFw();
+        var att = createAtt(fw);
+        var item = DB.h("id", 42, "icode", "s3code");
+
+        var key = att.getS3Key(item, "m");
+        var folderKey = att.getS3FolderKey(item);
+
+        Assert.AreEqual("att/s3code/s3code_m", key);
+        Assert.AreEqual("att/s3code/", folderKey);
+    }
+
+    [TestMethod]
+    public void TransmitFile_AllowsTrustedPdfInline()
+    {
+        var fw = createFw();
+        fw.response.Body = new MemoryStream();
+        var att = createAtt(fw);
+        att.Rows[14] = DB.h(
+            "id", 14,
+            "status", FwModel.STATUS_ACTIVE,
+            "fname", "preview.pdf",
+            "ext", ".pdf",
+            "is_image", 0);
+        var path = UploadUtils.getUploadImgPath(fw, "att", 14, "", ".pdf");
+        File.WriteAllText(path, "%PDF-1.7");
+
+        att.transmitFile(14, "", "inline");
+
+        StringAssert.StartsWith(fw.response.Headers.ContentDisposition.ToString(), "inline;");
+        Assert.AreEqual("application/pdf", fw.response.Headers.ContentType.ToString());
+    }
+
+    [TestMethod]
+    public void DownloadAction_ForPdfStillForcesDownload()
+    {
+        var fw = createFw();
+        fw.response.Body = new MemoryStream();
+        var att = createAtt(fw);
+        att.Rows[15] = DB.h(
+            "id", 15,
+            "icode", "pdfcode",
+            "status", FwModel.STATUS_ACTIVE,
+            "fname", "download.pdf",
+            "ext", ".pdf",
+            "is_image", 0);
+        var path = UploadUtils.getUploadImgPath(fw, "att", 15, "", ".pdf");
+        File.WriteAllText(path, "%PDF-1.7");
+        var controller = new TestAttController(att);
+        controller.init(fw);
+
+        controller.DownloadAction("pdfcode");
+
+        StringAssert.StartsWith(fw.response.Headers.ContentDisposition.ToString(), "attachment;");
+        Assert.AreEqual("application/pdf", fw.response.Headers.ContentType.ToString());
+    }
+
+    [TestMethod]
     public void TransmitFile_ForcesRiskyHtmlDownload()
     {
         var fw = createFw();
@@ -382,6 +441,7 @@ public class SecurityAttachmentTests
         Assert.AreEqual("application/octet-stream", UploadUtils.contentTypeForAttachment("payload.svg", "image/svg+xml"));
         Assert.AreEqual("inline", UploadUtils.dispositionForAttachment("photo.png", "inline", "image/png"));
         Assert.AreEqual("image/png", UploadUtils.contentTypeForAttachment("photo.png", "image/png"));
+        Assert.AreEqual("inline", UploadUtils.dispositionForAttachment("doc.pdf", "inline", trustedInlineExts: Att.TRUSTED_INLINE_EXTS));
     }
 
     private TestAtt createAtt(FW fw)

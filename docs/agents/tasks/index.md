@@ -116,3 +116,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-06-method-comments.md` - Updated agent coding-style guidance to prefer concise, contract-focused XML method docs instead of full param/return comments for obvious signatures.
 - `summary-2026-06-06-search-repo-improvements.md` - Reverted the throwaway byte-size helper test-session feature files and improved `Search-Repo.ps1` for multi-path searches and lower-noise defaults.
 - `summary-2026-06-06-token-efficient-workflow.md` - Added reusable agent helper scripts for scoped repo search and CRLF/UTF-8 no-BOM normalization.
+- `summary-2026-06-07-s3-att-compat-pdf-inline.md` - Added S3 attachment key compatibility and trusted PDF inline serving while preserving attachment authorization.

@@ -58,6 +58,9 @@ public class S3 : FwModel
     public const bool IS_ENABLED = false;
 #endif
 
+    // S3 attachment object key compatibility: false => att/{icode}/{icode}, true => att/{id}/{id}.
+    public const bool IS_ATT_KEY_BY_ID = false;
+
     public override void init(FW fw)
     {
         base.init(fw);
@@ -85,7 +88,7 @@ public class S3 : FwModel
         return "";
     }
 
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object? storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object? storage_class = null, string trustedInlineExts = "")
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return false;
@@ -103,7 +106,7 @@ public class S3 : FwModel
         return "";
     }
 
-    public object uploadPostedFile(string key, object file, string disposition = "", string filename = "")
+    public object uploadPostedFile(string key, object file, string disposition = "", string filename = "", string trustedInlineExts = "")
     {
         throw new System.ApplicationException("S3 storage is not enabled");
     }
@@ -161,11 +164,12 @@ public class S3 : FwModel
     /// S3 Storage Classes: https://docs.aws.amazon.com/sdkfornet/v3/apidocs/items/S3/TS3StorageClass.html
     /// </remarks>
     /// <param name="key">relative to the S3Root</param>
-    /// <param name="file">file from http upload</param>
+    /// <param name="filepath">local file path to upload</param>
     /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
     /// <param name="filename">optional filename to include in disposition header</param>
     /// <param name="storage_class">S3 Storage Class, default is Amazon.S3.S3StorageClass.Standard, use 5 times cheaper Amazon.S3.S3StorageClass.GlacierInstantRetrieval for warm archive files.</param>
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass? storage_class = null)
+    /// <param name="trustedInlineExts">Optional trusted extensions that may keep an inline disposition.</param>
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass? storage_class = null, string trustedInlineExts = "")
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
 
@@ -182,7 +186,7 @@ public class S3 : FwModel
         {
             if (filename == "") filename = System.IO.Path.GetFileName(filepath);
             filename = filename.Replace("\"", "'"); // replace quotes
-            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(filepath, disposition) + "; filename=\"" + filename + "\"";
+            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(filepath, disposition, trustedInlineExts: trustedInlineExts) + "; filename=\"" + filename + "\"";
         }
 
         var task = client.PutObjectAsync(request);
@@ -200,8 +204,9 @@ public class S3 : FwModel
     /// <param name="file">file from http upload</param>
     /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
     /// <param name="filename">optional filename to include in disposition header</param>
+    /// <param name="trustedInlineExts">Optional trusted extensions that may keep an inline disposition.</param>
     /// alternative way for disposition - in get https://docs.aws.amazon.com/AmazonS3/latest/dev/RetrievingObjectUsingNetSDK.html
-    public PutObjectResponse uploadPostedFile(string key, Microsoft.AspNetCore.Http.IFormFile file, string disposition = "", string filename = "")
+    public PutObjectResponse uploadPostedFile(string key, Microsoft.AspNetCore.Http.IFormFile file, string disposition = "", string filename = "", string trustedInlineExts = "")
     {
         var request = new PutObjectRequest()
         {
@@ -215,7 +220,7 @@ public class S3 : FwModel
         {
             if (filename == "") filename = file.FileName;
             filename = filename.Replace("\"", "'"); // replace quotes
-            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(file.FileName, disposition, file.ContentType) + "; filename=\"" + filename + "\"";
+            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(file.FileName, disposition, file.ContentType, trustedInlineExts) + "; filename=\"" + filename + "\"";
         }
 
         var task = client.PutObjectAsync(request);

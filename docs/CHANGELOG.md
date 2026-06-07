@@ -2,12 +2,17 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-06-07
+
+- Compatibility: S3-backed attachments still default to `att.icode` object keys (`att/{icode}/{icode}[_{size}]`), but apps with existing id-based buckets can set `S3.IS_ATT_KEY_BY_ID` to keep using legacy `att/{id}/{id}[_{size}]` keys during framework upgrades.
+- Compatibility: the default attachment "Open" path now serves trusted PDF uploads inline for browser preview; explicit `/Att/Download/{icode}` links still force download, and browser-active uploads such as HTML/SVG/JavaScript/XML/CSS/WASM/XHTML still use inert download metadata.
+
 ## 2026-06-06
 
-- Breaking: S3-backed attachments now use `att.icode` in S3 object keys (`att/{icode}/{icode}[_{size}]`) instead of numeric `att.id`; existing S3 objects stored under id-based keys must be copied or migrated before those attachments serve after upgrade.
+- Breaking: S3-backed attachments default to `att.icode` in S3 object keys (`att/{icode}/{icode}[_{size}]`) instead of numeric `att.id`; existing S3 objects stored under id-based keys must be copied/migrated or the app must set `S3.IS_ATT_KEY_BY_ID`.
 - Breaking: `Att.getUrl()` now returns the framework `/Att/{icode}` route for S3-backed attachments so signed S3 redirects are issued only after attachment authorization; app code expecting an immediate presigned S3 URL must call through the authorized attachment route or explicitly sign after its own access check.
 - Breaking: direct object-bound attachments (`att.fwentities_id > 0`) now require authorization through the parent model's `checkAccess()` before local serving, S3 redirect, preview fallback, or same-target link/use decisions; `att_links` remain reusable references and do not make an otherwise unbound library attachment private.
-- Breaking: the default attachment pipeline serves inline only for safe raster image uploads; PDFs, text files, browser-active types such as HTML/SVG/JavaScript/XML/CSS/WASM/XHTML, and other non-image uploads are forced to download with inert content metadata unless an app implements a separate trusted-serving path.
+- Breaking: the default attachment pipeline serves inline only for safe raster image uploads and trusted PDF uploads; text files, browser-active types such as HTML/SVG/JavaScript/XML/CSS/WASM/XHTML, and other non-image uploads are forced to download with inert content metadata unless an app implements a separate trusted-serving path.
 - Breaking: image uploads are rejected before thumbnail work when file size, dimensions, pixel count, or image headers exceed safe decode limits; apps that intentionally accepted very large images must resize before upload or adjust the framework limits.
 - Breaking: S3 upload and signed redirect metadata now uses server-selected attachment content type and disposition instead of browser-supplied upload MIME for active content.
 

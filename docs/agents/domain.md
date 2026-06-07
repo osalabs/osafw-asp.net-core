@@ -17,6 +17,8 @@ Core Subdomains
 - Files / Attachments
   - `att`, `att_links`, `att_categories` for uploads; supports S3 and inline images. Linked to entities via `fwentities`.
   - Direct attachment bindings in `att.fwentities_id/item_id` require parent-object authorization for view/download/link decisions; `att_links` are reusable references and do not make active library attachments private.
+  - S3 attachment keys default to `att/{icode}/{icode}[_{size}]`; setting `S3.IS_ATT_KEY_BY_ID` keeps legacy `att/{id}/{id}[_{size}]` keys for existing buckets.
+  - Attachment "Open" serves safe raster images and trusted PDF uploads inline; active browser content still downgrades to inert download metadata.
 - Activity Logging
   - `activity_logs` capture actions with types, entity, item_id, payload of changed fields.
 - Dynamic CRUD

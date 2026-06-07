@@ -121,6 +121,20 @@ public class UploadUtils
             || value.EndsWith("+xml");
     }
 
+    private static bool isTrustedInlineExt(string normalizedExt, string trustedInlineExts)
+    {
+        if (string.IsNullOrEmpty(normalizedExt) || string.IsNullOrWhiteSpace(trustedInlineExts))
+            return false;
+
+        foreach (var ext in trustedInlineExts.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (string.Equals(normalizeUploadExt(ext), normalizedExt, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Returns a safe content type for user attachment responses or storage metadata.
     /// </summary>
@@ -142,8 +156,9 @@ public class UploadUtils
     /// <param name="filenameOrExt">Original filename, path, or dot-prefixed extension to inspect.</param>
     /// <param name="requestedDisposition">Requested disposition, usually <c>inline</c> or <c>attachment</c>.</param>
     /// <param name="submittedContentType">Optional client-supplied content type used to detect active-content mismatches.</param>
-    /// <returns><c>inline</c> only for safe raster image types requested inline; otherwise <c>attachment</c>.</returns>
-    public static string dispositionForAttachment(string? filenameOrExt, string requestedDisposition = "attachment", string? submittedContentType = "")
+    /// <param name="trustedInlineExts">Optional space/comma/semicolon-separated extensions trusted for inline serving.</param>
+    /// <returns><c>inline</c> only for safe raster images or trusted extensions requested inline; otherwise <c>attachment</c>.</returns>
+    public static string dispositionForAttachment(string? filenameOrExt, string requestedDisposition = "attachment", string? submittedContentType = "", string trustedInlineExts = "")
     {
         if (!string.Equals(requestedDisposition, "inline", StringComparison.OrdinalIgnoreCase))
             return "attachment";
@@ -151,7 +166,8 @@ public class UploadUtils
         if (isActiveContentExt(filenameOrExt) || isActiveContentType(submittedContentType))
             return "attachment";
 
-        return isUploadImgExtAllowed(normalizeUploadExt(filenameOrExt)) ? "inline" : "attachment";
+        var normalizedExt = normalizeUploadExt(filenameOrExt);
+        return isUploadImgExtAllowed(normalizedExt) || isTrustedInlineExt(normalizedExt, trustedInlineExts) ? "inline" : "attachment";
     }
 
     // simple upload from posted field name to destination directory with different options

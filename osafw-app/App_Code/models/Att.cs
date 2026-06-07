@@ -34,6 +34,7 @@ public class Att : FwModel<Att.Row>
 
     public const string IMGURL_0 = "/img/0.gif";
     public const string IMGURL_FILE = "/img/att_file.png";
+    public const string TRUSTED_INLINE_EXTS = ".pdf";
 
     public const string ACCESS_ACTION_LINK = "link";
     public const string ACCESS_ACTION_VIEW = "view";
@@ -296,7 +297,7 @@ public class Att : FwModel<Att.Row>
             if (item["is_s3"].toInt() == 1)
             {
                 //delete the whole folder for att, it will delete all files recursively
-                fw.model<S3>().deleteObject(table_name + "/" + item["icode"] + "/");
+                fw.model<S3>().deleteObject(getS3FolderKey(item));
             }
             else
             {
@@ -505,7 +506,7 @@ public class Att : FwModel<Att.Row>
         }
 
         var filenameForContentPolicy = filenameForPolicy(item);
-        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForContentPolicy, disposition);
+        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForContentPolicy, disposition, trustedInlineExts: TRUSTED_INLINE_EXTS);
         fw.logger(LogLevel.INFO, "Transmit(", safeDisposition, ") filepath [", filepath, "]");
         string filename = item["fname"].toStr().Replace('"', '\'');
 
@@ -643,6 +644,35 @@ public class Att : FwModel<Att.Row>
         });
     }
 
+    private string s3KeyToken(FwDict item)
+    {
+        return S3.IS_ATT_KEY_BY_ID ? item["id"].toStr() : item["icode"].toStr();
+    }
+
+    /// <summary>
+    /// Builds the S3 object key for an attachment row using the configured id/icode compatibility token.
+    /// </summary>
+    /// <param name="item">Attachment row containing <c>id</c> and <c>icode</c>.</param>
+    /// <param name="size">Optional image size code.</param>
+    public string getS3Key(FwDict item, string size = "")
+    {
+        return getS3KeyByID(s3KeyToken(item), size);
+    }
+
+    /// <summary>
+    /// Builds the S3 folder prefix for deleting all objects associated with one attachment.
+    /// </summary>
+    /// <param name="item">Attachment row containing <c>id</c> and <c>icode</c>.</param>
+    public string getS3FolderKey(FwDict item)
+    {
+        return table_name + "/" + s3KeyToken(item) + "/";
+    }
+
+    /// <summary>
+    /// Formats an attachment S3 object key from the supplied token; prefer <see cref="getS3Key(FwDict, string)"/> for row-aware compatibility.
+    /// </summary>
+    /// <param name="id">Attachment key token, historically the numeric attachment id.</param>
+    /// <param name="size">Optional image size code.</param>
     public string getS3KeyByID(string id, string size = "")
     {
         var sizestr = "";
@@ -665,9 +695,9 @@ public class Att : FwModel<Att.Row>
         size = normalizeSize(size);
         var filenameForContentPolicy = filenameForPolicy(item);
         var filename = item["fname"].toStr().Replace('"', '\'');
-        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForContentPolicy, disposition);
+        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForContentPolicy, disposition, trustedInlineExts: TRUSTED_INLINE_EXTS);
         var url = fw.model<S3>().getSignedUrl(
-            getS3KeyByID(item["icode"].toStr(), size),
+            getS3Key(item, size),
             contentType: UploadUtils.contentTypeForAttachment(filenameForContentPolicy),
             disposition: safeDisposition,
             filename: filename);
@@ -692,8 +722,8 @@ public class Att : FwModel<Att.Row>
         var model_s3 = fw.model<S3>();
         // model_s3.createFolder(Me.table_name)
         // upload all sizes if exists
-        // icode=abc -> /abc/abc /abc/abc_s /abc/abc_m /abc/abc_l
-        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForPolicy(item), "inline");
+        // default icode=abc -> /abc/abc /abc/abc_s /abc/abc_m /abc/abc_l
+        var safeDisposition = UploadUtils.dispositionForAttachment(filenameForPolicy(item), "inline", trustedInlineExts: TRUSTED_INLINE_EXTS);
         foreach (string size1 in Utils.qw("&nbsp; s m l"))
         {
             var size = size1.Trim();
@@ -701,7 +731,7 @@ public class Att : FwModel<Att.Row>
             if (!System.IO.File.Exists(filepath))
                 continue;
 
-            result = model_s3.uploadLocalFile(getS3KeyByID(item["icode"], size), filepath, safeDisposition, item["fname"].toStr());
+            result = model_s3.uploadLocalFile(getS3Key(item, size), filepath, safeDisposition, item["fname"].toStr(), trustedInlineExts: TRUSTED_INLINE_EXTS);
             if (!result)
                 break;
         }
@@ -738,7 +768,7 @@ public class Att : FwModel<Att.Row>
             filepath = Utils.getTmpFilename() + item["ext"];
         }
 
-        return fw.model<S3>().download(getS3KeyByID(item["icode"].toStr(), size), filepath);
+        return fw.model<S3>().download(getS3Key(item, size), filepath);
     }
 
 
@@ -803,11 +833,11 @@ public class Att : FwModel<Att.Row>
             attitem["ext"] = ext;
             attitem["is_image"] = UploadUtils.isUploadImgExtAllowed(ext) ? "1" : "0";
             var att_id = fw.model<Att>().add(attitem);
-            var att_icode = attitem["icode"].toStr(att_id.ToString());
+            attitem["id"] = att_id;
 
             try
             {
-                model_s3.uploadPostedFile(getS3KeyByID(att_icode), file, UploadUtils.dispositionForAttachment(file.FileName, "inline", file.ContentType));
+                model_s3.uploadPostedFile(getS3Key(attitem), file, "inline", trustedInlineExts: TRUSTED_INLINE_EXTS);
 
                 // TODO check response for 200 and if not - error/delete?
                 // once uploaded - mark in db as uploaded
