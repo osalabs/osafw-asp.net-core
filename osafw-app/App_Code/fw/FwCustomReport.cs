@@ -73,7 +73,7 @@ public class FwCustomReport : FwReportsBase
 
             def["value"] = f[name].toStr();
             if (FwReports.isLookupParamType(def["type"].toStr()))
-                def["options"] = reportModel.listParamOptions(def);
+                def["options"] = reportModel.listParamOptions(def, db);
         }
 
         f_data["custom_params"] = paramDefs;

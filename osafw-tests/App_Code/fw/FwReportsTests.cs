@@ -368,6 +368,137 @@ public class FwReportsTests
         Assert.AreEqual("ready", filter["status"]);
     }
 
+    [TestMethod]
+    public void Init_DefaultReportUsesFrameworkDb()
+    {
+        var fw = TestHelpers.CreateFw();
+        var report = new DbExposedReportForTest();
+
+        report.init(fw, "sample", []);
+
+        Assert.AreSame(fw.db, report.RuntimeDb);
+    }
+
+    [TestMethod]
+    public void Init_ConfiguredReportUsesNamedDb()
+    {
+        var fw = TestHelpers.CreateFw();
+        addReadonlyDbConfig(fw);
+        var report = new DbExposedReportForTest("readonly");
+
+        report.init(fw, "sample", []);
+
+        Assert.AreNotSame(fw.db, report.RuntimeDb);
+        Assert.AreEqual("readonly", report.RuntimeDb.db_name);
+        Assert.AreEqual(DB.DBTYPE_SQLITE, report.RuntimeDb.dbtype);
+    }
+
+    [TestMethod]
+    public void CustomReport_ConfiguredDbKeepsMetadataOnFrameworkDb()
+    {
+        var fw = TestHelpers.CreateFw();
+        addReadonlyDbConfig(fw);
+        var report = new DbConfiguredCustomReportForTest(new FwDict
+        {
+            ["icode"] = "custom",
+            ["iname"] = "Custom",
+            ["access_level"] = Users.ACL_SITEADMIN,
+            ["sql_template"] = "select 1 as id",
+            ["params_json"] = "",
+            ["render_options_json"] = ""
+        });
+
+        report.init(fw, "custom", []);
+
+        Assert.AreEqual("readonly", report.RuntimeDb.db_name);
+        Assert.AreEqual(DB.DBTYPE_SQLITE, report.RuntimeDb.dbtype);
+        Assert.AreSame(fw.db, report.MetadataModel.getDB());
+    }
+
+    [TestMethod]
+    public void ListParamOptions_UsesProvidedDbForSqlLookup()
+    {
+        var fw = TestHelpers.CreateFw();
+        var model = new FwReports();
+        model.init(fw);
+        var lookupDb = new TrackingDb("reportdb");
+        var def = new FwDict
+        {
+            ["type"] = "lookup_sql",
+            ["source"] = "select id, iname from report_values"
+        };
+
+        var options = model.listParamOptions(def, lookupDb);
+
+        Assert.AreEqual(1, lookupDb.ArraypLimitCalls);
+        StringAssert.Contains(lookupDb.LastSql, "report_values");
+        Assert.AreEqual("reportdb", lookupDb.db_name);
+        Assert.AreEqual(1, options.Count);
+        Assert.AreEqual("Report Value", options[0]["iname"]);
+        Assert.AreSame(fw.db, model.getDB());
+    }
+
+    private static void addReadonlyDbConfig(FW fw)
+    {
+        var dbConfig = fw.config("db") as FwDict ?? [];
+        dbConfig["readonly"] = new FwDict
+        {
+            ["type"] = DB.DBTYPE_SQLITE,
+            ["connection_string"] = "Data Source=:memory:"
+        };
+        fw.config()["db"] = dbConfig;
+    }
+
+    private sealed class DbExposedReportForTest : FwReportsBase
+    {
+        public DbExposedReportForTest(string dbConfig = "")
+        {
+            db_config = dbConfig;
+        }
+
+        public DB RuntimeDb => db;
+    }
+
+    private sealed class DbConfiguredCustomReportForTest : FwCustomReport
+    {
+        public DbConfiguredCustomReportForTest(FwDict report) : base(report)
+        {
+            db_config = "readonly";
+        }
+
+        public DB RuntimeDb => db;
+
+        public FwReports MetadataModel
+        {
+            get
+            {
+                return (FwReports)(typeof(FwCustomReport)
+                    .GetField("reportModel", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .GetValue(this) ?? throw new AssertFailedException("reportModel not initialized"));
+            }
+        }
+    }
+
+    private sealed class TrackingDb(string dbName) : DB("", DB.DBTYPE_SQLSRV, dbName)
+    {
+        public int ArraypLimitCalls { get; private set; }
+        public string LastSql { get; private set; } = string.Empty;
+
+        public override DBList arrayp(string sql, FwDict? @params, int limit)
+        {
+            ArraypLimitCalls++;
+            LastSql = sql;
+            return
+            [
+                new DBRow
+                {
+                    ["id"] = "1",
+                    ["iname"] = "Report Value"
+                }
+            ];
+        }
+    }
+
     private sealed class JsonReportForTest : FwReportsBase
     {
         public override void setFilters()

@@ -445,9 +445,12 @@ public class FwReports : FwModel<FwReports.Row>
     /// Loads dynamic lookup options declared in parameter metadata for generic custom-report filters.
     /// </summary>
     /// <param name="def">One normalized parameter definition.</param>
+    /// <param name="sourceDb">Optional DB used for SQL/table-backed lookup sources.</param>
     /// <returns>Select options with id and iname fields.</returns>
-    public FwList listParamOptions(FwDict def)
+    public FwList listParamOptions(FwDict def, DB? sourceDb = null)
     {
+        var lookupDb = sourceDb ?? db;
+
         if (def["options"] is IList options)
             return normalizeOptions(options);
 
@@ -460,11 +463,11 @@ public class FwReports : FwModel<FwReports.Row>
             return [];
 
         if (type == "lookup_table")
-            return listTableParamOptions(source);
+            return listTableParamOptions(source, lookupDb);
         if (type == "lookup_model")
             return listModelParamOptions(source);
         if (type == "lookup_sql")
-            return listSqlParamOptions(source);
+            return listSqlParamOptions(source, lookupDb);
         if (type == "lookup_tpl")
             return listTemplateParamOptions(source);
 
@@ -489,9 +492,9 @@ public class FwReports : FwModel<FwReports.Row>
             var sql = source[4..].Trim();
             validateSqlTemplate(sql);
             if (Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
-                sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
+                sql = lookupDb.limit(sql, DEFAULT_LOOKUP_LIMIT);
 
-            return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+            return normalizeOptions(lookupDb.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
         }
 
         throw new UserException("Unsupported lookup source: " + source);
@@ -501,17 +504,18 @@ public class FwReports : FwModel<FwReports.Row>
     /// Loads lookup rows from a table that exposes `id` and `iname` columns.
     /// </summary>
     /// <param name="source">Table name, optionally schema-qualified.</param>
+    /// <param name="lookupDb">DB used to quote and execute the lookup query.</param>
     /// <returns>Select options with id and iname fields.</returns>
-    private FwList listTableParamOptions(string source)
+    private FwList listTableParamOptions(string source, DB lookupDb)
     {
         validateLookupIdentifier(source);
         var sql = $@"
-SELECT {db.qid("id")} AS id,
-       {db.qid("iname")} AS iname
-FROM {db.qid(source)}
-ORDER BY {db.qid("iname")}";
-        sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
-        return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+SELECT {lookupDb.qid("id")} AS id,
+       {lookupDb.qid("iname")} AS iname
+FROM {lookupDb.qid(source)}
+ORDER BY {lookupDb.qid("iname")}";
+        sql = lookupDb.limit(sql, DEFAULT_LOOKUP_LIMIT);
+        return normalizeOptions(lookupDb.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
     }
 
     /// <summary>
@@ -531,15 +535,16 @@ ORDER BY {db.qid("iname")}";
     /// Loads lookup rows from an admin-authored read-only SQL statement returning id and iname.
     /// </summary>
     /// <param name="source">Read-only SQL statement.</param>
+    /// <param name="lookupDb">DB used to limit and execute the lookup query.</param>
     /// <returns>Select options with id and iname fields.</returns>
-    private FwList listSqlParamOptions(string source)
+    private FwList listSqlParamOptions(string source, DB lookupDb)
     {
         var sql = source.Trim();
         validateSqlTemplate(sql);
         if (Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
-            sql = db.limit(sql, DEFAULT_LOOKUP_LIMIT);
+            sql = lookupDb.limit(sql, DEFAULT_LOOKUP_LIMIT);
 
-        return normalizeOptions(db.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
+        return normalizeOptions(lookupDb.arrayp(sql, null, DEFAULT_LOOKUP_LIMIT));
     }
 
     /// <summary>

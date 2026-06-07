@@ -54,6 +54,7 @@ public class FwReportsBase
 
     protected FW fw = null!;
     protected DB db = null!;
+    protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
     public FwDict ps = []; // final data for template rendering
     public long list_count;      // count of list rows returned from db
     public FwList list_rows = [];  // list rows returned from db (array of hashes)
@@ -218,7 +219,13 @@ public class FwReportsBase
     public virtual void init(FW fw, string report_code, FwDict f)
     {
         this.fw = fw;
-        this.db = fw.db;
+        if (!string.IsNullOrEmpty(this.db_config))
+        {
+            this.db = fw.getDB(this.db_config);
+        }
+        else
+            this.db = fw.db;
+
         this.report_code = report_code ?? string.Empty;
         this.f = f ?? [];
         this.format = this.f["format"].toStr().ToLowerInvariant();

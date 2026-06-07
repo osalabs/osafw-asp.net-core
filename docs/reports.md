@@ -17,6 +17,8 @@ Common overrides:
 - `getData()` builds `list_rows`, `list_count`, and any extra template values.
 - `saveChanges()` supports editable reports when needed.
 
+Reports use the main framework database by default. To run a hardcoded report against another configured connection, set `db_config` in the report class constructor. The value must be the name of an `appSettings.db` entry, the same as model `db_config`.
+
 Templates live under `osafw-app/App_Data/template/admin/reports/{code}`. A typical report has:
 
 - `title.html`
@@ -42,6 +44,8 @@ Custom reports use:
 - `status`: active, inactive, or deleted.
 
 Custom reports render through a generic table. They do not need per-report templates. Numeric columns are right-aligned, and the table footer sums numeric columns except identifier/status-style fields such as `id`, `*_id`, and `status`. Generic column sorting applies only to displayed/materialized rows after the configured row limit has been read.
+
+Custom report definitions remain stored in the framework `fwreports` table on the main database. Developers can set `db_config` in `FwCustomReport` to force every custom report's SQL and SQL/table-based parameter lookups to use a named configured connection instead. This is intended for read-only DB credentials as an extra protection layer around UI-authored SQL.
 
 ## SQL Rules
 
