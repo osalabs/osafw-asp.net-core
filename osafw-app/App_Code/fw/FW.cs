@@ -1423,9 +1423,7 @@ public class FW : IDisposable
             bool is_test = this.config("is_test").toBool();
             if (is_test)
             {
-                string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
-                if (test_email.Length == 0)
-                    test_email = this.config("test_email").toStr(); //try test_email from config
+                string test_email = resolveTestEmailRecipient();
 
                 mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
@@ -1553,6 +1551,19 @@ public class FW : IDisposable
             message?.Dispose();
         }// important, as this will close any opened attachment files
         return result;
+    }
+
+    /// <summary>
+    /// Resolves the test-mode recipient, preferring explicit configuration over the current session login.
+    /// </summary>
+    /// <returns>Configured test recipient, current session login fallback, or an empty string.</returns>
+    public string resolveTestEmailRecipient()
+    {
+        string test_email = config("test_email").toStr().Trim();
+        if (test_email.Length > 0)
+            return test_email;
+
+        return Session("login").Trim();
     }
 
     // shortcut for send_email from template from the /emails template dir

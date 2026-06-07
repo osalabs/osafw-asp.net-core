@@ -4,6 +4,7 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-06-07
 
+- Breaking: in test mode, non-empty `appSettings.test_email` now takes priority over the logged-in user's session email as the delivery sink; leave `test_email` blank to keep routing test emails to the current session user.
 - Breaking: framework route/action authorization now treats URL controller/action casing case-insensitively; apps cannot rely on duplicate controllers, actions, virtual-controller icodes, route rules, or access rules that differ only by case.
 - Breaking: sample configuration now uses `appSettings.access_levels`, and framework XSS exclusion now honors `appSettings.no_xss_prefixes`; apps carrying typoed `accesss_levels` or `no_xss_prefixes_prefixes` keys should rename them.
 - Breaking: the default member dashboard keeps the same sample panes visible, but lower-access users see conventional current-user scoped page/upload/user/activity counts, charts, and latest events. Existing pane links still rely on normal access checks when clicked, and sample aggregates such as `Users by Type` should be replaced or scoped by production apps with app-specific predicates.

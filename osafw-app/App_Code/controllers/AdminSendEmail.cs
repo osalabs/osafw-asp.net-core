@@ -45,7 +45,7 @@ public class AdminSendEmailController : FwAdminController
     public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
-        ps["test_email"] = fw.Session("login"); // in test mode send to current user
+        ps["test_email"] = fw.resolveTestEmailRecipient();
         return ps;
     }
 
