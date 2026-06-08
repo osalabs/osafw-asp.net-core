@@ -126,6 +126,21 @@
       });
       if (!$fields.length) return;
 
+      // handle modals: prevent Escape key behaviour in full editor screen
+      $fields.each(function () {
+        var $field = $(this);
+        var is_inside_modal = $field.closest('.modal').length > 0;
+
+        if (is_inside_modal) {
+          $field.off('keydown.markdown.fullscreen').on('keydown.markdown.fullscreen', function(e) {
+            // Check if the Escape key was pressed
+            if (e.key === 'Escape' && $(this).closest('.md-editor').hasClass('md-fullscreen-mode')) {
+              e.stopPropagation();
+            }
+          });
+        }
+      })
+      
       var turndownService = new TurndownService({
         headingStyle: 'atx',
         hr: '---',
