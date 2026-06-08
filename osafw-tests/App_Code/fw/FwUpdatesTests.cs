@@ -152,6 +152,36 @@ public class FwUpdatesTests
         }
     }
 
+    [TestMethod]
+    public void CheckApplyIfDev_RedirectsToPendingNoticeWhenDevUpdatesPending()
+    {
+        var fw = TestHelpers.CreateFw();
+        var updates = new SpyFwUpdates();
+        updates.init(fw);
+        var settings = FwConfig.GetCurrentSettings();
+        var oldIsDev = settings["IS_DEV"];
+        var oldAutoApply = settings["is_fwupdates_auto_apply"];
+
+        try
+        {
+            settings["IS_DEV"] = true;
+            settings["is_fwupdates_auto_apply"] = true;
+
+            Assert.ThrowsExactly<RedirectException>(() => updates.checkApplyIfDev());
+
+            Assert.IsTrue(updates.LoadUpdatesCalled);
+            Assert.IsTrue(updates.CountPendingCalled);
+            var location = fw.response.Headers["Location"].ToString();
+            Assert.AreEqual("/Dev/Configure/(PendingUpdates)", location);
+            Assert.IsFalse(location.Contains("ApplyUpdates"));
+        }
+        finally
+        {
+            settings["IS_DEV"] = oldIsDev;
+            settings["is_fwupdates_auto_apply"] = oldAutoApply;
+        }
+    }
+
     private static FwUpdates CreateUpdatesModel()
     {
         var fw = TestHelpers.CreateFw();

@@ -144,6 +144,49 @@ public class SecurityQuickFixTests
     }
 
     [TestMethod]
+    public void Login_IndexPreservesSafeLocalGourl()
+    {
+        var gourl = "/Admin/FwUpdates?dofilter=1&f[status]=0";
+        var fw = createFw(new Dictionary<string, string?>
+        {
+            ["appSettings:ROOT_DOMAIN"] = RootDomain,
+        });
+        fw.route.method = "GET";
+        fw.FORM["gourl"] = gourl;
+        var users = new LoginUsers();
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
+        var controller = new TestLoginController();
+        controller.init(fw);
+        controller.UseModel(users);
+
+        var ps = controller.IndexAction();
+
+        Assert.AreEqual(gourl, ps["gourl"]);
+    }
+
+    [TestMethod]
+    public void Login_IndexDropsUnsafeGourl()
+    {
+        var fw = createFw(new Dictionary<string, string?>
+        {
+            ["appSettings:ROOT_DOMAIN"] = RootDomain,
+        });
+        fw.route.method = "GET";
+        fw.FORM["gourl"] = "https://evil.example.test/Admin/FwUpdates";
+        var users = new LoginUsers();
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
+        var controller = new TestLoginController();
+        controller.init(fw);
+        controller.UseModel(users);
+
+        var ps = controller.IndexAction();
+
+        Assert.IsFalse(ps.ContainsKey("gourl"));
+    }
+
+    [TestMethod]
     public void PasswordResetRequest_KnownEmailRedirectsAndSendsReset()
     {
         var users = new PasswordUsers(new DBRow(userRow(Users.STATUS_ACTIVE)));

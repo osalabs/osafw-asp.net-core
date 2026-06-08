@@ -11,7 +11,7 @@ Feature modules bundle a database table, its model, controller, and templates. Y
 6. **Review UI fit** against the [design system](design_system.html) before adding custom CSS; generated screens should usually rely on shared fragments and theme tokens.
 7. **Prune unused partials/includes** in the generated template folder so only the needed pages and widgets remain.
 
-In local development, Home can automatically redirect into the FwUpdates apply flow when pending update scripts exist. Set `appSettings.is_fwupdates_auto_apply` to `false` when you want to review and apply `/Admin/FwUpdates` manually.
+In local development, Home can automatically redirect to a pending FwUpdates notice when update scripts exist. Set `appSettings.is_fwupdates_auto_apply` to `false` when you want to review and apply `/Admin/FwUpdates` manually.
 
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.

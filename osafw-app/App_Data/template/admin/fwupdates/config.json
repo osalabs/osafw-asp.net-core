@@ -76,7 +76,7 @@
               "label": "Apply All Pending",
               "icon": "bi bi-play-fill",
               "class": "btn btn-primary me-2",
-              "url": "/Dev/Configure/(ApplyUpdates)",
+              "url": "/Dev/Manage/(ApplyPendingFwUpdates)",
               "post": true
             },
             {

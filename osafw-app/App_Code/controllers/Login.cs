@@ -43,6 +43,9 @@ public class LoginController : FwController
 
         ps["login_mode"] = reqs("mode");
         ps["hide_sidebar"] = true;
+        var gourl = reqs("gourl");
+        if (Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr()))
+            ps["gourl"] = gourl;
 
         ps["i"] = item;
         ps["err_ctr"] = fw.G["err_ctr"].toInt() + 1;

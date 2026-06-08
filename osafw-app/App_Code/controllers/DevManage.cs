@@ -142,7 +142,7 @@ public class DevManageController : FwController
     #region Fw Updates
     public void RefreshViewsAction()
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().refreshViews();
         fw.flash("success", "Views refreshed");
         fw.redirect("/Admin/FwUpdates");
@@ -150,7 +150,7 @@ public class DevManageController : FwController
 
     public void MarkFwUpdatesAppliedAction()
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().markAllPendingApplied();
         fw.flash("success", "All pending updates marked as applied");
         fw.redirect("/Admin/FwUpdates");
@@ -158,7 +158,7 @@ public class DevManageController : FwController
 
     public FwDict? ApplyFwUpdateAction(int id)
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().applyOne(id);
 
         if (fw.isJsonExpected())
@@ -177,7 +177,7 @@ public class DevManageController : FwController
 
     public FwDict? ApplyFwUpdatesAction()
     {
-        checkXSS();
+        enforcePost();
         var ids = reqh("cb").Keys.Select(x => x.toInt()).ToList();
         fw.model<FwUpdates>().applyList(ids);
 
@@ -195,9 +195,28 @@ public class DevManageController : FwController
         }
     }
 
+    public FwDict? ApplyPendingFwUpdatesAction()
+    {
+        enforcePost();
+        fw.model<FwUpdates>().applyPending();
+
+        if (fw.isJsonExpected())
+        {
+            var ps = new FwDict();
+            ps["message"] = "Pending updates applied";
+            return new FwDict { { "_json", ps } };
+        }
+        else
+        {
+            fw.flash("success", "Pending updates applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
+        }
+    }
+
     public void ReloadFwUpdatesAction()
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().loadUpdates();
         fw.flash("success", "New Updates reloaded from disk");
         fw.redirect("/Admin/FwUpdates");

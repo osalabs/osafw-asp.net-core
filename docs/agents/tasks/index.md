@@ -119,3 +119,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-07-s3-att-compat-pdf-inline.md` - Added S3 attachment key compatibility and trusted PDF inline serving while preserving attachment authorization.
 - `summary-2026-06-07-modal-validation-comments.md` - Updated `fw-modal.js` modal AJAX submits to honor browser form validation and added concise comments around modal helper methods.
 - `summary-2026-06-07-security-group-9b.md` - Added central AdminUsers hierarchy authorization, activity-log comment attribution/access checks, and Data Protection key encryption setup.
+- `summary-2026-06-08-can-r06-041.md` - Removed the DevConfigure browser-GET update execution path and moved pending update application to a POST/XSS-protected Admin FwUpdates action.

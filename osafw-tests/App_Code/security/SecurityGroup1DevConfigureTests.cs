@@ -25,6 +25,37 @@ public class SecurityGroup1DevConfigureTests
         }
     }
 
+    private sealed class DevManageUsers : Users
+    {
+        public override bool isReadOnly(int id = -1) => false;
+
+        public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
+    }
+
+    private sealed class SpyFwUpdates : FwUpdates
+    {
+        private readonly DBList pendingRows;
+
+        public bool ListPendingCalled { get; private set; }
+        public bool ApplyPendingCalled { get; private set; }
+
+        public SpyFwUpdates(DBList? pendingRows = null)
+        {
+            this.pendingRows = pendingRows ?? [];
+        }
+
+        public override DBList listPending()
+        {
+            ListPendingCalled = true;
+            return pendingRows;
+        }
+
+        public override void applyPending(bool is_echo = false)
+        {
+            ApplyPendingCalled = true;
+        }
+    }
+
     [TestMethod]
     public void HostTrust_RejectsUnconfiguredHost()
     {
@@ -255,11 +286,94 @@ public class SecurityGroup1DevConfigureTests
         Assert.IsTrue(ps["ok"].toBool());
     }
 
+    [TestMethod]
+    public void PendingUpdates_ShowsNoticeWithoutApplyingUpdates()
+    {
+        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        fw.route.method = "GET";
+        fw.response.Body = new MemoryStream();
+        var updates = new SpyFwUpdates([
+            new DBRow(new FwDict { ["iname"] = "upd<script>.sql" })
+        ]);
+        updates.init(fw);
+        TestHelpers.RegisterModel(fw, (FwUpdates)updates);
+        var controller = new DevConfigureController();
+        controller.init(fw);
+
+        var result = controller.PendingUpdatesAction();
+
+        Assert.IsNull(result);
+        Assert.IsTrue(updates.ListPendingCalled);
+        Assert.IsFalse(updates.ApplyPendingCalled);
+        Assert.AreEqual("1", fw.Session("FW_UPDATES_CTR"));
+        var body = readResponseBody(fw);
+        StringAssert.Contains(body, "Pending framework updates");
+        StringAssert.Contains(body, "upd&lt;script&gt;.sql");
+        StringAssert.Contains(body, "/Login?gourl=" + Utils.urlescape("/Admin/FwUpdates?dofilter=1&f[status]=0"));
+    }
+
+    [TestMethod]
+    public void ApplyPendingFwUpdates_RejectsGetEvenWithToken()
+    {
+        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        fw.route.method = "GET";
+        setXssTokens(fw);
+        var updates = registerSpyFwUpdates(fw);
+        var controller = createDevManageController(fw);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.ApplyPendingFwUpdatesAction());
+        Assert.IsFalse(updates.ApplyPendingCalled);
+    }
+
+    [TestMethod]
+    public void ApplyPendingFwUpdates_RejectsPostWithMissingToken()
+    {
+        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        fw.route.method = "POST";
+        fw.Session("XSS", "token");
+        var updates = registerSpyFwUpdates(fw);
+        var controller = createDevManageController(fw);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.ApplyPendingFwUpdatesAction());
+        Assert.IsFalse(updates.ApplyPendingCalled);
+    }
+
+    [TestMethod]
+    public void ApplyPendingFwUpdates_AllowsPostWithToken()
+    {
+        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        fw.route.method = "POST";
+        setXssTokens(fw);
+        var updates = registerSpyFwUpdates(fw);
+        var controller = createDevManageController(fw);
+
+        Assert.ThrowsExactly<RedirectException>(() => controller.ApplyPendingFwUpdatesAction());
+
+        Assert.IsTrue(updates.ApplyPendingCalled);
+        Assert.AreEqual("/Admin/FwUpdates", fw.response.Headers["Location"].ToString());
+    }
+
     private static InitDbProbeController createInitDbController(FW fw)
     {
         var controller = new InitDbProbeController();
         controller.init(fw);
         return controller;
+    }
+
+    private static DevManageController createDevManageController(FW fw)
+    {
+        TestHelpers.RegisterModel(fw, (Users)new DevManageUsers());
+        var controller = new DevManageController();
+        controller.init(fw);
+        return controller;
+    }
+
+    private static SpyFwUpdates registerSpyFwUpdates(FW fw)
+    {
+        var updates = new SpyFwUpdates();
+        updates.init(fw);
+        TestHelpers.RegisterModel(fw, (FwUpdates)updates);
+        return updates;
     }
 
     private static IConfiguration configWithRootAndDevelopmentOverride()
@@ -312,6 +426,13 @@ public class SecurityGroup1DevConfigureTests
         fw.Session("XSS", sessionToken);
         if (formToken != null)
             fw.FORM["XSS"] = formToken;
+    }
+
+    private static string readResponseBody(FW fw)
+    {
+        fw.response.Body.Position = 0;
+        using var reader = new StreamReader(fw.response.Body, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true);
+        return reader.ReadToEnd();
     }
 
     private static string findRepoPath(params string[] relativeParts)
