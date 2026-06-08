@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
@@ -28,7 +29,11 @@ public static class FwConfig
     // internals
     private static readonly AsyncLocal<string?> _currentHostKey = new();          // per-async-flow cache key
     private static readonly ConcurrentDictionary<string, Lazy<FwDict>> _hostCache = new();
+    private static readonly object _configLock = new();
     private static IConfiguration? configuration;                                   // appsettings.* provider
+    private static FwDict? _baseSettings;
+    private static string? _trustedRootHost;
+    private static string[]? _trustedHostPatterns;
 
     private const string DefaultHostKey = "__default__";
 
@@ -42,9 +47,13 @@ public static class FwConfig
     /// <remarks>Called exactly once per _http request_ by FW.</remarks>
     public static void init(HttpContext? ctx, IConfiguration cfg, string? host = null)
     {
-        configuration ??= cfg;                                          // record for offline tools
+        setConfiguration(cfg);                                          // record for offline tools
 
         host ??= ctx?.Request.Host.ToString() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(host))
+            host = isTrustedHost(host) ? host.Trim() : string.Empty;
+        else
+            host = string.Empty;
         var cacheKey = resolveHostKey(host);
 
         GetSettingsForHost(host, ctx); // ensure host bucket built
@@ -64,24 +73,107 @@ public static class FwConfig
         init(fw.context, configuration, fw.context?.Request.Host.ToString());
     }
 
-    // One-time base (read-only) initialisation shared by all hosts.
-    private static readonly Lazy<FwDict> _base = new(() =>
+    /// <summary>
+    /// Checks whether a request host is present in the configured trusted public origin or host override patterns.
+    /// </summary>
+    public static bool isTrustedHost(string? host)
     {
-        var tmp = new FwDict();
-        initDefaults(null, "", ref tmp);
-        if (configuration != null)
-            applyAppSettings(configuration, tmp);
-        return tmp;
-    }, LazyThreadSafetyMode.ExecutionAndPublication);
+        if (string.IsNullOrWhiteSpace(host))
+            return false;
+
+        var patterns = Volatile.Read(ref _trustedHostPatterns);
+        var rootHost = Volatile.Read(ref _trustedRootHost);
+        if (patterns == null || rootHost == null)
+        {
+            _ = getBaseSettings();
+            patterns = Volatile.Read(ref _trustedHostPatterns) ?? [];
+            rootHost = Volatile.Read(ref _trustedRootHost) ?? string.Empty;
+        }
+
+        var hostText = host.Trim();
+        var hostName = hostNameOnly(hostText);
+        if (hostName.Length == 0)
+            return false;
+
+        if (rootHost.Length > 0 && string.Equals(hostName, rootHost, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        foreach (var pattern in patterns)
+        {
+            if (hostMatchesPattern(hostText, hostName, pattern))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static void setConfiguration(IConfiguration cfg)
+    {
+        if (ReferenceEquals(configuration, cfg))
+            return;
+
+        lock (_configLock)
+        {
+            if (ReferenceEquals(configuration, cfg))
+                return;
+
+            configuration = cfg;
+            Volatile.Write(ref _baseSettings, null);
+            Volatile.Write(ref _trustedRootHost, null);
+            Volatile.Write(ref _trustedHostPatterns, null);
+            _hostCache.Clear();
+            _currentHostKey.Value = null;
+        }
+    }
+
+    // One-time base (read-only) initialisation shared by all hosts for the active configuration.
+    private static FwDict getBaseSettings()
+    {
+        var cached = Volatile.Read(ref _baseSettings);
+        if (cached != null)
+            return cached;
+
+        lock (_configLock)
+        {
+            if (_baseSettings != null)
+                return _baseSettings;
+
+            var tmp = new FwDict();
+            initDefaults(null, "", ref tmp);
+            if (configuration != null)
+                applyAppSettings(configuration, tmp);
+            var patterns = new List<string>();
+            if (tmp["override"] is FwDict overs)
+            {
+                foreach (string overName in overs.Keys)
+                {
+                    if (overs[overName] is not FwDict over)
+                        continue;
+
+                    var pattern = over["hostname_match"].toStr().Trim();
+                    if (pattern.Length > 0 && !isWildcardHostPattern(pattern))
+                        patterns.Add(pattern);
+                }
+            }
+            Volatile.Write(ref _trustedRootHost, hostNameOnly(tmp["ROOT_DOMAIN"].toStr()));
+            Volatile.Write(ref _trustedHostPatterns, patterns.ToArray());
+            Volatile.Write(ref _baseSettings, tmp);
+            return tmp;
+        }
+    }
 
     private static FwDict buildForHost(HttpContext? ctx, string overrideName, bool isHostProvided)
     {
         // clone deep - each host gets its own mutable copy
-        var hs = new FwDict(_base.Value);
+        var hs = Utils.cloneHashDeep(getBaseSettings()) ?? [];
+
+        var configuredRootDomain = configuredRootDomainForHost(hs, overrideName, isHostProvided);
 
         overrideSettingsByName(overrideName, hs, isHostProvided); // hostname overrides use regex if host provided
+        if (isHostProvided && string.IsNullOrWhiteSpace(configuredRootDomain))
+            hs["ROOT_DOMAIN"] = "";
 
-        overrideContextSettings(ctx, overrideName, hs);
+        overrideContextSettings(ctx, overrideName, hs, configuredRootDomain);
         hs["_route_prefixes_rx"] = buildRoutePrefixesRx(hs);
         return hs;
     }
@@ -167,7 +259,7 @@ public static class FwConfig
         }
     }
 
-    private static void overrideContextSettings(HttpContext? ctx, string host, FwDict st)
+    private static void overrideContextSettings(HttpContext? ctx, string host, FwDict st, string configuredRootDomain = "")
     {
         st["hostname"] = host;
         if (ctx == null) return;
@@ -176,24 +268,38 @@ public static class FwConfig
         string appBase = req.PathBase;
         st["ROOT_URL"] = Regex.Replace(appBase, @"/$", "");
 
+        if (!string.IsNullOrWhiteSpace(configuredRootDomain))
+        {
+            st["ROOT_DOMAIN"] = configuredRootDomain;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(st["ROOT_DOMAIN"].toStr()))
+            return;
+
         var httpsValue = ctx.GetServerVariable("HTTPS") ?? string.Empty;
-        bool isHttps = httpsValue.Equals("on", StringComparison.OrdinalIgnoreCase);
-        string port = ctx.GetServerVariable("SERVER_PORT") ?? "80";
-        string portPart = (port == "80" || port == "443") ? "" : ":" + port;
-        var serverName = ctx.GetServerVariable("SERVER_NAME") ?? host;
-        st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + serverName + portPart;
+        var isHttps = req.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+            || httpsValue.Equals("on", StringComparison.OrdinalIgnoreCase);
+        var hostForOrigin = string.IsNullOrWhiteSpace(host) ? req.Host.ToString() : host;
+        if (!string.IsNullOrWhiteSpace(hostForOrigin))
+            st["ROOT_DOMAIN"] = (isHttps ? "https://" : "http://") + hostForOrigin;
     }
 
     public static void overrideSettingsByName(string override_name, FwDict with_settings, bool is_regex_match = false)
     {
+        var hostName = is_regex_match ? hostNameOnly(override_name) : string.Empty;
         if (with_settings["override"] is FwDict overs)
         {
             foreach (string over_name in overs.Keys)
             {
                 if (overs[over_name] is FwDict over)
                 {
+                    var pattern = over["hostname_match"].toStr();
                     if (!is_regex_match && over_name == override_name
-                        || is_regex_match && Regex.IsMatch(override_name, over["hostname_match"].toStr())
+                        || is_regex_match
+                            && pattern.Length > 0
+                            && !isWildcardHostPattern(pattern)
+                            && hostMatchesPattern(override_name, hostName, pattern)
                         )
                     {
                         with_settings["config_override"] = over_name;
@@ -234,6 +340,8 @@ public static class FwConfig
     /// <returns>A flat settings dictionary whose keys are direct children of appSettings.</returns>
     public static FwDict settingsForEnvironment(IConfiguration cfg)
     {
+        setConfiguration(cfg);
+
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
         FwDict st = [];
         applyAppSettings(cfg, st);
@@ -263,6 +371,9 @@ public static class FwConfig
 
     private static FwDict GetSettingsForHost(string? host = null, HttpContext? ctx = null)
     {
+        if (host != null)
+            host = host.Trim();
+
         var cacheKey = host != null ? resolveHostKey(host) : (_currentHostKey.Value ?? resolveHostKey(null));
         var overrideName = getOverrideName(host ?? string.Empty, cacheKey);
         var isHostProvided = !string.IsNullOrEmpty(host);
@@ -277,6 +388,95 @@ public static class FwConfig
     private static string resolveHostKey(string? host)
     {
         return getHostCacheKey(host ?? string.Empty);
+    }
+
+    private static string configuredRootDomainForHost(FwDict settings, string host, bool isHostProvided)
+    {
+        var rootDomain = settings["ROOT_DOMAIN"].toStr();
+        if (!isHostProvided || string.IsNullOrWhiteSpace(host))
+            return rootDomain;
+
+        var hostName = hostNameOnly(host);
+        if (!string.IsNullOrWhiteSpace(rootDomain)
+            && string.Equals(hostName, hostNameOnly(rootDomain), StringComparison.OrdinalIgnoreCase))
+            return rootDomain;
+
+        if (settings["override"] is not FwDict overs)
+            return string.Empty;
+
+        foreach (string overName in overs.Keys)
+        {
+            if (overs[overName] is not FwDict over)
+                continue;
+
+            var pattern = over["hostname_match"].toStr();
+            if (pattern.Length == 0 || isWildcardHostPattern(pattern))
+                continue;
+
+            if (hostMatchesPattern(host.Trim(), hostName, pattern))
+                return over["ROOT_DOMAIN"].toStr();
+        }
+
+        return string.Empty;
+    }
+
+    private static bool hostMatchesPattern(string host, string hostName, string pattern)
+    {
+        try
+        {
+            var options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+            var hostMatch = Regex.Match(host, pattern, options);
+            if (hostMatch.Success && hostMatch.Index == 0 && hostMatch.Length == host.Length)
+                return true;
+
+            if (hostName.Length == 0 || string.Equals(host, hostName, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var hostNameMatch = Regex.Match(hostName, pattern, options);
+            return hostNameMatch.Success && hostNameMatch.Index == 0 && hostNameMatch.Length == hostName.Length;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static bool isWildcardHostPattern(string pattern)
+    {
+        var normalized = pattern.Trim();
+        return normalized is "*" or ".*" or "^.*$" or ".+" or "^.+$";
+    }
+
+    private static string hostNameOnly(string host)
+    {
+        var raw = host.Trim();
+        if (raw.Length == 0)
+            return string.Empty;
+
+        if (Uri.TryCreate(raw, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host))
+            return uri.Host.TrimEnd('.').ToLowerInvariant();
+
+        try
+        {
+            var hostString = HostString.FromUriComponent(raw);
+            if (!string.IsNullOrWhiteSpace(hostString.Host))
+                return hostString.Host.TrimEnd('.').ToLowerInvariant();
+        }
+        catch (Exception)
+        {
+            // Fall through to conservative parsing.
+        }
+
+        if (raw.StartsWith("[", StringComparison.Ordinal) && raw.Contains(']'))
+            raw = raw[1..raw.IndexOf(']')];
+        else
+        {
+            var colonIndex = raw.LastIndexOf(':');
+            if (colonIndex > -1 && raw.IndexOf(':') == colonIndex)
+                raw = raw[..colonIndex];
+        }
+
+        return raw.Trim().TrimEnd('.').ToLowerInvariant();
     }
 
     private static string buildRoutePrefixesRx(FwDict currentSettings)

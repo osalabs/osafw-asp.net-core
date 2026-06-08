@@ -64,12 +64,12 @@ public class DevConfigureController : FwController
                 }
                 catch (Exception ex)
                 {
-                    ps["db_tables_err"] = ex.Message;
+                    logger(LogLevel.WARN, "DevConfigure DB table check failed:", ex.Message);
                 }
             }
             catch (Exception ex)
             {
-                ps["db_conn_err"] = ex.Message;
+                logger(LogLevel.WARN, "DevConfigure DB connection check failed:", ex.Message);
             }
         }
 
@@ -147,6 +147,17 @@ IF LEN(@sql) > 0
         if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
+        enforcePost();
+
+        return initDatabase();
+    }
+
+    /// <summary>
+    /// Runs the development database initialization scripts after request-level bootstrap guards pass.
+    /// </summary>
+    /// <returns>Template data containing the generated admin password when one or more SQL statements executed.</returns>
+    protected virtual FwDict initDatabase()
+    {
         FwDict ps = [];
         int sql_ctr = 0;
         var sql_root = fw.model<FwUpdates>().sqlScriptRoot();

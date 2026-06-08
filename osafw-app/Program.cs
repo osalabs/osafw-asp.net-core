@@ -33,6 +33,7 @@ public static class Program
 
         // read the environment settings
         var settings = FwConfig.settingsForEnvironment(builder.Configuration);
+
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
@@ -236,6 +237,13 @@ public static class Program
                 }
             }
 #endif
+
+            if (!FwConfig.isTrustedHost(request.Host.ToString()))
+            {
+                response.StatusCode = StatusCodes.Status400BadRequest;
+                await response.WriteAsync("Bad Host: request Host is not configured. Check appSettings.ROOT_DOMAIN or appSettings.override.*.hostname_match.");
+                return;
+            }
 
             // Call the FW "core" pipeline
             FW.run(context, app.Configuration);

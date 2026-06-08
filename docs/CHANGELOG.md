@@ -2,6 +2,11 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-06-08
+
+- Breaking: request hosts must match the configured `appSettings.ROOT_DOMAIN` host or an explicit full-string `appSettings.override.*.hostname_match` pattern before framework dispatch. Arbitrary wildcard host patterns are ignored for trust, unconfigured hosts receive a diagnostic `Bad Host` 400 response, and password/security email origins now come from the configured or matched canonical origin instead of an arbitrary request Host.
+- Breaking: `/Dev/Configure/(InitDB)` now requires POST plus the current XSS token while still allowing anonymous `IS_DEV` bootstrap. Public `/Dev/Configure` diagnostics remain available, but rendered DB connection/table and path guidance no longer includes raw exception text, DB host details, connection strings, or filesystem log paths.
+
 ## 2026-06-07
 
 - Breaking: AdminUsers privileged mutations now enforce hierarchy; non-Site Admins cannot save, delete, restore, reset, or bulk-delete users with equal/higher access and cannot grant equal/higher `access_level`.

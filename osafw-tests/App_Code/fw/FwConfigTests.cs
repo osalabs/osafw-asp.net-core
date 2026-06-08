@@ -128,7 +128,7 @@ namespace osafw.Tests
                 {
                     ["Geo"] = new FwDict
                     {
-                        ["hostname_match"] = "example",
+                        ["hostname_match"] = @".*\.example\.com",
                         ["timezone"] = "Local",
                     },
                 },
