@@ -1,0 +1,78 @@
+<~/common/form/page_header_custom>
+
+<form id="FEdit" class="fw-card" method="post" action="<~new_url if="is_new" inline><~/admin/reports/url>/new</~new_url><~edit_url unless="is_new" inline><~/admin/reports/url>/<~i[icode]>/edit</~edit_url>" data-check-changes data-errors="<~error[details] json>">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+
+  <fieldset>
+    <div class="row">
+      <div class="col-lg-7">
+        <~form_left>
+      </div>
+      <div class="col-lg-5">
+        <~form_right>
+      </div>
+    </div>
+    <div class="row form-row">
+      <div class="col-md-3 text-end">
+        <p class="form-control-plaintext"><span class="form-saved-status"></span></p>
+      </div>
+      <div class="col d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">`Save`</button>
+        <button type="submit" name="preview" value="1" class="btn btn-default">`Preview Run`</button>
+        <a class="btn btn-default" href="<~../url>">`Cancel`</a>
+        <~delete_btn unless="is_new" inline>
+          <a class="btn btn-default" href="<~../url>/<~i[icode]>/delete"><span class="text-danger"><~/common/icons/x-circle-fill></span>`Delete`</a>
+        </~delete_btn>
+      </div>
+    </div>
+  </fieldset>
+</form>
+
+<~preview_error if="has_preview_error" inline>
+  <h2 class="h4 mt-4">`Preview`</h2>
+  <div class="alert alert-danger" role="alert"><~preview_error_message></div>
+</~preview_error>
+
+<~preview if="has_preview" inline>
+  <h2 class="h4 mt-4">`Preview` <span class="badge badge-outline-secondary rounded-pill"><~preview_count></span></h2>
+  <~/admin/reports/common/result_table>
+</~preview>
+
+<section class="mt-4">
+  <h2 class="h5">`Help`</h2>
+  <div class="alert alert-info">
+    <p class="mb-3">`Use one SELECT or CTE query. Use @param placeholders for filters, then define optional parameter metadata as JSON.`</p>
+    <h3 class="h6">`Supported Parameter Types`</h3>
+    <ul class="small mb-3">
+      <li><code>text</code> - `free text input`</li>
+      <li><code>int</code> - `whole number input`</li>
+      <li><code>number</code> - `decimal number input`</li>
+      <li><code>date</code> - `date input; defaults can use today or -30d`</li>
+      <li><code>datetime</code> - `date and time input`</li>
+      <li><code>lookup</code> - `select input from JSON options`</li>
+      <li><code>lookup_table</code> - `select input from a table with id and iname columns`</li>
+      <li><code>lookup_model</code> - `select input from a model's listSelectOptions()`</li>
+      <li><code>lookup_sql</code> - `select input from SQL returning id and iname`</li>
+      <li><code>lookup_tpl</code> - `select input from a .sel template`</li>
+    </ul>
+    <h3 class="h6">`Copyable SQL Example`</h3>
+    <pre class="small mb-3"><code>SELECT id, fname, lname, email, access_level, add_time
+FROM users
+WHERE (@access_level IS NULL OR access_level = @access_level)
+  AND (@s IS NULL OR email LIKE '%' + @s + '%' OR fname LIKE '%' + @s + '%' OR lname LIKE '%' + @s + '%')
+ORDER BY add_time DESC</code></pre>
+    <h3 class="h6">`Copyable Parameters JSON Example`</h3>
+    <pre class="small mb-3"><code>[
+  {"name":"access_level","label":"Access Level","type":"lookup","options":{"80":"Employee","100":"Site Administrator"}},
+  {"name":"s","label":"Search","type":"text"}
+]</code></pre>
+    <h3 class="h6">`Lookup Examples`</h3>
+    <pre class="small mb-0"><code>[
+  {"name":"status","label":"Status","type":"lookup","options":{"0":"Active","10":"Inactive"}},
+  {"name":"demo_dicts_id","label":"Demo Dict","type":"lookup_table","source":"demo_dicts"},
+  {"name":"users_id","label":"User","type":"lookup_model","source":"Users"},
+  {"name":"users_id","label":"User","type":"lookup_sql","source":"SELECT id, email AS iname FROM users WHERE status=0"},
+  {"name":"is_active","label":"Is Active","type":"lookup_tpl","source":"/common/sel/yn.sel"}
+]</code></pre>
+  </div>
+</section>

@@ -7,7 +7,7 @@
     <a class="dropdown-item on-create-userlist" href="#">`Create New List`</a>
     <div class="dropdown-divider"></div>
     <~my_userlists repeat inline>
-      <a class="dropdown-item on-toggle-userlist" href="<~/my/lists/url>/(ToggleList)/<~id>?item_id=<~item_id>">
+      <a class="dropdown-item on-toggle-userlist" href="<~/my/lists/url>/(ToggleList)/<~id>" data-item-id="<~item_id>" data-xss="<~SESSION[XSS]>">
         <span class="flag-yes <~/common/cl/hide unless="is_checked">"><~/common/icons/flag-fill></span>
         <span class="flag-no <~/common/cl/hide if="is_checked">"><~/common/icons/flag></span>
         <~iname>

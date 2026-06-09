@@ -109,16 +109,9 @@ public class FormUtils
     }
 
     /// <summary>
-    /// get name for the value fromt the select template
-    /// file format: each line - value|description
-    /// ex: selectTplName('/common/sel/status.sel', 127) => 'Deleted'
-    /// ex: selectTplName('../status.sel', 127, '/admin/users/index') => 'Deleted'
-    /// TODO: refactor to make common code with ParsePage?
+    /// Resolves a value label from a select template whose lines use <c>value|description</c>.
     /// </summary>
-    /// <param name="tpl_path">path </param>
-    /// <param name="sel_id"></param>
-    /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
-    /// <returns></returns>
+    /// <param name="base_path">Template-root-relative base path required for relative template paths.</param>
     public static string selectTplName(string tpl_path, string sel_id, string base_path = "")
     {
         string result = "";
@@ -164,12 +157,9 @@ public class FormUtils
     }
 
     /// <summary>
-    /// return options for select tag from the template file
-    /// file format: each line - value|description
+    /// Reads select options from a template whose lines use <c>value|description</c>.
     /// </summary>
-    /// <param name="tpl_path"></param>
-    /// <param name="base_path">required if tpl_path is relative (not start with "/"), then base_path used. base_path itself is relative to template root</param>
-    /// <returns></returns>
+    /// <param name="base_path">Template-root-relative base path required for relative template paths.</param>
 
     public static FwList selectTplOptions(string tpl_path, string base_path = "")
     {
@@ -311,9 +301,6 @@ public class FormUtils
     /// <summary>
     /// similar to filter, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
     /// </summary>
-    /// <param name="itemdb"></param>
-    /// <param name="item"></param>
-    /// <param name="fields"></param>
     /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
     /// <param name="default_value">default value for non-exsiting fields in item</param>
     /// <returns>by ref itemdb - add fields with default_value or form value</returns>
@@ -341,8 +328,6 @@ public class FormUtils
     /// <summary>
     /// similar to filter, but for checkboxes (as unchecked checkboxes doesn't passed from the form submit)
     /// </summary>
-    /// <param name="itemdb"></param>
-    /// <param name="item"></param>
     /// <param name="fields">qh string with default values: "field|def_value field2|def_value2"</param>
     /// <param name="is_existing_fields_only">if true, then only process fields existing in the item. Usually used with PATCH requests</param>
     /// <param name="default_value">default value for non-exsiting fields in item, if default not defined in fields qw string</param>
@@ -371,8 +356,6 @@ public class FormUtils
     /// <summary>
     /// overload for filterNullable - for qw string
     /// </summary>
-    /// <param name="itemdb"></param>
-    /// <param name="names"></param>
     public static void filterNullable(FwDict itemdb, string names)
     {
         if (string.IsNullOrEmpty(names)) return;
@@ -385,8 +368,6 @@ public class FormUtils
     /// for each name in $names - check if value is empty '' and make it null
     /// not necessary in this framework As DB knows field types, it's here just for compatibility with php framework
     /// </summary>
-    /// <param name="itemdb"></param>
-    /// <param name="names"></param>
     public static void filterNullable(FwDict itemdb, IList names)
     {
         if (names == null || names.Count == 0) return;
@@ -450,16 +431,9 @@ public class FormUtils
     }
 
     /// <summary>
-    /// return SQL date for combo date selection or Nothing if wrong date
-    /// sample:
-    ///   <select name="item[fdate_combo_day]">
-    ///   <select name="item[fdate_combo_mon]">
-    ///   <select name="item[fdate_combo_year]">
-    ///   itemdb["fdate_combo"] = FormUtils.dateForCombo(item, "fdate_combo")
+    /// Combines day/month/year select fields into SQL date text, returning empty string for invalid dates.
     /// </summary>
-    /// <param name="item"></param>
-    /// <param name="field_prefix"></param>
-    /// <returns></returns>
+    /// <param name="item">Submitted fields keyed as <c>{prefix}_day</c>, <c>{prefix}_mon</c>, and <c>{prefix}_year</c>.</param>
     public static string dateForCombo(FwDict item, string field_prefix)
     {
         string result = "";
@@ -657,8 +631,6 @@ public class FormUtils
     /// <summary>
     /// leave in only those item keys, which are absent/different from itemold
     /// </summary>
-    /// <param name="item"></param>
-    /// <param name="itemold"></param>
     /// TODO: if itemold has a bit field, it returned from db as "True", but item from the form as "1" - so it's always different
     public static FwDict changesOnly(FwDict item, FwDict itemold)
     {
@@ -688,12 +660,9 @@ public class FormUtils
     }
 
     /// <summary>
-    /// return true if any of passed fields changed
+    /// Checks whether any field in a qw-list changed between two dictionaries.
     /// </summary>
-    /// <param name="item1"></param>
-    /// <param name="item2"></param>
-    /// <param name="fields">qw-list of fields</param>
-    /// <returns>false if no chagnes in passed fields or fields are empty</returns>
+    /// <param name="fields">Whitespace-delimited field names to compare.</param>
     public static bool isChanged(FwDict item1, FwDict item2, string fields)
     {
         var result = false;
@@ -736,14 +705,9 @@ public class FormUtils
     }
 
     /// <summary>
-    /// return sql for order by clause for the passed form name (sortby) and direction (sortdir) using defined mapping (sortmap)
+    /// Builds an ORDER BY clause from submitted sort fields and a trusted sort map.
     /// </summary>
-    /// <param name="db">fw.db</param>
-    /// <param name="sortby">form_name field to sort by</param>
-    /// <param name="sortdir">desc|[asc]</param>
-    /// <param name="sortmap">mapping form_name => field_name</param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
+    /// <param name="sortmap">Submitted sort key to trusted SQL field/expression mapping.</param>
     public static string sqlOrderBy(DB db, string sortby, string sortdir, FwDict sortmap)
     {
         string orderby = sortmap[sortby].toStr().Trim();

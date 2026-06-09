@@ -140,12 +140,11 @@ public class Spages : FwModel<Spages.Row>
     }
 
     /// <summary>
-    /// Read ALL rows from db according to where, then apply getPagesTree to return tree structure
+    /// Reads rows from a trusted SQL predicate and returns a ParsePage tree with <c>children</c> rows.
     /// </summary>
-    /// <param name="where">where to apply in sql</param>
-    /// <param name="orderby">order by fields to apply in sql</param>
-    /// <returns>parsepage AL with hierarcy (via "children" key)</returns>
-    /// <remarks></remarks>
+    /// <param name="where">Trusted SQL predicate body.</param>
+    /// <param name="orderby">Trusted SQL ORDER BY body.</param>
+    /// <returns>ParsePage list with hierarchy stored in each row's <c>children</c> key.</returns>
     public FwList tree(string where, FwDict list_where_params, string orderby)
     {
         FwList rows = db.arrayp("select * from " + db.qid(table_name) +
@@ -181,12 +180,10 @@ public class Spages : FwModel<Spages.Row>
     }
 
     /// <summary>
-    /// Generate parsepage AL of plain list with levelers based on tree structure from getPagesTree()
+    /// Flattens a page tree for ParsePage and adds <c>leveler</c> rows for indentation.
     /// </summary>
-    /// <param name="pages_tree">result of get_pages_tree()</param>
-    /// <param name="level">optional, used in recursive calls</param>
-    /// <returns>parsepage AL with "leveler" array added to each row with level>0</returns>
-    /// <remarks>RECURSIVE</remarks>
+    /// <param name="pages_tree">Tree returned by <see cref="getPagesTree"/>.</param>
+    /// <returns>ParsePage list with <c>leveler</c> arrays added for nested rows.</returns>
     public FwList getPagesTreeList(FwList? pages_tree, int level = 0)
     {
         FwList result = [];
@@ -213,13 +210,10 @@ public class Spages : FwModel<Spages.Row>
     }
 
     /// <summary>
-    /// Generate HTML with options for select with indents for hierarcy
+    /// Renders nested page options with indentation for a select element.
     /// </summary>
-    /// <param name="selected_id">selected id</param>
-    /// <param name="pages_tree">result of getPagesTree()</param>
-    /// <param name="level">optional, used in recursive calls</param>
-    /// <returns>HTML with options</returns>
-    /// <remarks>RECURSIVE</remarks>
+    /// <param name="pages_tree">Tree returned by <see cref="getPagesTree"/>.</param>
+    /// <returns>HTML <c>option</c> elements.</returns>
     public string getPagesTreeSelectHtml(string selected_id, FwList? pages_tree, int level = 0)
     {
         StringBuilder result = new();
@@ -237,11 +231,9 @@ public class Spages : FwModel<Spages.Row>
     }
 
     /// <summary>
-    /// Return full url (without domain) for the page item, including url of the page
+    /// Builds the app-relative URL path for a page by walking its parent chain.
     /// </summary>
-    /// <param name="id">record id</param>
-    /// <returns>URL like /page/subpage/subsubpage</returns>
-    /// <remarks>RECURSIVE!</remarks>
+    /// <returns>URL like <c>/page/subpage/subsubpage</c>, or empty string when the chain is invalid.</returns>
     public string getFullUrl(int id, int level = 0)
     {
         if (id == 0 || level > 20) // prevent infinite loop
@@ -256,10 +248,8 @@ public class Spages : FwModel<Spages.Row>
     }
 
     /// <summary>
-    /// return list of parent pages for the page (from topmost to immediate parent)
+    /// Lists parent pages from topmost ancestor to immediate parent.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
     public DBList listParents(int id)
     {
         DBList result = [];
@@ -300,7 +290,13 @@ public class Spages : FwModel<Spages.Row>
 
         var redirect_url = item["redirect_url"].toStr();
         if (!Utils.isEmpty(redirect_url))
-            fw.redirect(redirect_url);
+        {
+            // comment check for APP URL if you want to allow redirecting to any URL, but be careful with open redirect security issue
+            if (Utils.isAppUrl(redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+                fw.redirect(redirect_url);
+            else
+                fw.logger(LogLevel.WARN, "Ignoring unsafe static page redirect_url: ", redirect_url);
+        }
 
         var item_id = item["id"].toInt();
 

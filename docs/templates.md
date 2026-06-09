@@ -162,7 +162,7 @@ Prefer `load_script.html` over large inline `<script>` blocks in `main.html`.
 - Reuse shared common fragments before cloning large sections of list or form markup.
 - Keep route literal templates such as `url.html` on a single line with no trailing newline byte; otherwise the newline can leak into generated URLs.
 - When a screen-specific block needs JavaScript, prefer `load_script.html`.
-- When a value should be raw HTML, use `noescape` deliberately and trace where it is produced.
+- When a value should be raw HTML, use `noescape` deliberately and trace where it is produced. For markdown HTML, use `markdown="trusted"` only for server-controlled or already-sanitized content.
 - When exact matching matters, use comparison attributes (`ifeq`, `ifne`, etc.) instead of relying on truthiness.
 
 ## Pitfalls
@@ -619,7 +619,7 @@ Cherry
   - `<~tag default="none">`
 - `urlencode` - encode value for URLs
 - `json` (was `var2js`) - ouput variable as JSON string
-- `markdown` - convert markdown text to html using the [Markdig](https://github.com/lunet-io/markdig) library on ASP.NET. Note: may wrap tag with `<p>`
+- `markdown` - convert markdown text to html using the [Markdig](https://github.com/lunet-io/markdig) library on ASP.NET. Raw HTML and markdown-generated attributes are disabled by default; use `markdown="trusted"` only for trusted content. Note: may wrap tag with `<p>`
 - `noparse` - doesn't parse file and just include file by tag path as is, ignores all other attrs except `if`
 
 
@@ -687,7 +687,7 @@ These help keep your templates DRY and consistent. Below are the most important 
 - **select2.html**: Includes Select2 JS/CSS and related helpers for styled selects. Initializes on all `.select2` elements. Usage: `<~/common/select2>`
 - **calendar.html**: Includes Bootstrap Datepicker JS/CSS and datepicker initialization on all `.date` elements. Usage: `<~/common/calendar>`
 - **html_editor.html**: Includes HTML editor (TinyMCE) JS/CSS and initialize it on all `.fw-html-editor` elements. Usage: `<~/common/html_editor>`
-- **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. Markdown edits use the same autosave timing as plain textareas: 30 seconds after typing stops or on blur. Usage: `<~/common/markdown_editor>`
+- **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. The preview follows the safe default renderer: raw HTML and markdown attribute/container extensions are disabled. For server-controlled or already-sanitized editor fields only, add `data-markdown-trusted="1"` or class `markdown-trusted` to enable raw HTML plus container/attribute extensions in preview. Markdown edits use the same autosave timing as plain textareas: 30 seconds after typing stops or on blur. Usage: `<~/common/markdown_editor>`
 - **sortable.html**: Includes jQuery UI Sortable JS and initializes on `.fw-sortable` elements. Usage: `<~/common/sortable>`
 - **uploader.html**: Includes File Upload JS/CSS. Usage: `<~/common/uploader>`
 

@@ -67,6 +67,7 @@ public abstract partial class FwController
     protected string view_list_defaults = "";    // qw list of default columns
     protected FwDict view_list_map = [];           // list of all available columns fieldname|visiblename
     protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
+    protected string view_list_custom_trusted = ""; // qw list of custom fields allowed to render trusted raw HTML
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
@@ -225,6 +226,7 @@ public abstract partial class FwController
                 view_list_map = Utils.qh(raw_view_list_map.toStr());
 
             view_list_custom = config["view_list_custom"].toStr();
+            view_list_custom_trusted = config["view_list_custom_trusted"].toStr();
         }
 
         is_dynamic_index_edit = config["is_dynamic_index_edit"].toBool();
@@ -287,19 +289,11 @@ public abstract partial class FwController
             throw new AuthException();
     }
 
-    /// <summary>
-    /// return true if current request is GET request
-    /// </summary>
-    /// <returns></returns>
     public bool isGet()
     {
         return (fw.route.method == "GET");
     }
 
-    /// <summary>
-    /// return true if current request is PATCH request
-    /// </summary>
-    /// <returns></returns>
     public bool isPatch()
     {
         return (fw.route.method == "PATCH");
@@ -308,21 +302,16 @@ public abstract partial class FwController
     // set of helper functions to return string, integer, date values from request (fw.FORM)
 
     /// <summary>
-    /// return value from request (fw.FORM) by name
+    /// Reads a raw request form value, returning the supplied default when missing.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value to return if request value is not set</param>
-    /// <returns></returns>
     public object? req(string iname, object? def = null)
     {
         return fw.FORM[iname] ?? def;
     }
 
     /// <summary>
-    /// return FwRow value from request (fw.FORM)
+    /// Reads a request form value as <see cref="FwDict"/>, returning an empty dictionary when absent or wrong-shaped.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <returns></returns>
     public FwDict reqh(string iname)
     {
         if (fw.FORM[iname] is FwDict hf)
@@ -332,44 +321,32 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// return string value from request (fw.FORM)
+    /// Reads a request form value as a string with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value</param>
-    /// <returns></returns>
     public string reqs(string iname, string def = "")
     {
         return fw.FORM[iname].toStr(def);
     }
 
     /// <summary>
-    /// return int value from request (fw.FORM)
+    /// Reads a request form value as an integer with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value</param>
-    /// <returns></returns>
     public int reqi(string iname, int def = 0)
     {
         return fw.FORM[iname].toInt(def);
     }
 
     /// <summary>
-    /// return date value from request (fw.FORM)
+    /// Reads a request form value as a nullable date with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value</param>
-    /// <returns></returns>
     public DateTime? reqd(string iname, DateTime? def = null)
     {
         return fw.FORM[iname].toDateOrNull() ?? def;
     }
 
     /// <summary>
-    /// return bool value from request (fw.FORM)
+    /// Reads a request form value as a boolean with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def"></param>
-    /// <returns></returns>
     public bool reqb(string iname, bool def = false)
     {
         return fw.FORM.TryGetValue(iname, out object? value) ? value.toBool() : def;
@@ -396,6 +373,21 @@ public abstract partial class FwController
             throw new AuthException("XSS Error. Reload the page or try to re-login");
     }
 
+    /// <summary>
+    /// Enforces the POST method and validates the current XSS token for custom mutating actions.
+    /// </summary>
+    /// <remarks>
+    /// Custom action routes can otherwise be reached with GET, so callers should use this before performing side effects.
+    /// </remarks>
+    /// <exception cref="AuthException">Thrown when the request method is not POST or the XSS token is invalid.</exception>
+    public virtual void enforcePost()
+    {
+        if (!string.Equals(fw.route.method, "POST", StringComparison.OrdinalIgnoreCase))
+            throw new AuthException("POST required");
+
+        checkXSS();
+    }
+
     // return hashtable of filter values
     // NOTE: automatically set to defaults - pagenum=0 and pagesize=MAX_PAGE_ITEMS
     // NOTE: if request param 'dofilter' passed - session filters cleaned
@@ -408,6 +400,11 @@ public abstract partial class FwController
 
         FwDict sfilter = fw.SessionDict(session_key) ?? [];
         FwDict? saved_filter_search = null;
+        void clearUserFilter()
+        {
+            f.Remove("userfilters_id");
+            f.Remove("userfilter");
+        }
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -415,6 +412,15 @@ public abstract partial class FwController
         {
             Utils.mergeHash(sfilter, f);
             f = sfilter;
+            if (f["userfilter"] is FwDict uf)
+            {
+                if (uf["is_system"].toBool() || uf["add_users_id"].toInt() != fw.userId)
+                    clearUserFilter();
+            }
+            else if (f["userfilters_id"].toInt() > 0)
+            {
+                clearUserFilter();
+            }
         }
         else
         {
@@ -422,23 +428,34 @@ public abstract partial class FwController
             var userfilters_id = reqi("userfilters_id");
             if (userfilters_id > 0)
             {
-                var uf = fw.model<UserFilters>().one(userfilters_id);
-                if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
+                var uf = fw.model<UserFilters>().oneAvail(userfilters_id);
+                if (uf.Count > 0)
                 {
-                    if (f1["f"] is FwDict ff || f1.ContainsKey("search"))
+                    if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
                     {
-                        f = f1["f"] as FwDict ?? [];
-                        saved_filter_search = f1["search"] as FwDict ?? [];
+                        if (f1["f"] is FwDict || f1.ContainsKey("search"))
+                        {
+                            f = f1["f"] as FwDict ?? [];
+                            saved_filter_search = f1["search"] as FwDict ?? [];
+                        }
+                        else
+                        {
+                            f = f1;
+                        }
+                    }
+                    if (!uf["is_system"].toBool())
+                    {
+                        f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
+                        f["userfilter"] = uf;
                     }
                     else
                     {
-                        f = f1;
+                        clearUserFilter();
                     }
                 }
-                if (!uf["is_system"].toBool())
+                else
                 {
-                    f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
-                    f["userfilter"] = uf;
+                    clearUserFilter();
                 }
             }
             else
@@ -448,8 +465,11 @@ public abstract partial class FwController
                 if (userfilters_id > 0)
                 {
                     // just ned info on this filter
-                    var uf = fw.model<UserFilters>().one(userfilters_id);
-                    f["userfilter"] = uf;
+                    var uf = fw.model<UserFilters>().oneAvail(userfilters_id);
+                    if (uf.Count > 0)
+                        f["userfilter"] = uf;
+                    else
+                        clearUserFilter();
                 }
             }
         }
@@ -488,7 +508,6 @@ public abstract partial class FwController
     /// <summary>
     /// clears list_filter and related session key
     /// </summary>
-    /// <param name="session_key"></param>
     public virtual void clearFilter(string? session_key = null)
     {
         FwDict f = [];
@@ -552,12 +571,10 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Check validation result (validate_required)
+    /// Converts collected form errors into framework validation flags and throws on failure.
     /// </summary>
-    /// <param name="result">to use from external validation check</param>
-    /// <remarks>throw ValidationException exception if global FormErrors non-empty.
-    /// Also set global FormErrors[INVALID] if FormErrors non-empty, but FormErrors[REQUIRED] not true
-    /// </remarks>
+    /// <param name="result">External validation result to combine with collected form errors.</param>
+    /// <remarks>Sets <c>INVALID</c> when non-required form errors exist without an existing <c>REQUIRED</c> marker.</remarks>
     public virtual void validateCheckResult(bool result = true)
     {
         var hasRequired = fw.FormErrors.ContainsKey("REQUIRED") && fw.FormErrors["REQUIRED"] is true;
@@ -579,9 +596,8 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Set list sorting fields - Me.list_orderby according to Me.list_filter filter and Me.list_sortmap and Me.list_sortdef
+    /// Resolves list sort field/direction from request filters, sort map, and default sort.
     /// </summary>
-    /// <remarks></remarks>
     public virtual void setListSorting()
     {
         if (this.list_sortdef.Length == 0)
@@ -613,9 +629,9 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Add to Me.list_where search conditions from Me.list_filter["s") ]nd based on fields in Me.search_fields
+    /// Adds keyword search predicates to <c>list_where</c> using the configured OR/AND search-field groups.
     /// </summary>
-    /// <remarks>Sample: Me.search_fields="field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'</remarks>
+    /// <remarks>Example: <c>field1 field2,!field3 field4</c> means field1 contains the term, or field2 contains it while field3 equals it, or field4 contains it.</remarks>
     public virtual void setListSearch()
     {
         string s = this.list_filter["s"].toStr().Trim();
@@ -698,12 +714,7 @@ public abstract partial class FwController
 
 
     /// <summary>
-    /// set list_where based on search[] filter
-    ///      - exact: "=term" or just "=" - mean empty
-    ///      - Not equals "!=term" or just "!" - means not empty
-    ///      - Not contains: "!term"
-    ///      - more/less: <=, <, >=, >"
-    ///      - and support search by date if search value looks like date in format MM/DD/YYYY
+    /// Adds advanced per-column search predicates, including exact/empty, inequality, contains, numeric, and date comparisons.
     /// </summary>
     public virtual void setListSearchAdvanced()
     {
@@ -768,9 +779,7 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// set list_where filter based on status filter:
-    /// - if status not set - filter our deleted (i.e. show all)
-    /// - if status set - filter by status, but if status=127 (deleted) only allow to see deleted by admins
+    /// Applies status filtering, hiding deleted rows by default and limiting trash views to site admins.
     /// </summary>
     public virtual void setListSearchStatus()
     {
@@ -862,8 +871,7 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// set list fields for db select, based on user-selected headers from config
-    /// so we fetch from db only fields that are visible in the list + id field
+    /// Sets the DB select list from user-visible list headers plus the record id field.
     /// </summary>
     protected virtual void setListFields()
     {
@@ -871,13 +879,8 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Perform 2 queries to get list of rows.
-    /// Set variables:
-    /// Me.list_count - count of rows obtained from db
-    /// Me.list_rows list of rows
-    /// Me.list_pager pager from FormUtils.get_pager
+    /// Loads list count, rows, and pager state for the current filters, with export-specific page sizing.
     /// </summary>
-    /// <remarks></remarks>
     public virtual void getListRows()
     {
         var is_export = false;
@@ -925,12 +928,10 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Add or update records in db (Me.model0)
+    /// Adds or updates the controller model and sets the standard flash message.
     /// </summary>
-    /// <param name="id">id of the record, 0 if add</param>
-    /// <param name="fields">hash of field/values</param>
-    /// <returns>new autoincrement id (if added) or old id (if update)</returns>
-    /// <remarks>Also set fw.FLASH</remarks>
+    /// <param name="fields">Submitted field values to persist.</param>
+    /// <returns>New id for inserts, or the existing id for updates.</returns>
     public virtual int modelAddOrUpdate(int id, FwDict fields)
     {
         // make conversions
@@ -981,11 +982,8 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Return one item from controller's model. For simpler overriding in child controllers.
+    /// Loads one controller model row or throws so child controllers can override the lookup contract.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    /// <exception cref="NotFoundException"></exception>
     public virtual FwDict modelOneOrFail(int id)
     {
         var item = modelOne(id);
@@ -1022,8 +1020,6 @@ public abstract partial class FwController
     ///   - related_id
     ///   - copy_id
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
     public virtual string afterSaveLocation(string id = "")
     {
         string url;
@@ -1102,7 +1098,6 @@ public abstract partial class FwController
     /// <param name="action">route redirect to this method if error</param>
     /// <param name="location">redirect to this location if success</param>
     /// <param name="more_json">added to json response</param>
-    /// <returns></returns>
     public virtual FwDict? afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", FwDict? more_json = null)
     {
         if (string.IsNullOrEmpty(location))
@@ -1209,6 +1204,7 @@ public abstract partial class FwController
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
         ps["list_rows"] = this.list_rows;
+        ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
         ps["count"] = this.list_count;
         ps["pager"] = this.list_pager;
         ps["f"] = this.list_filter;
@@ -1363,8 +1359,6 @@ public abstract partial class FwController
     /// Currently supports only "date" conversion - i.e. date only fields will be formatted as date only (without time)
     /// Override to add more custom conversions
     /// </summary>
-    /// <param name="afields"></param>
-    /// <returns></returns>
     public virtual FwDict getViewListConversions(string[] afields)
     {
         // load schema info to perform specific conversions
@@ -1415,7 +1409,6 @@ public abstract partial class FwController
     /// <param name="fieldname">field name to apply conversion to</param>
     /// <param name="row">data row from db</param>
     /// <param name="hconversions">standard conversion rules from getViewListConversions</param>
-    /// <returns></returns>
     public virtual string applyViewListConversions(string fieldname, FwDict row, FwDict hconversions)
     {
         var data = row[fieldname].toStr();
@@ -1432,10 +1425,9 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// set list_headers (and add search_value from list_filter_search)
-    /// and
+    /// Builds list headers from the active user view and submitted column search values.
     /// </summary>
-    /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
+    /// <param name="is_cols">When true, also inject rendered column metadata into <c>list_rows</c>; use false for JSON responses.</param>
     public virtual void setViewList(bool is_cols = true)
     {
         list_user_view = getListUserView();
@@ -1454,6 +1446,7 @@ public abstract partial class FwController
         if (is_cols)
         {
             var hcustom = Utils.qh(view_list_custom);
+            var hcustomTrusted = Utils.qh(view_list_custom_trusted);
 
             // dynamic cols
             var afields = Utils.qw(fields);
@@ -1472,7 +1465,8 @@ public abstract partial class FwController
                         {"row",row},
                         {"field_name",fieldname},
                         {"data",data},
-                        {"is_custom",hcustom.ContainsKey(fieldname)}
+                        {"is_custom",hcustom.ContainsKey(fieldname)},
+                        {"is_custom_trusted",hcustomTrusted.ContainsKey(fieldname)}
                     });
                 }
                 row["cols"] = cols;

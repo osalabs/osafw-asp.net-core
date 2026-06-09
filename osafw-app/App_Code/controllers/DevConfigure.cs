@@ -64,12 +64,12 @@ public class DevConfigureController : FwController
                 }
                 catch (Exception ex)
                 {
-                    ps["db_tables_err"] = ex.Message;
+                    logger(LogLevel.WARN, "DevConfigure DB table check failed:", ex.Message);
                 }
             }
             catch (Exception ex)
             {
-                ps["db_conn_err"] = ex.Message;
+                logger(LogLevel.WARN, "DevConfigure DB connection check failed:", ex.Message);
             }
         }
 
@@ -147,6 +147,17 @@ IF LEN(@sql) > 0
         if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
+        enforcePost();
+
+        return initDatabase();
+    }
+
+    /// <summary>
+    /// Runs the development database initialization scripts after request-level bootstrap guards pass.
+    /// </summary>
+    /// <returns>Template data containing the generated admin password when one or more SQL statements executed.</returns>
+    protected virtual FwDict initDatabase()
+    {
         FwDict ps = [];
         int sql_ctr = 0;
         var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
@@ -175,31 +186,24 @@ IF LEN(@sql) > 0
         return ps;
     }
 
-    public FwDict? ApplyUpdatesAction()
+    public FwDict? PendingUpdatesAction()
     {
-        //only allow apply updates if in DEV mode or if user is site admin
-        if (!fw.config("IS_DEV").toBool() && !fw.model<Users>().isSiteAdmin())
-            throw new AuthException("Not in a DEV mode");
+        var pendingRows = fw.model<FwUpdates>().listPending();
+        fw.Session("FW_UPDATES_CTR", pendingRows.Count.ToString());
 
-        fw.model<FwUpdates>().loadUpdates();
+        var adminUrl = "/Admin/FwUpdates?dofilter=1&f[status]=0";
+        var adminLink = fw.isLogged
+            ? adminUrl
+            : "/Login?gourl=" + Utils.urlescape(adminUrl);
 
-        // apply updates - if any and echo results. If error happens we stay on this page
-        try
+        fw.rw("<b>Pending framework updates</b>");
+        fw.rw("<p>Framework database updates are pending. Review and apply them from Admin FwUpdates.</p>");
+        foreach (var row in pendingRows)
         {
-            fw.model<FwUpdates>().applyPending(true);
+            var iname = Utils.htmlescape(row["iname"].toStr());
+            fw.rw("&nbsp;&#183;&nbsp;" + iname);
         }
-        catch (Exception ex)
-        {
-            fw.rw("Error: " + ex.Message);
-            fw.rw("");
-            fw.rw("<b>Press F5 to continue applying updates</b><br>");
-            fw.rw("or go to <a href='/Admin/FwUpdates'>Admin FwUpdates</a>");
-            fw.rw("or go to <a href='/Login'>Login</a><br>");
-            return null;
-        }
-
-        // all success - show link back to home
-        fw.rw("All updates applied successfully. <a href='/'>Back to Home</a>");
+        fw.rw("<p><a href='/'>Home</a> or <a href='" + Utils.htmlescape(adminLink) + "'>Admin FwUpdates</a></p>");
         return null;
     }
 }

@@ -98,6 +98,23 @@ public class Utils
         return string.Join(" ", result);
     }
 
+    public static bool tryGetValueIgnoreCase(IDictionary<string, object?> values, string key, out object? value)
+    {
+        if (values.TryGetValue(key, out value))
+            return true;
+
+        foreach (var kv in values)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                value = kv.Value;
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
 
     // remove elements from dictionary, leave only those which keys passed
     public static void hashFilter(FwDict hash, string[] keys)
@@ -123,21 +140,17 @@ public class Utils
         }
     }
 
-    // leave just allowed chars in string - for routers: prefix part, controller, action or for route ID
+    /// <summary>
+    /// Keeps only route-safe characters for prefixes, controller/action names, and route ids.
+    /// </summary>
     public static string routeFixChars(string str)
     {
         return Regex.Replace(str, "[^A-Za-z0-9_-]+", "");
     }
 
-    /* <summary>
-    * Split string exactly into 2 voidstrings using regular expression
-    * </summary>
-    * <param name="re">string suitable for RegEx</param>
-    * <param name="source">string to be splitted</param>
-    * <param name="dest1">ByRef destination string 1</param>
-    * <param name="dest2">ByRef destination string 2</param>
-    * <remarks></remarks>
-    */
+    /// <summary>
+    /// Splits a string into exactly two output strings using a regular expression delimiter.
+    /// </summary>
     public static void split2(string re, string source, ref string dest1, ref string dest2)
     {
         dest1 = "";
@@ -309,7 +322,6 @@ public class Utils
     /// This method is obsolete. Use <see cref="FwExtensions.toDateOrNull(object, string)"/> instead.
     /// </summary>
     [Obsolete("This method is obsolete. Please use the 'toDateOrNull' extension method instead.")]
-    /// <returns></returns>
     public static DateTime? toDateOrNull(object o, string exact_format = "") => o.toDateOrNull(exact_format);
 
     /// <summary>
@@ -319,10 +331,8 @@ public class Utils
     public static DateTime? f2date(object field) => field.toDateOrNull();
 
     /// <summary>
-    /// return true if field is date (DateTime.MinValue is not considered as date)
+    /// Returns whether a value converts to a real date; <see cref="DateTime.MinValue"/> is treated as empty.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isDate(object? o)
     {
         var dt = o.toDateOrNull();
@@ -412,8 +422,6 @@ public class Utils
     /// <summary>
     /// just return false if input cannot be converted to float
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isFloat(object? o)
     {
         return o != null && double.TryParse(o.ToString(), out double _);
@@ -422,8 +430,6 @@ public class Utils
     /// <summary>
     /// just return false if input cannot be converted to int
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isInt(object? o)
     {
         return o != null && int.TryParse(o.ToString(), out int _);
@@ -432,8 +438,6 @@ public class Utils
     /// <summary>
     /// just return false if input cannot be converted to long
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isLong(object? o)
     {
         return o != null && long.TryParse(o.ToString(), out long _);
@@ -450,8 +454,6 @@ public class Utils
     /// instead of `string.IsNullOrEmpty(itemdb["iname"].toStr())`
     /// use `isEmpty(itemdb["iname"])`
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isEmpty(object? o)
     {
         if (o == null) return true;
@@ -491,10 +493,8 @@ public class Utils
     }
 
     /// <summary>
-    /// return content-type mime string by file extension, default is "application/octet-stream"
+    /// Resolves a MIME type by extension, defaulting to <c>application/octet-stream</c>.
     /// </summary>
-    /// <param name="ext">extension - doc, .jpg, ... (dot is optional)</param>
-    /// <returns></returns>
     public static string ext2mime(string? ext)
     {
         FwDict mime_map = qh(MIME_MAP);
@@ -591,14 +591,12 @@ public class Utils
         return result.ToString();
     }
 
-    /* <summary>
-    * standard function for exporting to csv
-    * </summary>
-    * <param name="csv_export_headers">CSV headers row, comma-separated format</param>
-    * <param name="csv_export_fields">empty, * or Utils.qw format</param>
-    * <param name="rows">DB array</param>
-    * <returns></returns>
-    */
+    /// <summary>
+    /// Builds CSV content from row dictionaries using explicit headers/fields or the first row's keys.
+    /// </summary>
+    /// <param name="csv_export_headers">Comma-separated CSV header row.</param>
+    /// <param name="csv_export_fields">Empty, <c>*</c>, or whitespace-delimited field names.</param>
+    /// <param name="rows">Rows to export.</param>
     public static StringBuilder getCSVExport(string csv_export_headers, string csv_export_fields, FwList rows)
     {
         string headers_str = csv_export_headers;
@@ -642,8 +640,6 @@ public class Utils
     /// <summary>
     /// export to XLS based on /common/list/export templates
     /// </summary>
-    /// <param name="fw"></param>
-    /// <param name="filename"></param>
     /// <param name="csv_export_headers">comma-separated names for headers in specific order</param>
     /// <param name="csv_export_fields">qw-string(space separated) list of fields to match headers</param>
     /// <param name="rows">db array of rows</param>
@@ -718,10 +714,8 @@ public class Utils
     }
 
     /// <summary>
-    /// return file size by path, if file not exists or not accessible - return 0
+    /// Returns file size, or zero when the path is missing or inaccessible.
     /// </summary>
-    /// <param name="filepath"></param>
-    /// <returns></returns>
     public static long fileSize(string filepath)
     {
         long result = 0;
@@ -744,13 +738,9 @@ public class Utils
     }
 
 
-    /* <summary>
-    * Merge hashes - copy all key-values from hash2 to hash1 with overwriting existing keys
-    * </summary>
-    * <param name="hash1"></param>
-    * <param name="hash2"></param>
-    * <remarks></remarks>
-    */
+    /// <summary>
+    /// Copies all key-values from the second dictionary into the first, overwriting existing keys.
+    /// </summary>
     public static void mergeHash(FwDict hash1, FwDict hash2)
     {
         if (hash2 != null)
@@ -913,30 +903,22 @@ public class Utils
         return result;
     }
 
-    /* <summary>
-    * convert data structure to JSON string
-    * </summary>
-    * <param name="data">any data like single value, arraylist, hashtable, etc..</param>
-    * <returns></returns>
-    */
+    /// <summary>
+    /// Serializes arbitrary framework values such as rows, lists, dictionaries, or scalar values to JSON.
+    /// </summary>
     public static string jsonEncode(object data, bool is_pretty = false)
     {
         return JsonSerializer.Serialize(data, data.GetType(), is_pretty ? jsonSerializerOptionsPretty : jsonSerializerOptions);
     }
 
-    //overload alias for jsonDecode(string)
     public static object? jsonDecode(object str)
     {
         return jsonDecode(str.toStr());
     }
 
-    /* <summary>
-    * convert JSON string into data structure
-    * </summary>
-    * <param name="str">JSON string</param>
-    * <returns>value or FwRow (objects) or FwList (arrays) or null if cannot be converted</returns>
-    * <remarks></remarks>
-    */
+    /// <summary>
+    /// Converts JSON text into framework values: scalars, <see cref="FwDict"/> objects, <see cref="FwList"/> arrays, or null on failure.
+    /// </summary>
     public static object? jsonDecode(string str)
     {
         if (string.IsNullOrEmpty(str))
@@ -1408,12 +1390,9 @@ public class Utils
         return Regex.Replace(str ?? "", @"[\n\r]+", ",");
     }
 
-    /* <summary>
-    * for each row in rows add keys/values to this row (by ref)
-    * </summary>
-    * <param name="rows">db array</param>
-    * <param name="fields">keys/values to add</param>
-    */
+    /// <summary>
+    /// Adds the provided key-values to every row in a framework list in place.
+    /// </summary>
     public static void arrayInject(FwList rows, FwDict fields)
     {
         foreach (FwDict row in rows)
@@ -1426,35 +1405,21 @@ public class Utils
         }
     }
 
-    /* <summary>
-    *  escapes/encodes string so it can be passed as part of the url
-    *  </summary>
-    *  <param name="str"></param>
-    *  <returns></returns>
-    */
     public static string urlescape(string? str)
     {
         return HttpUtility.UrlEncode(str, Encoding.UTF8) ?? "";
     }
 
-    /* <summary>
-    *  unescapes/decodes escaped/encoded string back
-    *  </summary>
-    *  <param name="str"></param>
-    *  <returns></returns>
-    */
     public static string urlunescape(string str)
     {
         return HttpUtility.UrlDecode(str);
     }
 
     /// <summary>
-    /// load content from url
+    /// Loads URL content with optional POST parameters and headers, returning empty string on errors.
     /// </summary>
-    /// <param name="url">url to get data from</param>
-    /// <param name="parameters">optional, name/value params if set - post will be used, instead of get</param>
-    /// <param name="headers">optional, name/value headers to add to request</param>
-    /// <returns>content received. empty string if error</returns>
+    /// <param name="parameters">When provided, values are sent as form POST data instead of GET.</param>
+    /// <param name="headers">Optional request headers to add.</param>
     public static string loadUrl(string url, FwDict? parameters = null, FwDict? headers = null)
     {
         string content;
@@ -1502,11 +1467,9 @@ public class Utils
     /// <summary>
     /// sent multipart/form-data POST request to remote URL with files and formFields
     /// </summary>
-    /// <param name="url"></param>
     /// <param name="files">key=fieldname, value=filepath</param>
     /// <param name="formFields">optional, key=fieldname, value=value</param>
     /// <param name="cert">optional, certificate</param>
-    /// <returns></returns>
     /// TODO - combine this method with loadUrl() ?
     public static string sendFileToUrl(
         string url,
@@ -1592,7 +1555,7 @@ public class Utils
             if (!string.IsNullOrEmpty(json))
             {
                 result = Utils.jsonDecode(json) as FwDict ?? [];
-                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
+                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", fw.config("log_pii").toBool() ? result : new StrList(result.Keys));
             }
         }
         catch (Exception ex)
@@ -1765,21 +1728,16 @@ public class Utils
     }
 
     /// <summary>
-    /// return file content OR "" if no file exists or some other error happened (ignore errors)
+    /// Reads file content, returning empty string when the file is missing or unreadable.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <returns></returns>
     public static string getFileContent(string filename)
     {
         return getFileContent(filename, out _);
     }
 
     /// <summary>
-    /// return file content OR "" if no file exists or some other error happened (see error)
+    /// Reads file content and exposes read failures through the output exception.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <param name="error"></param>
-    /// <returns></returns>
     public static string getFileContent(string filename, out Exception? error)
     {
         error = null;
@@ -1804,20 +1762,16 @@ public class Utils
     }
 
     /// <summary>
-    /// return array of file lines OR empty array if no file exists or some other error happened (ignore errors)
+    /// Reads file lines, returning an empty array when the file is missing or unreadable.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <returns></returns>
     public static string[] getFileLines(string filename)
     {
         return getFileLines(filename, out _);
     }
 
     /// <summary>
-    /// return array of file lines OR empty array if no file exists or some other error happened (see error)
+    /// Reads file lines and exposes read failures through the output exception.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <returns></returns>
     public static string[] getFileLines(string filename, out Exception? error)
     {
         error = null;
@@ -1836,8 +1790,6 @@ public class Utils
     /// <summary>
     /// replace or append file content
     /// </summary>
-    /// <param name="filename"></param>
-    /// <param name="fileData"></param>
     /// <param name="isAppend">False by default </param>
     public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
     {

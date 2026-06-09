@@ -231,23 +231,42 @@ public class AssistantController : FwController
         // If it looks good, store it
         if (parsedResult != null)
         {
-
-            // If redirect, read "redirect_url" from JSON, do your fw.redirect. If done, just break.
-            if (!string.IsNullOrEmpty(parsedResult.redirect_url))
-            {
-                fw.redirect(parsedResult.redirect_url);
+            if (!applyAssistantResult(parsedResult))
                 return;
-            }
-
-            fw.G["llm_sql"] = parsedResult.sql;
-            fw.G["llm_title"] = parsedResult.title;
-            fw.G["llm_explanation"] = parsedResult.explanation;
-            //fw.G["llm_form"] = parsedResult.html_form;
         }
 
         //fw.flash("info", "Assistant completed conversation. Last JSON=" + lastJSON);
         fw.G["user_prompt"] = userPrompt; // pass user prompt to the view
         fw.routeRedirect(FW.ACTION_INDEX);
+    }
+
+    /// <summary>
+    /// Applies a structured assistant response after LLM completion so redirect validation and result storage stay fail-closed.
+    /// </summary>
+    /// <param name="parsedResult">Assistant response parsed from model JSON, including optional redirect and result content.</param>
+    /// <returns><c>true</c> when the caller should continue to the assistant result page; <c>false</c> when handling redirected or stopped.</returns>
+    protected virtual bool applyAssistantResult(AssistantResult parsedResult)
+    {
+        // If redirect, read "redirect_url" from JSON, do your fw.redirect. If done, just break.
+        if (!string.IsNullOrEmpty(parsedResult.redirect_url))
+        {
+            if (Utils.isAppUrl(parsedResult.redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+            {
+                fw.redirect(parsedResult.redirect_url);
+                return false;
+            }
+
+            logger(LogLevel.WARN, "Assistant returned unsafe redirect_url: ", parsedResult.redirect_url);
+            fw.flash("error", "Assistant returned an unsupported redirect.");
+            fw.redirect(this.base_url);
+            return false;
+        }
+
+        fw.G["llm_sql"] = parsedResult.sql;
+        fw.G["llm_title"] = parsedResult.title;
+        fw.G["llm_explanation"] = parsedResult.explanation;
+        //fw.G["llm_form"] = parsedResult.html_form;
+        return true;
     }
 
 }

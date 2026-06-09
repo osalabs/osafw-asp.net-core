@@ -1,0 +1,14 @@
+<~run_context_block if="has_run_context" inline>
+  <div class="small text-muted mb-3">
+    <span>`Generated` <~generated_time></span>
+    <~row_limit_text if="has_row_limit_context" inline><span class="mx-1">&middot;</span><span><~row_limit_context></span></~row_limit_text>
+    <span class="mx-1">&middot;</span>
+    <span><~sorting_context></span>
+  </div>
+  <~params_context if="has_applied_params" inline>
+    <div class="small text-muted mb-3">
+      <span class="fw-semibold">`Applied params`:</span>
+      <~applied_params repeat inline><span class="badge badge-outline-secondary me-1"><~label>: <~value></span></~applied_params>
+    </div>
+  </~params_context>
+</~run_context_block>

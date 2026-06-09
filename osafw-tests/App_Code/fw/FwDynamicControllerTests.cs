@@ -5,6 +5,14 @@ namespace osafw.Tests;
 [TestClass]
 public class FwDynamicControllerTests
 {
+    private class TestModel : FwModel
+    {
+        public TestModel()
+        {
+            table_name = "test_records";
+        }
+    }
+
     private class TestDynamicController : FwDynamicController
     {
         private readonly StrList ids;
@@ -18,6 +26,8 @@ public class FwDynamicControllerTests
         public override void init(FW fw)
         {
             base.init(fw);
+            model0 = new TestModel();
+            model0.init(fw);
             fw.route.method = "GET";
             list_sortmap = Utils.qh("id|id");
             list_sortdef = "id asc";

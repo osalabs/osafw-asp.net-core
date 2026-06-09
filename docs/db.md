@@ -49,6 +49,8 @@ To enable SQLite:
 
 When the app is compiled with `isSQLite` and `type` is `SQLite`, `FwSessionCache` stores sessions in the SQLite `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server/MySQL or an external distributed cache instead of SQLite.
 
+Data Protection key XML stored in `fwkeys` is protected with Windows DPAPI before it is written to the database. Non-Windows deployments fail closed by default; for local/dev-only environments that intentionally accept plaintext key XML, change the `ALLOW_PLAINTEXT_DP_KEYS` constant in `Program.cs` to `true`.
+
 ## API summary
 
 ### Optional

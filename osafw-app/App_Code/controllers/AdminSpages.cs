@@ -111,6 +111,8 @@ public class AdminSpagesController : FwAdminController
         if (id > 0)
             ps["subpages"] = model.listChildren(id);
 
+        ps["is_site_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN);
+
         return ps;
     }
 
@@ -152,6 +154,10 @@ public class AdminSpagesController : FwAdminController
 
         FwDict itemdb = FormUtils.filter(item, save_fields2);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        if (!fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))
+            foreach (string field in Utils.qw("custom_head custom_css custom_js"))
+                itemdb.Remove(field);
+
         itemdb["prio"] = itemdb["prio"].toInt();
 
         // if no publish time defined - publish it now
@@ -173,6 +179,10 @@ public class AdminSpagesController : FwAdminController
 
         if (result && model.isExistsByUrl(item["url"].toStr(), item["parent_id"].toInt(), id))
             fw.FormErrors["url"] = "EXISTS";
+
+        var redirect_url = item["redirect_url"].toStr();
+        if (result && !Utils.isEmpty(redirect_url) && !Utils.isAppUrl(redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+            fw.FormErrors["redirect_url"] = "APP_URL";
 
         if (result)
         {

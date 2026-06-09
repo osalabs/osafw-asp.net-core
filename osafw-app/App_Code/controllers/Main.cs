@@ -3,6 +3,8 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
+using System.Collections;
+
 namespace osafw;
 
 public class MainController : FwController
@@ -29,8 +31,9 @@ public class MainController : FwController
     /// Returns recent daily activity counts with provider-neutral date bucketing and C# label formatting.
     /// </summary>
     /// <param name="logTypeCode">Optional log type code filter, such as <c>login</c>.</param>
+    /// <param name="scopedUsersId">When nonzero, limits activity to the current dashboard user.</param>
     /// <returns>Rows with <c>idate</c>, <c>ivalue</c>, and chart label fields.</returns>
-    private FwList listDailyActivityCounts(string logTypeCode = "")
+    private FwList listDailyActivityCounts(string logTypeCode = "", int scopedUsersId = 0)
     {
         var dateExpr = db.sqlDateExpr("al.idate");
         var sql = "select " + dateExpr + " as idate, count(*) as ivalue "
@@ -41,6 +44,11 @@ public class MainController : FwController
         {
             sql += " and lt.icode=@log_type_code";
             p["@log_type_code"] = logTypeCode;
+        }
+        if (scopedUsersId != 0)
+        {
+            sql += " and al.users_id=@users_id";
+            p["@users_id"] = scopedUsersId;
         }
 
         sql += " group by " + dateExpr + " order by " + dateExpr + " desc";
@@ -57,6 +65,38 @@ public class MainController : FwController
         return result;
     }
 
+    private void addTableHeadersAndCols(FwDict pane, FwList rows, string dateTimeFields = "")
+    {
+        pane["rows"] = rows;
+        var headers = new FwList();
+        pane["headers"] = headers;
+        if (rows.Count == 0 || rows[0] is not FwDict firstRow)
+            return;
+
+        var dateFields = Utils.qh(dateTimeFields);
+        var keys = firstRow.Keys;
+        var fields = new string[keys.Count];
+        keys.CopyTo(fields, 0);
+        foreach (var key in fields)
+            headers.Add(new FwDict() { { "field_name", key } });
+        foreach (FwDict row in rows)
+        {
+            FwList cols = [];
+            foreach (var fieldname in fields)
+            {
+                if (dateFields.ContainsKey(fieldname))
+                    row[fieldname] = fw.formatUserDateTime(row[fieldname]);
+                cols.Add(new FwDict()
+                {
+                    {"row",row},
+                    {"field_name",fieldname},
+                    {"data",row[fieldname]}
+                });
+            }
+            row["cols"] = cols;
+        }
+    }
+
     public FwDict IndexAction()
     {
 
@@ -69,14 +109,15 @@ public class MainController : FwController
         const int DIFF_DAYS = -7;
         // init const int[] STATUSES with single value FwModel.STATUS_ACTIVE
         var STATUSES = new int[] { FwModel.STATUS_ACTIVE };
+        var scopedUsersId = fw.userAccessLevel >= Users.ACL_SITEADMIN ? 0 : (fw.userId > 0 ? fw.userId : -1);
 
         one = [];
         one["type"] = "bignum";
         one["title"] = "Pages";
         one["url"] = "/Admin/Spages";
-        one["value"] = fw.model<Spages>().getCount(STATUSES);
+        one["value"] = fw.model<Spages>().getCount(STATUSES, userId: scopedUsersId);
         one["value_class"] = "text-warning";
-        one["badge_value"] = Utils.percentChange(fw.model<Spages>().getCount(STATUSES, DIFF_DAYS), fw.model<Spages>().getCount(STATUSES, DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<Spages>().getCount(STATUSES, DIFF_DAYS, scopedUsersId), fw.model<Spages>().getCount(STATUSES, DIFF_DAYS * 2, scopedUsersId));
         one["badge_class"] = "text-bg-warning";
         one["icon"] = "bi-file-earmark-richtext";
         panes["plate1"] = one;
@@ -85,9 +126,9 @@ public class MainController : FwController
         one["type"] = "bignum";
         one["title"] = "Uploads";
         one["url"] = "/Admin/Att";
-        one["value"] = fw.model<Att>().getCount(STATUSES);
+        one["value"] = fw.model<Att>().getCount(STATUSES, userId: scopedUsersId);
         one["value_class"] = "text-info";
-        one["badge_value"] = Utils.percentChange(fw.model<Att>().getCount(STATUSES, DIFF_DAYS), fw.model<Att>().getCount(STATUSES, DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<Att>().getCount(STATUSES, DIFF_DAYS, scopedUsersId), fw.model<Att>().getCount(STATUSES, DIFF_DAYS * 2, scopedUsersId));
         one["badge_class"] = "text-bg-info";
         one["icon"] = "bi-cloud-upload";
         panes["plate2"] = one;
@@ -96,9 +137,9 @@ public class MainController : FwController
         one["type"] = "bignum";
         one["title"] = "Users";
         one["url"] = "/Admin/Users";
-        one["value"] = fw.model<Users>().getCount(STATUSES);
+        one["value"] = fw.model<Users>().getCount(STATUSES, userId: scopedUsersId, userField: "id");
         one["value_class"] = "text-success";
-        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS), fw.model<Users>().getCount(STATUSES, DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<Users>().getCount(STATUSES, DIFF_DAYS, scopedUsersId, "id"), fw.model<Users>().getCount(STATUSES, DIFF_DAYS * 2, scopedUsersId, "id"));
         one["badge_class"] = "text-bg-success";
         one["icon"] = "bi-people";
         panes["plate3"] = one;
@@ -107,9 +148,9 @@ public class MainController : FwController
         one["type"] = "bignum";
         one["title"] = "Events";
         one["url"] = "/Admin/Reports/sample";
-        one["value"] = fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES);
+        one["value"] = fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, userId: scopedUsersId);
         one["value_class"] = "";
-        one["badge_value"] = Utils.percentChange(fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS), fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS * 2));
+        one["badge_value"] = Utils.percentChange(fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS, scopedUsersId), fw.model<FwActivityLogs>().getCountByLogIType(FwLogTypes.ITYPE_SYSTEM, STATUSES, DIFF_DAYS * 2, scopedUsersId));
         one["badge_class"] = "text-bg-secondary";
         one["icon"] = "bi-clock";
         panes["plate4"] = one;
@@ -119,7 +160,7 @@ public class MainController : FwController
         one["title"] = "Logins per day";
         one["id"] = "logins_per_day";
         // one["url") ] "/Admin/Reports/sample"
-        one["rows"] = listDailyActivityCounts("login");
+        one["rows"] = listDailyActivityCounts("login", scopedUsersId);
         panes["barchart"] = one;
 
         one = [];
@@ -137,37 +178,18 @@ public class MainController : FwController
         one["type"] = "table";
         one["title"] = "Last Events";
         // one["url") ] "/Admin/Reports/sample"
-        rows = db.arrayp(db.limit("select al.idate as " + db.qid("On") + ", " + db.sqlConcat("fe.iname", db.q(" "), "lt.iname", db.q(" "), "al.idesc") + " as Event " +
+        var lastEventsSql = "select al.idate as " + db.qid("On") + ", " + db.sqlConcat("fe.iname", db.q(" "), "lt.iname", db.q(" "), "al.idesc") + " as Event " +
             " from activity_logs al, log_types lt, fwentities fe " +
             " where al.log_types_id=lt.id" +
-            "   and fe.id=al.fwentities_id" +
-            " order by al.id desc", 10), DB.h());
-        one["rows"] = rows;
-        var headers = new FwList();
-        one["headers"] = headers;
-        if (rows.Count > 0 && rows[0] is FwDict firstRow)
+            "   and fe.id=al.fwentities_id";
+        var lastEventsParams = DB.h();
+        if (scopedUsersId != 0)
         {
-            var keys = firstRow.Keys;
-            var fields = new string[keys.Count];
-            keys.CopyTo(fields, 0);
-            foreach (var key in fields)
-                headers.Add(new FwDict() { { "field_name", key } });
-            foreach (FwDict row in rows)
-            {
-                row["On"] = fw.formatUserDateTime(row["On"]);
-                FwList cols = [];
-                foreach (var fieldname in fields)
-                {
-                    cols.Add(new FwDict()
-                    {
-                        {"row",row},
-                        {"field_name",fieldname},
-                        {"data",row[fieldname]}
-                    });
-                }
-                row["cols"] = cols;
-            }
+            lastEventsSql += " and al.users_id=@users_id";
+            lastEventsParams["@users_id"] = scopedUsersId;
         }
+        rows = db.arrayp(db.limit(lastEventsSql + " order by al.id desc", 10), lastEventsParams);
+        addTableHeadersAndCols(one, rows, "On");
         panes["tabledata"] = one;
 
         // Example of using Report class to generate html block
@@ -183,7 +205,7 @@ public class MainController : FwController
         //{
         //    { "IS_SUPPRESS_TITLE", true }
         //};
-        //one["html"] = FwReports.createHtml(fw, "sample", f, ps_rep);
+        //one["html"] = FwReportsBase.createHtml(fw, "sample", f, ps_rep);
         //panes["htmldata"] = one;
 
         one = [];
@@ -191,7 +213,7 @@ public class MainController : FwController
         one["title"] = "Events per day";
         one["id"] = "eventsctr";
         // one["url") ] "/Admin/Reports/sample"
-        one["rows"] = listDailyActivityCounts();
+        one["rows"] = listDailyActivityCounts(scopedUsersId: scopedUsersId);
         panes["linechart"] = one;
 
         // Example for area chart
@@ -211,8 +233,8 @@ public class MainController : FwController
         one = [];
         one["type"] = "progress";
         one["title"] = "Active Users";
-        long totalUsers = fw.model<Users>().getCount();
-        long activeUsers = fw.model<Users>().getCount(STATUSES);
+        long totalUsers = fw.model<Users>().getCount(userId: scopedUsersId, userField: "id");
+        long activeUsers = fw.model<Users>().getCount(STATUSES, userId: scopedUsersId, userField: "id");
         one["percent"] = totalUsers == 0 ? 0 : activeUsers * 100 / totalUsers;
         one["progress_class"] = "bg-success";
         panes["progress"] = one;

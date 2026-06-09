@@ -246,15 +246,15 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - all reports accessed via `AdminReportsController`
   - `IndexAction` - shows a list of all available reports (basically renders static html template with a link to specific reports)
   - `ShowAction` - based on passed report code calls related Report model
-- base report model is `FwReports`, major methods (you may override in the specific report):
-  - `getReportFilters()` - set data for the report filters
-  - `getReportData()` - returns report data, usually based on some sql query (see Sample report)
+- base report class is `FwReportsBase`, major methods (you may override in the specific report):
+  - `setFilters()` - set data for the report filters
+  - `getData()` - returns report data, usually based on some sql query (see Sample report)
 - `ReportSample` model (in `\osafw-app\App_Code\models\Reports` folder) is a sample report implementation, that can be used as a template to build custom reports
 - basic steps to create a new report:
   - copy `\osafw-app\App_Code\models\Reports\Sample.cs` to `\osafw-app\App_Code\models\Reports\Cool.cs` (to create Cool report)
   - edit `Cool.cs` and rename "Sample" to "Cool"
-  - modify `getReportFilters()` to match your report filters
-  - modify `getReportData()` to edit sql query and related post-processing
+  - modify `setFilters()` to match your report filters
+  - modify `getData()` to edit sql query and related post-processing
   - copy templates folder `\osafw-app\App_Data\template\reports\sample` to `\osafw-app\App_Data\template\reports\cool`
   - edit templates:
     - `title.html` - report title
@@ -278,7 +278,7 @@ To enable PDF export using Playwright (Chromium):
    - If PDF export fails, check `/osafw-app/App_Data/logs/main.log` for errors.
    - Ensure the browser path is writable and accessible by the IIS user.
 
-For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.
+For more technical details, see comments in `ConvUtils.cs` and `FwReportsBase.cs`.
 
 ### Background Service for Scheduled Tasks
 

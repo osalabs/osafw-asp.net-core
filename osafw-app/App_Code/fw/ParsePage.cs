@@ -110,7 +110,7 @@ Parses file templates and replaces <~tags> with values from dictionary
   default
   urlencode
   json (was var2js) - produces json-compatible string, example: {success:true, msg:""}
-  markdown      - convert markdown text to html using Markdig (optional). Note: may wrap tag with <p>
+  markdown      - convert markdown text to html using Markdig (optional). Raw HTML is disabled unless markdown="trusted". Note: may wrap tag with <p>
   noparse       - doesn't parse file and just include file by tag path as is, ignores all other attrs except if
 */
 
@@ -170,20 +170,21 @@ public class ParsePage
     public const int MAX_TEMPLATE_RECURSION_DEPTH = 100; // high enough for real trees, low enough to avoid process-killing runaway recursion
     // "d M yyyy HH:mm"
 
-    // current date formats - may be changed in constructor based on user settings
-    private static string DateFormat = DATE_FORMAT_DEF;
-    private static string DateFormatShort = DATE_FORMAT_SHORT;
-    private static string DateFormatLong = DATE_FORMAT_LONG;
-    private static string InputTimezone = DATE_TIMEZONE_DEF;
-    private static string OutputTimezone = DATE_TIMEZONE_DEF;
-
     // for dynamic load of Markdig markdown converter
+    private const string MARKDOWN_EXTENSIONS_SAFE = "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks";
+    private const string MARKDOWN_EXTENSIONS_TRUSTED = MARKDOWN_EXTENSIONS_SAFE + "+customcontainers+attributes";
     private static System.Reflection.MethodInfo? mMarkdownToHtml;
-    private static object? MarkdownPipeline;
+    private static object? MarkdownPipelineSafe;
+    private static object? MarkdownPipelineTrusted;
 
     private readonly Func<FwDict> globalsGetter = () => [];
     private readonly ISession? session;
     private readonly Action<LogLevel, string[]> loggerAction = (_, _) => { };
+    private readonly string dateFormat = DATE_FORMAT_DEF;
+    private readonly string dateFormatShort = DATE_FORMAT_SHORT;
+    private readonly string dateFormatLong = DATE_FORMAT_LONG;
+    private readonly string inputTimezone = DATE_TIMEZONE_DEF;
+    private readonly string outputTimezone = DATE_TIMEZONE_DEF;
     // checks if template files modifies and reload them, depends on config's "log_level"
     // true if level at least DEBUG, false for production as on production there are no tempalte file changes (unless during update, which leads to restart App anyway)
     private readonly bool is_check_file_modifications = false;
@@ -209,17 +210,12 @@ public class ParsePage
             session = options.Session;
             loggerAction = options.Logger ?? ((level, messages) => { }); // by default - no logging
 
-            // set date formats based on user settings
-            if (!string.IsNullOrEmpty(options.DateFormat))
-                DateFormat = options.DateFormat;
-            if (!string.IsNullOrEmpty(options.DateFormatShort))
-                DateFormatShort = options.DateFormatShort;
-            if (!string.IsNullOrEmpty(options.DateFormatLong))
-                DateFormatLong = options.DateFormatLong;
-            if (!string.IsNullOrEmpty(options.InputTimezone))
-                InputTimezone = options.InputTimezone;
-            if (!string.IsNullOrEmpty(options.OutputTimezone))
-                OutputTimezone = options.OutputTimezone;
+            // Date/time display settings are request-specific and must not leak between parser instances.
+            dateFormat = string.IsNullOrEmpty(options.DateFormat) ? DATE_FORMAT_DEF : options.DateFormat;
+            dateFormatShort = string.IsNullOrEmpty(options.DateFormatShort) ? DATE_FORMAT_SHORT : options.DateFormatShort;
+            dateFormatLong = string.IsNullOrEmpty(options.DateFormatLong) ? DATE_FORMAT_LONG : options.DateFormatLong;
+            inputTimezone = string.IsNullOrEmpty(options.InputTimezone) ? DATE_TIMEZONE_DEF : options.InputTimezone;
+            outputTimezone = string.IsNullOrEmpty(options.OutputTimezone) ? DATE_TIMEZONE_DEF : options.OutputTimezone;
 
             if (!LANG_CACHE.ContainsKey(lang) && !string.IsNullOrEmpty(TMPL_PATH))
                 load_lang();
@@ -458,7 +454,6 @@ public class ParsePage
     /// <summary>
     /// read precached file and split it into lines (ignores empty lines)
     /// </summary>
-    /// <param name="filename"></param>
     /// <returns>empty array if no content</returns>
     private string[] precache_file_lines(string filename)
     {
@@ -981,6 +976,37 @@ public class ParsePage
         return result;
     }
 
+    /// <summary>
+    /// Builds the Markdig pipeline used by ParsePage so untrusted markdown can keep normal
+    /// formatting while rejecting raw HTML and arbitrary markdown-generated attributes.
+    /// </summary>
+    /// <param name="pipelineBuilderType">Runtime Markdig <c>MarkdownPipelineBuilder</c> type loaded by reflection.</param>
+    /// <param name="markdownExtensionsType">Runtime Markdig <c>MarkdownExtensions</c> type that exposes extension methods.</param>
+    /// <param name="isTrusted">When true, enables the legacy raw HTML/attribute-capable pipeline for trusted templates.</param>
+    /// <returns>A Markdig pipeline instance, or <c>null</c> when required Markdig APIs are unavailable.</returns>
+    private static object? buildMarkdownPipeline(Type pipelineBuilderType, Type markdownExtensionsType, bool isTrusted)
+    {
+        var pipelineBuilder = Activator.CreateInstance(pipelineBuilderType);
+        var configureMethod = markdownExtensionsType.GetMethod("Configure", [pipelineBuilderType, typeof(string)]);
+        var buildMethod = pipelineBuilderType.GetMethod("Build", Type.EmptyTypes);
+
+        if (pipelineBuilder == null || configureMethod == null || buildMethod == null)
+            return null;
+
+        configureMethod.Invoke(null, [pipelineBuilder, isTrusted ? MARKDOWN_EXTENSIONS_TRUSTED : MARKDOWN_EXTENSIONS_SAFE]);
+
+        if (!isTrusted)
+        {
+            var disableHtmlMethod = markdownExtensionsType.GetMethod("DisableHtml", [pipelineBuilderType]);
+            if (disableHtmlMethod == null)
+                return null;
+
+            disableHtmlMethod.Invoke(null, [pipelineBuilder]);
+        }
+
+        return buildMethod.Invoke(pipelineBuilder, null);
+    }
+
     private void tag_replace(ref string hpage_ref, ref string tag_full_ref, ref string value_ref, FwDict hattrs, object? originalValue = null)
     {
         if (string.IsNullOrEmpty(hpage_ref))
@@ -1050,19 +1076,19 @@ public class ParsePage
                     {
                         case "":
                             {
-                                dformat = DateFormat;
+                                dformat = dateFormat;
                                 break;
                             }
 
                         case "short":
                             {
-                                dformat = DateFormatShort;
+                                dformat = dateFormatShort;
                                 break;
                             }
 
                         case "long":
                             {
-                                dformat = DateFormatLong;
+                                dformat = dateFormatLong;
                                 break;
                             }
 
@@ -1081,7 +1107,7 @@ public class ParsePage
                     DateTime? parsedDate = originalValue as DateTime?;
                     parsedDate ??= DateUtils.SQL2Date(value);
                     if (parsedDate == null
-                        && DateTime.TryParseExact(value, [DateFormat, DateFormatShort, DateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
+                        && DateTime.TryParseExact(value, [dateFormat, dateFormatShort, dateFormatLong], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exactDate))
                     {
                         // Parse user-formatted dates explicitly so date-only inputs keep their original semantics.
                         parsedDate = exactDate;
@@ -1089,7 +1115,7 @@ public class ParsePage
 
                     if (parsedDate != null)
                     {
-                        var dt = convertTimezone(parsedDate.Value, InputTimezone, OutputTimezone, originalValue, value);
+                        var dt = convertTimezone(parsedDate.Value, inputTimezone, outputTimezone, originalValue, value);
                         value = dt.ToString(dformat, DateTimeFormatInfo.InvariantInfo);
                     }
 
@@ -1176,6 +1202,8 @@ public class ParsePage
                     // var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
                     // or var pipeline = new MarkdownPipelineBuilder().Configure("common+gfm-pipetables+emphasisextras+listextras+footers+citations+attributes+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks").Build();
                     // var result = Markdown.ToHtml(value, pipeline);
+                    var markdownInput = originalValue?.toStr() ?? value;
+                    bool isTrustedMarkdown = hattrs["markdown"].toStr().Equals("trusted", StringComparison.OrdinalIgnoreCase);
                     try
                     {
                         if (mMarkdownToHtml == null)
@@ -1196,32 +1224,31 @@ public class ParsePage
                             {
                                 mMarkdownToHtml = tMarkdown.GetMethod("ToHtml", [typeof(string), tMarkdownPipeline, tMarkdownParserContext]);
 
-                                var configureMethod = tMarkdownExtensions.GetMethod("Configure");
-
-                                var pipelineBuilder = Activator.CreateInstance(tMarkdownPipelineBuilder);
-                                var buildMethod = tMarkdownPipelineBuilder.GetMethod("Build");
-
-                                if (configureMethod == null || pipelineBuilder == null || buildMethod == null)
+                                MarkdownPipelineSafe = buildMarkdownPipeline(tMarkdownPipelineBuilder, tMarkdownExtensions, false);
+                                MarkdownPipelineTrusted = buildMarkdownPipeline(tMarkdownPipelineBuilder, tMarkdownExtensions, true);
+                                if (MarkdownPipelineSafe == null || MarkdownPipelineTrusted == null)
                                 {
                                     logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
                                     attr_count = 0;
                                 }
-                                else
-                                {
-                                    configureMethod.Invoke(null, [pipelineBuilder, "common+hardlinebreak+gfm-pipetables+emphasisextras+listextras+footers+citations+abbreviations+figures+bootstrap+medialinks+autoidentifiers+tasklists+autolinks+customcontainers+attributes"]);
-
-                                    MarkdownPipeline = buildMethod.Invoke(pipelineBuilder, null);
-                                }
                             }
                         }
 
-                        if (mMarkdownToHtml != null && MarkdownPipeline != null)
-                            value = mMarkdownToHtml.Invoke(null, [value, MarkdownPipeline, null]).toStr();
+                        var markdownPipeline = isTrustedMarkdown ? MarkdownPipelineTrusted : MarkdownPipelineSafe;
+                        if (mMarkdownToHtml != null && markdownPipeline != null)
+                        {
+                            var markdownSource = isTrustedMarkdown ? markdownInput : value;
+                            value = mMarkdownToHtml.Invoke(null, [markdownSource, markdownPipeline, null]).toStr();
+                        }
+                        else if (!isTrustedMarkdown)
+                            value = Utils.htmlescape(markdownInput);
                     }
                     catch (Exception ex)
                     {
                         logger(LogLevel.WARN, @"error parsing markdown, install Markdig package");
                         logger(LogLevel.DEBUG, ex.Message);
+                        if (!isTrustedMarkdown)
+                            value = Utils.htmlescape(markdownInput);
                     }
 
                     attr_count -= 1;
@@ -1613,7 +1640,7 @@ public class ParsePage
     {
         var originalDateTime = originalValue as DateTime?;
         // Date-only values should render as the same day for every user, so skip timezone math for those cases.
-        if (DateUtils.isDateOnlyDisplayValue(originalDateTime ?? dt, rawValue, DateFormat))
+        if (DateUtils.isDateOnlyDisplayValue(originalDateTime ?? dt, rawValue, dateFormat))
             return dt;
 
         if (from_tz == to_tz)

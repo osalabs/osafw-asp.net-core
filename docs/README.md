@@ -19,6 +19,7 @@ Use this file to find the right document quickly instead of searching the whole 
 - [design_system.html](design_system.html): visual design system for the Bootstrap-based framework UI, active themes, tokens, and component examples.
 - [layout.md](layout.md): shared layout structure, CRUD headers, and theming extension points.
 - [dashboard.md](dashboard.md): dashboard pane types and how to add custom ones.
+- [reports.md](reports.md): hardcoded report development and Site Admin-managed custom SQL reports.
 - [datetime.md](datetime.md): per-user date/time formatting, timezone conversion, and save-path normalization.
 - [feature_modules.md](feature_modules.md): module scaffolding from `/Dev/Manage` or manual setup.
 
@@ -29,11 +30,14 @@ Use this file to find the right document quickly instead of searching the whole 
 - [agents/glossary.md](agents/glossary.md): project terms and framework vocabulary.
 - [agents/code_reviewer.md](agents/code_reviewer.md): review loop instructions for code reviewer agents.
 - [agents/mcp.md](agents/mcp.md): MCP usage and troubleshooting notes.
+- [agents/tasks/index.md](agents/tasks/index.md): compact task-history index to search before opening full task summaries.
+- [agents/tools/](agents/tools/): reusable helper scripts for scoped repo search and text normalization.
 
 ## Which Doc to Use
 
 - If the task changes visual styling, shared UI components, or theme behavior: start with `design_system.html`, then `layout.md`, then `templates.md` if shared fragments are involved.
 - If the task changes templates or screen composition: start with `templates.md`, then `layout.md`, then `design_system.html`, then `dynamic.md` if a dynamic controller is involved.
 - If the task changes models, queries, or save flows: start with `crud.md`, then `db.md`, then `datetime.md` if date fields are involved.
+- If the task changes report classes, report templates, exports, or custom report SQL behavior: read `reports.md`, then `db.md`, then `templates.md` if templates are involved.
 - If the task adds or renames framework methods, variables, constants, or generated module helpers: read `naming.md`.
-- If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`.
+- If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`; search `agents/tasks/index.md` before opening old summaries.

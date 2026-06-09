@@ -112,10 +112,8 @@ public class DateUtils
     }
 
     /// <summary>
-    /// return true if string is date in format MM/DD/YYYY or D/M/YYYY
+    /// Returns whether a string matches the legacy date formats MM/DD/YYYY or D/M/YYYY.
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
     public static bool isDateStr(string str)
     {
         return Regex.IsMatch(str, @"^\d{1,2}/\d{1,2}/\d{4}$");
@@ -218,7 +216,7 @@ public class DateUtils
     }
 
     /// <summary>
-    /// convert human date input to SQL date
+    /// Converts human-entered date text into SQL date text using the configured user formats.
     /// </summary>
     /// <param name="str">human date input per current user settings (see date_format)</param>
     /// <param name="date_format">See DATE_FORMAT_* constants.</param>
@@ -242,7 +240,7 @@ public class DateUtils
     }
 
     /// <summary>
-    /// convert human date input to date only string per user settings
+    /// Converts human-entered date text into a date-only string using user settings.
     /// </summary>
     /// <remarks>Example: 1/17/2023 12:00:00 AM => 1/17/2023</remarks>
     /// <param name="str">date/time string</param>
@@ -262,13 +260,12 @@ public class DateUtils
     }
 
     /// <summary>
-    /// convert human date input to time only string per user settings
+    /// Converts human-entered date text into a time-only string using user settings.
     /// </summary>
     /// <remarks>Example: 1/17/2023 3:12 AM => 3:12 AM</remarks>
     /// <param name="str">date/time string</param>
     /// <param name="date_format">See DATE_FORMAT_* constants.</param>
     /// <param name="time_format">See TIME_FORMAT_* constants</param>
-    /// <returns></returns>
     public static string Str2TimeOnly(string str, int date_format, int time_format)
     {
         string result = "";

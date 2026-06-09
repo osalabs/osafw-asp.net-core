@@ -23,8 +23,7 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set list fields for db select, based on user-selected headers in list_headers
-    /// so we fetch from db only fields that are visible in the list + id field
+    /// Sets the Vue list DB select fields from active headers plus the record id field.
     /// </summary>
     protected override void setListFields()
     {
@@ -101,9 +100,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for initial scope for Vue controller
+    /// Populates initial Vue page state, including globals, headers, form config, and feature flags.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeInitial(FwDict ps)
     {
         ps["XSS"] = fw.Session("XSS");
@@ -126,6 +124,7 @@ public class FwVueController : FwDynamicController
 
         ps["field_id"] = model0.field_id;
         ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
+        ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
 
         // add form tabs with tab-specific field definitions if configured
         if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
@@ -155,9 +154,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for list_rows scope for Vue controller
+    /// Populates Vue list rows with sorting, filtering, paging, export, and JSON shaping applied.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeListRows(FwDict ps)
     {
         setListSorting();
@@ -184,9 +182,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for lookups scope for Vue controller
+    /// Populates Vue lookup data from configured form fields and optional user-list state.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeLookups(FwDict ps)
     {
         // userlists support if necessary
@@ -531,6 +528,11 @@ public class FwVueController : FwDynamicController
         return allFields;
     }
 
+    /// <summary>
+    /// Saves a Vue dynamic controller row after checking update access to the target parent row.
+    /// </summary>
+    /// <param name="id">Existing parent row id to update, or zero for a new row.</param>
+    /// <returns>JSON-oriented save response with subtable reconciliation metadata when needed.</returns>
     public override FwDict? SaveAction(int id = 0)
     {
         if (this.save_fields == null)
@@ -539,6 +541,8 @@ public class FwVueController : FwDynamicController
             throw new Exception("Wrong use refresh=1 on Vue Controller");
 
         checkReadOnly();
+        if (id != 0)
+            modelOneOrFail(id);
 
         FwDict item = reqh("item");
         var success = true;

@@ -1,0 +1,5 @@
+<nav>
+  <a href="<~../url>">`Reports`</a>
+  <~new_label if="is_new" inline> <span class="text-muted">/</span> `New`</~new_label>
+  <~edit_label unless="is_new" inline> <span class="text-muted">/</span> <a href="<~/admin/reports/url>/<~i[icode]>"><~i[iname]></a> <span class="text-muted">/</span></~edit_label>
+</nav>

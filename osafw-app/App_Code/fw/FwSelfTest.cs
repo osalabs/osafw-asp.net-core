@@ -437,9 +437,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is false and ouput OK. If true output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
-    /// <param name="err_str"></param>
     public Result is_false(string label, bool value, string err_str = "ERROR")
     {
         Result res = Result.ERR;
@@ -459,9 +456,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is true and ouput OK. If false output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
-    /// <param name="err_str"></param>
     public Result is_true(string label, bool value, string err_str = "ERROR")
     {
         Result res = Result.ERR;
@@ -481,8 +475,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is not nothing and not empty string and ouput OK. If value is empty output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
     public Result is_notempty(string label, object value, string err_str = "EMPTY")
     {
         Result res = Result.ERR;
@@ -502,8 +494,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is nothing or empty string and ouput OK. If false output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
     public Result is_empty(string label, object value, string err_str = "EMPTY")
     {
         Result res = Result.ERR;

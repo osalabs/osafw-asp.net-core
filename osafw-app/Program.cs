@@ -20,6 +20,8 @@ namespace osafw;
 
 public static class Program
 {
+    private const bool ALLOW_PLAINTEXT_DP_KEYS = false;
+
     public static void Main(string[] args)
     {
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
@@ -31,6 +33,7 @@ public static class Program
 
         // read the environment settings
         var settings = FwConfig.settingsForEnvironment(builder.Configuration);
+
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
@@ -71,7 +74,11 @@ public static class Program
         // Data Protection
         // repository used for keys storage in the DB
         var repository = new FwKeysXmlRepository(new DB(connStr, dbType, "main"));
-        builder.Services.AddDataProtection().SetApplicationName(appName);
+        var dataProtectionBuilder = builder.Services.AddDataProtection().SetApplicationName(appName);
+        if (OperatingSystem.IsWindows())
+            dataProtectionBuilder.ProtectKeysWithDpapi(protectToLocalMachine: true);
+        else if (!ALLOW_PLAINTEXT_DP_KEYS)
+            throw new ApplicationException("Data Protection key encryption requires Windows DPAPI or an explicit local/dev plaintext fallback.");
         builder.Services.Configure<KeyManagementOptions>(options =>
             {
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
@@ -230,6 +237,13 @@ public static class Program
                 }
             }
 #endif
+
+            if (!FwConfig.isTrustedHost(request.Host.ToString()))
+            {
+                response.StatusCode = StatusCodes.Status400BadRequest;
+                await response.WriteAsync("Bad Host: request Host is not configured. Check appSettings.ROOT_DOMAIN or appSettings.override.*.hostname_match.");
+                return;
+            }
 
             // Call the FW "core" pipeline
             FW.run(context, app.Configuration);

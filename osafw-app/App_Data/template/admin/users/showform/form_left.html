@@ -17,7 +17,7 @@
   </div>
   <~pwd_block if="i[id]" inline>
     <div class="col-6 col-md">
-        <button type="button" class="btn btn-default on-send-pwd"><~/common/icons/unlock-fill>`Send reset link`</button>
+        <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(SendPwd)/<~id>?XSS=<~SESSION[XSS]>" data-ajax data-spinner><~/common/icons/unlock-fill>`Send reset link`</button>
     </div>
     </~pwd_block>
 </div>

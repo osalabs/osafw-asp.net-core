@@ -58,6 +58,9 @@ public class S3 : FwModel
     public const bool IS_ENABLED = false;
 #endif
 
+    // S3 attachment object key compatibility: false => att/{icode}/{icode}, true => att/{id}/{id}.
+    public const bool IS_ATT_KEY_BY_ID = false;
+
     public override void init(FW fw)
     {
         base.init(fw);
@@ -79,13 +82,13 @@ public class S3 : FwModel
         return null;
     }
 
-    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000)
+    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000, string contentType = "", string disposition = "", string filename = "")
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return "";
     }
 
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object? storage_class = null)
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", object? storage_class = null, string trustedInlineExts = "")
     {
         fw.logger(LogLevel.WARN, "S3 storage is not enabled");
         return false;
@@ -103,7 +106,7 @@ public class S3 : FwModel
         return "";
     }
 
-    public object uploadPostedFile(string key, object file, string disposition = "", string filename = "")
+    public object uploadPostedFile(string key, object file, string disposition = "", string filename = "", string trustedInlineExts = "")
     {
         throw new System.ApplicationException("S3 storage is not enabled");
     }
@@ -161,12 +164,12 @@ public class S3 : FwModel
     /// S3 Storage Classes: https://docs.aws.amazon.com/sdkfornet/v3/apidocs/items/S3/TS3StorageClass.html
     /// </remarks>
     /// <param name="key">relative to the S3Root</param>
-    /// <param name="file">file from http upload</param>
+    /// <param name="filepath">local file path to upload</param>
     /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
     /// <param name="filename">optional filename to include in disposition header</param>
     /// <param name="storage_class">S3 Storage Class, default is Amazon.S3.S3StorageClass.Standard, use 5 times cheaper Amazon.S3.S3StorageClass.GlacierInstantRetrieval for warm archive files.</param>
-    /// <returns></returns>
-    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass? storage_class = null)
+    /// <param name="trustedInlineExts">Optional trusted extensions that may keep an inline disposition.</param>
+    public bool uploadLocalFile(string key, string filepath, string disposition = "", string filename = "", S3StorageClass? storage_class = null, string trustedInlineExts = "")
     {
         logger("uploading to S3: key=[" + key + "], filepath=[" + filepath + "]");
 
@@ -177,13 +180,13 @@ public class S3 : FwModel
             FilePath = filepath,
             StorageClass = storage_class ?? S3StorageClass.Standard
         };
-        request.Headers["Content-Type"] = UploadUtils.mimeMapping(filepath);
+        request.Headers["Content-Type"] = UploadUtils.contentTypeForAttachment(filepath);
 
         if (!string.IsNullOrEmpty(disposition))
         {
             if (filename == "") filename = System.IO.Path.GetFileName(filepath);
             filename = filename.Replace("\"", "'"); // replace quotes
-            request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
+            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(filepath, disposition, trustedInlineExts: trustedInlineExts) + "; filename=\"" + filename + "\"";
         }
 
         var task = client.PutObjectAsync(request);
@@ -201,9 +204,9 @@ public class S3 : FwModel
     /// <param name="file">file from http upload</param>
     /// <param name="disposition">if defined (ex: inline) - Content-Disposition with file.FileName added</param>
     /// <param name="filename">optional filename to include in disposition header</param>
-    /// <returns></returns>
+    /// <param name="trustedInlineExts">Optional trusted extensions that may keep an inline disposition.</param>
     /// alternative way for disposition - in get https://docs.aws.amazon.com/AmazonS3/latest/dev/RetrievingObjectUsingNetSDK.html
-    public PutObjectResponse uploadPostedFile(string key, Microsoft.AspNetCore.Http.IFormFile file, string disposition = "", string filename = "")
+    public PutObjectResponse uploadPostedFile(string key, Microsoft.AspNetCore.Http.IFormFile file, string disposition = "", string filename = "", string trustedInlineExts = "")
     {
         var request = new PutObjectRequest()
         {
@@ -211,13 +214,13 @@ public class S3 : FwModel
             Key = this.root + key,
             InputStream = file.OpenReadStream()
         };
-        request.Headers["Content-Type"] = file.ContentType;
+        request.Headers["Content-Type"] = UploadUtils.contentTypeForAttachment(file.FileName, file.ContentType);
 
         if (!string.IsNullOrEmpty(disposition))
         {
             if (filename == "") filename = file.FileName;
             filename = filename.Replace("\"", "'"); // replace quotes
-            request.Headers["Content-Disposition"] = disposition + "; filename=\"" + filename + "\"";
+            request.Headers["Content-Disposition"] = UploadUtils.dispositionForAttachment(file.FileName, disposition, file.ContentType, trustedInlineExts) + "; filename=\"" + filename + "\"";
         }
 
         var task = client.PutObjectAsync(request);
@@ -234,7 +237,6 @@ public class S3 : FwModel
     /// <summary>
     /// download file from S3 to specific local filepath
     /// </summary>
-    /// <param name="key"></param>
     /// <param name="filepath">filepath to download file to</param>
     /// <returns>downloaded file filepath or empty string if not success</returns>
     public string download(string key, string filepath)
@@ -265,21 +267,26 @@ public class S3 : FwModel
 
 
     /// <summary>
-    /// return signed url for the key with standard params: 10 min expiration
+    /// Builds an S3 pre-signed download URL with optional response headers and browser cache lifetime.
     /// </summary>
-    /// <param name="key">relative to the S3Root</param>
-    /// <returns>url to download the </returns>
-    /// see for all the details and ability to override response headers https://docs.aws.amazon.com/sdkfornet/v3/apidocs/items/S3/MS3GetPreSignedURLGetPreSignedUrlRequest.html
-    /// TODO for cacheing use custom builder which will round current time to 10min (or 1h) and sign with "fixed" time instead current
-    /// https://stackoverflow.com/questions/45213553/aws-s3-presigned-request-cache
-    /// or cache signed urls on caller level (Att model)
-    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000)
+    /// <param name="key">Object key relative to the configured S3 root.</param>
+    /// <returns>Pre-signed URL for the object.</returns>
+    public string getSignedUrl(string key, int expires_minutes = 10, int max_age = 31536000, string contentType = "", string disposition = "", string filename = "")
     {
         if (max_age == 0)
             max_age = expires_minutes * 60;//special case to match max_age to expires
 
         var headers = new ResponseHeaderOverrides();
         headers.CacheControl = "private, max-age=" + max_age + ", immutable"; //max age=31536000 with immuatable avoids send revalidation request from browser to resource https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#avoiding_revalidation
+        if (!string.IsNullOrEmpty(contentType))
+            headers.ContentType = contentType;
+        if (!string.IsNullOrEmpty(disposition))
+        {
+            if (filename == "")
+                filename = System.IO.Path.GetFileName(key);
+            filename = filename.Replace("\"", "'");
+            headers.ContentDisposition = disposition + "; filename=\"" + filename + "\"";
+        }
 
         var request = new GetPreSignedUrlRequest()
         {
@@ -300,13 +307,12 @@ public class S3 : FwModel
     }
 
     /// <summary>
-    /// delete one object or whole folder
+    /// Deletes one S3 object or recursively deletes a folder prefix.
     /// </summary>
-    /// <param name="key">object key, relative to the S3Root by default</param>
-    /// <param name="is_add_root">if set to False, the S3Root prefix is not added. Used in recursive folder delete where object key name is obtained as a full path from the S3 API</param>
-    /// <param name="is_folder_check">if set to False, do not check for the folder "/" ending. Used to delete a folder where the folder itself is an actual object with a zero size</param>
-    /// <returns>response of one object deletion or response of top folder delete</returns>
-    /// <remarks>RECURSIVE! for folders</remarks>
+    /// <param name="key">Object key, relative to the configured S3 root unless <paramref name="is_add_root"/> is false.</param>
+    /// <param name="is_add_root">When false, <paramref name="key"/> is already the full S3 key.</param>
+    /// <param name="is_folder_check">When false, skip folder-prefix recursion and delete the key as a normal object.</param>
+    /// <returns>Response for the object deletion or top folder marker deletion.</returns>
     public DeleteObjectResponse deleteObject(string key, bool is_add_root = true, bool is_folder_check = true)
     {
         logger("S3 deleteObject: [" + key + "]" + " (" + is_add_root.ToString()[0] + "," + is_folder_check.ToString()[0] + ")");

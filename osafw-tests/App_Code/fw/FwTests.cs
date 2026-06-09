@@ -103,6 +103,26 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void ResolveTestEmailRecipient_PrefersConfiguredTestEmail()
+        {
+            var fw = CreateFwForHost("test-email-configured");
+            fw.config()["test_email"] = " configured@example.test ";
+            fw.Session("login", "session@example.test");
+
+            Assert.AreEqual("configured@example.test", fw.resolveTestEmailRecipient());
+        }
+
+        [TestMethod]
+        public void ResolveTestEmailRecipient_FallsBackToSessionLoginWhenConfigBlank()
+        {
+            var fw = CreateFwForHost("test-email-session-fallback");
+            fw.config()["test_email"] = " ";
+            fw.Session("login", " session@example.test ");
+
+            Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
+        }
+
+        [TestMethod]
         public void Constructor_DoesNotCreateFlashSessionKeyWhenFlashIsMissing()
         {
             var context = new DefaultHttpContext
@@ -157,6 +177,18 @@ namespace osafw.Tests
             Assert.AreEqual("Central Standard Time", fw.Session("timezone"));
             Assert.AreNotEqual("", fw.Session("XSS"));
             Assert.AreNotEqual("old-token", fw.Session("XSS"));
+        }
+
+        private static FW CreateFwForHost(string host)
+        {
+            var context = new DefaultHttpContext
+            {
+                Session = new FakeSession(),
+            };
+            context.Request.Host = new HostString(host);
+
+            var configuration = new ConfigurationBuilder().Build();
+            return new FW(context, configuration);
         }
 
         // Minimal ISession for FW unit testing

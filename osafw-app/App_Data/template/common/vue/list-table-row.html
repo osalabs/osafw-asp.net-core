@@ -29,7 +29,8 @@
                 <slot :name="'cell-'+header.field_name"
                       :row="row"
                       :col="header">
-                    <div v-if="fwStore.view_list_custom.hasOwnProperty(header.field_name)" v-html="fwStore.cellFormatter(row, header)"></div>
+                    <div v-if="fwStore.view_list_custom.hasOwnProperty(header.field_name) && fwStore.isTrustedListRenderer(header)" v-html="fwStore.cellFormatter(row, header)"></div>
+                    <div v-else-if="fwStore.view_list_custom.hasOwnProperty(header.field_name)">{{ fwStore.cellFormatter(row, header) }}</div>
                     <list-cell-ro v-else :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
                 </slot>
             </td>

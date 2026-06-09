@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace osafw.Tests;
 
@@ -12,6 +13,7 @@ public class FwControllersModelTests
         public string? LastOrderBy;
         public int LastOffset;
         public int LastLimit;
+        public int UpdateCount;
 
         public FakeDb() : base("", DB.DBTYPE_SQLSRV) { }
 
@@ -23,6 +25,12 @@ public class FwControllersModelTests
             LastLimit = limit;
             return new DBList { new DBRow(new FwDict { ["id"] = "1" }) };
         }
+
+        public override int update(string table, FwDict fields, FwDict where)
+        {
+            UpdateCount++;
+            return 1;
+        }
     }
 
     private class TestFwControllers : FwControllers
@@ -31,6 +39,34 @@ public class FwControllersModelTests
         {
             init(fw);
             this.db = db;
+        }
+    }
+
+    private class CachedFwControllers : TestFwControllers
+    {
+        private readonly Queue<DBRow> rows = new();
+
+        public int ReadCount { get; private set; }
+
+        public CachedFwControllers(FW fw, FakeDb db) : base(fw, db)
+        {
+            is_log_changes = false;
+        }
+
+        public void EnqueueRow(int id, int accessLevel)
+        {
+            rows.Enqueue(new DBRow(new FwDict
+            {
+                ["id"] = id,
+                ["icode"] = "Virtual",
+                ["access_level"] = accessLevel
+            }));
+        }
+
+        protected override DBRow oneByIcodeIC(string icode)
+        {
+            ReadCount++;
+            return rows.Count > 0 ? rows.Dequeue() : [];
         }
     }
 
@@ -53,5 +89,35 @@ public class FwControllersModelTests
         Assert.AreEqual(DBOps.NOT, statusOperation.op);
         Assert.AreEqual(Users.ACL_MANAGER, accessLevelOperation.value);
         Assert.HasCount(1, rows);
+    }
+
+    [TestMethod]
+    public void OneByIcode_CachesCaseInsensitivelyAndUpdateInvalidates()
+    {
+        var db = new FakeDb();
+        var fw = TestHelpers.CreateFw();
+        fw.db = db;
+        var model = new CachedFwControllers(fw, db);
+        model.removeCacheAll();
+        try
+        {
+            model.EnqueueRow(1, Users.ACL_MEMBER);
+            model.EnqueueRow(1, Users.ACL_SITEADMIN);
+
+            var first = model.oneByIcode("Virtual");
+            var second = model.oneByIcode("virtual");
+            model.update(1, new FwDict { ["access_level"] = Users.ACL_SITEADMIN });
+            var third = model.oneByIcode("VIRTUAL");
+
+            Assert.AreEqual(1, first["access_level"].toInt());
+            Assert.AreEqual(1, second["access_level"].toInt());
+            Assert.AreEqual(Users.ACL_SITEADMIN, third["access_level"].toInt());
+            Assert.AreEqual(2, model.ReadCount);
+            Assert.AreEqual(1, db.UpdateCount);
+        }
+        finally
+        {
+            model.removeCacheAll();
+        }
     }
 }

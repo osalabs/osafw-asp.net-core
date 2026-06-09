@@ -135,12 +135,12 @@ public class FwUpdates : FwModel
         }
     }
 
-    public DBList listPending()
+    public virtual DBList listPending()
     {
         return db.array(table_name, new FwDict() { { "status", STATUS_ACTIVE } }, "id");
     }
 
-    public void applyPending(bool is_echo = false)
+    public virtual void applyPending(bool is_echo = false)
     {
         DBList rows = listPending();
         foreach (FwDict row in rows)
@@ -218,7 +218,7 @@ public class FwUpdates : FwModel
         fw.Session("FW_UPDATES_CTR", "0");
     }
 
-    public void applyList(IntList ids, bool is_echo = false)
+    public virtual void applyList(IntList ids, bool is_echo = false)
     {
         foreach (var id in ids)
         {
@@ -251,7 +251,7 @@ public class FwUpdates : FwModel
     }
 
     /// <summary>
-    /// Checks for pending framework SQL updates during developer Home page visits and redirects to the update runner.
+    /// Checks for pending framework SQL updates during developer Home page visits and redirects to the pending notice.
     /// </summary>
     /// <remarks>
     /// The <c>is_fwupdates_auto_apply</c> setting lets local developers keep pending updates visible in `/Admin/FwUpdates`
@@ -269,7 +269,7 @@ public class FwUpdates : FwModel
                 return; // keep pending updates visible without entering the apply flow
 
             if (getCountPending() > 0)
-                fw.redirect("/Dev/Configure/(ApplyUpdates)");
+                fw.redirect("/Dev/Configure/(PendingUpdates)");
         }
         catch (Exception e)
         {

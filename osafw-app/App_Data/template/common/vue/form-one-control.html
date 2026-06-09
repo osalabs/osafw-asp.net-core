@@ -25,7 +25,7 @@
             {{item[def.field+'_iname']??'-'}}
         </template>
     </p>
-    <div v-else-if="def.type=='markdown'" class="form-control-plaintext" v-html="renderMarkdown(value)"></div>
+    <div v-else-if="def.type=='markdown'" class="form-control-plaintext" v-html="renderMarkdown(value, isTrustedMarkdown)"></div>
     <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
     <p v-else-if="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
     <p v-else-if="def.type=='plaintext_currency'" class="form-control-plaintext">
@@ -389,7 +389,8 @@
     import { mapStores } from 'pinia';
     import Multiselect from 'Multiselect';
 
-    let md = null; // markdown-it instance
+    let md = null; // markdown-it instance for untrusted stored values
+    let mdTrusted = null; // markdown-it instance for explicit trusted renderers
 
     fwApp.component('form-one-control', {
         template: '#form-one-control-template',
@@ -504,6 +505,9 @@
             },
             isReadonlyControl() {
                 return this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
+            },
+            isTrustedMarkdown() {
+                return this.def.trusted === true || this.def.trusted === 1 || this.def.trusted === '1' || this.def.trusted === 'true';
             },
             class_control() {
                 return (this.def.class_control ?? '') + (this.is_invalid ? ' is-invalid' : '');
@@ -790,21 +794,22 @@
             bytes2str(bytes) {
                 return AppUtils.bytes2str(bytes);
             },
-            renderMarkdown(text) {
-                if (!md && window.markdownit) {
+            renderMarkdown(text, isTrustedMarkdown = false) {
+                let parser = isTrustedMarkdown ? mdTrusted : md;
+                if (!parser && window.markdownit) {
                     const mdOptions = {
-                        html: true,
+                        html: isTrustedMarkdown,
                         breaks: true,
                         linkify: true
                     };
-                    md = window.markdownit(mdOptions);
-                    if (window.markdownitSub) md.use(window.markdownitSub);
-                    if (window.markdownitSup) md.use(window.markdownitSup);
-                    if (window.markdownitAbbr) md.use(window.markdownitAbbr);
-                    if (window.markdownitIns) md.use(window.markdownitIns);
-                    if (window.markdownitMark) md.use(window.markdownitMark);
-                    if (window.markdownitContainer) {
-                        md.use(window.markdownitContainer, 'foobar', {
+                    parser = window.markdownit(mdOptions);
+                    if (window.markdownitSub) parser.use(window.markdownitSub);
+                    if (window.markdownitSup) parser.use(window.markdownitSup);
+                    if (window.markdownitAbbr) parser.use(window.markdownitAbbr);
+                    if (window.markdownitIns) parser.use(window.markdownitIns);
+                    if (window.markdownitMark) parser.use(window.markdownitMark);
+                    if (isTrustedMarkdown && window.markdownitContainer) {
+                        parser.use(window.markdownitContainer, 'foobar', {
                             validate: name => name.trim().length,
                             render: (tokens, idx) => {
                                 if (tokens[idx].nesting === 1) {
@@ -820,17 +825,22 @@
                             }
                         });
                     }
-                    if (window.markdownItAttrs) md.use(window.markdownItAttrs);
-                    if (md.renderer && md.renderer.rules) {
-                        md.renderer.rules.table_open = function () {
+                    if (isTrustedMarkdown && window.markdownItAttrs) parser.use(window.markdownItAttrs);
+                    if (parser.renderer && parser.renderer.rules) {
+                        parser.renderer.rules.table_open = function () {
                             return '<table class="table">';
                         };
                     }
+                    if (isTrustedMarkdown) {
+                        mdTrusted = parser;
+                    } else {
+                        md = parser;
+                    }
                 }
-                if (md) {
-                    return md.render(text ?? '');
+                if (parser) {
+                    return parser.render(text ?? '');
                 } else {
-                    return text;
+                    return isTrustedMarkdown ? (text ?? '') : AppUtils.htmlescape(text ?? '');
                 }
             }
         }

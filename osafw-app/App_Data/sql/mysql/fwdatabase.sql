@@ -40,7 +40,7 @@ CREATE TABLE att (
   table_name            VARCHAR(128) NOT NULL DEFAULT '',
   item_id               INT NOT NULL DEFAULT 0,
 
-  is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - see config: $S3Bucket/$S3Root/att/att_id */
+  is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - default key att/{icode}, S3.IS_ATT_KEY_BY_ID uses att/{id} */
   is_inline             TINYINT DEFAULT 0, /* if uploaded with wysiwyg */
   is_image              TINYINT DEFAULT 0, /* 1 if this is supported image */
 
@@ -334,6 +334,29 @@ CREATE TABLE menu_items (
   PRIMARY KEY (id)
 ) DEFAULT CHARSET=utf8mb4;
 -- INSERT INTO menu_items (iname, url, icon, controller) VALUES ('Test Menu Item', '/Admin/Demos', 'list-ul', 'AdminDemos');
+
+/*Site Admin-managed custom reports*/
+DROP TABLE IF EXISTS fwreports;
+CREATE TABLE fwreports (
+  id                    INT NOT NULL auto_increment,
+  icode                 VARCHAR(50) NOT NULL,
+  iname                 VARCHAR(255) NOT NULL default '',
+  idesc                 TEXT,
+  icon                  VARCHAR(64) NOT NULL DEFAULT '',
+  access_level          TINYINT NOT NULL DEFAULT 80,
+  sql_template          TEXT NOT NULL,
+  params_json           TEXT,
+  render_options_json   TEXT,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  add_users_id          INT DEFAULT 0,
+  upd_time              TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  upd_users_id          INT DEFAULT 0,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_fwreports_icode (icode)
+) DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS user_filters;
 CREATE TABLE user_filters (

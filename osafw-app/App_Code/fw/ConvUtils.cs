@@ -398,19 +398,12 @@ public class ConvUtils
     /// * <param name = "xls_export_fields" > empty, * or Utils.qw format</param>
     /// * <param name = "rows" > DB array</param>
     /// </summary>
-    /// <param name="sheetsData"></param>
 
 
     /// <summary>
     /// Create native xlsx file 
     /// </summary>
-    /// <param name="fw"></param>
-    /// <param name="headers"></param>
-    /// <param name="fields"></param>
-    /// <param name="rows"></param>
     /// <param name="out_filename">if empty or set to just filename (no path) - write to browser, if path - write to file</param>
-    /// <returns></returns>
-    /// <exception cref="UserException"></exception>
     public static void exportNativeExcel(FW fw, IList<string> headers, IEnumerable<string> fields, FwList rows, string out_filename = "")
     {
         var is_browser = false;

@@ -30,6 +30,83 @@ public class UserLists : FwModel<UserLists.Row>
         is_log_changes = false; // no need to log changes here
     }
 
+    /// <summary>
+    /// Returns one list owned by the logged-in user so direct id paths cannot load another user's list.
+    /// </summary>
+    /// <param name="id">The `user_lists.id` value to load.</param>
+    /// <returns>The matching owned list row, or an empty row when unavailable.</returns>
+    public virtual DBRow oneMine(int id)
+    {
+        if (id <= 0)
+            return [];
+
+        var cacheKey = $"{cache_prefix}mine:{fw.userId}:{id}";
+        if (fw.cache.getRequestValue(cacheKey) is FwDict cached)
+            return (DBRow)cached;
+
+        var sql = $@"select *
+  from {qTable()}
+ where id=@id
+   and add_users_id=@users_id";
+        var item = db.rowp(sql, DB.h("@id", id, "@users_id", fw.userId));
+        normalizeNames(item);
+        fw.cache.setRequestValue(cacheKey, item);
+        return item;
+    }
+
+    /// <summary>
+    /// Loads lists through the owner predicate used by generic CRUD id paths.
+    /// </summary>
+    /// <param name="id">The `user_lists.id` value to load.</param>
+    /// <returns>The matching owned list row, or an empty row when unavailable.</returns>
+    public override DBRow one(int id)
+    {
+        return oneMine(id);
+    }
+
+    /// <summary>
+    /// Adds a list as owned by the current user, ignoring any submitted owner value.
+    /// </summary>
+    /// <param name="item">Filtered `user_lists` field values to insert.</param>
+    /// <returns>The new `user_lists.id` value.</returns>
+    public override int add(FwDict item)
+    {
+        if (fw.isLogged)
+            item[field_add_users_id] = fw.userId;
+        return base.add(item);
+    }
+
+    /// <summary>
+    /// Updates a list only when the current user owns it.
+    /// </summary>
+    /// <param name="id">The `user_lists.id` value to update.</param>
+    /// <param name="item">Filtered field values to persist.</param>
+    /// <returns>True when the update was issued.</returns>
+    public override bool update(int id, FwDict item)
+    {
+        checkMine(id);
+        return base.update(id, item);
+    }
+
+    /// <summary>
+    /// Deletes a list only when the current user owns it.
+    /// </summary>
+    /// <param name="id">The `user_lists.id` value to delete.</param>
+    /// <param name="is_perm">True to permanently delete the row and its linked items.</param>
+    public override void delete(int id, bool is_perm = false)
+    {
+        checkMine(id);
+        if (is_perm)
+        {
+            // delete list items first
+            FwDict where = [];
+            where["user_lists_id"] = id;
+            db.del(table_items, where);
+        }
+
+        base.delete(id, is_perm);
+    }
+
     public int countItems(int id)
     {
         return db.value(table_items, new FwDict() { { "user_lists_id", id } }, "count(*)").toInt();
@@ -55,8 +132,15 @@ public class UserLists : FwModel<UserLists.Row>
         return db.array(table_name, where, "iname", Utils.qw("id iname"));
     }
 
+    /// <summary>
+    /// Lists items for a user list only after proving the current user owns the parent list.
+    /// </summary>
+    /// <param name="id">The parent `user_lists.id` value.</param>
+    /// <returns>Active linked item rows for the owned list.</returns>
     public FwList listItemsById(int id)
     {
+        checkMine(id);
+
         FwDict where = [];
         where["status"] = STATUS_ACTIVE;
         where["user_lists_id"] = id;
@@ -73,26 +157,27 @@ public class UserLists : FwModel<UserLists.Row>
                              order by t.iname", DB.h("@item_id", item_id, "@entity", entity, "@users_id", fw.userId));
     }
 
-    public override void delete(int id, bool is_perm = false)
-    {
-        if (is_perm)
-        {
-            // delete list items first
-            FwDict where = [];
-            where["user_lists_id"] = id;
-            db.del(table_items, where);
-        }
-
-        base.delete(id, is_perm);
-    }
-
+    /// <summary>
+    /// Returns one linked item only after confirming the current user owns the parent list.
+    /// </summary>
+    /// <param name="user_lists_id">The parent `user_lists.id` value.</param>
+    /// <param name="item_id">The linked application record id stored in `user_lists_items.item_id`.</param>
+    /// <returns>The matching list-item row, or an empty row when it is not present.</returns>
     public FwDict oneItemsByUK(int user_lists_id, int item_id)
     {
+        checkMine(user_lists_id);
         return db.row(table_items, DB.h("user_lists_id", user_lists_id, "item_id", item_id));
     }
 
+    /// <summary>
+    /// Deletes one linked list item only when it belongs to a list owned by the current user.
+    /// </summary>
+    /// <param name="id">The `user_lists_items.id` value to delete.</param>
     public virtual void deleteItems(int id)
     {
+        if (oneItemMine(id).Count == 0)
+            throw new NotFoundException();
+
         FwDict where = [];
         where["id"] = id;
         db.del(table_items, where);
@@ -101,9 +186,16 @@ public class UserLists : FwModel<UserLists.Row>
             fw.logActivity(FwLogTypes.ICODE_DELETED, table_items, id);
     }
 
-    // add new record and return new record id
+    /// <summary>
+    /// Adds one linked item only when the parent list is owned by the current user.
+    /// </summary>
+    /// <param name="user_lists_id">The parent `user_lists.id` value.</param>
+    /// <param name="item_id">The linked application record id to store.</param>
+    /// <returns>The new `user_lists_items.id` value.</returns>
     public virtual int addItems(int user_lists_id, int item_id)
     {
+        checkMine(user_lists_id);
+
         FwDict item = [];
         item["user_lists_id"] = user_lists_id;
         item["item_id"] = item_id;
@@ -117,9 +209,16 @@ public class UserLists : FwModel<UserLists.Row>
         return id;
     }
 
-    // add or remove item from the list
+    /// <summary>
+    /// Adds or removes one item only when the parent list is owned by the current user.
+    /// </summary>
+    /// <param name="user_lists_id">The parent `user_lists.id` value.</param>
+    /// <param name="item_id">The linked application record id to toggle.</param>
+    /// <returns>True when the item was added; false when it was removed.</returns>
     public bool toggleItemList(int user_lists_id, int item_id)
     {
+        checkMine(user_lists_id);
+
         var result = false;
         FwDict litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
@@ -135,9 +234,16 @@ public class UserLists : FwModel<UserLists.Row>
         return result;
     }
 
-    // add item to the list, if item not yet in the list
+    /// <summary>
+    /// Adds one item only when the parent list is owned by the current user.
+    /// </summary>
+    /// <param name="user_lists_id">The parent `user_lists.id` value.</param>
+    /// <param name="item_id">The linked application record id to add.</param>
+    /// <returns>True when a new link was created; false when the link already existed.</returns>
     public bool addItemList(int user_lists_id, int item_id)
     {
+        checkMine(user_lists_id);
+
         var result = false;
         var litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
@@ -153,9 +259,16 @@ public class UserLists : FwModel<UserLists.Row>
         return result;
     }
 
-    // delete item from the list
+    /// <summary>
+    /// Removes one item only when the parent list is owned by the current user.
+    /// </summary>
+    /// <param name="user_lists_id">The parent `user_lists.id` value.</param>
+    /// <param name="item_id">The linked application record id to remove.</param>
+    /// <returns>True when an existing link was removed; false when the link was absent.</returns>
     public bool delItemList(int user_lists_id, int item_id)
     {
+        checkMine(user_lists_id);
+
         var result = false;
         FwDict litem = oneItemsByUK(user_lists_id, item_id);
         if (litem.Count > 0)
@@ -165,5 +278,35 @@ public class UserLists : FwModel<UserLists.Row>
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Returns one linked item only when its parent list is owned by the current user.
+    /// </summary>
+    /// <param name="id">The `user_lists_items.id` value to load.</param>
+    /// <returns>The matching linked item row, or an empty row when unavailable.</returns>
+    protected virtual DBRow oneItemMine(int id)
+    {
+        if (id <= 0)
+            return [];
+
+        var cacheKey = $"{cache_prefix}itemmine:{fw.userId}:{id}";
+        if (fw.cache.getRequestValue(cacheKey) is FwDict cached)
+            return (DBRow)cached;
+
+        var item = db.rowp(@"select ti.* from " + db.qid(table_items) + @" ti
+                              inner join " + db.qid(table_name) + @" t on t.id=ti.user_lists_id
+                              where ti.id=@id
+                                and t.add_users_id=@users_id", DB.h("@id", id, "@users_id", fw.userId));
+        fw.cache.setRequestValue(cacheKey, item);
+        return item;
+    }
+
+    private DBRow checkMine(int id)
+    {
+        var item = oneMine(id);
+        if (item.Count == 0)
+            throw new NotFoundException();
+        return item;
     }
 }

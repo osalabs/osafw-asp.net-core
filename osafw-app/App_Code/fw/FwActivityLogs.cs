@@ -29,15 +29,13 @@ public class FwActivityLogs : FwModel
     }
 
     /// <summary>
-    /// add new log record by icodes
+    /// Adds an activity log row using log type and entity icodes.
     /// </summary>
     /// <param name="log_types_icode">required, must be predefined constant from FwLogTypes</param>
     /// <param name="entity_icode">required, fwentity, basically table name - if not exists - autocreated</param>
     /// <param name="item_id">related item id, if 0 - NULL will be stored in db</param>
     /// <param name="idesc">optional title/description</param>
     /// <param name="payload">optional payload (will be serialized as json)</param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
     public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", FwDict? payload = null)
     {
         var lt = fw.model<FwLogTypes>().oneByIcode(log_types_icode);
@@ -60,12 +58,11 @@ public class FwActivityLogs : FwModel
 
 
     /// <summary>
-    /// return activity for given entity
+    /// Lists activity rows for a specific entity record.
     /// </summary>
     /// <param name="entity_icode">entity table name</param>
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
-    /// <returns></returns>
     public virtual DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
@@ -89,12 +86,9 @@ public class FwActivityLogs : FwModel
     }
 
     /// <summary>
-    /// return activity for given entity for UI
+    /// Lists activity rows shaped for the UI activity tab.
     /// </summary>
-    /// <param name="entity_icode"></param>
-    /// <param name="id"></param>
     /// <param name="tab">"all", "comments" or "history"</param>
-    /// <returns></returns>
     public FwList listByEntityForUI(string entity_icode, int id, string tab = "")
     {
         // convert tab to log_types_icodes
@@ -218,7 +212,7 @@ public class FwActivityLogs : FwModel
         return result;
     }
 
-    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null)
+    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null, int userId = 0)
     {
         var sql = $@"SELECT count(*)
                     from {db.qid(table_name)} al
@@ -235,6 +229,11 @@ public class FwActivityLogs : FwModel
         {
             sql += " and al.add_time > @since_cutoff";
             p["since_cutoff"] = DateTime.UtcNow.AddDays(since_days.Value);
+        }
+        if (userId != 0)
+        {
+            sql += " and al.users_id=@users_id";
+            p["users_id"] = userId;
         }
 
         return db.valuep(sql, p).toLong();

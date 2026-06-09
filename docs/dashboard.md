@@ -4,6 +4,8 @@ The main dashboard renders a collection of *panes*. Each pane is described by a 
 
 For dashboard card visual rules, theme behavior, icon treatment, and spacing examples, see [design_system.html](design_system.html#components).
 
+The built-in `MainController` panes are sample framework dashboard data. Some sample aggregates use conventional current-user filters for lower-access sessions, while panes such as `Users by Type` remain framework samples. Production apps should replace or scope dashboard panes with app-specific authorization predicates instead of treating the sample aggregates as domain-ready access control.
+
 ## Built-in Panel Templates
 
 The framework ships with several panel types:

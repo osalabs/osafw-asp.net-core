@@ -1780,6 +1780,10 @@ END" + Environment.NewLine;
         }
     }
 
+    /// <summary>
+    /// Converts dynamic field definitions to ParsePage tags for extracted static templates.
+    /// </summary>
+    /// <param name="fields">Field definitions prepared from dynamic config; each item is updated with generated value tags and related display attributes.</param>
     public static void makeValueTags(FwList fields)
     {
         foreach (FwDict def in fields)
@@ -1807,7 +1811,8 @@ END" + Environment.NewLine;
 
                 case "markdown":
                     {
-                        def["value"] = tag + " markdown>";
+                        string markdownAttr = def["trusted"].toBool() ? " markdown=\"trusted\"" : " markdown";
+                        def["value"] = tag + markdownAttr + ">";
                         break;
                     }
 
@@ -1835,11 +1840,11 @@ END" + Environment.NewLine;
 
     public void createReport(string repcode)
     {
-        repcode = FwReports.cleanupRepcode(repcode);
+        repcode = FwReportsBase.cleanupRepcode(repcode);
         if (string.IsNullOrEmpty(repcode))
             throw new UserException("No report code");
 
-        var report_class = FwReports.repcodeToClass(repcode);
+        var report_class = FwReportsBase.repcodeToClass(repcode);
         var reports_path = fw.config("site_root") + @"\App_Code\models\Reports";
         var src_file = reports_path + @"\Sample.cs";
         var dest_file = reports_path + @"\" + report_class.Replace("Report", "") + ".cs";

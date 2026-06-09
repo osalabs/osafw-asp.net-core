@@ -12,8 +12,10 @@
 1. Scope and record the task.
    - Create or update `docs/agents/tasks/summary-<YYYY-MM-DD>-<TASK-ID>.md` unless the user explicitly asked for no file changes or a read-only review. Use one short kebab-case task id per task session, and keep updating the same summary for iterative feedback in that session.
    - If no task summary is created because the request is read-only, include the useful summary in the final response instead.
+   - Before reading old task summaries, search `docs/agents/tasks/index.md` when it exists; open full summaries only when the index points to relevant history or when continuing that exact task.
    - For non-trivial tasks, identify the critical path, safe parallel side work, and tightly coupled work that should stay local.
    - For files over 1 MB or known large drafts/logs/generated outputs, do not run whole-file reads such as `Get-Content <file>`. Start with `rg` for headings/section IDs or read only targeted ranges, and record the sections used in the task summary.
+   - For broad repo searches, prefer `docs/agents/tools/Search-Repo.ps1`; include drafts or task-history summaries only when they are directly relevant.
 
 2. Implement the requested change first.
    - Do not start test-only refactors or broad QA edits before the implementation pass is complete.
@@ -25,13 +27,14 @@
 
 4. Run a review-fix loop when risk justifies it.
    - For runtime-affecting source code, schema, templates, scripts, tests, configuration, or risky developer/agent workflow changes, review the final diff using `docs/agents/code_reviewer.md`.
-   - Prefer a code reviewer sub-agent. If sub-agents are unavailable, perform the same review yourself and record that fallback in the task summary.
+   - Prefer a code reviewer sub-agent for risky/shared/security changes. For small or already-verified diffs, or after one unproductive reviewer wait, perform the same review yourself and record that fallback in the task summary.
    - Fix findings in the main workspace and repeat until there are no issues or no improvement points worth another loop.
    - Documentation-only changes do not need this loop unless they alter runnable configuration or risky developer/agent workflow.
 
 5. Keep the task summary current.
    - Append useful notes as the task evolves, except `Testing instructions`, which should always reflect the final state.
-   - For code changes, list exact automated/manual checks run, affected flows, highest-risk follow-up checks not run, and setup caveats.
+   - Keep summaries compact. For code changes, list exact final automated/manual checks run, affected flows, highest-risk follow-up checks not run, and setup caveats.
+   - Do not paste long command output or repeat known unrelated full-suite failures. Put bulky logs or evidence under `docs/agents/artifacts/` or repo-root `artifacts/`, then summarize the relevant lines.
    - For docs-only or internal instruction changes, set `Testing instructions` to `N/A - docs/instructions only` or an equivalent concise statement.
 
 6. Close out knowledge capture.
@@ -103,7 +106,23 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Keep ParsePage route literal templates such as `App_Data/template/**/url.html` on one line with no trailing newline byte.
 - Use `FormUtils` for filtering/validation, `DateUtils` for user timezone formatting, `FwLogger` for logs, and `FwCache` for memoization.
 - For SQL queries or SQL fragments in code, prefer one `$@"..."` string block over concatenated pieces.
-- For new or updated C# methods, add XML docs explaining why the method exists and include detailed param/return info for non-primitive types. Add inline comments only for complex logic blocks.
+- For new or updated C# methods, prefer concise XML docs that explain intent, framework contract, or non-obvious behavior. Use `<summary>` when it adds information beyond the method name/signature. Add `<param>` or `<returns>` only for loose types (`FwDict`, `FwList`, `object?`), complex formats, security/access expectations, side effects, null/empty/exception behavior, or public return shapes. Do not document obvious primitive parameters or restate the code. Add inline comments only for complex logic blocks.
+- Avoid one-use wrappers and test-only entry points in production code unless they clarify intent, reduce meaningful duplication, define a reusable contract, or isolate genuinely complex logic.
+
+## Security Guardrails
+
+- When adding or changing custom actions that mutate state, call `enforcePost()` before side effects and update forms/templates so valid submissions use POST and include the XSS token.
+- When loading, saving, or deleting by direct id, include object-level authorization in the read/write predicate; saved user records need owner-or-system checks, and dynamic child or attachment writes need parent-record checks.
+- Validate redirect targets with the app-local URL policy unless an explicit siteadmin-managed external redirect allowlist covers the destination.
+- Escape or sanitize stored/user/editor HTML and markdown before display; reserve `noescape`, raw markdown HTML, and Vue `v-html` for explicitly trusted server-controlled content.
+- For attachments, authorize against the parent business object before linking, serving, or issuing S3 redirects; block or force download for active content and enforce safe image decode limits.
+- Keep dev/admin tooling, generated SQL, assistant tool calls, and generated file/schema writes behind safe environment/exposure gates, explicit allowlists, normal resource checks, and sensitive request/session/Sentry redaction.
+
+## Performance Guardrails
+
+- In request-wide, repeated, or likely hot paths, avoid repeated DB, remote, file, config, template, or metadata work inside loops; batch, preload, project, filter, aggregate, or page data where practical while preserving authorization, ordering, and empty-result behavior.
+- Avoid unbounded result materialization, large per-request allocations/string building, sync-over-async or blocking I/O, and expensive clients/resources created per request.
+- Prefer small data-shape or existing-cache fixes before broad rewrites. Ask for measurement when an optimization is non-obvious, invasive, or adds meaningful complexity.
 
 ## Sub-Agent Delegation
 
@@ -122,7 +141,7 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Keep `docs/agents/artifacts/` gitignored; do not leave `tmp_*` scratch files at repo root or under `osafw-app/`.
 - Use repo-root `artifacts/` for build outputs and larger generated verification assets that do not belong under docs.
 - Keep machine-specific guidance in `docs/agents/local_instructions.md`; check it before implementation and keep it out of Git.
-- Put reusable agent/debug helpers under `docs/agents/tools/`.
+- Put reusable agent/debug helpers under `docs/agents/tools/`; use the search and text-normalization helpers there instead of ad hoc broad search or line-ending scripts when they fit.
 - Do not store secrets, DB backups, or large logs in any agent workspace folder.
 
 ## Documentation Entry Points
@@ -137,21 +156,28 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Agent docs:
   - `docs/agents/code_reviewer.md` - review loop instructions.
   - `docs/agents/mcp.md` - MCP usage and troubleshooting notes.
+  - `docs/agents/tasks/index.md` - compact task-history index; search this before opening old summaries.
+  - `docs/agents/tools/` - reusable agent search and text-normalization helpers.
   - `docs/agents/heuristics.md`, `docs/agents/domain.md`, and `docs/agents/glossary.md` - reusable project knowledge.
 
 ## Documentation Sync
 
 - Agent instruction sync set: `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, `docs/README.md`, and task-summary expectations.
+- Record every end-user-app breaking upgrade change in `docs/CHANGELOG.md` under the change date before closing the task. Breaking changes include public framework API/signature changes, route or template/include path changes, schema/update requirements, config/compile-symbol changes, storage key/URL changes, security/default behavior changes, and frontend asset/class/plugin contracts that app code or overrides may depend on; if no entry is needed, note that in the task summary.
 - `docs/templates.md` is the canonical templates and ParsePage doc.
 - When changing shared ParsePage behavior, shared layout fragments, standard dynamic-controller screen structure, schema/update process, public framework behavior, or agent workflow, review the related docs in the same task and note when no doc update was needed.
 - When schema changes are present, consider both the additive update path under `osafw-app/App_Data/sql/updates/` and the from-scratch schema reference in `osafw-app/App_Data/sql/fwdatabase.sql`.
 
 ## Testing Guidance
 
-- Prefer targeted build/test/manual checks before broad suites.
+- Prefer focused build/test/manual checks before broad suites.
+- Prefer behavior-level tests through public framework, controller/action, model, route, template, or UI boundaries. Use internal-method/unit tests when the logic is shared, complex, security-sensitive, deterministic, or hard to exercise through public behavior.
+- Do not split production code into helper methods solely to make internal branches easier to test.
+- When production simplicity and exhaustive internal branch coverage conflict, prefer the simpler production shape and cover the behavior at the nearest practical boundary. Record meaningful untested edge cases in the task summary.
+- When VS/IIS Express may be running or normal build output is locked, immediately use an absolute repo-root `OutDir` under `artifacts/assistant_*` for build/test instead of retrying `bin/Debug`.
 - If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary.
 - Build app: `dotnet build osafw-app/osafw-app.csproj`.
-- Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=artifacts/assistant_build/`.
+- Build app to isolated output when normal `bin/Debug` is locked: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=$PWD\artifacts\assistant_build\`.
 - Do not set `BaseIntermediateOutputPath` for `osafw-app`; generated intermediate files can be picked up by the project compile glob and cause duplicate assembly attributes.
 - Build solution: `dotnet build osafw-asp.net-core.sln`.
 - Test: `dotnet test`.
