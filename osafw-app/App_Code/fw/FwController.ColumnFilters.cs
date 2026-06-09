@@ -325,6 +325,8 @@ public abstract partial class FwController
         if (filterType == "multi_select")
             def["filter_options"] = getListColumnFilterOptions(def, def["filter_values_csv"].toStr());
 
+        applyListColumnFilterDisplayText(def);
+
         if (def["filter_template"].toStr().Length > 0)
             def["filter_template_html"] = renderListColumnFilterTemplate(def);
 
@@ -409,9 +411,108 @@ public abstract partial class FwController
             op = "starts_with";
             value = rawValue[1..];
         }
+        else if (rawValue.StartsWith('$'))
+        {
+            op = "ends_with";
+            value = rawValue[1..];
+        }
 
         def["filter_op"] = op;
         def["filter_value"] = value;
+    }
+
+    private void applyListColumnFilterDisplayText(FwDict def)
+    {
+        var display = listColumnFilterDisplayText(def);
+        def["filter_display"] = display.Length > 0 ? display : "Any";
+        def["filter_active_class"] = display.Length > 0 ? " is-active" : "";
+    }
+
+    private string listColumnFilterDisplayText(FwDict def)
+    {
+        var blankOp = def["filter_blank_op"].toStr();
+        if (blankOp == "blank")
+            return "blank";
+        if (blankOp == "not_blank")
+            return "not blank";
+
+        switch (def["filter_type"].toStr())
+        {
+            case "date_range":
+                var from = def["filter_from"].toStr();
+                var to = def["filter_to"].toStr();
+                if (from.Length > 0 && to.Length > 0)
+                    return from == to ? from : $"{from} - {to}";
+                if (from.Length > 0)
+                    return $">= {from}";
+                if (to.Length > 0)
+                    return $"<= {to}";
+                break;
+            case "multi_select":
+                var values = listColumnFilterValues(def["filter_values_csv"]);
+                if (values.Count == 1)
+                    return listColumnFilterOptionLabel(def, values[0]);
+                if (values.Count > 1)
+                    return $"{values.Count} selected";
+                break;
+            case "autocomplete":
+                var acValues = listColumnFilterValues(def["filter_values_csv"]);
+                if (acValues.Count == 1)
+                    return autocompleteListColumnFilterLabel(acValues[0]);
+                if (acValues.Count > 1)
+                    return $"{acValues.Count} selected";
+                break;
+            case "number_conditions":
+                return listColumnFilterNumberDisplayText(def);
+            case "boolean":
+                return def["filter_value"].toStr() switch
+                {
+                    "1" or "true" or "yes" or "y" => "Yes",
+                    "0" or "false" or "no" or "n" => "No",
+                    _ => "",
+                };
+        }
+
+        return "";
+    }
+
+    private string listColumnFilterNumberDisplayText(FwDict def)
+    {
+        var equal = def["filter_equal"].toStr();
+        if (equal.Length > 0)
+            return $"= {equal}";
+
+        StrList parts = [];
+        var gte = def["filter_gte"].toStr();
+        var lte = def["filter_lte"].toStr();
+        if (gte.Length > 0)
+            parts.Add($">= {gte}");
+        if (lte.Length > 0)
+            parts.Add($"<= {lte}");
+
+        var from = def["filter_from"].toStr();
+        var to = def["filter_to"].toStr();
+        if (from.Length > 0 || to.Length > 0)
+            parts.Add(from.Length > 0 && to.Length > 0 ? $"{from} - {to}" : $"{from}{to}");
+
+        var notFrom = def["filter_not_between_from"].toStr();
+        var notTo = def["filter_not_between_to"].toStr();
+        if (notFrom.Length > 0 || notTo.Length > 0)
+            parts.Add($"not {notFrom} - {notTo}");
+
+        return string.Join(", ", parts);
+    }
+
+    private string listColumnFilterOptionLabel(FwDict def, string value)
+    {
+        if (def["filter_options"] is not IList optionRows)
+            return value;
+
+        foreach (FwDict option in optionRows)
+            if (option["id"].toStr() == value)
+                return option["iname"].toStr(value);
+
+        return value;
     }
 
     private FwList getListColumnFilterOptions(FwDict def, string selectedValues)
@@ -772,6 +873,13 @@ public abstract partial class FwController
         const string separator = FormUtils.AUTOCOMPLETE_SEPARATOR;
         var separatorIndex = value.IndexOf(separator, StringComparison.Ordinal);
         return separatorIndex < 0 ? value : value[(separatorIndex + separator.Length)..].Trim();
+    }
+
+    private static string autocompleteListColumnFilterLabel(string value)
+    {
+        const string separator = FormUtils.AUTOCOMPLETE_SEPARATOR;
+        var separatorIndex = value.IndexOf(separator, StringComparison.Ordinal);
+        return separatorIndex < 0 ? value : value[..separatorIndex].Trim();
     }
 
     private DateTime? parseListColumnFilterDate(string value)

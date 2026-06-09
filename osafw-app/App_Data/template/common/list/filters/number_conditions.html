@@ -1,15 +1,29 @@
-<div class="fw-column-filter" data-column-filter-type="number_conditions">
+<div class="dropdown fw-column-filter fw-column-filter-dropdown" data-column-filter-type="number_conditions">
   <input type="hidden" name="search[<~field_name>]" value="<~search_value>" data-column-filter-json>
-  <select class="form-select form-select-sm mb-1" data-column-filter-blank>
-    <option value="">`number`</option>
-    <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>`blank`</option>
-    <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
-  </select>
-  <input type="number" step="any" value="<~filter_equal>" class="form-control form-control-sm mb-1" placeholder="=" data-column-filter-equal>
-  <input type="number" step="any" value="<~filter_gte>" class="form-control form-control-sm mb-1" placeholder=">=" data-column-filter-gte>
-  <input type="number" step="any" value="<~filter_lte>" class="form-control form-control-sm mb-1" placeholder="<=" data-column-filter-lte>
-  <input type="number" step="any" value="<~filter_from>" class="form-control form-control-sm mb-1" placeholder="from" data-column-filter-from>
-  <input type="number" step="any" value="<~filter_to>" class="form-control form-control-sm mb-1" placeholder="to" data-column-filter-to>
-  <input type="number" step="any" value="<~filter_not_between_from>" class="form-control form-control-sm mb-1" placeholder="not from" data-column-filter-not-between-from>
-  <input type="number" step="any" value="<~filter_not_between_to>" class="form-control form-control-sm" placeholder="not to" data-column-filter-not-between-to>
+  <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle fw-column-filter-summary<~filter_active_class>" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="viewport" aria-expanded="false" title="<~field_name_visible>">
+    <span class="text-truncate"><~filter_display></span>
+  </button>
+  <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
+    <select class="form-select form-select-sm mb-2" data-column-filter-blank>
+      <option value="">`number`</option>
+      <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>`blank`</option>
+      <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
+    </select>
+    <input type="number" step="any" value="<~filter_equal>" class="form-control form-control-sm mb-2" placeholder="=" data-column-filter-equal>
+    <input type="number" step="any" value="<~filter_gte>" class="form-control form-control-sm mb-2" placeholder=">=" data-column-filter-gte>
+    <input type="number" step="any" value="<~filter_lte>" class="form-control form-control-sm mb-2" placeholder="<=" data-column-filter-lte>
+    <div class="input-group input-group-sm mb-2">
+      <input type="number" step="any" value="<~filter_from>" class="form-control" placeholder="from" data-column-filter-from>
+      <input type="number" step="any" value="<~filter_to>" class="form-control" placeholder="to" data-column-filter-to>
+    </div>
+    <div class="input-group input-group-sm mb-2">
+      <span class="input-group-text">`not`</span>
+      <input type="number" step="any" value="<~filter_not_between_from>" class="form-control" placeholder="from" data-column-filter-not-between-from>
+      <input type="number" step="any" value="<~filter_not_between_to>" class="form-control" placeholder="to" data-column-filter-not-between-to>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-primary flex-fill" data-column-filter-apply>`Apply`</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-column-filter-clear>`Clear`</button>
+    </div>
+  </div>
 </div>

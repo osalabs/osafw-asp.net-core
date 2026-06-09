@@ -1,81 +1,104 @@
 <script type="text/x-template" id="list-column-filter-template">
     <component v-if="header.filter_component" :is="header.filter_component" :header="header"></component>
     <span v-else-if="filterType==='none'" class="text-muted">-</span>
-    <div v-else class="fw-column-filter-vue">
-        <template v-if="filterType==='text'">
-            <select class="form-select form-select-sm mb-1" v-model="op" @change="apply">
-                <option value="contains">`contains`</option>
-                <option value="equals">`=`</option>
-                <option value="not_equals">`!=`</option>
-                <option value="not_contains">`not contains`</option>
-                <option value="starts_with">`starts`</option>
-                <option value="ends_with">`ends`</option>
-                <option value="blank">`blank`</option>
-                <option value="not_blank">`not blank`</option>
+    <div v-else-if="filterType==='text'" class="fw-column-filter fw-column-filter-inline fw-column-filter-vue" data-column-filter-type="text">
+        <div class="input-group input-group-sm flex-nowrap">
+            <select class="form-select form-select-sm fw-column-filter-op" title="`Operator`" v-model="op" @change="applyText">
+                <option value="contains">~</option>
+                <option value="equals">=</option>
+                <option value="not_equals">!=</option>
+                <option value="not_contains">!~</option>
+                <option value="starts_with">^</option>
+                <option value="ends_with">$</option>
+                <option value="blank">B</option>
+                <option value="not_blank">NB</option>
             </select>
-            <input type="text" class="form-control form-control-sm" v-model="value" @change="apply" @keyup.enter.stop="apply">
-        </template>
-        <template v-else-if="filterType==='date_range'">
-            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
-                <option value="">`date range`</option>
-                <option value="blank">`blank`</option>
-                <option value="not_blank">`not blank`</option>
-            </select>
-            <input type="date" class="form-control form-control-sm mb-1" v-model="from" @change="apply">
-            <input type="date" class="form-control form-control-sm mb-1" v-model="to" @change="apply">
-            <div class="btn-group btn-group-sm w-100" role="group">
-                <button type="button" class="btn btn-outline-secondary" title="Today" @click="quick('today')">`Today`</button>
-                <button type="button" class="btn btn-outline-secondary" title="Last 7 days" @click="quick('week')">`Week`</button>
-                <button type="button" class="btn btn-outline-secondary" title="Last 30 days" @click="quick('30')">`30`</button>
+            <input type="text" class="form-control form-control-sm" v-model="value" @change="applyText" @keyup.enter.stop="applyText">
+        </div>
+    </div>
+    <div v-else class="dropdown fw-column-filter fw-column-filter-dropdown fw-column-filter-vue" :data-column-filter-type="filterType">
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm dropdown-toggle fw-column-filter-summary"
+                :class="{ 'is-active': isActive }"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                data-bs-boundary="viewport"
+                aria-expanded="false"
+                :title="header.field_name_visible">
+            <span class="text-truncate">{{ displayText }}</span>
+        </button>
+        <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
+            <template v-if="filterType==='date_range'">
+                <select class="form-select form-select-sm mb-2" v-model="blankOp">
+                    <option value="">`date range`</option>
+                    <option value="blank">`blank`</option>
+                    <option value="not_blank">`not blank`</option>
+                </select>
+                <input type="date" class="form-control form-control-sm mb-2" v-model="from">
+                <input type="date" class="form-control form-control-sm mb-2" v-model="to">
+                <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                    <button type="button" class="btn btn-outline-secondary" title="Today" @click="quick('today')">`Today`</button>
+                    <button type="button" class="btn btn-outline-secondary" title="Last 7 days" @click="quick('week')">`Week`</button>
+                    <button type="button" class="btn btn-outline-secondary" title="Last 30 days" @click="quick('30')">`30`</button>
+                </div>
+            </template>
+            <template v-else-if="filterType==='multi_select'">
+                <select class="form-select form-select-sm mb-2" v-model="blankOp">
+                    <option value="">`values`</option>
+                    <option value="blank">`blank`</option>
+                    <option value="not_blank">`not blank`</option>
+                </select>
+                <select class="form-select form-select-sm fw-column-filter-multi" multiple v-model="values">
+                    <option v-for="option in options" :key="option.id" :value="String(option.id)">{{ option.iname }}</option>
+                </select>
+            </template>
+            <template v-else-if="filterType==='autocomplete'">
+                <select class="form-select form-select-sm mb-2" v-model="blankOp">
+                    <option value="">`values`</option>
+                    <option value="blank">`blank`</option>
+                    <option value="not_blank">`not blank`</option>
+                </select>
+                <autocomplete v-if="autocompleteUrl"
+                              v-model="valuesText"
+                              :url="autocompleteUrl"
+                              class="form-control-sm"
+                              @select="setAutocompleteValue"></autocomplete>
+                <input v-else type="text" class="form-control form-control-sm" v-model="valuesText">
+            </template>
+            <template v-else-if="filterType==='number_conditions'">
+                <select class="form-select form-select-sm mb-2" v-model="blankOp">
+                    <option value="">`number`</option>
+                    <option value="blank">`blank`</option>
+                    <option value="not_blank">`not blank`</option>
+                </select>
+                <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder="=" v-model="equal">
+                <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder=">=" v-model="gte">
+                <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder="<=" v-model="lte">
+                <div class="input-group input-group-sm mb-2">
+                    <input type="number" step="any" class="form-control" placeholder="from" v-model="from">
+                    <input type="number" step="any" class="form-control" placeholder="to" v-model="to">
+                </div>
+                <div class="input-group input-group-sm mb-2">
+                    <span class="input-group-text">`not`</span>
+                    <input type="number" step="any" class="form-control" placeholder="from" v-model="notBetweenFrom">
+                    <input type="number" step="any" class="form-control" placeholder="to" v-model="notBetweenTo">
+                </div>
+            </template>
+            <template v-else-if="filterType==='boolean'">
+                <select class="form-select form-select-sm" v-model="value">
+                    <option value="">`all`</option>
+                    <option value="1">`yes`</option>
+                    <option value="0">`no`</option>
+                    <option value="blank">`blank`</option>
+                    <option value="not_blank">`not blank`</option>
+                </select>
+            </template>
+            <span v-else class="text-muted">-</span>
+            <div class="d-flex gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-primary flex-fill" data-column-filter-apply @click="apply">`Apply`</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-column-filter-clear @click="clear">`Clear`</button>
             </div>
-        </template>
-        <template v-else-if="filterType==='multi_select'">
-            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
-                <option value="">`values`</option>
-                <option value="blank">`blank`</option>
-                <option value="not_blank">`not blank`</option>
-            </select>
-            <select class="form-select form-select-sm" multiple v-model="values" @change="apply">
-                <option v-for="option in options" :key="option.id" :value="String(option.id)">{{ option.iname }}</option>
-            </select>
-        </template>
-        <template v-else-if="filterType==='autocomplete'">
-            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
-                <option value="">`values`</option>
-                <option value="blank">`blank`</option>
-                <option value="not_blank">`not blank`</option>
-            </select>
-            <autocomplete v-if="autocompleteUrl"
-                          v-model="valuesText"
-                          :url="autocompleteUrl"
-                          class="form-control-sm"
-                          @select="setAutocompleteValue"
-                          @enter="apply"></autocomplete>
-            <input v-else type="text" class="form-control form-control-sm" v-model="valuesText" @change="apply" @keyup.enter.stop="apply">
-        </template>
-        <template v-else-if="filterType==='number_conditions'">
-            <select class="form-select form-select-sm mb-1" v-model="blankOp" @change="apply">
-                <option value="">`number`</option>
-                <option value="blank">`blank`</option>
-                <option value="not_blank">`not blank`</option>
-            </select>
-            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="=" v-model="equal" @change="apply">
-            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder=">=" v-model="gte" @change="apply">
-            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="<=" v-model="lte" @change="apply">
-            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="from" v-model="from" @change="apply">
-            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="to" v-model="to" @change="apply">
-            <input type="number" step="any" class="form-control form-control-sm mb-1" placeholder="not from" v-model="notBetweenFrom" @change="apply">
-            <input type="number" step="any" class="form-control form-control-sm" placeholder="not to" v-model="notBetweenTo" @change="apply">
-        </template>
-        <template v-else-if="filterType==='boolean'">
-            <select class="form-select form-select-sm" v-model="value" @change="apply">
-                <option value="">`all`</option>
-                <option value="1">`yes`</option>
-                <option value="0">`no`</option>
-                <option value="blank">`blank`</option>
-                <option value="not_blank">`not blank`</option>
-            </select>
-        </template>
+        </div>
     </div>
 </script>
 
@@ -114,6 +137,49 @@
             },
             autocompleteUrl() {
                 return this.header.autocomplete_url || '';
+            },
+            displayText() {
+                const parsed = this.parseSearchValue(this.header.search_value);
+                if (!parsed) return 'Any';
+                if (parsed.type === 'blank') return 'blank';
+                if (parsed.type === 'not_blank') return 'not blank';
+
+                if (parsed.type === 'date_range') {
+                    const from = parsed.from || '';
+                    const to = parsed.to || '';
+                    if (from && to) return from === to ? from : from + ' - ' + to;
+                    if (from) return '>= ' + from;
+                    if (to) return '<= ' + to;
+                }
+
+                if (parsed.type === 'multi_select') {
+                    const values = (parsed.values || []).map(v => String(v));
+                    if (values.length === 1) return this.optionLabel(values[0]);
+                    if (values.length > 1) return values.length + ' selected';
+                }
+
+                if (parsed.type === 'autocomplete') {
+                    const values = (parsed.values || []).map(v => String(v));
+                    if (values.length === 1) return this.autocompleteLabel(values[0]);
+                    if (values.length > 1) return values.length + ' selected';
+                }
+
+                if (parsed.type === 'number_conditions') return this.numberDisplay(parsed);
+
+                if (parsed.type === 'boolean') {
+                    if (['1', 'true', 'yes', 'y'].includes(String(parsed.value).toLowerCase())) return 'Yes';
+                    if (['0', 'false', 'no', 'n'].includes(String(parsed.value).toLowerCase())) return 'No';
+                }
+
+                return 'Any';
+            },
+            isActive() {
+                return !!this.parseSearchValue(this.header.search_value);
+            }
+        },
+        watch: {
+            'header.search_value'() {
+                this.loadInitialValue();
             }
         },
         mounted() {
@@ -122,38 +188,76 @@
         methods: {
             loadInitialValue() {
                 const raw = this.header.search_value || '';
-                let parsed = null;
-                if (typeof raw === 'string' && raw.trim().startsWith('{')) {
-                    try { parsed = JSON.parse(raw); } catch { parsed = null; }
-                } else if (raw && typeof raw === 'object') {
-                    parsed = raw;
-                }
+                const parsed = this.parseSearchValue(raw);
+                this.resetDraft();
 
                 if (!parsed) {
-                    this.value = raw || '';
+                    if (this.filterType === 'text') this.value = raw || '';
                     return;
                 }
 
-                if (parsed.type === 'blank' || parsed.type === 'not_blank') this.blankOp = parsed.type;
+                if (parsed.type === 'blank' || parsed.type === 'not_blank') {
+                    if (this.filterType === 'text') this.op = parsed.type;
+                    else if (this.filterType === 'boolean') this.value = parsed.type;
+                    else this.blankOp = parsed.type;
+                }
+
                 this.op = parsed.op || this.op;
-                this.value = parsed.value || '';
+                this.value = parsed.value || this.value || '';
                 this.from = parsed.from || '';
                 this.to = parsed.to || '';
                 this.values = (parsed.values || []).map(v => String(v));
                 this.valuesText = this.values.join(',');
-                this.equal = parsed.equal || parsed.value || '';
-                this.gte = parsed.gte || '';
-                this.lte = parsed.lte || '';
-                this.notBetweenFrom = parsed.not_between_from || '';
-                this.notBetweenTo = parsed.not_between_to || '';
+                this.equal = this.hasFilterValue(parsed.equal)
+                    ? parsed.equal
+                    : (this.filterType === 'number_conditions' && this.hasFilterValue(parsed.value) ? parsed.value : '');
+                this.gte = this.hasFilterValue(parsed.gte) ? parsed.gte : '';
+                this.lte = this.hasFilterValue(parsed.lte) ? parsed.lte : '';
+                this.notBetweenFrom = this.hasFilterValue(parsed.not_between_from) ? parsed.not_between_from : '';
+                this.notBetweenTo = this.hasFilterValue(parsed.not_between_to) ? parsed.not_between_to : '';
+            },
+            resetDraft() {
+                this.op = 'contains';
+                this.blankOp = '';
+                this.value = '';
+                this.from = '';
+                this.to = '';
+                this.values = [];
+                this.valuesText = '';
+                this.equal = '';
+                this.gte = '';
+                this.lte = '';
+                this.notBetweenFrom = '';
+                this.notBetweenTo = '';
+            },
+            parseSearchValue(raw) {
+                if (!raw) return null;
+                if (raw && typeof raw === 'object') return raw;
+                if (typeof raw !== 'string') return null;
+
+                const trimmed = raw.trim();
+                if (!trimmed) return null;
+                if (trimmed.startsWith('{')) {
+                    try { return JSON.parse(trimmed); } catch { return null; }
+                }
+
+                return this.filterType === 'text' ? { type: 'text', op: 'contains', value: raw } : null;
+            },
+            applyText() {
+                this.apply();
             },
             apply() {
                 const payload = this.payload();
                 this.header.search_value = payload ? JSON.stringify(payload) : '';
                 this.fwStore.setFilters({});
             },
+            clear() {
+                this.resetDraft();
+                this.header.search_value = '';
+                this.fwStore.setFilters({});
+            },
             payload() {
-                if (this.blankOp) return { type: this.blankOp };
+                if (this.filterType !== 'text' && this.filterType !== 'boolean' && this.blankOp) return { type: this.blankOp };
 
                 if (this.filterType === 'text') {
                     if (this.op === 'blank' || this.op === 'not_blank') return { type: this.op };
@@ -175,13 +279,13 @@
 
                 if (this.filterType === 'number_conditions') {
                     let payload = { type: 'number_conditions' };
-                    if (this.equal) payload.equal = this.equal;
-                    if (this.gte) payload.gte = this.gte;
-                    if (this.lte) payload.lte = this.lte;
-                    if (this.from) payload.from = this.from;
-                    if (this.to) payload.to = this.to;
-                    if (this.notBetweenFrom) payload.not_between_from = this.notBetweenFrom;
-                    if (this.notBetweenTo) payload.not_between_to = this.notBetweenTo;
+                    if (this.hasFilterValue(this.equal)) payload.equal = this.equal;
+                    if (this.hasFilterValue(this.gte)) payload.gte = this.gte;
+                    if (this.hasFilterValue(this.lte)) payload.lte = this.lte;
+                    if (this.hasFilterValue(this.from)) payload.from = this.from;
+                    if (this.hasFilterValue(this.to)) payload.to = this.to;
+                    if (this.hasFilterValue(this.notBetweenFrom)) payload.not_between_from = this.notBetweenFrom;
+                    if (this.hasFilterValue(this.notBetweenTo)) payload.not_between_to = this.notBetweenTo;
                     return Object.keys(payload).length > 1 ? payload : null;
                 }
 
@@ -194,7 +298,6 @@
             },
             setAutocompleteValue(value) {
                 this.valuesText = value || this.valuesText;
-                this.apply();
             },
             quick(mode) {
                 const to = new Date();
@@ -204,12 +307,40 @@
                 this.blankOp = '';
                 this.from = this.formatDate(from);
                 this.to = this.formatDate(to);
-                this.apply();
             },
             formatDate(d) {
                 const month = String(d.getMonth() + 1).padStart(2, '0');
                 const day = String(d.getDate()).padStart(2, '0');
                 return d.getFullYear() + '-' + month + '-' + day;
+            },
+            optionLabel(value) {
+                const option = this.options.find(option => String(option.id) === String(value));
+                return option ? option.iname : value;
+            },
+            autocompleteLabel(value) {
+                const separator = ' ::: ';
+                const index = value.indexOf(separator);
+                return index < 0 ? value : value.substring(0, index).trim();
+            },
+            hasFilterValue(value) {
+                return value !== undefined && value !== null && String(value).length > 0;
+            },
+            numberDisplay(parsed) {
+                if (this.hasFilterValue(parsed.equal)) return '= ' + parsed.equal;
+                let parts = [];
+                if (this.hasFilterValue(parsed.gte)) parts.push('>= ' + parsed.gte);
+                if (this.hasFilterValue(parsed.lte)) parts.push('<= ' + parsed.lte);
+                if (this.hasFilterValue(parsed.from) || this.hasFilterValue(parsed.to)) {
+                    const from = this.hasFilterValue(parsed.from) ? parsed.from : '';
+                    const to = this.hasFilterValue(parsed.to) ? parsed.to : '';
+                    parts.push(from + ' - ' + to);
+                }
+                if (this.hasFilterValue(parsed.not_between_from) || this.hasFilterValue(parsed.not_between_to)) {
+                    const from = this.hasFilterValue(parsed.not_between_from) ? parsed.not_between_from : '';
+                    const to = this.hasFilterValue(parsed.not_between_to) ? parsed.not_between_to : '';
+                    parts.push('not ' + from + ' - ' + to);
+                }
+                return parts.length ? parts.join(', ') : 'Any';
             }
         }
     });

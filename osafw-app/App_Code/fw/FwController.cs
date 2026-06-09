@@ -771,6 +771,7 @@ public abstract partial class FwController
                     ">" => $" > {qv}",
                     "!" => $" NOT LIKE {db.q($"%{v}%")}",
                     "^" => $" LIKE {db.q($"{v}%")}",
+                    "$" => $" LIKE {db.q($"%{v}")}",
                     _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
                 },// then check for 1-char operators
             };

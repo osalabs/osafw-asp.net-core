@@ -149,6 +149,37 @@ window.fw={
       });
   },
 
+  initAutocompleteInputs: function (scope) {
+    var root = scope || document;
+    if (!root.querySelector('input[data-autocomplete]')) return Promise.resolve();
+
+    var fwScript = document.querySelector('script[src*="/js/fw.js"]');
+    var assetsUrl = fwScript ? fwScript.getAttribute('src').split('/js/fw.js')[0] : '/assets';
+    return fw.initComponent('autocomplete', {
+      scope: root,
+      assetsUrls: [
+        assetsUrl + '/lib/bootstrap-simple-autocomplete/bootstrap-simple-autocomplete.js'
+      ],
+      init: function (initScope) {
+        if (typeof BootstrapSimpleAutocomplete !== 'function') return;
+
+        $(initScope).find('input[data-autocomplete]').addBack('input[data-autocomplete]').each(function () {
+          if (this.dataset.autocompleteInitialized) return;
+          var isInitialized = this.parentElement
+            && this.parentElement.classList.contains('position-relative')
+            && this.nextElementSibling
+            && this.nextElementSibling.classList.contains('dropdown-menu');
+          if (isInitialized) {
+            this.dataset.autocompleteInitialized = '1';
+            return;
+          }
+          new BootstrapSimpleAutocomplete(this);
+          this.dataset.autocompleteInitialized = '1';
+        });
+      }
+    });
+  },
+
   // Dispose scoped component instances and plugin DOM before replacing/removing a scope.
   disposeComponents: function (scope) {
     var root = scope || document;
@@ -339,6 +370,7 @@ window.fw={
   setup_handlers: function (){
     //list screen init
     fw.make_table_list(".list");
+    fw.initAutocompleteInputs(document);
 
     //list screen init
     var $ffilter = $('form[data-list-filter]:first');
@@ -439,11 +471,8 @@ window.fw={
       return value.split(',').map(function (v) { return v.trim(); }).filter(function (v) { return v.length > 0; });
     };
 
-    var update_column_filter_value = function ($filter) {
+    var read_column_filter_payload = function ($filter) {
       var type = $filter.data('column-filter-type');
-      var $target = $filter.find('[data-column-filter-json]');
-      if (!$target.length) return;
-
       var blankOp = $filter.find('[data-column-filter-blank]').val() || '';
       var payload = null;
       if (blankOp === 'blank' || blankOp === 'not_blank') {
@@ -477,14 +506,22 @@ window.fw={
         else if (boolValue.length) payload = { type: 'boolean', value: boolValue };
       }
 
+      return payload;
+    };
+
+    var update_column_filter_value = function ($filter) {
+      var $target = $filter.find('[data-column-filter-json]');
+      if (!$target.length) return;
+
+      var payload = read_column_filter_payload($filter);
       $target.val(payload ? JSON.stringify(payload) : '');
     };
 
     $(document).on('change input', '.fw-column-filter :input', function () {
-      update_column_filter_value($(this).closest('.fw-column-filter'));
-    });
-    $(document).on('autocomplete', '.fw-column-filter [data-column-filter-values-text]', function () {
-      update_column_filter_value($(this).closest('.fw-column-filter'));
+      var $filter = $(this).closest('.fw-column-filter');
+      if ($filter.data('column-filter-type') === 'text') {
+        update_column_filter_value($filter);
+      }
     });
 
     $(document).on('click', '[data-column-filter-quick]', function () {
@@ -497,13 +534,43 @@ window.fw={
       $filter.find('[data-column-filter-blank]').val('');
       $filter.find('[data-column-filter-from]').val(format_filter_date(from));
       $filter.find('[data-column-filter-to]').val(format_filter_date(to));
+    });
+
+    $(document).on('click', '[data-column-filter-apply]', function (e) {
+      e.preventDefault();
+      var $filter = $(this).closest('.fw-column-filter');
       update_column_filter_value($filter);
+      $ffilter.find('input[name="f[is_search]"]').val('1');
+      $ffilter.trigger('submit');
+    });
+
+    $(document).on('click', '[data-column-filter-clear]', function (e) {
+      e.preventDefault();
+      var $filter = $(this).closest('.fw-column-filter');
+      $filter.find('[data-column-filter-json]').val('');
+      $filter.find('[data-column-filter-op]').val('contains');
+      $filter.find('[data-column-filter-blank]').val('');
+      $filter.find('[data-column-filter-value]').val('');
+      $filter.find('[data-column-filter-from]').val('');
+      $filter.find('[data-column-filter-to]').val('');
+      $filter.find('[data-column-filter-values]').val([]);
+      $filter.find('[data-column-filter-values-text]').val('');
+      $filter.find('[data-column-filter-equal]').val('');
+      $filter.find('[data-column-filter-gte]').val('');
+      $filter.find('[data-column-filter-lte]').val('');
+      $filter.find('[data-column-filter-not-between-from]').val('');
+      $filter.find('[data-column-filter-not-between-to]').val('');
+      $ffilter.find('input[name="f[is_search]"]').val('1');
       $ffilter.trigger('submit');
     });
 
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
           e.preventDefault();
+          var $filter = $(this).closest('.fw-column-filter');
+          if ($filter.length && $filter.data('column-filter-type') !== 'text') {
+              return false;
+          }
           //on explicit search - could reset pagenum to 0
           //$ffilter.find('input[name="f[pagenum]"]').val(0);
           $ffilter.trigger('submit');
@@ -518,7 +585,7 @@ window.fw={
         if ($fis.val()=='1'){
             //if search ON - add search fields to the form
             $f.find('.osafw-list-search').remove();
-            $('table.list:first .fw-column-filter').each(function () {
+            $('table.list:first .fw-column-filter[data-column-filter-type="text"]').each(function () {
               update_column_filter_value($(this));
             });
             var html=[];

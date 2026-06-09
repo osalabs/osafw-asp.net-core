@@ -88,16 +88,18 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
     },
     "ffloat": { "type": "number_conditions" },
     "is_active": { "type": "boolean" },
-      "large_lookup_id": {
-        "type": "autocomplete",
-        "autocomplete_url": "/Admin/LargeLookups/(Autocomplete)?q="
-      },
+    "large_lookup_id": {
+      "type": "autocomplete",
+      "autocomplete_url": "/Admin/LargeLookups/(Autocomplete)?q="
+    },
     "unsafe_calc": { "type": "none" }
   }
 }
 ```
 
-Supported types are `text`, `date_range`, `multi_select`, `autocomplete`, `number_conditions`, `boolean`, and `none`. Every type supports blank/not blank. Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`, `!abc`, comparisons, and `^abc` for starts-with) and also accept JSON such as `{"type":"text","op":"starts_with","value":"abc"}`. Typed filters submit JSON through the same `search[field]` key and are converted to parameterized SQL server-side.
+Supported types are `text`, `date_range`, `multi_select`, `autocomplete`, `number_conditions`, `boolean`, and `none`. Every type supports blank/not blank. Text filters render inline as a compact operator/input group with operator labels `~`, `=`, `!=`, `!~`, `^`, `$`, `B`, and `NB`. Structured filters render as one-line dropdown cells; changes inside the dropdown are draft-only until the user clicks `Apply`, while `Clear` removes that column's `search[field]` value.
+
+Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`, `!abc`, `^abc` for starts-with, and `$abc` for ends-with) and also accept JSON such as `{"type":"text","op":"starts_with","value":"abc"}`. Typed filters submit JSON through the same `search[field]` key and are converted to parameterized SQL server-side.
 
 `filter_field` can point a visible list alias to the real list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
 

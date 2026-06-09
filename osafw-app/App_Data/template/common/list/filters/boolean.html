@@ -1,10 +1,19 @@
-<div class="fw-column-filter" data-column-filter-type="boolean">
+<div class="dropdown fw-column-filter fw-column-filter-dropdown" data-column-filter-type="boolean">
   <input type="hidden" name="search[<~field_name>]" value="<~search_value>" data-column-filter-json>
-  <select class="form-select form-select-sm" data-column-filter-value>
-    <option value="">`all`</option>
-    <option value="1" <~/common/attr/selected ifeq="filter_value" value="1">>`yes`</option>
-    <option value="0" <~/common/attr/selected ifeq="filter_value" value="0">>`no`</option>
-    <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>`blank`</option>
-    <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
-  </select>
+  <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle fw-column-filter-summary<~filter_active_class>" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="viewport" aria-expanded="false" title="<~field_name_visible>">
+    <span class="text-truncate"><~filter_display></span>
+  </button>
+  <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
+    <select class="form-select form-select-sm" data-column-filter-value>
+      <option value="">`all`</option>
+      <option value="1" <~/common/attr/selected ifeq="filter_value" value="1">>`yes`</option>
+      <option value="0" <~/common/attr/selected ifeq="filter_value" value="0">>`no`</option>
+      <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>`blank`</option>
+      <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
+    </select>
+    <div class="d-flex gap-2 mt-2">
+      <button type="button" class="btn btn-sm btn-primary flex-fill" data-column-filter-apply>`Apply`</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-column-filter-clear>`Clear`</button>
+    </div>
+  </div>
 </div>

@@ -90,6 +90,16 @@ public class FwControllerColumnFilterTests
     }
 
     [TestMethod]
+    public void LegacyEndsWith_SyntaxStillWorks()
+    {
+        var controller = BuildController();
+
+        controller.ApplySearch(new FwDict { ["name"] = "$Acme" });
+
+        StringAssert.Contains(controller.WhereSql, "LIKE '%Acme'");
+    }
+
+    [TestMethod]
     public void JsonDateRange_UsesLocalDayBoundariesAndExclusiveDatetimeTo()
     {
         var controller = BuildController();

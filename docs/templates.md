@@ -762,14 +762,14 @@ Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disp
 
 #### Other Common Templates
 - **list/** - Directory with common templates for list screens.
-  - `list/filters/*.html` renders opt-in typed list column filters for Dynamic/Vue-compatible server-rendered tables. The shared `thead.html` delegates each search cell to `list/filters/cell.html`, which chooses text, date range, multi-select/autocomplete, number, boolean, or none based on `list_headers` metadata.
+  - `list/filters/*.html` renders opt-in typed list column filters for Dynamic/Vue-compatible server-rendered tables. The shared `thead.html` delegates each search cell to `list/filters/cell.html`, which chooses text, date range, multi-select/autocomplete, number, boolean, or none based on `list_headers` metadata. Text filters stay inline as a compact operator/input group; other typed filters render a one-line dropdown trigger with draft controls plus `Apply` and `Clear`.
 - **form/** - Directory with common templates for form screens.
 - **form/show/** - Directory with common templates for showing records. Used in Dynamic controllers.
 - **form/showform/** - Directory with common templates for edit forms. Used in Dynamic controllers.
 - **form/showdelete/** - Directory with common templates for delete confirmation screens.
 - **activitylogs/** - Directory with common templates for displaying activity logs.
 - **vue/** - Directory with Vue.js components for Vue-based controllers.
-  - `vue/list-column-filter.html` is the shared Vue table-header filter component. It reads `header.filter_type`, keeps using `header.search_value`, and serializes typed filters back through `search[field]` JSON.
+  - `vue/list-column-filter.html` is the shared Vue table-header filter component. It reads `header.filter_type`, keeps using `header.search_value`, and serializes typed filters back through `search[field]` JSON. Custom `filter_component` implementations are still supported and should own their own compact/dropdown UI.
 - **virtual/** - Directory with standard templates for Virtual controllers.
 - **icons/** - Directory for custom svg icons.
 - **list/return_breadcrumbs.html** - Shared origin breadcrumb. Controllers can pass app-local `return_url` plus `return_title`; shared list/form headers render the origin link only when that metadata is present.

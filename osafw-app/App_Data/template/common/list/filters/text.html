@@ -1,15 +1,17 @@
-<div class="fw-column-filter" data-column-filter-type="text">
+<div class="fw-column-filter fw-column-filter-inline" data-column-filter-type="text">
   <input type="hidden" name="search[<~field_name>]" value="<~search_value>" data-column-filter-json>
-  <select class="form-select form-select-sm mb-1" data-column-filter-op>
-    <option value="contains" <~/common/attr/selected ifeq="filter_op" value="contains">>`contains`</option>
-    <option value="equals" <~/common/attr/selected ifeq="filter_op" value="equals">>`=`</option>
-    <option value="not_equals" <~/common/attr/selected ifeq="filter_op" value="not_equals">>`!=`</option>
-    <option value="not_contains" <~/common/attr/selected ifeq="filter_op" value="not_contains">>`not contains`</option>
-    <option value="starts_with" <~/common/attr/selected ifeq="filter_op" value="starts_with">>`starts`</option>
-    <option value="ends_with" <~/common/attr/selected ifeq="filter_op" value="ends_with">>`ends`</option>
-    <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>`blank`</option>
-    <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
-  </select>
-  <input type="text" value="<~filter_value>" class="form-control form-control-sm" data-column-filter-value>
+  <div class="input-group input-group-sm flex-nowrap">
+    <select class="form-select form-select-sm fw-column-filter-op" title="`Operator`" data-column-filter-op>
+      <option value="contains" <~/common/attr/selected ifeq="filter_op" value="contains">>~</option>
+      <option value="equals" <~/common/attr/selected ifeq="filter_op" value="equals">>=</option>
+      <option value="not_equals" <~/common/attr/selected ifeq="filter_op" value="not_equals">>!=</option>
+      <option value="not_contains" <~/common/attr/selected ifeq="filter_op" value="not_contains">>!~</option>
+      <option value="starts_with" <~/common/attr/selected ifeq="filter_op" value="starts_with">>^</option>
+      <option value="ends_with" <~/common/attr/selected ifeq="filter_op" value="ends_with">>$</option>
+      <option value="blank" <~/common/attr/selected ifeq="filter_blank_op" value="blank">>B</option>
+      <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>NB</option>
+    </select>
+    <input type="text" value="<~filter_value>" class="form-control form-control-sm" data-column-filter-value>
+  </div>
   <noscript><input type="text" name="search[<~field_name>]" value="<~search_value>" class="form-control form-control-sm"></noscript>
 </div>

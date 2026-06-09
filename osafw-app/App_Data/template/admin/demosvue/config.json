@@ -47,7 +47,7 @@
 
     "is_dynamic_index": true,
     "list_view": "(select d.*, dp.iname as parent_iname, dd.iname as demo_dicts_iname, da.iname as dict_link_auto_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d  LEFT OUTER JOIN demos dp ON dp.id=d.parent_id LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id LEFT OUTER JOIN demo_dicts da ON da.id=d.dict_link_auto_id) t",
-    "view_list_defaults": "demo_dicts_iname dict_link_auto_iname iname email fdate_pop_str fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat add_time status",
+    "view_list_defaults": "demo_dicts_iname dict_link_auto_iname iname email fdate_pop_str fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat status",
     "###view_list_map": "demo_dicts_iname|DemoDicts iname|Title email|Email add_time|Added&nbsp;on status|Status id|id",
     "view_list_map": {
         "id": "id",
@@ -87,9 +87,18 @@
             "demo_dicts_iname": {
                 "type": "text"
             },
+            "demo_dicts_id": {
+                "type": "multi_select",
+                "lookup_model": "DemoDicts"
+            },
             "dict_link_auto_iname": {
                 "type": "autocomplete",
                 "filter_field": "dict_link_auto_id",
+                "field_storage_type": "int",
+                "autocomplete_url": "/Admin/DemosVue/(Autocomplete)?model=DemoDicts&q="
+            },
+            "dict_link_auto_id": {
+                "type": "autocomplete",
                 "field_storage_type": "int",
                 "autocomplete_url": "/Admin/DemosVue/(Autocomplete)?model=DemoDicts&q="
             },
@@ -102,6 +111,11 @@
             "fdate_pop_str": {
                 "type": "date_range",
                 "filter_field": "fdate_pop",
+                "is_date_only": true,
+                "field_storage_type": "date"
+            },
+            "fdate_pop": {
+                "type": "date_range",
                 "is_date_only": true,
                 "field_storage_type": "date"
             },
@@ -138,7 +152,7 @@
 
     "is_dynamic_index_edit": true,
     "list_edit" : "demos",
-    "edit_list_defaults": "demo_dicts_id iname email fdate_pop fdatetime_local is_checkbox fyesno fradio fint ffloat frange is_switch add_time status",
+    "edit_list_defaults": "demo_dicts_id dict_link_auto_id iname email fdate_pop fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat status",
     "edit_list_map": {
         "id": "id",
         "parent_id": "Parent",

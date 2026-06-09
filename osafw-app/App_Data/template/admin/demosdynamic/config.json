@@ -45,23 +45,39 @@
     "related_field_name": "demo_dicts_id",
 
     "is_dynamic_index": true,
-    "list_view": "(select d.*, dd.iname as demo_dicts_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id) t",
-    "view_list_defaults": "demo_dicts_iname iname email fdatetime_utc fdatetime_local add_time status",
+    "list_view": "(select d.*, dp.iname as parent_iname, dd.iname as demo_dicts_iname, da.iname as dict_link_auto_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demos dp ON dp.id=d.parent_id LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id LEFT OUTER JOIN demo_dicts da ON da.id=d.dict_link_auto_id) t",
+    "view_list_defaults": "demo_dicts_iname dict_link_auto_iname iname email fdate_pop_str fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat status",
     "###view_list_map": "demo_dicts_iname|DemoDicts iname|Title email|Email add_time|Added&nbsp;on status|Status id|id",
     "view_list_map": {
+        "id": "id",
+        "parent_iname": "Parent",
         "demo_dicts_iname": "DemoDicts",
         "iname": "Title",
+        "idesc": "Description",
         "email": "Email",
-        "add_time": "Added on",
-        "upd_time": "Updated on",
-        "status": "Status",
-        "fdate_pop_str": "Date popup Formatted",
-        "fdate_pop": "Date popup",
+        "fint": "Integer",
+        "ffloat": "Float",
+        "frange": "Range",
+        "dict_link_auto_iname": "DemoDicts AC",
+        "dict_link_multi": "DemoDicts Multi",
+        "fcombo": "Combo",
+        "fradio": "Radio",
+        "fyesno": "Y/N",
+        "is_checkbox": "CB",
+        "is_switch": "Switch",
+        "fdate_combo": "Date Combo",
+        "fdate_pop_str": "Date Popup",
         "fdatetime": "Date and time",
         "fdatetime_utc": "UTC datetime",
         "fdatetime_offset": "Offset datetime",
         "fdatetime_local": "Browser local",
-        "id": "id"
+        "ftime": "Time",
+        "att_id": "Att",
+        "status": "Status",
+        "add_time": "Added on",
+        "add_users_id": "Added by",
+        "upd_time": "Updated on",
+        "upd_users_id": "Updated by"
     },
     "view_list_custom": "iname status demo_dicts_iname",
     "list_column_filters": {
@@ -69,6 +85,21 @@
         "fields": {
             "demo_dicts_iname": {
                 "type": "text"
+            },
+            "demo_dicts_id": {
+                "type": "multi_select",
+                "lookup_model": "DemoDicts"
+            },
+            "dict_link_auto_iname": {
+                "type": "autocomplete",
+                "filter_field": "dict_link_auto_id",
+                "field_storage_type": "int",
+                "autocomplete_url": "/Admin/DemosDynamic/(Autocomplete)?model=DemoDicts&q="
+            },
+            "dict_link_auto_id": {
+                "type": "autocomplete",
+                "field_storage_type": "int",
+                "autocomplete_url": "/Admin/DemosDynamic/(Autocomplete)?model=DemoDicts&q="
             },
             "iname": {
                 "type": "text"
@@ -82,6 +113,11 @@
                 "is_date_only": true,
                 "field_storage_type": "date"
             },
+            "fdate_pop": {
+                "type": "date_range",
+                "is_date_only": true,
+                "field_storage_type": "date"
+            },
             "fdatetime_utc": {
                 "type": "date_range",
                 "field_storage_type": "datetime"
@@ -89,6 +125,22 @@
             "fdatetime_local": {
                 "type": "date_range",
                 "field_storage_type": "datetime"
+            },
+            "is_checkbox": {
+                "type": "boolean"
+            },
+            "fyesno": {
+                "type": "boolean"
+            },
+            "fradio": {
+                "type": "multi_select",
+                "lookup_tpl": "/common/sel/fcombo.sel"
+            },
+            "fint": {
+                "type": "number_conditions"
+            },
+            "ffloat": {
+                "type": "number_conditions"
             },
             "status": {
                 "type": "multi_select",
