@@ -107,6 +107,7 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Use `FormUtils` for filtering/validation, `DateUtils` for user timezone formatting, `FwLogger` for logs, and `FwCache` for memoization.
 - For SQL queries or SQL fragments in code, prefer one `$@"..."` string block over concatenated pieces.
 - For new or updated C# methods, prefer concise XML docs that explain intent, framework contract, or non-obvious behavior. Use `<summary>` when it adds information beyond the method name/signature. Add `<param>` or `<returns>` only for loose types (`FwDict`, `FwList`, `object?`), complex formats, security/access expectations, side effects, null/empty/exception behavior, or public return shapes. Do not document obvious primitive parameters or restate the code. Add inline comments only for complex logic blocks.
+- Avoid one-use wrappers and test-only entry points in production code unless they clarify intent, reduce meaningful duplication, define a reusable contract, or isolate genuinely complex logic.
 
 ## Security Guardrails
 
@@ -116,6 +117,12 @@ What slowed this task? What should future agents do differently? Were sub-agents
 - Escape or sanitize stored/user/editor HTML and markdown before display; reserve `noescape`, raw markdown HTML, and Vue `v-html` for explicitly trusted server-controlled content.
 - For attachments, authorize against the parent business object before linking, serving, or issuing S3 redirects; block or force download for active content and enforce safe image decode limits.
 - Keep dev/admin tooling, generated SQL, assistant tool calls, and generated file/schema writes behind safe environment/exposure gates, explicit allowlists, normal resource checks, and sensitive request/session/Sentry redaction.
+
+## Performance Guardrails
+
+- In request-wide, repeated, or likely hot paths, avoid repeated DB, remote, file, config, template, or metadata work inside loops; batch, preload, project, filter, aggregate, or page data where practical while preserving authorization, ordering, and empty-result behavior.
+- Avoid unbounded result materialization, large per-request allocations/string building, sync-over-async or blocking I/O, and expensive clients/resources created per request.
+- Prefer small data-shape or existing-cache fixes before broad rewrites. Ask for measurement when an optimization is non-obvious, invasive, or adds meaningful complexity.
 
 ## Sub-Agent Delegation
 
@@ -164,6 +171,9 @@ What slowed this task? What should future agents do differently? Were sub-agents
 ## Testing Guidance
 
 - Prefer focused build/test/manual checks before broad suites.
+- Prefer behavior-level tests through public framework, controller/action, model, route, template, or UI boundaries. Use internal-method/unit tests when the logic is shared, complex, security-sensitive, deterministic, or hard to exercise through public behavior.
+- Do not split production code into helper methods solely to make internal branches easier to test.
+- When production simplicity and exhaustive internal branch coverage conflict, prefer the simpler production shape and cover the behavior at the nearest practical boundary. Record meaningful untested edge cases in the task summary.
 - When VS/IIS Express may be running or normal build output is locked, immediately use an absolute repo-root `OutDir` under `artifacts/assistant_*` for build/test instead of retrying `bin/Debug`.
 - If no automated coverage exists or is practical, record concise manual verification steps and prerequisites in the task summary.
 - Build app: `dotnet build osafw-app/osafw-app.csproj`.
