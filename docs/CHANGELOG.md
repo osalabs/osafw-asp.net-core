@@ -5,6 +5,7 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 ## 2026-06-08
 
 - Breaking: request hosts must match the configured `appSettings.ROOT_DOMAIN` host or an explicit full-string `appSettings.override.*.hostname_match` pattern before framework dispatch. Arbitrary wildcard host patterns are ignored for trust, unconfigured hosts receive a diagnostic `Bad Host` 400 response, and password/security email origins now come from the configured or matched canonical origin instead of an arbitrary request Host.
+- Breaking: passwordless developer login now requires `IS_DEV`, a `Development*` config override, blank or `Development*` runtime environment, localhost/loopback Host, and loopback remote IP. Developer overrides such as `DevelopmentOleg` can continue using different localhost ports, but beta/live IIS deployments cannot enable the shortcut through Host selection alone.
 - Breaking: `/Dev/Configure/(InitDB)` now requires POST plus the current XSS token while still allowing anonymous `IS_DEV` bootstrap. Public `/Dev/Configure` diagnostics remain available, but rendered DB connection/table and path guidance no longer includes raw exception text, DB host details, connection strings, or filesystem log paths.
 - Breaking: `/Dev/Configure/(ApplyUpdates)` no longer executes pending SQL updates from a browser GET. Dev Home now redirects to read-only `/Dev/Configure/(PendingUpdates)`, and `/Admin/FwUpdates` applies pending updates through POST-only `/Dev/Manage/(ApplyPendingFwUpdates)` with the current XSS token.
 

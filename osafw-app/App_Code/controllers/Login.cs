@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -67,9 +68,10 @@ public class LoginController : FwController
 
             // for dev config only - login as first admin
             var is_dev_login = false;
-            if (fw.config("IS_DEV").toBool() && string.IsNullOrEmpty(login) && pwd == "~")
+            if (isPasswordlessDevLoginRequest(login, pwd))
             {
-                var dev = db.row(model.table_name, DB.h("status", Users.STATUS_ACTIVE, "access_level", Users.ACL_SITEADMIN), "id");
+                var devs = model.listByWhere(DB.h("status", Users.STATUS_ACTIVE, "access_level", Users.ACL_SITEADMIN), limit: 1, orderby: "id");
+                var dev = devs.Count > 0 ? devs[0] : [];
                 login = dev["email"];
                 is_dev_login = true;
             }
@@ -214,5 +216,37 @@ public class LoginController : FwController
             url = fw.config("LOGGED_DEFAULT_URL").toStr();
 
         fw.redirect(url);
+    }
+
+    private bool isPasswordlessDevLoginRequest(string login, string password)
+    {
+        if (!string.IsNullOrEmpty(login) || password != "~")
+            return false;
+
+        if (!fw.config("IS_DEV").toBool())
+            return false;
+
+        if (!fw.config("config_override").toStr().StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var context = fw.context;
+        if (context == null)
+            return false;
+
+        var host = context.Request.Host.Host;
+        if (!host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            && (!IPAddress.TryParse(host, out var hostAddress) || !IPAddress.IsLoopback(hostAddress)))
+            return false;
+
+        var aspnetEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (!string.IsNullOrWhiteSpace(aspnetEnv) && !aspnetEnv.StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var dotnetEnv = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+        if (!string.IsNullOrWhiteSpace(dotnetEnv) && !dotnetEnv.StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var remoteIp = context.Connection.RemoteIpAddress;
+        return remoteIp != null && IPAddress.IsLoopback(remoteIp);
     }
 }
