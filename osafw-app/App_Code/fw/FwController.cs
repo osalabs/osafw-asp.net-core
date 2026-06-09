@@ -1192,6 +1192,20 @@ public abstract class FwController
         //for RBAC
         ps["rbac"] = rbac;
 
+        //list filter search fields placeholder
+        if (!string.IsNullOrEmpty(this.search_fields))
+        {
+            var field_names = new List<string>();
+            foreach (var search_field in Utils.qw(this.search_fields))
+            {
+                var field = search_field.TrimStart('!');
+                var field_name = view_list_map[field] as string ?? $"[{field}]";
+                field_names.Add(field_name);
+            }
+        
+            ps["list_filter_search_placeholder"] = "Search in " + String.Join(", ", field_names);
+        }
+
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
         {
