@@ -194,6 +194,26 @@
       var isTrustedMarkdownField = function ($field) {
         return $field.hasClass('markdown-trusted') || isTruthyDataValue($field.data('markdownTrusted'));
       };
+      var bindModalFullscreenEscape = function ($field) {
+        if (!$field.closest('.modal').length) return;
+
+        var markdown = $field.data('markdown');
+        if (!markdown || !markdown.$editor || !markdown.$editor.length) return;
+
+        markdown.$editor
+          .off('keydown.fwMarkdownFullscreen')
+          .on('keydown.fwMarkdownFullscreen', function (e) {
+            var isEscape = e.key === 'Escape' || e.keyCode === 27;
+            if (!isEscape || !$(this).hasClass('md-fullscreen-mode')) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (typeof markdown.setFullscreen === 'function') {
+              markdown.setFullscreen(false);
+            }
+          });
+      };
 
       $fields.each(function () {
         var $field = $(this);
@@ -345,6 +365,7 @@
             // }
           });
 
+        bindModalFullscreenEscape($field);
         $field.data('fw-md-inited', true);
       });
     }
