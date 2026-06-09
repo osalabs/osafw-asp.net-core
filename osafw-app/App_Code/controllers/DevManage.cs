@@ -225,6 +225,8 @@ public class DevManageController : FwController
 
     public void CreateModelAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var table_name = item["table_name"].toStr().Trim();
         var model_name = item["model_name"].toStr().Trim();
@@ -243,6 +245,8 @@ public class DevManageController : FwController
 
     public void CreateControllerAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var model_name = item["model_name"].toStr().Trim();
         var controller_url = item["controller_url"].toStr().Trim();
@@ -277,6 +281,8 @@ public class DevManageController : FwController
 
     public void CreateReportAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var repcode = item["report_code"].toStr().Trim();
 
@@ -288,6 +294,8 @@ public class DevManageController : FwController
 
     public void ExtractControllerAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var controller_name = item["controller_name"].toStr().Trim();
 
@@ -352,6 +360,8 @@ public class DevManageController : FwController
     // analyse database tables and create db.json describing entities, fields and relationships
     public FwDict AnalyseDBAction()
     {
+        enforcePost();
+
         FwDict ps = [];
         var item = reqh("item");
         string connstr = item["connstr"] + "";
@@ -405,6 +415,8 @@ public class DevManageController : FwController
 
     public void DBAnalyzerSaveAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         string dbname = item["db"] + "";
         var dbConfigs = fw.config("db") as FwDict ?? throw new UserException("Wrong DB selection");
@@ -431,6 +443,8 @@ public class DevManageController : FwController
 
     public void EntityBuilderSaveAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var is_create_all = reqi("DoMagic") == 1;
 
@@ -488,6 +502,8 @@ public class DevManageController : FwController
 
     public void DBInitializerSaveAction()
     {
+        enforcePost();
+
         var is_sql_only = reqi("DoSQL") == 1;
 
         if (is_sql_only)
@@ -547,6 +563,8 @@ public class DevManageController : FwController
 
     public void AppCreatorSaveAction()
     {
+        enforcePost();
+
         var f = reqh("f");
         var search = f["s"].toStr();
         var item = reqh("item");

@@ -87,7 +87,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-05-19-common-frontend-components.md` - Reworked `common/bootstrap_select.html` into the `fw.initComponent` pattern using the project reference version as the base.
 - `summary-2026-05-19-design-system.md` - Added `docs/design_system.html` as a static visual guide for framework UI conventions, active themes, tokens, and shared component examples.
 - `summary-2026-05-19-execmultiple-sql.md` - Kept `DB.splitMultiSQL()` as the simple semicolon/`GO` splitter for interactive/simple script use.
-- `summary-2026-05-19-initialize-db.md` - Fixed `/Dev/Configure/(InitDB)` so the development initializer includes `demo.sql` when present.
+- `summary-2026-05-19-initialize-db.md` - Fixed development database initialization so optional demo data is included when present.
 - `summary-2026-05-19-ui-controls.md` - Added range and switch support to static, Dynamic, and Vue demo screens.
 - `summary-2026-05-20-agent-efficiency.md` - Updated `docs/agents/heuristics.md` with generalized efficiency heuristics for large-file reading, bounded sub-agents, MCP fallback discipline, and isolated builds.
 - `summary-2026-05-20-compile-symbols.md` - Centralized optional compile-time feature constants in `osafw-app/osafw-app.csproj`.
@@ -99,18 +99,18 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-05-26-lookups-navigation.md` - Fixed shared Vue history handling so initial screen state uses `replaceState`, normal in-app navigation uses `pushState`, and `popstate` updates the current screen without addin...
 - `summary-2026-05-26-modal-component-refactor.md` - Moved inline `common/modal.html` JavaScript to cacheable `wwwroot/assets/js/fw-modal.js`.
 - `summary-2026-05-27-static-icon-partials.md` - Migrated static Bootstrap icon tags in ParsePage templates to `common/icons/*` includes.
-- `summary-2026-06-01-deep-security-scan.md` - Started a repository-wide Codex Security Deep Security Scan.
+- `summary-2026-06-01-deep-security-scan.md` - Completed a private repository-wide security assessment and kept detailed findings in ignored/private artifacts.
 - `summary-2026-06-03-custom-reports.md` - Added Site Admin-managed custom reports on top of the existing `/Admin/Reports` module.
-- `summary-2026-06-03-security-agent-instruction-updates.md` - Added concise recurring security guardrails to `AGENTS.md`, `docs/agents/code_reviewer.md`, and `docs/agents/heuristics.md`; synced `.github/copilot-instructions.md` from `AGENT...
-- `summary-2026-06-03-security-post-token-small-actions.md` - Added `FwController.enforcePost()` to require POST and validate the existing XSS token for custom mutating actions.
-- `summary-2026-06-03-security-quick-local-fixes.md` - Replaced the JSON Content-Type slice in `FW.parseForm` with a safe `StartsWith` check.
-- `summary-2026-06-03-security-remediation-plan.md` - Created `docs/drafts/security2026-06.md` as a developer handoff checklist for the 42 reportable findings in the June 2026 security scan. The draft groups findings into smaller i...
-- `summary-2026-06-03-security-user-owned-preferences.md` - Added owner-aware `oneMine` and owner/system-aware `oneAvail` helpers to saved view/filter/list models.
+- `summary-2026-06-03-security-agent-instruction-updates.md` - Added concise recurring security guardrails to shared agent and reviewer instructions.
+- `summary-2026-06-03-security-post-token-small-actions.md` - Added request-method and token checks to custom mutating actions.
+- `summary-2026-06-03-security-quick-local-fixes.md` - Applied small input parsing, redirect, diagnostic, password-reset, and report-email hardening fixes.
+- `summary-2026-06-03-security-remediation-plan.md` - Created a private remediation checklist and grouped follow-up hardening tasks.
+- `summary-2026-06-03-security-user-owned-preferences.md` - Added owner-aware helpers to saved view, filter, and list models.
 - `summary-2026-06-04-custom-reports-review.md` - Created `docs/drafts/custom_reports_review.md` with architecture, code, docs, security, template/UI, simplification, test-gap, and open-question findings for the custom reports ...
 - `summary-2026-06-04-custom-reports-review-fixes.md` - Renamed the report runtime/base class to `FwReportsBase` and moved the `fwreports` table model to `osafw-app/App_Code/fw/FwReports.cs` as `FwReports`.
-- `summary-2026-06-05-security-attachments.md` - Implemented Group 7 attachment hardening:
-- `summary-2026-06-05-security-dynamic-object-links.md` - Implemented dynamic parent/object-link authorization and public signup create-only behavior for CAN-R01-011, CAN-R01-012, CAN-R03-029, and CAN-R03-030.
-- `summary-2026-06-05-stored-rendering-hardening.md` - Completed Group 6 stored HTML/markdown rendering hardening.
+- `summary-2026-06-05-security-attachments.md` - Hardened attachment authorization and browser delivery behavior.
+- `summary-2026-06-05-security-dynamic-object-links.md` - Hardened dynamic child-row and object-link authorization while preserving create-only public signup behavior.
+- `summary-2026-06-05-stored-rendering-hardening.md` - Made stored markdown and selected raw-rendering surfaces safe by default with explicit trusted opt-ins.
 - `summary-2026-06-06-breaking-changelog.md` - Rebuilt `docs/CHANGELOG.md` into dated breaking-upgrade sections covering commits since 2025-06-01.
 - `summary-2026-06-06-method-comment-cleanup.md` - Reviewed 2,260 C# method-like declarations under `osafw-app/` and `osafw-tests/` using a Roslyn inventory, excluding `bin/`, `obj/`, and `osafw-app/App_Data/db/`.
 - `summary-2026-06-06-method-comments.md` - Updated agent coding-style guidance to prefer concise, contract-focused XML method docs instead of full param/return comments for obvious signatures.
@@ -118,8 +118,12 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-06-token-efficient-workflow.md` - Added reusable agent helper scripts for scoped repo search and CRLF/UTF-8 no-BOM normalization.
 - `summary-2026-06-07-s3-att-compat-pdf-inline.md` - Added S3 attachment key compatibility and trusted PDF inline serving while preserving attachment authorization.
 - `summary-2026-06-07-modal-validation-comments.md` - Updated `fw-modal.js` modal AJAX submits to honor browser form validation and added concise comments around modal helper methods.
-- `summary-2026-06-07-security-group-9b.md` - Added central AdminUsers hierarchy authorization, activity-log comment attribution/access checks, and Data Protection key encryption setup.
-- `summary-2026-06-08-can-r06-041.md` - Removed the DevConfigure browser-GET update execution path and moved pending update application to a POST/XSS-protected Admin FwUpdates action.
-- `summary-2026-06-08-can-r01-001-dev-login.md` - Restricted passwordless developer login to local Development-style overrides and loopback requests.
+- `summary-2026-06-07-security-group-9b.md` - Added central privileged user-management checks, activity-log comment handling, and Data Protection setup.
+- `summary-2026-06-08-fwupdates-post-flow.md` - Split developer update discovery from authenticated update execution.
+- `summary-2026-06-08-dev-login-local-gating.md` - Restricted developer convenience login to local development conditions.
 - `summary-2026-06-08-agent-testing-balance.md` - Added behavior-level testing guidance and production-code simplicity checks to agent and reviewer instructions.
 - `summary-2026-06-08-agent-performance-review.md` - Added concise performance guardrails and reviewer checks for repeated expensive work, unbounded data, blocking I/O, and invasive optimizations.
+- `summary-2026-06-09-markdown-modal-escape.md` - Added modal-aware Escape handling so Bootstrap Markdown fullscreen exits before Escape closes the containing Bootstrap modal.
+- `summary-2026-06-09-devmanage-write-guards.md` - Added DevManage request-method and token guards before generator, schema, and file-write side effects.
+- `summary-2026-06-09-security-remediation-review.md` - Created a private remediation-status review and public-safety audit of June security task summaries.
+- `summary-2026-06-09-sanitize-security-summaries.md` - Sanitized June security task summaries and moved detailed reconciliation notes to ignored/private artifacts.

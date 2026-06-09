@@ -2,6 +2,10 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-06-09
+
+- Breaking: DevManage generator/schema actions now require POST plus the current XSS token before creating models, controllers, reports, db.json, SQL, database tables, or generated templates. The built-in Developer Tools forms already submit correctly; custom links or automation that invoked these actions with GET must switch to tokened POST.
+
 ## 2026-06-08
 
 - Breaking: request hosts must match the configured `appSettings.ROOT_DOMAIN` host or an explicit full-string `appSettings.override.*.hostname_match` pattern before framework dispatch. Arbitrary wildcard host patterns are ignored for trust, unconfigured hosts receive a diagnostic `Bad Host` 400 response, and password/security email origins now come from the configured or matched canonical origin instead of an arbitrary request Host.
