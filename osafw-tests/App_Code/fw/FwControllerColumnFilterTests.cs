@@ -11,6 +11,23 @@ public class FwControllerColumnFilterTests
         public StubModel() : base() => table_name = "stub";
     }
 
+    private class LookupOptionsModel : FwModel
+    {
+        public int ListSelectOptionsCalls { get; private set; }
+        public object? LastSelectedId { get; private set; }
+
+        public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
+        {
+            ListSelectOptionsCalls++;
+            LastSelectedId = selected_id;
+            return
+            [
+                new FwDict { ["id"] = "12", ["iname"] = "Selected Lookup" },
+                new FwDict { ["id"] = "13", ["iname"] = "Other Lookup" },
+            ];
+        }
+    }
+
     private class TestController : FwController
     {
         public TestController(FW fw) : base(fw)
@@ -18,7 +35,7 @@ public class FwControllerColumnFilterTests
             fw.G["controller.action"] = "ColumnFilterTests";
             model0 = new StubModel();
             is_dynamic_index = true;
-            view_list_defaults = "name event_utc status amount flag lookup_id";
+            view_list_defaults = "name event_utc status amount flag lookup_id lookup_model_id lookup_model_alt_id inline_status";
             view_list_map = new FwDict
             {
                 ["name"] = "Name",
@@ -27,6 +44,9 @@ public class FwControllerColumnFilterTests
                 ["amount"] = "Amount",
                 ["flag"] = "Flag",
                 ["lookup_id"] = "Lookup",
+                ["lookup_model_id"] = "Lookup Model",
+                ["lookup_model_alt_id"] = "Lookup Model Alt",
+                ["inline_status"] = "Inline Status",
             };
             list_column_filters = new FwDict
             {
@@ -39,6 +59,17 @@ public class FwControllerColumnFilterTests
                     ["amount"] = new FwDict { ["type"] = "number_conditions", ["field_storage_type"] = "decimal" },
                     ["flag"] = new FwDict { ["type"] = "boolean" },
                     ["lookup_id"] = new FwDict { ["type"] = "autocomplete", ["field_storage_type"] = "int" },
+                    ["lookup_model_id"] = new FwDict { ["type"] = "multi_select", ["field_storage_type"] = "int", ["lookup_model"] = nameof(LookupOptionsModel) },
+                    ["lookup_model_alt_id"] = new FwDict { ["type"] = "multi_select", ["field_storage_type"] = "int", ["lookup_model"] = nameof(LookupOptionsModel) },
+                    ["inline_status"] = new FwDict
+                    {
+                        ["type"] = "multi_select",
+                        ["options"] = new FwDict
+                        {
+                            ["A"] = "Active",
+                            ["I"] = "Inactive",
+                        },
+                    },
                 }
             };
             is_list_column_filters = true;
@@ -57,11 +88,35 @@ public class FwControllerColumnFilterTests
             list_filter_search = search;
             setListSearchAdvanced();
         }
+
+        public void BuildHeaders(FwDict? search = null)
+        {
+            list_filter_search = search ?? [];
+            list_headers = getViewListArr(view_list_defaults);
+            foreach (FwDict header in list_headers)
+            {
+                var fieldName = header["field_name"].toStr();
+                header["search_value"] = list_filter_search?[fieldName];
+            }
+            enrichListColumnFilterHeaders();
+        }
+
+        public FwDict HeaderFor(string fieldName)
+        {
+            foreach (FwDict header in list_headers)
+                if (header["field_name"].toStr() == fieldName)
+                    return header;
+
+            throw new InvalidOperationException($"Header not found: {fieldName}");
+        }
     }
 
-    private static TestController BuildController()
+    private static TestController BuildController(FW? fw = null)
     {
-        var fw = TestHelpers.CreateFw();
+        var shouldRegisterLookupOptions = fw == null;
+        fw ??= TestHelpers.CreateFw();
+        if (shouldRegisterLookupOptions)
+            TestHelpers.RegisterModel(fw, new LookupOptionsModel());
         return new TestController(fw);
     }
 
@@ -200,5 +255,62 @@ public class FwControllerColumnFilterTests
 
         StringAssert.Contains(controller.WhereSql, "[lookup_id] IN (@cf_lookup_id_in_0)");
         Assert.AreEqual(12L, controller.WhereParams["cf_lookup_id_in_0"]);
+    }
+
+    [TestMethod]
+    public void MultiSelectHeader_LoadsLookupModelOptionsOnce_ForRepeatedLookupSource()
+    {
+        var fw = TestHelpers.CreateFw();
+        var lookupOptions = new LookupOptionsModel();
+        TestHelpers.RegisterModel(fw, lookupOptions);
+        var controller = BuildController(fw);
+
+        controller.BuildHeaders();
+
+        Assert.AreEqual(1, lookupOptions.ListSelectOptionsCalls);
+        var header = controller.HeaderFor("lookup_model_id");
+        var altHeader = controller.HeaderFor("lookup_model_alt_id");
+        Assert.IsInstanceOfType(header["filter_options"], typeof(FwList));
+        Assert.AreEqual(2, ((FwList)header["filter_options"]!).Count);
+        Assert.AreSame(header["filter_options"], altHeader["filter_options"]);
+    }
+
+    [TestMethod]
+    public void MultiSelectHeader_ReusesSelectedLookupModelOptions_WhenSelectedValueNeedsLabel()
+    {
+        var fw = TestHelpers.CreateFw();
+        var lookupOptions = new LookupOptionsModel();
+        TestHelpers.RegisterModel(fw, lookupOptions);
+        var controller = BuildController(fw);
+
+        controller.BuildHeaders(new FwDict
+        {
+            ["lookup_model_id"] = Utils.jsonEncode(new FwDict { ["type"] = "multi_select", ["values"] = new ObjList { "12" } }),
+            ["lookup_model_alt_id"] = Utils.jsonEncode(new FwDict { ["type"] = "multi_select", ["values"] = new ObjList { "12" } })
+        });
+
+        Assert.AreEqual(1, lookupOptions.ListSelectOptionsCalls);
+        Assert.AreEqual("12", lookupOptions.LastSelectedId);
+        var header = controller.HeaderFor("lookup_model_id");
+        var altHeader = controller.HeaderFor("lookup_model_alt_id");
+        Assert.AreEqual("Selected Lookup", header["filter_display"]);
+        Assert.AreSame(header["filter_options"], altHeader["filter_options"]);
+    }
+
+    [TestMethod]
+    public void MultiSelectHeader_KeepsInlineOptionsWithoutSelectedValues()
+    {
+        var controller = BuildController();
+
+        controller.BuildHeaders();
+
+        var header = controller.HeaderFor("inline_status");
+        if (header["filter_options"] is FwList options)
+        {
+            Assert.AreEqual(2, options.Count);
+            return;
+        }
+
+        Assert.Fail("Expected inline filter options to be loaded.");
     }
 }

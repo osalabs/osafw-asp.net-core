@@ -210,8 +210,8 @@ let getters = {
         // add related_id to request
         if (state.related_id) req.related_id = state.related_id;
 
-        //add search values from headers if search is open
-        if (state.is_list_search_open) {
+        //add active search values from headers on explicit filter requests
+        if (!state.is_initial_load) {
             state.list_headers.forEach(h => {
                 if (hasListSearchValue(h.search_value)) req['search[' + h.field_name + ']'] = serializeListSearchValue(h.search_value);
             });

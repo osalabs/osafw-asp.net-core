@@ -502,33 +502,6 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// Collect fields from the base config and any tab-specific overrides for Vue payloads.
-    /// </summary>
-    /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
-    /// <returns>Combined list of field definitions across all tabs.</returns>
-    protected override FwList collectFormFields(string prefix)
-    {
-        var allFields = new FwList();
-        if (config[prefix] is IList fields)
-            allFields.AddRange(new FwList(fields));
-
-        if (config["form_tabs"] is IList form_tabs)
-        {
-            foreach (FwDict tab in form_tabs)
-            {
-                var tabCode = tab["tab"].toStr();
-                if (tabCode.Length == 0)
-                    continue;
-                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
-                if (tabFields.Count > 0)
-                    allFields.AddRange(tabFields);
-            }
-        }
-
-        return allFields;
-    }
-
-    /// <summary>
     /// Saves a Vue dynamic controller row after checking update access to the target parent row.
     /// </summary>
     /// <param name="id">Existing parent row id to update, or zero for a new row.</param>

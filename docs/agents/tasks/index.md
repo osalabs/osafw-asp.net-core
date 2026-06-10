@@ -128,3 +128,5 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-09-security-remediation-review.md` - Created a private remediation-status review and public-safety audit of June security task summaries.
 - `summary-2026-06-09-sanitize-security-summaries.md` - Sanitized June security task summaries and moved detailed reconciliation notes to ignored/private artifacts.
 - `summary-2026-06-09-sync-master-conflicts.md` - Resolved master merge conflicts in customizable list filters by combining typed filter restore with saved-filter authorization and dynamic permission hooks.
+- `summary-2026-06-09-deploy-script.md` - Added a scheduled-task deploy script v2 with temp worktree publishing, app_offline deployment, logging, locking, webhook notification, and runtime-folder preservation notes.
+- `summary-2026-06-10-pr270-review-fixes.md` - Fixed PR #270 review findings for Vue search persistence, duplicate Vue form-field collection, column-filter inference work, and lookup option caching.

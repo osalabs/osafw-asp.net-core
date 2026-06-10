@@ -14,6 +14,7 @@ namespace osafw;
 public abstract partial class FwController
 {
     private const int LIST_COLUMN_FILTER_MULTI_LIMIT = 200;
+    private FwDict list_column_filter_options_cache = [];
 
     /// <summary>
     /// Loads the optional list column filter config without enabling behavior for base/simple controllers.
@@ -23,6 +24,7 @@ public abstract partial class FwController
     {
         list_column_filters = controllerConfig["list_column_filters"] as FwDict ?? [];
         list_column_filter_defs = [];
+        list_column_filter_options_cache = [];
         is_list_column_filters = false;
     }
 
@@ -69,7 +71,8 @@ public abstract partial class FwController
 
         var result = new FwDict();
         var fields = Utils.qw(getViewListUserFields());
-        var overrides = getListColumnFilterFieldOverrides();
+        var formDefs = getListColumnFilterFormFieldDefs();
+        var overrides = getListColumnFilterConfig()["fields"] as FwDict ?? [];
 
         foreach (var field in fields)
         {
@@ -81,7 +84,7 @@ public abstract partial class FwController
                 ["field_name"] = field,
                 ["field_name_visible"] = view_list_map[field],
             };
-            result[field] = inferListColumnFilterDef(header);
+            result[field] = inferListColumnFilterDef(header, formDefs, overrides);
         }
 
         foreach (var entry in overrides)
@@ -95,7 +98,7 @@ public abstract partial class FwController
                 ["field_name"] = field,
                 ["field_name_visible"] = view_list_map[field] ?? field,
             };
-            result[field] = inferListColumnFilterDef(header);
+            result[field] = inferListColumnFilterDef(header, formDefs, overrides);
         }
 
         list_column_filter_defs = result;
@@ -106,8 +109,10 @@ public abstract partial class FwController
     /// Infers one filter definition from a visible list header, dynamic field config, explicit overrides, and schema metadata.
     /// </summary>
     /// <param name="header">List header dictionary containing at least `field_name`.</param>
+    /// <param name="formDefs">Dynamic form field definitions keyed by field name.</param>
+    /// <param name="overrides">Explicit list column filter overrides keyed by field name.</param>
     /// <returns>A normalized filter definition for the field.</returns>
-    protected virtual FwDict inferListColumnFilterDef(FwDict header)
+    protected virtual FwDict inferListColumnFilterDef(FwDict header, FwDict formDefs, FwDict overrides)
     {
         var field = header["field_name"].toStr();
         var def = new FwDict
@@ -119,7 +124,6 @@ public abstract partial class FwController
             ["is_filterable"] = true,
         };
 
-        var formDefs = getListColumnFilterFormFieldDefs();
         FwDict formDef = formDefs[field] as FwDict ?? [];
         if (formDef.Count > 0)
         {
@@ -129,7 +133,6 @@ public abstract partial class FwController
             def["source_field_type"] = formDef["type"];
         }
 
-        var overrides = getListColumnFilterFieldOverrides();
         FwDict overrideDef = overrides[field] as FwDict ?? [];
         var explicitType = overrideDef["type"].toStr();
         foreach (var entry in overrideDef)
@@ -212,12 +215,6 @@ public abstract partial class FwController
 
         _ = applyTypedListColumnFilter(def, raw);
         return true;
-    }
-
-    private FwDict getListColumnFilterFieldOverrides()
-    {
-        var config = getListColumnFilterConfig();
-        return config["fields"] as FwDict ?? [];
     }
 
     private string inferListColumnFilterType(string field, FwDict formDef, FwDict def)
@@ -322,8 +319,9 @@ public abstract partial class FwController
 
         applyListColumnFilterDisplayValues(def, parsed, searchValue);
 
+        var selectedValues = def["filter_values_csv"].toStr();
         if (filterType == "multi_select")
-            def["filter_options"] = getListColumnFilterOptions(def, def["filter_values_csv"].toStr());
+            def["filter_options"] = getListColumnFilterOptions(def, selectedValues);
 
         applyListColumnFilterDisplayText(def);
 
@@ -532,24 +530,68 @@ public abstract partial class FwController
 
     private FwList getListColumnFilterOptions(FwDict def, string selectedValues)
     {
+        var cacheKey = listColumnFilterOptionsCacheKey(def, selectedValues);
+        if (cacheKey.Length > 0 && list_column_filter_options_cache[cacheKey] is FwList cached)
+            return cached;
+
+        FwList result;
         if (def["options"] is FwDict options)
-            return new FwList(options.Select(entry => new FwDict { ["id"] = entry.Key, ["iname"] = entry.Value }));
+            result = new FwList(options.Select(entry => new FwDict { ["id"] = entry.Key, ["iname"] = entry.Value }));
+        else if (def["options"] is IList optionRows)
+            result = new FwList(optionRows);
+        else
+        {
+            var lookupTpl = def["lookup_tpl"].toStr();
+            if (lookupTpl.Length > 0)
+                result = FormUtils.selectTplOptions(lookupTpl, fw.route.controller_path.ToLower());
+            else
+            {
+                var lookupModel = def["lookup_model"].toStr();
+                if (lookupModel.Length > 0)
+                {
+                    var selected = selectedValues.Length > 0 ? selectedValues : null;
+                    result = fw.model(lookupModel).listSelectOptions(def, selected);
+                }
+                else
+                    result = [];
+            }
+        }
 
-        if (def["options"] is IList optionRows)
-            return new FwList(optionRows);
+        if (cacheKey.Length > 0)
+            list_column_filter_options_cache[cacheKey] = result;
 
+        return result;
+    }
+
+    private string listColumnFilterOptionsCacheKey(FwDict def, string selectedValues)
+    {
         var lookupTpl = def["lookup_tpl"].toStr();
         if (lookupTpl.Length > 0)
-            return FormUtils.selectTplOptions(lookupTpl, fw.route.controller_path.ToLower());
+            return $"tpl|{fw.route.controller_path.ToLowerInvariant()}|{lookupTpl}";
 
         var lookupModel = def["lookup_model"].toStr();
         if (lookupModel.Length > 0)
         {
-            var selected = selectedValues.Length > 0 ? selectedValues : null;
-            return fw.model(lookupModel).listSelectOptions(def, selected);
+            var filterBy = def["filter_by"].toStr();
+            var filterField = filterBy.Length > 0 ? def["filter_field"].toStr() : "";
+            var filterValue = "";
+            if (filterBy.Length > 0 && def["i"] is FwDict item)
+                filterValue = item[filterBy].toStr();
+
+            return string.Join("|", [
+                "model",
+                lookupModel,
+                selectedValues,
+                def["lookup_params"].toStr(),
+                def["lookup_field"].toStr(),
+                def["lookup_key"].toStr(),
+                filterBy,
+                filterField,
+                filterValue,
+            ]);
         }
 
-        return [];
+        return "";
     }
 
     private string renderListColumnFilterTemplate(FwDict def)
