@@ -1429,7 +1429,8 @@ public abstract partial class FwController
     /// Builds list headers from the active user view and submitted column search values.
     /// </summary>
     /// <param name="is_cols">When true, also inject rendered column metadata into <c>list_rows</c>; use false for JSON responses.</param>
-    public virtual void setViewList(bool is_cols = true)
+    /// <param name="is_column_filters">When false, skip typed column filter UI metadata while still building field headers for data queries.</param>
+    public virtual void setViewList(bool is_cols = true, bool is_column_filters = true)
     {
         list_user_view = getListUserView();
 
@@ -1442,7 +1443,8 @@ public abstract partial class FwController
             var fieldName = header["field_name"].toStr();
             header["search_value"] = list_filter_search?[fieldName];
         }
-        enrichListColumnFilterHeaders();
+        if (is_column_filters)
+            enrichListColumnFilterHeaders();
 
         if (is_cols)
         {

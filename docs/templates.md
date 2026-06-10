@@ -763,6 +763,7 @@ Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disp
 #### Other Common Templates
 - **list/** - Directory with common templates for list screens.
   - `list/filters/*.html` renders opt-in typed list column filters for Dynamic/Vue-compatible server-rendered tables. The shared `thead.html` delegates each search cell to `list/filters/cell.html`, which chooses text, date range, multi-select/autocomplete, number, boolean, or none based on `list_headers` metadata. Text filters stay inline as a compact operator/input group; other typed filters render a one-line dropdown trigger with draft controls plus `Apply` and `Clear`.
+  - Custom server-rendered column filters should be controller-local partials referenced by `list_column_filters.fields[field].template`. Keep the visible cell one line high and commit the typed JSON into the hidden `search[field]` input only on `Apply` for dropdown-style filters.
 - **form/** - Directory with common templates for form screens.
 - **form/show/** - Directory with common templates for showing records. Used in Dynamic controllers.
 - **form/showform/** - Directory with common templates for edit forms. Used in Dynamic controllers.

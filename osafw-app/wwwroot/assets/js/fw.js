@@ -385,13 +385,15 @@ window.fw={
       } else {
           $el.show();
           $fis.val('1');
-          //show search tooltip
-          ToastInfo("WORD to search for contains word<br>"+
-            "!WORD to search for NOT contains word<br>"+
-            "=WORD to search for equals word<br>"+
-            "!=WORD to search for NOT equals word<br>"+
-            "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-            {header: 'Search hints', html: true, autohide: false});
+          if (!$('table.list:first .fw-column-filter').length) {
+            //show search tooltip
+            ToastInfo("WORD to search for contains word<br>"+
+              "!WORD to search for NOT contains word<br>"+
+              "=WORD to search for equals word<br>"+
+              "!=WORD to search for NOT equals word<br>"+
+              "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
+              {header: 'Search hints', html: true, autohide: false});
+          }
       }
     };
     $(document).on('click', '.on-toggle-search', on_toggle_search);
@@ -495,6 +497,8 @@ window.fw={
           var value = $filter.find('[data-column-filter-' + key + ']').val() || '';
           if (value.length) payload[key] = value;
         });
+        var notEqual = $filter.find('[data-column-filter-not-equal]').val() || '';
+        if (notEqual.length) payload.not_equal = notEqual;
         var nbFrom = $filter.find('[data-column-filter-not-between-from]').val() || '';
         var nbTo = $filter.find('[data-column-filter-not-between-to]').val() || '';
         if (nbFrom.length) payload.not_between_from = nbFrom;
@@ -524,6 +528,10 @@ window.fw={
       }
     });
 
+    $(document).on('change', '.fw-column-filter-op', function () {
+      $(this).closest('.fw-column-filter').find('[data-column-filter-value]').trigger('focus');
+    });
+
     $(document).on('click', '[data-column-filter-quick]', function () {
       var $filter = $(this).closest('.fw-column-filter');
       var quick = $(this).data('column-filter-quick');
@@ -548,7 +556,7 @@ window.fw={
       e.preventDefault();
       var $filter = $(this).closest('.fw-column-filter');
       $filter.find('[data-column-filter-json]').val('');
-      $filter.find('[data-column-filter-op]').val('contains');
+      $filter.find('[data-column-filter-op]').val('');
       $filter.find('[data-column-filter-blank]').val('');
       $filter.find('[data-column-filter-value]').val('');
       $filter.find('[data-column-filter-from]').val('');
@@ -556,6 +564,7 @@ window.fw={
       $filter.find('[data-column-filter-values]').val([]);
       $filter.find('[data-column-filter-values-text]').val('');
       $filter.find('[data-column-filter-equal]').val('');
+      $filter.find('[data-column-filter-not-equal]').val('');
       $filter.find('[data-column-filter-gte]').val('');
       $filter.find('[data-column-filter-lte]').val('');
       $filter.find('[data-column-filter-not-between-from]').val('');

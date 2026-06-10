@@ -164,7 +164,7 @@ public class FwVueController : FwDynamicController
         setListSearchStatus();
 
         if (list_headers.Count == 0)
-            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+            setViewList(false, false); // initialize list headers only; row JSON does not need filter UI options
 
         //only select from db visible fields + id, save as comma-separated string into list_fields
         setListFields();
@@ -191,7 +191,7 @@ public class FwVueController : FwDynamicController
             this.setUserLists(ps);
 
         if (list_headers.Count == 0)
-            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+            setViewList(false, false); // lookup-only JSON does not need filter UI options
 
         FwList showform_fields = collectFormFields("showform_fields");
         //FwRow hfields = _fieldsToHash(showform_fields);
@@ -205,14 +205,14 @@ public class FwVueController : FwDynamicController
 
             var dtype = def["type"].toStr();
             var lookup_model = def["lookup_model"].toStr();
-            if (lookup_model.Length > 0 && dtype != "autocomplete")
+            if (lookup_model.Length > 0 && dtype != "autocomplete" && !lookups.ContainsKey(lookup_model))
             {
                 //all lookup_models, except autocomplete (for those it could be too large)
                 lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
             }
 
             var lookup_tpl = def["lookup_tpl"].toStr();
-            if (lookup_tpl.Length > 0)
+            if (lookup_tpl.Length > 0 && !lookups.ContainsKey(lookup_tpl))
             {
                 lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
             }

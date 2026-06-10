@@ -16,7 +16,7 @@
                 <option value="blank">B blank</option>
                 <option value="not_blank">NB not blank</option>
             </select>
-            <input ref="textInput" type="text" class="form-control form-control-sm" v-model="value" @change="applyText" @keyup.enter.stop="applyText">
+            <input ref="textInput" type="text" class="form-control form-control-sm" data-column-filter-value v-model="value" @change="applyText" @keyup.enter.stop="applyText">
         </div>
     </div>
     <div v-else class="dropdown fw-column-filter fw-column-filter-dropdown fw-column-filter-vue" :data-column-filter-type="filterType">
@@ -255,7 +255,10 @@
                 this.apply();
             },
             onTextOpChange() {
-                this.applyText();
+                if (this.op === 'blank' || this.op === 'not_blank') {
+                    this.applyText();
+                    return;
+                }
                 this.$nextTick(() => {
                     if (this.$refs.textInput) this.$refs.textInput.focus();
                 });

@@ -103,7 +103,65 @@ Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`,
 
 `filter_field` can point a visible list alias to the real list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
 
-For small custom behavior, override the controller hook `applyListColumnFilter(FwDict def, object rawValue)` and return `true` after appending a predicate. UI overrides can use `template` for a server-rendered filter cell partial or `component` for a Vue component name.
+To customize an inferred filter, add the field under `list_column_filters.fields` and override only the parts that differ:
+
+```json
+"list_column_filters": {
+  "enabled": true,
+  "fields": {
+    "customer_iname": {
+      "type": "autocomplete",
+      "filter_field": "customers_id",
+      "autocomplete_url": "/Admin/Customers/(Autocomplete)?q="
+    },
+    "status": {
+      "type": "multi_select",
+      "options": {
+        "0": "Active",
+        "10": "Pending"
+      }
+    }
+  }
+}
+```
+
+For custom server behavior, override `applyListColumnFilter(FwDict def, object rawValue)` and return `true` after appending a safe predicate. Cast `rawValue` to `FwDict`, read only your whitelisted field, and put user values into `list_where_params`:
+
+```csharp
+protected override bool applyListColumnFilter(FwDict def, object rawValue)
+{
+    if (def["field_name"].toStr() != "score_band" || rawValue is not FwDict raw)
+        return false;
+
+    var band = raw["value"].toStr();
+    if (band == "high")
+    {
+        list_where += " AND [score] >= @score_band";
+        list_where_params["score_band"] = 80;
+        return true;
+    }
+
+    return false;
+}
+```
+
+For custom UI on server-rendered Dynamic screens, set `template` to a filter-cell partial that renders a compact one-line trigger or input and writes the committed JSON to `search[field]`:
+
+```json
+"score_band": {
+  "type": "text",
+  "template": "/admin/orders/list/filters/score_band.html"
+}
+```
+
+For Vue screens, set `component` to a registered Vue component name. The component receives `header`, owns its compact/dropdown UI, writes `header.search_value`, and calls `fwStore.setFilters({})` to reload:
+
+```json
+"score_band": {
+  "type": "text",
+  "component": "orders-score-band-filter"
+}
+```
 
 ### Generated layout heuristics
 

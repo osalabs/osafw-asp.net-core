@@ -919,8 +919,11 @@ table.list .search > th {
   flex: 0 0 3rem;
   width: 3rem;
   max-width: 3rem;
-  padding-left: 0.35rem;
-  padding-right: 1.1rem;
+}
+
+.fw-column-filter-inline .input-group-sm > .fw-column-filter-op {
+  padding-left: 2px;
+  padding-right: 2rem;
 }
 
 .fw-column-filter-summary {
@@ -933,9 +936,9 @@ table.list .search > th {
 }
 
 .fw-column-filter-summary.is-active {
-  color: var(--bs-primary);
-  border-color: var(--bs-primary);
-  background-color: var(--fw-hiliter);
+  color: var(--bs-emphasis-color);
+  border-color: var(--bs-border-color);
+  background-color: var(--bs-tertiary-bg);
 }
 
 .fw-column-filter-summary .text-truncate {
@@ -982,6 +985,11 @@ table.list.table-dense .fw-column-filter-op {
   flex-basis: 2.6rem;
   width: 2.6rem;
   max-width: 2.6rem;
+}
+
+table.list.table-dense .fw-column-filter-inline .input-group-sm > .fw-column-filter-op {
+  padding-left: 2px !important;
+  padding-right: 2rem !important;
 }
 
 table.list.table-dense .btn {
