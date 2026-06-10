@@ -3,29 +3,32 @@
     <span v-else-if="filterType==='none'" class="text-muted">-</span>
     <div v-else-if="filterType==='text'" class="fw-column-filter fw-column-filter-inline fw-column-filter-vue" data-column-filter-type="text">
         <div class="input-group input-group-sm flex-nowrap">
-            <select class="form-select form-select-sm fw-column-filter-op" title="`Operator`" v-model="op" @change="applyText">
-                <option value="contains">~</option>
-                <option value="equals">=</option>
-                <option value="not_equals">!=</option>
-                <option value="not_contains">!~</option>
-                <option value="starts_with">^</option>
-                <option value="ends_with">$</option>
-                <option value="blank">B</option>
-                <option value="not_blank">NB</option>
+            <select class="form-select form-select-sm fw-column-filter-op" title="`Operator`" v-model="op" @change="onTextOpChange">
+                <option value=""></option>
+                <option value="contains">~ contains</option>
+                <option value="equals">= equal</option>
+                <option value="not_equals">!= not equal</option>
+                <option value="not_contains">!~ not contains</option>
+                <option value="starts_with">^ begins with</option>
+                <option value="not_starts_with">!^ not begins with</option>
+                <option value="ends_with">$ ends with</option>
+                <option value="not_ends_with">!$ not ends with</option>
+                <option value="blank">B blank</option>
+                <option value="not_blank">NB not blank</option>
             </select>
-            <input type="text" class="form-control form-control-sm" v-model="value" @change="applyText" @keyup.enter.stop="applyText">
+            <input ref="textInput" type="text" class="form-control form-control-sm" v-model="value" @change="applyText" @keyup.enter.stop="applyText">
         </div>
     </div>
     <div v-else class="dropdown fw-column-filter fw-column-filter-dropdown fw-column-filter-vue" :data-column-filter-type="filterType">
         <button type="button"
-                class="btn btn-outline-secondary btn-sm dropdown-toggle fw-column-filter-summary"
+                class="btn btn-default btn-sm dropdown-toggle fw-column-filter-summary"
                 :class="{ 'is-active': isActive }"
                 data-bs-toggle="dropdown"
                 data-bs-auto-close="outside"
                 data-bs-boundary="viewport"
                 aria-expanded="false"
                 :title="header.field_name_visible">
-            <span class="text-truncate">{{ displayText }}</span>
+            <span class="text-truncate"><template v-if="displayText">{{ displayText }}</template><template v-else>&nbsp;</template></span>
         </button>
         <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
             <template v-if="filterType==='date_range'">
@@ -37,33 +40,34 @@
                 <input type="date" class="form-control form-control-sm mb-2" v-model="from">
                 <input type="date" class="form-control form-control-sm mb-2" v-model="to">
                 <div class="btn-group btn-group-sm w-100 mb-2" role="group">
-                    <button type="button" class="btn btn-outline-secondary" title="Today" @click="quick('today')">`Today`</button>
-                    <button type="button" class="btn btn-outline-secondary" title="Last 7 days" @click="quick('week')">`Week`</button>
-                    <button type="button" class="btn btn-outline-secondary" title="Last 30 days" @click="quick('30')">`30`</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Today" @click="quick('today')">`Today`</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Last 7 days" @click="quick('week')">`Week`</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Last 30 days" @click="quick('30')">`30`</button>
                 </div>
             </template>
             <template v-else-if="filterType==='multi_select'">
                 <select class="form-select form-select-sm mb-2" v-model="blankOp">
-                    <option value="">`values`</option>
+                    <option value="">`selected values`</option>
                     <option value="blank">`blank`</option>
                     <option value="not_blank">`not blank`</option>
                 </select>
-                <select class="form-select form-select-sm fw-column-filter-multi" multiple v-model="values">
+                <select class="form-select form-select-sm fw-column-filter-multi" multiple v-model="values" title="`Use Ctrl to select multiple values`">
                     <option v-for="option in options" :key="option.id" :value="String(option.id)">{{ option.iname }}</option>
                 </select>
             </template>
             <template v-else-if="filterType==='autocomplete'">
                 <select class="form-select form-select-sm mb-2" v-model="blankOp">
-                    <option value="">`values`</option>
+                    <option value="">`value`</option>
                     <option value="blank">`blank`</option>
                     <option value="not_blank">`not blank`</option>
                 </select>
                 <autocomplete v-if="autocompleteUrl"
                               v-model="valuesText"
                               :url="autocompleteUrl"
+                              placeholder="`Start typing to select...`"
                               class="form-control-sm"
                               @select="setAutocompleteValue"></autocomplete>
-                <input v-else type="text" class="form-control form-control-sm" v-model="valuesText">
+                <input v-else type="text" class="form-control form-control-sm" placeholder="`Start typing to select...`" v-model="valuesText">
             </template>
             <template v-else-if="filterType==='number_conditions'">
                 <select class="form-select form-select-sm mb-2" v-model="blankOp">
@@ -72,6 +76,7 @@
                     <option value="not_blank">`not blank`</option>
                 </select>
                 <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder="=" v-model="equal">
+                <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder="!=" v-model="notEqual">
                 <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder=">=" v-model="gte">
                 <input type="number" step="any" class="form-control form-control-sm mb-2" placeholder="<=" v-model="lte">
                 <div class="input-group input-group-sm mb-2">
@@ -114,7 +119,7 @@
             }
         },
         data: () => ({
-            op: 'contains',
+            op: '',
             blankOp: '',
             value: '',
             from: '',
@@ -122,6 +127,7 @@
             values: [],
             valuesText: '',
             equal: '',
+            notEqual: '',
             gte: '',
             lte: '',
             notBetweenFrom: '',
@@ -140,7 +146,7 @@
             },
             displayText() {
                 const parsed = this.parseSearchValue(this.header.search_value);
-                if (!parsed) return 'Any';
+                if (!parsed) return '';
                 if (parsed.type === 'blank') return 'blank';
                 if (parsed.type === 'not_blank') return 'not blank';
 
@@ -171,7 +177,7 @@
                     if (['0', 'false', 'no', 'n'].includes(String(parsed.value).toLowerCase())) return 'No';
                 }
 
-                return 'Any';
+                return '';
             },
             isActive() {
                 return !!this.parseSearchValue(this.header.search_value);
@@ -202,7 +208,7 @@
                     else this.blankOp = parsed.type;
                 }
 
-                this.op = parsed.op || this.op;
+                this.op = parsed.op === 'contains' ? '' : (parsed.op || this.op);
                 this.value = parsed.value || this.value || '';
                 this.from = parsed.from || '';
                 this.to = parsed.to || '';
@@ -211,13 +217,14 @@
                 this.equal = this.hasFilterValue(parsed.equal)
                     ? parsed.equal
                     : (this.filterType === 'number_conditions' && this.hasFilterValue(parsed.value) ? parsed.value : '');
+                this.notEqual = this.hasFilterValue(parsed.not_equal) ? parsed.not_equal : (this.hasFilterValue(parsed.not_equals) ? parsed.not_equals : '');
                 this.gte = this.hasFilterValue(parsed.gte) ? parsed.gte : '';
                 this.lte = this.hasFilterValue(parsed.lte) ? parsed.lte : '';
                 this.notBetweenFrom = this.hasFilterValue(parsed.not_between_from) ? parsed.not_between_from : '';
                 this.notBetweenTo = this.hasFilterValue(parsed.not_between_to) ? parsed.not_between_to : '';
             },
             resetDraft() {
-                this.op = 'contains';
+                this.op = '';
                 this.blankOp = '';
                 this.value = '';
                 this.from = '';
@@ -225,6 +232,7 @@
                 this.values = [];
                 this.valuesText = '';
                 this.equal = '';
+                this.notEqual = '';
                 this.gte = '';
                 this.lte = '';
                 this.notBetweenFrom = '';
@@ -246,22 +254,35 @@
             applyText() {
                 this.apply();
             },
+            onTextOpChange() {
+                this.applyText();
+                this.$nextTick(() => {
+                    if (this.$refs.textInput) this.$refs.textInput.focus();
+                });
+            },
             apply() {
                 const payload = this.payload();
                 this.header.search_value = payload ? JSON.stringify(payload) : '';
+                this.hideDropdown();
                 this.fwStore.setFilters({});
             },
             clear() {
                 this.resetDraft();
                 this.header.search_value = '';
+                this.hideDropdown();
                 this.fwStore.setFilters({});
+            },
+            hideDropdown() {
+                const toggle = this.$el.querySelector && this.$el.querySelector('[data-bs-toggle="dropdown"]');
+                if (!toggle || !window.bootstrap || !window.bootstrap.Dropdown) return;
+                window.bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
             },
             payload() {
                 if (this.filterType !== 'text' && this.filterType !== 'boolean' && this.blankOp) return { type: this.blankOp };
 
                 if (this.filterType === 'text') {
                     if (this.op === 'blank' || this.op === 'not_blank') return { type: this.op };
-                    return this.value ? { type: 'text', op: this.op, value: this.value } : null;
+                    return this.value ? { type: 'text', op: this.op || 'contains', value: this.value } : null;
                 }
 
                 if (this.filterType === 'date_range') {
@@ -280,6 +301,7 @@
                 if (this.filterType === 'number_conditions') {
                     let payload = { type: 'number_conditions' };
                     if (this.hasFilterValue(this.equal)) payload.equal = this.equal;
+                    if (this.hasFilterValue(this.notEqual)) payload.not_equal = this.notEqual;
                     if (this.hasFilterValue(this.gte)) payload.gte = this.gte;
                     if (this.hasFilterValue(this.lte)) payload.lte = this.lte;
                     if (this.hasFilterValue(this.from)) payload.from = this.from;
@@ -328,6 +350,8 @@
             numberDisplay(parsed) {
                 if (this.hasFilterValue(parsed.equal)) return '= ' + parsed.equal;
                 let parts = [];
+                const notEqual = this.hasFilterValue(parsed.not_equal) ? parsed.not_equal : parsed.not_equals;
+                if (this.hasFilterValue(notEqual)) parts.push('!= ' + notEqual);
                 if (this.hasFilterValue(parsed.gte)) parts.push('>= ' + parsed.gte);
                 if (this.hasFilterValue(parsed.lte)) parts.push('<= ' + parsed.lte);
                 if (this.hasFilterValue(parsed.from) || this.hasFilterValue(parsed.to)) {
@@ -340,7 +364,7 @@
                     const to = this.hasFilterValue(parsed.not_between_to) ? parsed.not_between_to : '';
                     parts.push('not ' + from + ' - ' + to);
                 }
-                return parts.length ? parts.join(', ') : 'Any';
+                return parts.length ? parts.join(', ') : '';
             }
         }
     });

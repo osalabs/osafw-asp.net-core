@@ -1,7 +1,7 @@
 <div class="dropdown fw-column-filter fw-column-filter-dropdown" data-column-filter-type="number_conditions">
   <input type="hidden" name="search[<~field_name>]" value="<~search_value>" data-column-filter-json>
-  <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle fw-column-filter-summary<~filter_active_class>" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="viewport" aria-expanded="false" title="<~field_name_visible>">
-    <span class="text-truncate"><~filter_display></span>
+  <button type="button" class="btn btn-default btn-sm dropdown-toggle fw-column-filter-summary<~filter_active_class>" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-boundary="viewport" aria-expanded="false" title="<~field_name_visible>">
+    <span class="text-truncate"><~filter_value_display if="filter_display" inline><~filter_display></~filter_value_display><~filter_empty unless="filter_display" inline>&nbsp;</~filter_empty></span>
   </button>
   <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
     <select class="form-select form-select-sm mb-2" data-column-filter-blank>
@@ -10,6 +10,7 @@
       <option value="not_blank" <~/common/attr/selected ifeq="filter_blank_op" value="not_blank">>`not blank`</option>
     </select>
     <input type="number" step="any" value="<~filter_equal>" class="form-control form-control-sm mb-2" placeholder="=" data-column-filter-equal>
+    <input type="number" step="any" value="<~filter_not_equal>" class="form-control form-control-sm mb-2" placeholder="!=" data-column-filter-not-equal>
     <input type="number" step="any" value="<~filter_gte>" class="form-control form-control-sm mb-2" placeholder=">=" data-column-filter-gte>
     <input type="number" step="any" value="<~filter_lte>" class="form-control form-control-sm mb-2" placeholder="<=" data-column-filter-lte>
     <div class="input-group input-group-sm mb-2">

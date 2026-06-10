@@ -80,6 +80,29 @@ public class FwControllerColumnFilterTests
     }
 
     [TestMethod]
+    public void JsonTextNotStartsAndNotEndsWith_UseParameterizedNotLike()
+    {
+        var controller = BuildController();
+
+        controller.ApplySearch(new FwDict
+        {
+            ["name"] = Utils.jsonEncode(new FwDict { ["type"] = "text", ["op"] = "not_starts_with", ["value"] = "Acme" })
+        });
+
+        StringAssert.Contains(controller.WhereSql, "NOT LIKE @cf_name_text_0");
+        Assert.AreEqual("Acme%", controller.WhereParams["cf_name_text_0"]);
+
+        controller = BuildController();
+        controller.ApplySearch(new FwDict
+        {
+            ["name"] = Utils.jsonEncode(new FwDict { ["type"] = "text", ["op"] = "not_ends_with", ["value"] = "Acme" })
+        });
+
+        StringAssert.Contains(controller.WhereSql, "NOT LIKE @cf_name_text_0");
+        Assert.AreEqual("%Acme", controller.WhereParams["cf_name_text_0"]);
+    }
+
+    [TestMethod]
     public void LegacyStartsWith_SyntaxStillWorks()
     {
         var controller = BuildController();
@@ -135,6 +158,20 @@ public class FwControllerColumnFilterTests
         Assert.AreEqual(3m, controller.WhereParams["cf_amount_notfrom_2"]);
         Assert.AreEqual(7m, controller.WhereParams["cf_amount_notto_3"]);
         Assert.AreEqual(1, controller.WhereParams["cf_flag_bool_4"]);
+    }
+
+    [TestMethod]
+    public void JsonNumberNotEqual_UsesParameterizedPredicate()
+    {
+        var controller = BuildController();
+
+        controller.ApplySearch(new FwDict
+        {
+            ["amount"] = Utils.jsonEncode(new FwDict { ["type"] = "number_conditions", ["not_equal"] = "7" })
+        });
+
+        StringAssert.Contains(controller.WhereSql, "[amount] <> @cf_amount_neq_0");
+        Assert.AreEqual(7m, controller.WhereParams["cf_amount_neq_0"]);
     }
 
     [TestMethod]

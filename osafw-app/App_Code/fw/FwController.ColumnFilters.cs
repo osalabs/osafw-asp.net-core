@@ -368,6 +368,7 @@ public abstract partial class FwController
                 break;
             case "number_conditions":
                 def["filter_equal"] = parsed["equal"].toStr(parsed["value"].toStr());
+                def["filter_not_equal"] = parsed["not_equal"].toStr(parsed["not_equals"].toStr());
                 def["filter_gte"] = parsed["gte"];
                 def["filter_lte"] = parsed["lte"];
                 def["filter_from"] = parsed["from"];
@@ -401,6 +402,16 @@ public abstract partial class FwController
             op = "equals";
             value = rawValue[1..];
         }
+        else if (rawValue.StartsWith("!^"))
+        {
+            op = "not_starts_with";
+            value = rawValue[2..];
+        }
+        else if (rawValue.StartsWith("!$"))
+        {
+            op = "not_ends_with";
+            value = rawValue[2..];
+        }
         else if (rawValue.StartsWith('!'))
         {
             op = "not_contains";
@@ -424,7 +435,7 @@ public abstract partial class FwController
     private void applyListColumnFilterDisplayText(FwDict def)
     {
         var display = listColumnFilterDisplayText(def);
-        def["filter_display"] = display.Length > 0 ? display : "Any";
+        def["filter_display"] = display;
         def["filter_active_class"] = display.Length > 0 ? " is-active" : "";
     }
 
@@ -483,6 +494,10 @@ public abstract partial class FwController
             return $"= {equal}";
 
         StrList parts = [];
+        var notEqual = def["filter_not_equal"].toStr();
+        if (notEqual.Length > 0)
+            parts.Add($"!= {notEqual}");
+
         var gte = def["filter_gte"].toStr();
         var lte = def["filter_lte"].toStr();
         if (gte.Length > 0)
@@ -617,15 +632,17 @@ public abstract partial class FwController
             "not_equals" or "not_equal" => "<>",
             "not_contains" => "NOT LIKE",
             "starts_with" => "LIKE",
+            "not_starts_with" => "NOT LIKE",
             "ends_with" => "LIKE",
+            "not_ends_with" => "NOT LIKE",
             _ => "LIKE",
         };
 
         var paramValue = op switch
         {
             "equals" or "equal" or "not_equals" or "not_equal" => value,
-            "starts_with" => value + "%",
-            "ends_with" => "%" + value,
+            "starts_with" or "not_starts_with" => value + "%",
+            "ends_with" or "not_ends_with" => "%" + value,
             _ => "%" + value + "%",
         };
 
@@ -718,6 +735,14 @@ public abstract partial class FwController
             var param = nextListColumnFilterParamName(def, "eq");
             list_where += $" AND {sqlField} = @{param}";
             list_where_params[param] = equal;
+            applied = true;
+        }
+
+        if (tryGetListColumnFilterNumber(raw["not_equal"], out var notEqual) || tryGetListColumnFilterNumber(raw["not_equals"], out notEqual))
+        {
+            var param = nextListColumnFilterParamName(def, "neq");
+            list_where += $" AND {sqlField} <> @{param}";
+            list_where_params[param] = notEqual;
             applied = true;
         }
 

@@ -5,6 +5,8 @@
 - Stored saved user-list filters as separate `f` and `search` payloads while preserving old saved-filter JSON.
 - Added server-rendered filter partials, a Vue `list-column-filter` component, Vue store serialization support, demo opt-in config, docs updates, asset cache version bump, and focused tests.
 - Follow-up: moved server filter partials under `common/list/filters/` and scrubbed repo-root/prohibited local absolute path strings from task summaries.
+- Follow-up UI polish: filter summary buttons now use `btn-default`, empty summaries render blank, text operators include an empty top option plus short descriptions, operator selects refocus the related text input, structured filter labels/placeholders/hints were adjusted, date quick buttons use explicit small buttons, search hints are hidden for custom-filter lists, and Vue Apply/Clear hides the open dropdown.
+- Follow-up Access parity: empty text operator is the visible default and serializes as contains, summary buttons use `&nbsp;` fallback to preserve height, text adds does-not-begin/end-with, and number conditions add not-equal.
 
 ## Scope reviewed
 - `docs/agents/local_instructions.md`
@@ -15,16 +17,24 @@
 - Dynamic/Vue controller config and list rendering paths.
 - Server templates under `osafw-app/App_Data/template/common/list` and `common/vue`.
 - No >1 MB files required whole-file reads.
+- Latest feedback pass reviewed only active filter/template/JS/CSS/server files; old task-summary files were not rescanned for local-path tokens.
+- Reviewed Access reference screenshots under `docs/drafts/2026-06-09(filters)/`: text, number, and date filter menus.
 
 ## Commands used / verification
-- Visual Studio MCP: verified solution/project list, ran `build_project` on `osafw-app`; initial build succeeded. A later VS build reported `FailedProjects: 1` while the running app/output was locked, but Error List was empty and isolated CLI build passed.
+- Visual Studio MCP: verified solution/project list, build status clean, ran `build_project` on `osafw-app`; latest VS project build completed with `FailedProjects: 0`.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=..\artifacts\assistant_build\` - passed, 0 warnings/errors.
-- `dotnet test osafw-tests\osafw-tests.csproj --filter FwControllerColumnFilterTests -p:OutDir=..\artifacts\assistant_test_build\` - passed, 6 tests.
+- `dotnet test osafw-tests\osafw-tests.csproj --filter FwControllerColumnFilterTests -p:OutDir=..\artifacts\assistant_test_build\` - passed, 9 tests.
 - Playwright `https://localhost:44315/Admin/DemosDynamic`: typed filters rendered, `fw.js?v0.26.0601` loaded, starts-with text control serialized to JSON.
 - Playwright `https://localhost:44315/Admin/DemosVue`: Vue column-filter component resolved, filters rendered, no Vue warnings or console errors.
 - Playwright `https://localhost:44315/Admin/Users`: simple controller kept legacy text search inputs and rendered no typed filters.
+- Follow-up Playwright `https://localhost:44315/Admin/DemosDynamic`: loaded `SITE_VERSION` `0.26.0609.2`, row height stayed 40.5px with dropdown open, empty summaries were blank, summary buttons used `btn-default`, operator labels/descriptions rendered, operator select focused its input, multi/autocomplete labels/placeholders/hints rendered, date quick buttons were `btn-sm`, and no `Search hints` toast appeared.
+- Follow-up Playwright `https://localhost:44315/Admin/DemosVue`: row height stayed 48.5px, empty summaries were blank, operator select padding was 2px in normal and dense modes, operator select focused its input after Vue tick, Vue date Apply and Clear closed the dropdown, and the only console error was the existing `/_vs/browserLink` 404.
+- Latest Playwright `https://localhost:44315/Admin/DemosDynamic`: loaded `SITE_VERSION` `0.26.0609.3`, row stayed 40.5px, empty text operator serialized to `op:"contains"`, operator padding-right computed to 32px, summary HTML was `&nbsp;`, and number not-equal input rendered.
+- Latest Playwright `https://localhost:44315/Admin/DemosVue`: row stayed 48px, normal/dense operator padding-right computed to 32px, summary HTML was `&nbsp;`, number not-equal input rendered, empty operator committed `op:"contains"`, no `Search hints` toast appeared, and the only console error was the existing `/_vs/browserLink` 404.
 - Code reviewer sub-agent reported four issues; all were fixed, and the final self-review found no remaining issues worth another loop.
+- Follow-up self-review found one dense-mode operator padding miss; fixed and reran verification. No remaining issues found. Review loop can stop.
 - `git diff --check` - passed.
+- CRLF check for touched files - passed.
 - Follow-up path cleanup: repo-root/prohibited local path search returned no matches.
 - Follow-up template move: stale old partial-name include search returned no matches; `common/list/filters/` contains the server partials.
 - Follow-up browser smoke was blocked by login state on the existing IIS Express instance; build/tests and template-reference checks passed.
@@ -35,6 +45,7 @@
 - Use `filter_field` as the trusted config alias to the SQL column and quote it with `db.qid`; user values always go through `list_where_params`.
 - Treat malformed JSON as legacy text search so typed opt-in does not eat searches that happen to start with `{`.
 - Bump `SITE_VERSION` because `fw.js` changed and the running browser had the old asset cached under the prior version.
+- No changelog entry was added for the follow-up UI polish because it is still within the unreleased opt-in column-filter work and does not add a new breaking upgrade requirement.
 
 ## Pitfalls - fixes
 - Shared server header partial initially replaced legacy search cells for disabled controllers; fixed with a legacy fallback when `filter_type` is absent.
@@ -43,10 +54,13 @@
 - Review found autocomplete was only comma-token text; fixed with real server `data-autocomplete`, Vue `autocomplete` component usage, and ID extraction from formatted `label ::: id` values.
 - ParsePage consumed a JavaScript template literal in the Vue component, causing `Unexpected token '{'`; fixed with string concatenation.
 - Project-local relative `OutDir` created recursive `artifacts` under `osafw-app`; removed generated output and reran builds with repo-root artifact paths.
+- Bootstrap `.input-group-sm > .form-select` and dense-mode list padding overrode the requested narrow operator select padding; fixed with narrowly scoped `.fw-column-filter-op` selectors and verified computed 2px padding in both modes.
+- Vue summary fallback was kept as escaped text plus a literal `&nbsp;`, not `v-html`, so lookup/autocomplete labels remain escaped.
 
 ## Risks / follow-ups
 - Autocomplete filtering supports selected formatted values and manual fallback text, but large lookup UX may need multi-value chips in a later phase.
 - Date range tests cover UTC-suffixed datetime boundaries; broader timezone/manual DB checks would be useful for non-UTC DB-local datetime fields.
+- Access-style date presets were reviewed but intentionally not implemented in this pass; UI/API options should be agreed before expanding date filter behavior.
 - Existing unrelated untracked/generated paths are present in the worktree and should not be included with this task.
 
 ## Heuristics (keep terse)
@@ -60,4 +74,4 @@
 - Manual smoke: log in to `https://localhost:44315/`, check `/Admin/DemosDynamic`, `/Admin/DemosVue`, and `/Admin/Users` filter rows.
 
 ## Reflection
-The Visual Studio MCP path was useful for solution validation and launch attempts, but build diagnostics were weaker than the CLI when the running app/output was locked. Future runs should use VS MCP first when requested, then switch quickly to absolute `OutDir` CLI builds for actionable diagnostics. The reviewer sub-agent caught real contract misses; delegation was worth it here because server, Vue, and template behavior changed together. No stable framework facts, heuristics, or ADRs were added beyond the docs/config changes in this task; the reusable lessons are recorded above for user review.
+The Visual Studio MCP path was useful for solution validation and launch attempts, but CLI isolated builds remained the clearest compile signal. Playwright-side computed-style checks were important for Bootstrap specificity issues that static review missed; future UI polish passes should verify the actual computed style, not just class/rule presence. The reviewer sub-agent caught real contract misses in the larger pass; for this smaller follow-up, self-review plus browser checks was faster and still found one dense-mode gap. No stable framework facts, heuristics, or ADRs were added beyond the docs/config changes in this task; the reusable lessons are recorded above for user review.
