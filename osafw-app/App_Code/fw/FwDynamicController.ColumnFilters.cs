@@ -239,7 +239,6 @@ public partial class FwDynamicController
         };
     }
 
-
     private void enrichListColumnFilterHeaders()
     {
         if (!is_list_column_filters || list_headers.Count == 0)
@@ -366,8 +365,9 @@ public partial class FwDynamicController
             var label = value;
             if (filter["type"].toStr() == "autocomplete")
             {
-                id = autocompleteValue(value);
-                label = autocompleteLabel(value);
+                (label, id) = FormUtils.parseAutocomplete(value);
+                if (id.Length == 0)
+                    id = label;
             }
             else if (filter["options"] is IList optionRows)
             {
@@ -603,7 +603,15 @@ public partial class FwDynamicController
 
         var sqlParams = new StrList();
         foreach (var value in values.Take(LIST_COLUMN_FILTER_MULTI_VALUE_LIMIT))
-            sqlParams.Add(addListColumnFilterParam(filter, "in", filter["type"].toStr() == "autocomplete" ? autocompleteValue(value) : value));
+        {
+            var paramValue = value;
+            if (filter["type"].toStr() == "autocomplete")
+            {
+                var (label, id) = FormUtils.parseAutocomplete(value);
+                paramValue = id.Length > 0 ? id : label;
+            }
+            sqlParams.Add(addListColumnFilterParam(filter, "in", paramValue));
+        }
 
         var field = db.qid(filter["filter_field"].toStr());
         list_where += $" AND {field} IN ({string.Join(",", sqlParams)})";
@@ -636,18 +644,6 @@ public partial class FwDynamicController
             foreach (var item in raw.toStr().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
                 values.Add(item);
         return new StrList(values.Take(LIST_COLUMN_FILTER_MULTI_VALUE_LIMIT));
-    }
-
-    private static string autocompleteValue(string value)
-    {
-        var separatorIndex = value.IndexOf(FormUtils.AUTOCOMPLETE_SEPARATOR, StringComparison.Ordinal);
-        return separatorIndex < 0 ? value : value[(separatorIndex + FormUtils.AUTOCOMPLETE_SEPARATOR.Length)..].Trim();
-    }
-
-    private static string autocompleteLabel(string value)
-    {
-        var separatorIndex = value.IndexOf(FormUtils.AUTOCOMPLETE_SEPARATOR, StringComparison.Ordinal);
-        return separatorIndex < 0 ? value : value[..separatorIndex].Trim();
     }
 
     private DateTime? parseListColumnFilterDate(string value)

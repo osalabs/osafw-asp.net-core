@@ -340,7 +340,7 @@ public class FwDynamicControllerColumnFilterTests
 
         controller.ApplySearch(new FwDict
         {
-            ["dict_link_auto_iname"] = Utils.jsonEncode(new FwDict { ["type"] = "autocomplete", ["values"] = new ObjList { "Alpha ::: 12" } })
+            ["dict_link_auto_iname"] = Utils.jsonEncode(new FwDict { ["type"] = "autocomplete", ["values"] = new ObjList { "Alpha:::12" } })
         });
 
         StringAssert.Contains(controller.WhereSql, "[lookup_id] IN (@cf_dict_link_auto_iname_in_0)");

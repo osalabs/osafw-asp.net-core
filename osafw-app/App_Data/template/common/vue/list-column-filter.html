@@ -368,7 +368,7 @@
                 return option ? option.iname : value;
             },
             autocompleteLabel(value) {
-                const separator = ' ::: ';
+                const separator = ':::';
                 const index = value.indexOf(separator);
                 return index < 0 ? value : value.substring(0, index).trim();
             },

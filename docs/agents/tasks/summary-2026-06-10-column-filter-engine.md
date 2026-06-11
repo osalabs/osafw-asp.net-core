@@ -8,6 +8,7 @@
 - Follow-up simplification removed root-level Vue/header compatibility keys, moved server summary wording into ParsePage filter summary partials, changed Vue to read nested `header.filter`, and replaced the local column-filter JSON wrapper with `Utils.jsonDecodeDict()`.
 - Added `Utils.jsonDecodeDict()` and `Utils.jsonDecodeList()` helpers; column-filter request parsing now uses the dict helper directly.
 - Removed broad numeric coercion for multi-select/autocomplete IN params; autocomplete still strips display labels before binding.
+- Additional review pass replaced local autocomplete separator parsing with `FormUtils.parseAutocomplete()` and aligned Vue autocomplete summary parsing to tolerate `:::` with or without spaces.
 - Reworked column-filter tests from a plain `FwController` fixture to Dynamic/Vue behavior tests, and added JSON helper tests.
 - Updated `docs/dynamic.md`, `docs/templates.md`, and `docs/db.md`.
 
@@ -41,6 +42,8 @@
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_dynamic_column_filters_build\` - passed, 0 warnings/errors.
 - `dotnet test osafw-tests\osafw-tests.csproj --filter FwDynamicControllerColumnFilterTests -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_dynamic_column_filters_tests_column\` - passed, 18 tests after updating stale flat-header assertions.
 - `dotnet test osafw-tests\osafw-tests.csproj --filter "ClassName=osafw.Tests.UtilsTests|ClassName=osafw.Tests.FwReportsTests|ClassName=osafw.Tests.UserOwnedPreferencesSecurityTests" -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_dynamic_column_filters_tests_related\` - passed, 132 tests.
+- Follow-up review pass reran `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_dynamic_column_filters_build\` - passed, 0 warnings/errors.
+- Follow-up review pass reran `dotnet test osafw-tests\osafw-tests.csproj --filter FwDynamicControllerColumnFilterTests -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_dynamic_column_filters_tests_column\` - passed, 18 tests.
 - `git diff --check` - passed.
 - `powershell -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check ...` - all touched text files are UTF-8 without BOM and CRLF.
 - Code review loop: initial earlier reviewer sub-agent stalled and local review was used. Follow-up pass spawned a bounded reviewer for the current diff, but it also timed out and was closed; performed the same review locally against `docs/agents/code_reviewer.md` and found no issue worth another loop.
@@ -55,6 +58,7 @@
 - Kept C# preparation of `selected_options`, `values_count`, and canonical boolean state because templates need structured rows/state to render summaries without lookup or parsing logic.
 - Treated active dropdown state as presence of a valid committed typed payload, matching the stricter request format and avoiding field-by-field defensive state reconstruction.
 - Stopped converting IN-list values to numeric types. `DB` accepts object values, number-condition predicates still parse numbers, and autocomplete only needs label stripping before binding.
+- Reused `FormUtils.parseAutocomplete()` instead of local parsing because form and list filters should share the same tolerance for autocomplete display/id strings.
 - Did not add dynamic ParsePage include-by-value support. Static `template: "custom"` plus controller-local `index/list_filter_custom.html` satisfies the current customization need with less framework surface.
 - Did not add a changelog entry because this is still an unreleased feature refactor; related docs were updated.
 
