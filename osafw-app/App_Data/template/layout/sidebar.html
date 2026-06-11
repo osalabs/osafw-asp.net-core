@@ -13,6 +13,9 @@
 <ul class="nav nav-pills flex-column mt-3">
   <~logged_menu if="SESSION[user_id]" inline>
     <li class="nav-item">
+      <small class="d-block text-muted text-center px-3 pb-1 lh-sm" style="font-size: .75rem;"><~GLOBAL[current_time] date="long"><~version_stamp if="GLOBAL[app_version_stamp]" inline> @ <~GLOBAL[app_version_stamp]></~version_stamp></small>
+    </li>
+    <li class="nav-item">
       <a href="<~/main/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="Main">">
         <~/common/icons/grid-fill><~/main/index/title>
       </a>

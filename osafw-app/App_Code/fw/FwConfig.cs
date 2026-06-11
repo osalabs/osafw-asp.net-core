@@ -35,7 +35,8 @@ public static class FwConfig
     private static string? _trustedRootHost;
     private static string[]? _trustedHostPatterns;
 
-    private const string DefaultHostKey = "__default__";
+    private const string DEFAULT_HOST_KEY = "__default__";
+    private const int GIT_COMMIT_DISPLAY_LENGTH = 8;
 
     public static readonly char path_separator = Path.DirectorySeparatorChar;
 
@@ -142,6 +143,7 @@ public static class FwConfig
             initDefaults(null, "", ref tmp);
             if (configuration != null)
                 applyAppSettings(configuration, tmp);
+            tmp["app_version_stamp"] = resolveGitFetchHeadVersion(tmp["site_root"].toStr());
             var patterns = new List<string>();
             if (tmp["override"] is FwDict overs)
             {
@@ -224,6 +226,42 @@ public static class FwConfig
         st["date_format"] ??= DateUtils.DATE_FORMAT_MDY;
         st["time_format"] ??= DateUtils.TIME_FORMAT_12;
         st["timezone"] ??= DateUtils.TZ_UTC;
+    }
+
+    /// <summary>
+    /// Reads the last fetched deployment commit from the nearest `.git/FETCH_HEAD`.
+    /// </summary>
+    private static string resolveGitFetchHeadVersion(string siteRoot)
+    {
+        try
+        {
+            var currentDir = Path.GetFullPath(siteRoot);
+            while (!string.IsNullOrEmpty(currentDir))
+            {
+                var fetchHeadPath = Path.Combine(currentDir, ".git", "FETCH_HEAD");
+                if (File.Exists(fetchHeadPath))
+                {
+                    var fetchHead = File.ReadLines(fetchHeadPath).FirstOrDefault() ?? "";
+                    var match = Regex.Match(fetchHead.Trim(), "^[0-9a-fA-F]{7,64}");
+                    if (!match.Success)
+                        return "";
+
+                    var commit = match.Value;
+                    return commit[..Math.Min(GIT_COMMIT_DISPLAY_LENGTH, commit.Length)].ToLowerInvariant();
+                }
+
+                var parent = Directory.GetParent(currentDir);
+                if (parent == null || string.Equals(parent.FullName, currentDir, StringComparison.OrdinalIgnoreCase))
+                    return "";
+                currentDir = parent.FullName;
+            }
+        }
+        catch
+        {
+            return "";
+        }
+
+        return "";
     }
 
     /// <summary>
@@ -358,7 +396,7 @@ public static class FwConfig
         if (!string.IsNullOrEmpty(trimmed)) return trimmed;
 
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
-        return string.IsNullOrEmpty(environment) ? DefaultHostKey : environment;
+        return string.IsNullOrEmpty(environment) ? DEFAULT_HOST_KEY : environment;
     }
 
     private static string getOverrideName(string host, string cacheKey)
@@ -366,7 +404,7 @@ public static class FwConfig
         if (!string.IsNullOrEmpty(host))
             return host;
 
-        return cacheKey == DefaultHostKey ? string.Empty : cacheKey;
+        return cacheKey == DEFAULT_HOST_KEY ? string.Empty : cacheKey;
     }
 
     private static FwDict GetSettingsForHost(string? host = null, HttpContext? ctx = null)

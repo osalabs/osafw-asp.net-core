@@ -244,7 +244,7 @@ public class FW : IDisposable
 
         // per request settings
         G["request_url"] = request?.GetDisplayUrl() ?? "";
-        G["current_time"] = DateTime.Now;
+        G["current_time"] = DateTime.UtcNow;
 
         // override default lang with user's lang
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
