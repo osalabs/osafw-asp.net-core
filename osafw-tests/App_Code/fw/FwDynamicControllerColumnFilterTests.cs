@@ -89,9 +89,9 @@ public class FwDynamicControllerColumnFilterTests
             return [];
         }
 
-        public void BuildHeaders()
+        public void BuildHeaders(FwDict? search = null)
         {
-            list_filter_search = [];
+            list_filter_search = search ?? [];
             setViewList(false);
         }
 
@@ -526,5 +526,25 @@ public class FwDynamicControllerColumnFilterTests
 
         var multiFilter = FilterFor(controller.HeaderFor("inline_status"));
         Assert.IsInstanceOfType(multiFilter["options"], typeof(FwList));
+    }
+
+    [TestMethod]
+    public void VueControllerHeadersExposeLegacyTextSearchMetadata()
+    {
+        var fw = TestHelpers.CreateFw();
+        TestHelpers.RegisterModel(fw, new LookupOptionsModel());
+        var controller = new TestVueController();
+        controller.InitForTest(fw, BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.BuildHeaders(new FwDict { ["name"] = "^Acme" });
+
+        var filter = FilterFor(controller.HeaderFor("name"));
+        Assert.AreEqual("starts_with", filter["op"]);
+        Assert.AreEqual("Acme", filter["value"]);
+        Assert.AreEqual("^Acme", filter["search_value"]);
+
+        var template = File.ReadAllText(Path.Combine(RepoRoot(), "osafw-app", "App_Data", "template", "common", "vue", "list-column-filter.html"));
+        StringAssert.Contains(template, "this.filter.op || 'contains'");
+        StringAssert.Contains(template, "this.hasFilterValue(this.filter.value) ? this.filter.value : raw");
     }
 }

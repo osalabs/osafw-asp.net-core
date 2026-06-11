@@ -428,10 +428,10 @@ public abstract partial class FwController
                 {
                     if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
                     {
-                        if (f1["f"] is FwDict || f1.ContainsKey("search"))
+                        if (f1["f"] is FwDict fSplit && f1["search"] is FwDict searchSplit)
                         {
-                            f = f1["f"] as FwDict ?? [];
-                            saved_filter_search = f1["search"] as FwDict ?? [];
+                            f = fSplit;
+                            saved_filter_search = searchSplit;
                         }
                         else
                         {

@@ -274,7 +274,13 @@
                     try { return JSON.parse(trimmed); } catch { return null; }
                 }
 
-                return this.filterType === 'text' ? { type: 'text', op: 'contains', value: raw } : null;
+                if (this.filterType !== 'text') return null;
+
+                return {
+                    type: 'text',
+                    op: this.filter.op || 'contains',
+                    value: this.hasFilterValue(this.filter.value) ? this.filter.value : raw
+                };
             },
             applyText() {
                 this.apply();
