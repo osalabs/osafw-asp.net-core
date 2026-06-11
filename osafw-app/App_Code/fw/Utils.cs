@@ -921,6 +921,21 @@ public class Utils
     /// </summary>
     public static object? jsonDecode(string str)
     {
+        try
+        {
+            return jsonDecodeOrThrow(str);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Converts JSON text into framework values and throws when the payload is malformed.
+    /// </summary>
+    public static object? jsonDecodeOrThrow(string str)
+    {
         if (string.IsNullOrEmpty(str))
             return null;
 
@@ -931,20 +946,10 @@ public class Utils
             CommentHandling = JsonCommentHandling.Skip
         };
 
-        object? result;
-        try
-        {
-            var reader = new Utf8JsonReader(jsonUtf8, options);
-            reader.Read(); //initial read
+        var reader = new Utf8JsonReader(jsonUtf8, options);
+        reader.Read(); //initial read
 
-            result = jsonDecodeRead(ref reader);
-        }
-        catch (Exception)
-        {
-            //ignore json errors, just return null, uncomment and log error for debug
-            throw;
-        }
-        return result;
+        return jsonDecodeRead(ref reader);
     }
 
     private static object? jsonDecodeRead(ref Utf8JsonReader reader)

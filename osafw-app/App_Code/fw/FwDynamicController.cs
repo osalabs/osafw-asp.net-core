@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class FwDynamicController : FwController
+public partial class FwDynamicController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
@@ -22,16 +22,6 @@ public class FwDynamicController : FwController
     public override void init(FW fw)
     {
         base.init(fw);
-    }
-
-    /// <summary>
-    /// Enables typed list column filters only when a Dynamic/Vue controller explicitly opts in through config.
-    /// </summary>
-    /// <param name="controllerConfig">Controller config loaded from `config.json` or a virtual-controller payload.</param>
-    protected override void configureListColumnFilters(FwDict controllerConfig)
-    {
-        base.configureListColumnFilters(controllerConfig);
-        is_list_column_filters = list_column_filters["enabled"].toBool();
     }
 
     /// <summary>
@@ -886,26 +876,6 @@ public class FwDynamicController : FwController
         }
 
         return allFields;
-    }
-
-    /// <summary>
-    /// Returns all reusable dynamic form field definitions keyed by field name for list column filter inference.
-    /// </summary>
-    /// <returns>Field-name keyed dynamic definitions from showform and show configs.</returns>
-    protected override FwDict getListColumnFilterFormFieldDefs()
-    {
-        var result = new FwDict();
-        foreach (var prefix in new[] { "showform_fields", "show_fields" })
-        {
-            foreach (FwDict def in collectFormFields(prefix))
-            {
-                var field = def["field"].toStr();
-                if (field.Length > 0 && !result.ContainsKey(field))
-                    result[field] = def;
-            }
-        }
-
-        return result;
     }
 
     /// <summary>

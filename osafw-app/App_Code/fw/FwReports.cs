@@ -120,7 +120,7 @@ public class FwReports : FwModel<FwReports.Row>
             object? decoded;
             try
             {
-                decoded = Utils.jsonDecode(paramsJson);
+                decoded = Utils.jsonDecodeOrThrow(paramsJson);
             }
             catch (Exception ex)
             {
@@ -217,7 +217,7 @@ public class FwReports : FwModel<FwReports.Row>
         object? decoded;
         try
         {
-            decoded = Utils.jsonDecode(renderOptionsJson);
+            decoded = Utils.jsonDecodeOrThrow(renderOptionsJson);
         }
         catch (Exception ex)
         {

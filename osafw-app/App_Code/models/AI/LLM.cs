@@ -174,7 +174,7 @@ public class LLM : FwModel
 
         try
         {
-            return Utils.jsonDecode(jsonText);
+            return Utils.jsonDecodeOrThrow(jsonText);
         }
         catch (Exception ex)
         {

@@ -43,9 +43,6 @@ public abstract partial class FwController
     protected long list_count;                    // count of list rows returned from db
     protected FwList list_rows = [];               // list rows returned from db (array of hashes)
     protected FwList list_headers = [];            // list headers with misc meta info per column
-    protected bool is_list_column_filters = false; // true when typed per-column filters are enabled by a dynamic/vue controller
-    protected FwDict list_column_filters = [];     // list_column_filters config block
-    protected FwDict list_column_filter_defs = []; // cached typed filter definitions keyed by field name
     protected FwList list_pager = [];              // pager for the list from FormUtils.getPager
     protected int list_pagesize_export = 10000;  // max pagesize for export (to avoid memory issues on large exports), override in controller if needed
     protected string list_sortdef = string.Empty;               // required for Index, default list sorting: name asc|desc
@@ -130,7 +127,7 @@ public abstract partial class FwController
         }
 
         // CACHE MISS - load from file
-        var parsedObj = Utils.jsonDecode(Utils.getFileContent(full_path));
+        var parsedObj = Utils.jsonDecodeOrThrow(Utils.getFileContent(full_path));
         if (parsedObj is not FwDict parsed)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + full_path);
 
@@ -275,8 +272,6 @@ public abstract partial class FwController
         is_dynamic_showform = config["is_dynamic_showform"].toBool();
 
         route_return = config["route_return"].toStr();
-
-        configureListColumnFilters(config);
     }
 
     /// <summary>
@@ -726,57 +721,62 @@ public abstract partial class FwController
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
-            if (is_list_column_filters && applyListColumnFilterSearch(fieldname, value))
-                continue;
-
-            var qfieldname = db.qid(fieldname);
-            var fieldname_sql = db.sqlTextExpr(qfieldname);
-            var fieldname_sql_num = db.sqlNumberExpr(qfieldname);
-            var fieldname_sql_date = db.sqlDateExpr(qfieldname); //for date search
-
-            string op = value[..1];
-            string op2 = value.Length >= 2 ? value[..2] : string.Empty;
-
-            string v = value[1..];
-            if (op2 == "!=" || op2 == "<=" || op2 == ">=")
-                v = value[2..];
-
-            var qv = db.q(v); // quoted value
-            if (DateUtils.isDateStr(v))
-            {
-                //if input looks like a date - compare as date
-                fieldname_sql = fieldname_sql_date;
-                qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
-            }
-            else
-            {
-                if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
-                {
-                    //numerical comparison
-                    fieldname_sql = fieldname_sql_num;
-                    qv = db.qdec(v).toStr();
-                }
-            }
-
-            string op_value = op2 switch
-            {
-                // first - check for 2-char operators
-                "!=" => $" <> {qv}",
-                "<=" => $" <= {qv}",
-                ">=" => $" >= {qv}",
-                _ => op switch
-                {
-                    "=" => $" = {qv}",
-                    "<" => $" < {qv}",
-                    ">" => $" > {qv}",
-                    "!" => $" NOT LIKE {db.q($"%{v}%")}",
-                    "^" => $" LIKE {db.q($"{v}%")}",
-                    "$" => $" LIKE {db.q($"%{v}")}",
-                    _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
-                },// then check for 1-char operators
-            };
-            list_where += $" AND {fieldname_sql} {op_value}";
+            appendListSearchAdvancedField(fieldname, value);
         }
+    }
+
+    /// <summary>
+    /// Appends the legacy string-syntax predicate for one submitted list search field.
+    /// </summary>
+    protected virtual void appendListSearchAdvancedField(string fieldname, string value)
+    {
+        var qfieldname = db.qid(fieldname);
+        var fieldname_sql = db.sqlTextExpr(qfieldname);
+        var fieldname_sql_num = db.sqlNumberExpr(qfieldname);
+        var fieldname_sql_date = db.sqlDateExpr(qfieldname); //for date search
+
+        string op = value[..1];
+        string op2 = value.Length >= 2 ? value[..2] : string.Empty;
+
+        string v = value[1..];
+        if (op2 == "!=" || op2 == "<=" || op2 == ">=")
+            v = value[2..];
+
+        var qv = db.q(v); // quoted value
+        if (DateUtils.isDateStr(v))
+        {
+            //if input looks like a date - compare as date
+            fieldname_sql = fieldname_sql_date;
+            qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
+        }
+        else
+        {
+            if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
+            {
+                //numerical comparison
+                fieldname_sql = fieldname_sql_num;
+                qv = db.qdec(v).toStr();
+            }
+        }
+
+        string op_value = op2 switch
+        {
+            // first - check for 2-char operators
+            "!=" => $" <> {qv}",
+            "<=" => $" <= {qv}",
+            ">=" => $" >= {qv}",
+            _ => op switch
+            {
+                "=" => $" = {qv}",
+                "<" => $" < {qv}",
+                ">" => $" > {qv}",
+                "!" => $" NOT LIKE {db.q($"%{v}%")}",
+                "^" => $" LIKE {db.q($"{v}%")}",
+                "$" => $" LIKE {db.q($"%{v}")}",
+                _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
+            },// then check for 1-char operators
+        };
+        list_where += $" AND {fieldname_sql} {op_value}";
     }
 
     /// <summary>
@@ -1443,9 +1443,6 @@ public abstract partial class FwController
             var fieldName = header["field_name"].toStr();
             header["search_value"] = list_filter_search?[fieldName];
         }
-        if (is_column_filters)
-            enrichListColumnFilterHeaders();
-
         if (is_cols)
         {
             var hcustom = Utils.qh(view_list_custom);

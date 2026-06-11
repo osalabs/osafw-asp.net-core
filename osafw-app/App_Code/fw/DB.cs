@@ -3067,6 +3067,25 @@ public class DB : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Returns full schema metadata for one table field, or an empty dictionary when it cannot be found.
+    /// </summary>
+    public FwDict schemaField(string table, string field_name)
+    {
+        if (string.IsNullOrEmpty(table) || string.IsNullOrEmpty(field_name))
+            return [];
+
+        try
+        {
+            var schema = tableSchemaFull(table);
+            return schema[field_name.ToLowerInvariant()] as FwDict ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     // return array of foreign keys in the table as array of hashtables
     // {
     //   name=>"constraint name",

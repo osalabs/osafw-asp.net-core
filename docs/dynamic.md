@@ -70,7 +70,7 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 
 ### List column filters
 
-`list_column_filters.enabled` opts a Dynamic or Vue list into typed per-column filters. The default is disabled, and simple controllers keep the legacy text-only `search[field]` behavior unless they explicitly call the shared helpers.
+`list_column_filters.enabled` opts a Dynamic or Vue list into typed per-column filters. The default is disabled, and plain `FwController` screens keep the legacy text-only `search[field]` behavior.
 
 ```json
 "list_column_filters": {
@@ -101,7 +101,7 @@ Supported types are `text`, `date_range`, `multi_select`, `autocomplete`, `numbe
 
 Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`, `!abc`, `^abc` for starts-with, `$abc` for ends-with, `!^abc` for does-not-start-with, and `!$abc` for does-not-end-with) and also accept JSON such as `{"type":"text","op":"starts_with","value":"abc"}`. Number conditions support `equal`, `not_equal`, `gte`, `lte`, inclusive `from`/`to`, and strict `not_between_from`/`not_between_to`. Typed filters submit JSON through the same `search[field]` key and are converted to parameterized SQL server-side.
 
-`filter_field` can point a visible list alias to the real list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
+`fields` is optional. When it is omitted, Dynamic infers typed filters for visible simple fields from form definitions and table schema. Calculated fields, aliases, dotted fields, and expressions need an explicit entry. `filter_field` can point a visible list alias to the real simple list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
 
 To customize an inferred filter, add the field under `list_column_filters.fields` and override only the parts that differ:
 
@@ -125,15 +125,15 @@ To customize an inferred filter, add the field under `list_column_filters.fields
 }
 ```
 
-For custom server behavior, override `applyListColumnFilter(FwDict def, object rawValue)` and return `true` after appending a safe predicate. Cast `rawValue` to `FwDict`, read only your whitelisted field, and put user values into `list_where_params`:
+For custom server behavior in a Dynamic controller, override `applyListColumnFilter(FwDict def, FwDict rawValue)` and return `true` after appending a safe predicate. Read only your whitelisted field, and put user values into `list_where_params`. The normalized `def` includes `field`, `field_name`, `type`, and `filter_field`:
 
 ```csharp
-protected override bool applyListColumnFilter(FwDict def, object rawValue)
+protected override bool applyListColumnFilter(FwDict def, FwDict rawValue)
 {
-    if (def["field_name"].toStr() != "score_band" || rawValue is not FwDict raw)
+    if (def["field_name"].toStr() != "score_band")
         return false;
 
-    var band = raw["value"].toStr();
+    var band = rawValue["value"].toStr();
     if (band == "high")
     {
         list_where += " AND [score] >= @score_band";
@@ -145,12 +145,12 @@ protected override bool applyListColumnFilter(FwDict def, object rawValue)
 }
 ```
 
-For custom UI on server-rendered Dynamic screens, set `template` to a filter-cell partial that renders a compact one-line trigger or input and writes the committed JSON to `search[field]`:
+For custom UI on server-rendered Dynamic screens, set `template` to `"custom"` and add `index/list_filter_custom.html` under the controller template directory. That controller-local partial is included from the common filter cell and can branch on `filter[field]`; it should render a compact one-line trigger or input and write committed JSON to `search[field]`.
 
 ```json
 "score_band": {
   "type": "text",
-  "template": "/admin/orders/list/filters/score_band.html"
+  "template": "custom"
 }
 ```
 

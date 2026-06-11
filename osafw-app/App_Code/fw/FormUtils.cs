@@ -201,6 +201,21 @@ public class FormUtils
         return result;
     }
 
+    /// <summary>
+    /// Normalizes inline select options to rows with <c>id</c> and <c>iname</c> keys.
+    /// </summary>
+    /// <param name="options">Either a value-to-label dictionary or a list of option rows.</param>
+    public static FwList normalizeSelectOptions(object? options)
+    {
+        if (options is FwDict inlineOptions)
+            return new FwList(inlineOptions.Select(entry => new FwDict { ["id"] = entry.Key, ["iname"] = entry.Value }));
+
+        if (options is IList optionRows && options is not string)
+            return new FwList(optionRows);
+
+        return [];
+    }
+
     public static string cleanInput(string strIn)
     {
         // Replace invalid characters with empty strings.
