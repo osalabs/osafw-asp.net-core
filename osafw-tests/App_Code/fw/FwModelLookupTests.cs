@@ -150,6 +150,30 @@ public class FwModelLookupTests
     }
 
     [TestMethod]
+    public void ListSelectOptions_SelectedIdRespectsLookupFiltersByDefault()
+    {
+        var db = new FakeDb();
+        db.Results.Enqueue([]);
+        var model = BuildModel(db);
+        var def = new FwDict
+        {
+            ["record_id"] = 10,
+            ["field"] = "lookup_id",
+            ["i"] = new FwDict { ["id"] = 10, ["lookup_id"] = 2 },
+        };
+
+        model.listSelectOptions(def, baseWhere: DB.h("parent_id", 0));
+
+        Assert.HasCount(1, db.SqlCalls);
+        StringAssert.Contains(db.SqlCalls[0], "[parent_id] = @lookup_filter_0");
+        StringAssert.Contains(db.SqlCalls[0], "[status] <> @status_deleted");
+        StringAssert.Contains(db.SqlCalls[0], "([status] = @status_active OR [id] = @selected_id)");
+        Assert.IsFalse(db.SqlCalls[0].Contains("OR ([status] <> @status_deleted AND [id] = @selected_id)"));
+        Assert.AreEqual(0, db.ParamCalls[0]["lookup_filter_0"]);
+        Assert.AreEqual(2, db.ParamCalls[0]["selected_id"]);
+    }
+
+    [TestMethod]
     public void ListSelectOptions_IgnoresInactiveDefaultsOnAdd()
     {
         var db = new FakeDb();
@@ -278,7 +302,8 @@ public class FwModelLookupTests
         StringAssert.Contains(db.SqlCalls[0], "UPPER(iname) AS iname");
         StringAssert.Contains(db.SqlCalls[0], "[demo_dicts_id] = @lookup_filter_0");
         StringAssert.Contains(db.SqlCalls[0], "[parent_id] = @lookup_filter_1");
-        StringAssert.Contains(db.SqlCalls[0], "[iname] = @selected_value");
+        StringAssert.Contains(db.SqlCalls[0], "(([demo_dicts_id] = @lookup_filter_0 AND [parent_id] = @lookup_filter_1) AND [status] = @status_active)");
+        StringAssert.Contains(db.SqlCalls[0], "OR ([status] <> @status_deleted AND [iname] = @selected_value)");
         Assert.AreEqual(7, db.ParamCalls[0]["lookup_filter_0"]);
         Assert.AreEqual(0, db.ParamCalls[0]["lookup_filter_1"]);
         Assert.AreEqual("Inactive Demo", db.ParamCalls[0]["selected_value"]);

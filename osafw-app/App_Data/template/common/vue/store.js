@@ -202,7 +202,7 @@ let getters = {
             // initial load - don't set filters, we'll get them from backend
         } else {
             req.dofilter = 1;
-            req.scope = 'list_rows'; // after initial load we only need list_rows
+            req.scope = state.is_list_edit ? 'list_rows,lookups' : 'list_rows';
             Object.keys(state.f).forEach(key => {
                 req['f[' + key + ']'] = state.f[key] ?? ''; //null to empty string
             });

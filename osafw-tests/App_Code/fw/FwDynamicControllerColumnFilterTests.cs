@@ -74,6 +74,8 @@ public class FwDynamicControllerColumnFilterTests
 
     private class TestVueController : FwVueController
     {
+        public FwList TestRows { get; set; } = [];
+
         public void InitForTest(FW fw, FwDict config)
         {
             fw.G["controller.action"] = "VueColumnFilterTests";
@@ -93,6 +95,24 @@ public class FwDynamicControllerColumnFilterTests
         {
             list_filter_search = search ?? [];
             setViewList(false);
+        }
+
+        protected override void setScopeListRows(FwDict ps)
+        {
+            list_rows = TestRows;
+            list_count = list_rows.Count;
+            list_pager = [];
+            ps["list_rows"] = list_rows;
+            ps["count"] = list_count;
+            ps["pager"] = list_pager;
+        }
+
+        public FwDict BuildLookups(FwList rows)
+        {
+            list_rows = rows;
+            var ps = new FwDict();
+            setScopeLookups(ps);
+            return ps;
         }
 
         public FwDict HeaderFor(string fieldName)
@@ -320,6 +340,42 @@ public class FwDynamicControllerColumnFilterTests
     }
 
     [TestMethod]
+    public void LookupIdBlankFilters_TreatZeroAsBlank()
+    {
+        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.ApplySearch(new FwDict
+        {
+            ["lookup_model_id"] = Utils.jsonEncode(new FwDict { ["type"] = "blank" })
+        });
+
+        StringAssert.Contains(controller.WhereSql, "[lookup_model_id] IS NULL");
+        StringAssert.Contains(controller.WhereSql, "= 0");
+
+        controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+        controller.ApplySearch(new FwDict
+        {
+            ["lookup_model_id"] = Utils.jsonEncode(new FwDict { ["type"] = "not_blank" })
+        });
+
+        StringAssert.Contains(controller.WhereSql, "[lookup_model_id] IS NOT NULL");
+        StringAssert.Contains(controller.WhereSql, "<> 0");
+    }
+
+    [TestMethod]
+    public void NonLookupBlankFilters_DoNotTreatZeroAsBlank()
+    {
+        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.ApplySearch(new FwDict
+        {
+            ["status"] = Utils.jsonEncode(new FwDict { ["type"] = "blank" })
+        });
+
+        Assert.IsFalse(controller.WhereSql.Contains("= 0", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public void JsonNumberNotEqual_UsesParameterizedPredicate()
     {
         var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
@@ -526,6 +582,78 @@ public class FwDynamicControllerColumnFilterTests
 
         var multiFilter = FilterFor(controller.HeaderFor("inline_status"));
         Assert.IsInstanceOfType(multiFilter["options"], typeof(FwList));
+    }
+
+    [TestMethod]
+    public void VueLookupsIncludeCurrentListRowSelectedIds()
+    {
+        var fw = TestHelpers.CreateFw();
+        var lookupOptions = new LookupOptionsModel();
+        TestHelpers.RegisterModel(fw, lookupOptions);
+        var config = BuildConfig(fields: ExplicitFilterFields());
+        ((FwList)config["showform_fields"]!).Add(new FwDict
+        {
+            ["field"] = "lookup_model_id",
+            ["type"] = "select",
+            ["lookup_model"] = nameof(LookupOptionsModel),
+        });
+        ((FwList)config["showform_fields"]!).Add(new FwDict
+        {
+            ["field"] = "secondary_lookup_model_id",
+            ["type"] = "select",
+            ["lookup_model"] = nameof(LookupOptionsModel),
+        });
+        var controller = new TestVueController();
+        controller.InitForTest(fw, config);
+
+        var ps = controller.BuildLookups(
+        [
+            new FwDict { ["lookup_model_id"] = "12", ["secondary_lookup_model_id"] = "15" },
+            new FwDict { ["lookup_model_id"] = "14", ["secondary_lookup_model_id"] = "12" },
+            new FwDict { ["lookup_model_id"] = "12" },
+        ]);
+
+        Assert.IsInstanceOfType(ps["lookups"], typeof(FwDict));
+        var selected = lookupOptions.LastSelectedId as StrList;
+        Assert.IsNotNull(selected);
+        CollectionAssert.AreEqual(new[] { "12", "14", "15" }, selected!.ToArray());
+
+        var store = File.ReadAllText(Path.Combine(RepoRoot(), "osafw-app", "App_Data", "template", "common", "vue", "store.js"));
+        StringAssert.Contains(store, "is_list_edit");
+        StringAssert.Contains(store, "list_rows,lookups");
+    }
+
+    [TestMethod]
+    public void VueIndexActionListRowsLookupsScopeIncludesCurrentSelectedIds()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.request.Headers.Accept = "application/json";
+        fw.FORM["scope"] = "list_rows,lookups";
+        var lookupOptions = new LookupOptionsModel();
+        TestHelpers.RegisterModel(fw, lookupOptions);
+        var config = BuildConfig(fields: ExplicitFilterFields());
+        ((FwList)config["showform_fields"]!).Add(new FwDict
+        {
+            ["field"] = "lookup_model_id",
+            ["type"] = "select",
+            ["lookup_model"] = nameof(LookupOptionsModel),
+        });
+        var controller = new TestVueController();
+        controller.InitForTest(fw, config);
+        controller.TestRows =
+        [
+            new FwDict { ["lookup_model_id"] = "12" },
+            new FwDict { ["lookup_model_id"] = "14" },
+        ];
+
+        var ps = controller.IndexAction();
+
+        Assert.AreEqual(true, ps["_json"]);
+        Assert.IsInstanceOfType(ps["list_rows"], typeof(FwList));
+        Assert.IsInstanceOfType(ps["lookups"], typeof(FwDict));
+        var selected = lookupOptions.LastSelectedId as StrList;
+        Assert.IsNotNull(selected);
+        CollectionAssert.AreEqual(new[] { "12", "14" }, selected!.ToArray());
     }
 
     [TestMethod]

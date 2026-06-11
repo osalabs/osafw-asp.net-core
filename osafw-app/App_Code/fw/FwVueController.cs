@@ -194,6 +194,7 @@ public class FwVueController : FwDynamicController
             setViewList(false, false); // lookup-only JSON does not need filter UI options
 
         FwList showform_fields = collectFormFields("showform_fields");
+        var selectedValuesByLookupModel = listLookupSelectedValuesByLookupModel(showform_fields);
         //FwRow hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
@@ -208,7 +209,8 @@ public class FwVueController : FwDynamicController
             if (lookup_model.Length > 0 && dtype != "autocomplete" && !lookups.ContainsKey(lookup_model))
             {
                 //all lookup_models, except autocomplete (for those it could be too large)
-                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
+                var selectedValues = selectedValuesByLookupModel[lookup_model] as StrList;
+                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def, selectedValues != null && selectedValues.Count > 0 ? selectedValues : null);
             }
 
             var lookup_tpl = def["lookup_tpl"].toStr();
@@ -219,6 +221,39 @@ public class FwVueController : FwDynamicController
         }
 
         ps["lookups"] = lookups;
+    }
+
+    private FwDict listLookupSelectedValuesByLookupModel(FwList showformFields)
+    {
+        FwDict result = [];
+        if (list_rows.Count == 0)
+            return result;
+
+        foreach (FwDict def in showformFields)
+        {
+            var fieldName = def["field"].toStr();
+            var lookupModel = def["lookup_model"].toStr();
+            if (fieldName.Length == 0 || def["type"].toStr() == "autocomplete" || lookupModel.Length == 0)
+                continue;
+
+            foreach (FwDict row in list_rows)
+            {
+                var value = row[fieldName].toStr().Trim();
+                if (value.Length == 0)
+                    continue;
+
+                if (result[lookupModel] is not StrList values)
+                {
+                    values = [];
+                    result[lookupModel] = values;
+                }
+
+                if (!values.Contains(value))
+                    values.Add(value);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

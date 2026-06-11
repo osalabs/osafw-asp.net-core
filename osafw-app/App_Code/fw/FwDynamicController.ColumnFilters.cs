@@ -590,10 +590,23 @@ public partial class FwDynamicController
     {
         var field = db.qid(filter["filter_field"].toStr());
         var textExpr = db.sqlTextExpr(field);
+        var zeroExpr = isLookupIdColumnFilter(filter) ? db.sqlNumberExpr(field) : "";
         list_where += isNotBlank
-            ? $" AND ({field} IS NOT NULL AND {textExpr} <> '')"
-            : $" AND ({field} IS NULL OR {textExpr} = '')";
+            ? $" AND ({field} IS NOT NULL AND {textExpr} <> ''{(zeroExpr.Length > 0 ? $" AND {zeroExpr} <> 0" : "")})"
+            : $" AND ({field} IS NULL OR {textExpr} = ''{(zeroExpr.Length > 0 ? $" OR {zeroExpr} = 0" : "")})";
         return true;
+    }
+
+    private static bool isLookupIdColumnFilter(FwDict filter)
+    {
+        if (filter["lookup_by_value"].toBool())
+            return false;
+
+        if (filter["lookup_model"].toStr().Length == 0 && filter["lookup_table"].toStr().Length == 0)
+            return false;
+
+        var field = filter["filter_field"].toStr();
+        return field.EndsWith("_id", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool appendListColumnFilterIn(FwDict filter, StrList values)
