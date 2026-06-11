@@ -13,6 +13,9 @@
 - Vue inline-edit list refreshes now request `lookups` with `list_rows` and the server includes selected ids from current rows when loading lookup-model options. This keeps nonzero selected ids displayable when they are outside the default active lookup page/options.
 - Added a model-specific selected-lookup filter bypass hook and opted in only the `Demos` parent lookup, so saved parent selections outside the top-level parent option filter can render while generic lookup `baseWhere` constraints remain intact by default.
 - Renamed the boolean selected-lookup bypass hook to `isSelectedLookupFilterBypassAllowed()` to follow the project `is*` predicate naming convention.
+- 2026-06-11 follow-up review loop: number `from`/`to` and `not_between_from`/`not_between_to` filters now serialize, display, and mark active only when both endpoints are present.
+- Invalid boolean typed-filter values are ignored instead of silently filtering as `false`.
+- Parseable but unrecognized JSON search text now falls back to legacy search and restores as legacy text, while native `FwDict`/`IDictionary` typed filter payloads still apply without stringifying to a type name.
 
 ## Scope reviewed
 - `docs/agents/local_instructions.md`
@@ -34,6 +37,8 @@
 - Follow-up diff in `FwDynamicController.ColumnFilters.cs`, `FwVueController.cs`, `common/vue/store.js`, and `FwDynamicControllerColumnFilterTests.cs`.
 - Final manual-feedback diff also covered `FwModel.cs`, `Demos.cs`, and `FwModelLookupTests.cs` after the review loop identified that the selected-id option exception should not be global.
 - Final reviewer sub-agent checked the corrected generic/default lookup scoping plus Demos-specific opt-in and found no remaining issues.
+- 2026-06-11 review loop covered `FwDynamicController.ColumnFilters.cs`, `common/vue/list-column-filter.html`, `assets/js/fw.js`, and `FwDynamicControllerColumnFilterTests.cs`.
+- C# explorer sub-agent reviewed Dynamic column-filter engine/contracts and found the parseable JSON fallback/native payload gaps; a second template/client explorer was closed after repeated unproductive waits and the main agent performed the fallback review.
 
 ## Commands used / verification
 - Sub-agent worker for Vue search persistence: changed `store.js`; reported focused Node extraction check, `git diff --check`, and CRLF check passed.
@@ -60,6 +65,12 @@
   - `dotnet test osafw-tests\osafw-tests.csproj --filter FwModelLookupTests -p:OutDir=$PWD\artifacts\assistant_dynamic_column_filters_tests_lookup\` - passed, 11 tests.
   - `git diff --check` - passed.
   - `powershell -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check ...` - touched files are UTF-8 without BOM and CRLF.
+- 2026-06-11 required verification after follow-up fixes:
+  - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=$PWD\artifacts\assistant_dynamic_column_filters_build\` - passed, 0 warnings/errors.
+  - `dotnet test osafw-tests\osafw-tests.csproj --filter FwDynamicControllerColumnFilterTests -p:OutDir=$PWD\artifacts\assistant_dynamic_column_filters_tests_column\` - passed, 27 tests.
+  - `dotnet test osafw-tests\osafw-tests.csproj --filter "ClassName=osafw.Tests.UtilsTests|ClassName=osafw.Tests.FwReportsTests|ClassName=osafw.Tests.UserOwnedPreferencesSecurityTests" -p:OutDir=$PWD\artifacts\assistant_dynamic_column_filters_tests_related\` - passed, 133 tests.
+  - `git diff --check` - passed.
+  - `powershell -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check osafw-app\App_Code\fw\FwDynamicController.ColumnFilters.cs osafw-app\App_Data\template\common\vue\list-column-filter.html osafw-app\wwwroot\assets\js\fw.js osafw-tests\App_Code\fw\FwDynamicControllerColumnFilterTests.cs` - passed; touched files are UTF-8 without BOM and CRLF.
 
 ## Decisions - why
 - Keep `FwController.ColumnFilters.cs` for now per user direction.
@@ -74,6 +85,8 @@
 - Limited zero-as-blank behavior to lookup-backed `_id` filters. Status/radio/numeric fields can legitimately use `0`, so their blank predicates remain null/empty-string only.
 - Aggregated Vue selected lookup ids by `lookup_model`, matching the existing lookup payload key and preserving selections across multiple fields sharing one option source without changing the Vue data contract.
 - Kept selected-id bypass disabled for generic `FwModel.listSelectOptions()` because `baseWhere` can carry real relationship or security constraints. The opt-in hook is only enabled by `Demos` parent lookup for the UI presentation filter `parent_id=0`.
+- Kept incomplete typed number payloads as typed-but-inactive rather than falling back to legacy `LIKE` predicates, because applying literal JSON text to numeric/date columns would be misleading. Unrecognized JSON without a supported filter `type` falls back to legacy text search.
+- No docs/changelog update was needed for the 2026-06-11 loop because it tightens unreleased PR behavior and preserves the documented nested filter contract.
 
 ## Pitfalls - fixes
 - A sub-agent's first option-loading fix prevented lookup-backed multi-select dropdowns from rendering choices. Sent it back through a review-fix loop and accepted the revised request-cache approach instead.
@@ -84,6 +97,8 @@
 - A temporary artifact-hosted app was not suitable for browser smoke testing because templates are resolved outside the isolated DLL output. Avoid treating that empty-page result as an app regression.
 - A reviewer caught the initial shared `FwModel` selected-id bypass as too broad because it could leak rows outside `baseWhere`; the fix was reworked into a default-deny hook plus explicit `Demos` parent lookup opt-in.
 - Added an `IndexAction`-level Vue test after review noted that helper-only lookup tests did not exercise the `scope=list_rows,lookups` request path.
+- The first 2026-06-11 fix made unrecognized JSON text fall back in SQL but still restored it as an inactive typed object in headers. The follow-up patch applies the same recognition rule during header state preparation.
+- `apply_patch` introduced bare LF in edited files again; reran `Normalize-TextFiles.ps1` before final checks.
 
 ## Risks / follow-ups
 - True open-time lazy option loading remains a follow-up; it needs a small endpoint plus client loading/error states for both server-rendered and Vue filters.
@@ -91,6 +106,8 @@
 - The Vue template regression test includes a small source-contract assertion because the legacy-text restore behavior lives in client template code that the .NET test suite does not execute.
 - Final live-browser verification of the last Demos parent lookup opt-in was not rerun after that final patch; the VS-hosted app needs another rebuild/restart for that exact check. Automated tests now cover the corrected SQL contract and Vue request path.
 - The existing Vue lookup payload is keyed by lookup model, not field plus lookup parameters. This fix preserves that contract; two fields using the same model but incompatible lookup parameters still share one option list as before.
+- 2026-06-11 loop did not rerun live browser checks; automated tests cover the corrected server/client serialization contracts, but manual UI smoke remains the highest-value follow-up if the VS-hosted app is rebuilt.
+- Full suite was not run; focused build/tests matched the requested verification scope.
 
 ## Heuristics (keep terse)
 - Do not skip lookup-backed filter options unless the UI has a lazy path; otherwise the dropdown is empty.
@@ -103,7 +120,7 @@
 - Related tests: `dotnet test osafw-tests\osafw-tests.csproj --filter "ClassName=osafw.Tests.UtilsTests|ClassName=osafw.Tests.FwReportsTests|ClassName=osafw.Tests.UserOwnedPreferencesSecurityTests" -p:OutDir=$PWD\artifacts\assistant_dynamic_column_filters_tests_related\`
 - Lookup regression tests: `dotnet test osafw-tests\osafw-tests.csproj --filter FwModelLookupTests -p:OutDir=$PWD\artifacts\assistant_dynamic_column_filters_tests_lookup\`
 - Whitespace: `git diff --check`
-- CRLF/UTF-8: `powershell -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check <touched files>`
+- CRLF/UTF-8: `powershell -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check <touched files>`; 2026-06-11 touched files were `FwDynamicController.ColumnFilters.cs`, `list-column-filter.html`, `fw.js`, and `FwDynamicControllerColumnFilterTests.cs`.
 
 ## Reflection
 Sub-agent delegation helped isolate the four requested findings quickly, but the option-loading worker's first pass shows that performance fixes need immediate UI-contract review when there is no lazy data path. Future agents should explicitly distinguish "dedupe repeated eager work" from "make eager work lazy"; the latter needs endpoint and client-state design, not just server omission. The main-agent line-ending check was necessary after manual patches. No stable framework facts, shared heuristics, or ADRs were added beyond this task summary because the remaining lazy-loading design is still a follow-up, not a settled framework rule.
@@ -111,3 +128,5 @@ Sub-agent delegation helped isolate the four requested findings quickly, but the
 Follow-up reviewers were useful: they found two restore regressions missed in the previous pass, one in saved-filter shape detection and one in Vue legacy text hydration. The worker was useful for quick implementation but needed main-agent integration because its first test fixture was incomplete and generated a local test-results folder. Future agents should treat saved preference JSON shape changes as backward-compatibility work and add collision tests for plausible legacy keys. No stable framework facts, shared heuristics, ADRs, or AGENTS changes were added; this pass fixed PR-specific regressions and preserved the existing documented nested filter contract.
 
 The manual-feedback loop showed that matching SQL semantics and rendered select semantics are separate checks for lookup-backed inline-edit columns. The final reviewer was valuable because it caught a security/ownership risk in a broad shared helper change before closeout; future agents should keep selected-id exception behavior model-specific unless they can prove `baseWhere` is only cosmetic. Temporary app verification with custom `OutDir` was not useful for Dynamic configs because template/config resolution followed the isolated output; prefer the VS-hosted app after rebuild for browser smoke checks. No shared heuristic/doc/ADR update was added because the selected-id bypass is a Demos-specific demo lookup behavior, not a settled framework-wide rule.
+
+The 2026-06-11 review loop showed that active-state restoration must use the same typed-payload recognition rules as SQL application; otherwise a fallback search can apply correctly while the header UI looks inactive. One explorer sub-agent was useful for finding the parseable JSON/native payload gap, while the second explorer did not return in time and was replaced by main-agent review. No stable framework facts, shared heuristics, ADRs, or AGENTS changes were added because the fixes are PR-local contract tightening rather than new general workflow.

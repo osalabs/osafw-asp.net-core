@@ -235,8 +235,13 @@
 
                 this.op = parsed.op === 'contains' ? '' : (parsed.op || this.op);
                 this.value = parsed.value || this.value || '';
-                this.from = parsed.from || '';
-                this.to = parsed.to || '';
+                if (this.filterType === 'number_conditions') {
+                    this.from = this.hasFilterValue(parsed.from) && this.hasFilterValue(parsed.to) ? parsed.from : '';
+                    this.to = this.hasFilterValue(parsed.from) && this.hasFilterValue(parsed.to) ? parsed.to : '';
+                } else {
+                    this.from = parsed.from || '';
+                    this.to = parsed.to || '';
+                }
                 this.values = (parsed.values || []).map(v => String(v));
                 this.valuesText = this.values.join(',');
                 this.equal = this.hasFilterValue(parsed.equal)
@@ -338,10 +343,14 @@
                     if (this.hasFilterValue(this.notEqual)) payload.not_equal = this.notEqual;
                     if (this.hasFilterValue(this.gte)) payload.gte = this.gte;
                     if (this.hasFilterValue(this.lte)) payload.lte = this.lte;
-                    if (this.hasFilterValue(this.from)) payload.from = this.from;
-                    if (this.hasFilterValue(this.to)) payload.to = this.to;
-                    if (this.hasFilterValue(this.notBetweenFrom)) payload.not_between_from = this.notBetweenFrom;
-                    if (this.hasFilterValue(this.notBetweenTo)) payload.not_between_to = this.notBetweenTo;
+                    if (this.hasFilterValue(this.from) && this.hasFilterValue(this.to)) {
+                        payload.from = this.from;
+                        payload.to = this.to;
+                    }
+                    if (this.hasFilterValue(this.notBetweenFrom) && this.hasFilterValue(this.notBetweenTo)) {
+                        payload.not_between_from = this.notBetweenFrom;
+                        payload.not_between_to = this.notBetweenTo;
+                    }
                     return Object.keys(payload).length > 1 ? payload : null;
                 }
 
@@ -388,16 +397,8 @@
                 if (this.hasFilterValue(notEqual)) parts.push({ kind: 'not_equal', value: notEqual });
                 if (this.hasFilterValue(parsed.gte)) parts.push({ kind: 'gte', value: parsed.gte });
                 if (this.hasFilterValue(parsed.lte)) parts.push({ kind: 'lte', value: parsed.lte });
-                if (this.hasFilterValue(parsed.from) || this.hasFilterValue(parsed.to)) {
-                    const from = this.hasFilterValue(parsed.from) ? parsed.from : '';
-                    const to = this.hasFilterValue(parsed.to) ? parsed.to : '';
-                    parts.push({ kind: 'between', from, to });
-                }
-                if (this.hasFilterValue(parsed.not_between_from) || this.hasFilterValue(parsed.not_between_to)) {
-                    const from = this.hasFilterValue(parsed.not_between_from) ? parsed.not_between_from : '';
-                    const to = this.hasFilterValue(parsed.not_between_to) ? parsed.not_between_to : '';
-                    parts.push({ kind: 'not_between', from, to });
-                }
+                if (this.hasFilterValue(parsed.from) && this.hasFilterValue(parsed.to)) parts.push({ kind: 'between', from: parsed.from, to: parsed.to });
+                if (this.hasFilterValue(parsed.not_between_from) && this.hasFilterValue(parsed.not_between_to)) parts.push({ kind: 'not_between', from: parsed.not_between_from, to: parsed.not_between_to });
                 return parts.length ? { kind: 'number', parts } : {};
             }
         }

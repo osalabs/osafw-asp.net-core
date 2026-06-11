@@ -493,16 +493,24 @@ window.fw={
         if (values.length) payload = { type: type, values: values };
       } else if (type === 'number_conditions') {
         payload = { type: 'number_conditions' };
-        ['equal', 'gte', 'lte', 'from', 'to'].forEach(function (key) {
+        ['equal', 'gte', 'lte'].forEach(function (key) {
           var value = $filter.find('[data-column-filter-' + key + ']').val() || '';
           if (value.length) payload[key] = value;
         });
         var notEqual = $filter.find('[data-column-filter-not-equal]').val() || '';
         if (notEqual.length) payload.not_equal = notEqual;
+        var from = $filter.find('[data-column-filter-from]').val() || '';
+        var to = $filter.find('[data-column-filter-to]').val() || '';
+        if (from.length && to.length) {
+          payload.from = from;
+          payload.to = to;
+        }
         var nbFrom = $filter.find('[data-column-filter-not-between-from]').val() || '';
         var nbTo = $filter.find('[data-column-filter-not-between-to]').val() || '';
-        if (nbFrom.length) payload.not_between_from = nbFrom;
-        if (nbTo.length) payload.not_between_to = nbTo;
+        if (nbFrom.length && nbTo.length) {
+          payload.not_between_from = nbFrom;
+          payload.not_between_to = nbTo;
+        }
         if (Object.keys(payload).length === 1) payload = null;
       } else if (type === 'boolean') {
         var boolValue = $filter.find('[data-column-filter-value]').val() || '';

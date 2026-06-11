@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
@@ -266,6 +267,15 @@ public class FwDynamicControllerColumnFilterTests
 
         StringAssert.Contains(controller.WhereSql, "LIKE @cf_name_text_0");
         Assert.AreEqual("Acme%", controller.WhereParams["cf_name_text_0"]);
+
+        controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+        controller.ApplySearch(new FwDict
+        {
+            ["name"] = new Hashtable { ["type"] = "text", ["op"] = "equals", ["value"] = "Beta" }
+        });
+
+        StringAssert.Contains(controller.WhereSql, "= @cf_name_text_0");
+        Assert.AreEqual("Beta", controller.WhereParams["cf_name_text_0"]);
     }
 
     [TestMethod]
@@ -390,6 +400,50 @@ public class FwDynamicControllerColumnFilterTests
     }
 
     [TestMethod]
+    public void IncompleteNumberConditionPairs_AreIgnoredAndNotMarkedActive()
+    {
+        var search = new FwDict
+        {
+            ["amount"] = Utils.jsonEncode(new FwDict
+            {
+                ["type"] = "number_conditions",
+                ["from"] = "3",
+                ["not_between_to"] = "9",
+            })
+        };
+        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.ApplySearch(search);
+
+        Assert.AreEqual(" 1=1 ", controller.WhereSql);
+
+        controller.BuildHeaders(search);
+        var filter = FilterFor(controller.HeaderFor("amount"));
+        Assert.IsFalse(filter["is_active"].toBool());
+        Assert.AreEqual("", filter["from"].toStr());
+        Assert.AreEqual("", filter["not_between_to"].toStr());
+    }
+
+    [TestMethod]
+    public void InvalidBooleanCondition_IsIgnoredAndNotMarkedActive()
+    {
+        var search = new FwDict
+        {
+            ["flag"] = Utils.jsonEncode(new FwDict { ["type"] = "boolean", ["value"] = "maybe" })
+        };
+        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.ApplySearch(search);
+
+        Assert.AreEqual(" 1=1 ", controller.WhereSql);
+
+        controller.BuildHeaders(search);
+        var filter = FilterFor(controller.HeaderFor("flag"));
+        Assert.IsFalse(filter["is_active"].toBool());
+        Assert.AreEqual("", filter["value"].toStr());
+    }
+
+    [TestMethod]
     public void ExplicitComplexAliasFilter_UsesConfiguredFilterField()
     {
         var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
@@ -425,6 +479,36 @@ public class FwDynamicControllerColumnFilterTests
         controller.ApplySearch(new FwDict { ["name"] = "{not-json" });
 
         StringAssert.Contains(controller.WhereSql, "LIKE '%{not-json%'");
+    }
+
+    [TestMethod]
+    public void ParseableJsonWithoutRecognizedFilterType_FallsBackToLegacySearch()
+    {
+        var rawSearch = "{\"foo\":\"bar\"}";
+        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.ApplySearch(new FwDict { ["name"] = rawSearch });
+
+        StringAssert.Contains(controller.WhereSql, "LIKE '%{\"foo\":\"bar\"}%'");
+
+        controller.BuildHeaders(new FwDict { ["name"] = rawSearch });
+        var filter = FilterFor(controller.HeaderFor("name"));
+        Assert.IsTrue(filter["is_active"].toBool());
+        Assert.AreEqual(rawSearch, filter["value"]);
+    }
+
+    [TestMethod]
+    public void NativeTypedPayload_AppliesWithoutStringifying()
+    {
+        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+
+        controller.ApplySearch(new FwDict
+        {
+            ["name"] = new FwDict { ["type"] = "text", ["op"] = "starts_with", ["value"] = "Acme" }
+        });
+
+        StringAssert.Contains(controller.WhereSql, "LIKE @cf_name_text_0");
+        Assert.AreEqual("Acme%", controller.WhereParams["cf_name_text_0"]);
     }
 
     [TestMethod]

@@ -40,11 +40,12 @@ public partial class FwDynamicController
     {
         foreach (string fieldname in list_filter_search.Keys)
         {
-            string value = list_filter_search[fieldname].toStr();
+            var rawValue = list_filter_search[fieldname];
+            string value = listColumnFilterSearchString(rawValue);
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
-            if (is_list_column_filters && applyListColumnFilterSearch(fieldname, value))
+            if (is_list_column_filters && applyListColumnFilterSearch(fieldname, rawValue))
                 continue;
 
             appendListSearchAdvancedField(fieldname, value);
@@ -270,6 +271,8 @@ public partial class FwDynamicController
         filter["search_value"] = header["search_value"];
         var rawSearch = filter["search_value"].toStr();
         var parsed = Utils.jsonDecodeDict(rawSearch);
+        if (parsed != null && !isRecognizedListColumnFilterPayload(filter, parsed))
+            parsed = null;
         applyListColumnFilterState(filter, parsed, rawSearch);
         if (filter["type"].toStr() == "multi_select")
             filter["options"] = loadListColumnFilterOptions(filter, filter["values_csv"].toStr());
@@ -280,7 +283,7 @@ public partial class FwDynamicController
             filter["values_count"] = values.Count;
             filter["selected_options"] = listColumnFilterSelectedOptions(filter, values);
         }
-        filter["is_active"] = parsed != null || (filter["type"].toStr() == "text" && rawSearch.Length > 0);
+        filter["is_active"] = isListColumnFilterActive(filter, parsed, rawSearch);
 
         header["filter"] = filter;
     }
@@ -307,8 +310,9 @@ public partial class FwDynamicController
                 filter["value"] = parsed["value"];
                 break;
             case "date_range":
-                filter["from"] = parsed["from"];
-                filter["to"] = parsed["to"];
+                var (quickFrom, quickTo) = quickListColumnFilterDateRange(parsed["quick"].toStr());
+                filter["from"] = quickFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? parsed["from"];
+                filter["to"] = quickTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? parsed["to"];
                 break;
             case "multi_select":
             case "autocomplete":
@@ -319,20 +323,49 @@ public partial class FwDynamicController
                 filter["not_equal"] = parsed["not_equal"].toStr(parsed["not_equals"].toStr());
                 filter["gte"] = parsed["gte"];
                 filter["lte"] = parsed["lte"];
-                filter["from"] = parsed["from"];
-                filter["to"] = parsed["to"];
-                filter["not_between_from"] = parsed["not_between_from"];
-                filter["not_between_to"] = parsed["not_between_to"];
+                if (parsed["from"].toStr().Length > 0 && parsed["to"].toStr().Length > 0)
+                {
+                    filter["from"] = parsed["from"];
+                    filter["to"] = parsed["to"];
+                }
+                if (parsed["not_between_from"].toStr().Length > 0 && parsed["not_between_to"].toStr().Length > 0)
+                {
+                    filter["not_between_from"] = parsed["not_between_from"];
+                    filter["not_between_to"] = parsed["not_between_to"];
+                }
                 break;
             case "boolean":
-                filter["value"] = parsed["value"].toStr().Trim().ToLowerInvariant() switch
-                {
-                    "1" or "true" or "yes" or "y" => "1",
-                    "0" or "false" or "no" or "n" => "0",
-                    var value => value,
-                };
+                var boolValue = normalizeListColumnFilterBooleanValue(parsed["value"]);
+                if (boolValue.Length > 0)
+                    filter["value"] = boolValue;
                 break;
         }
+    }
+
+    private bool isListColumnFilterActive(FwDict filter, FwDict? parsed, string rawSearch)
+    {
+        if (filter["blank_op"].toStr().Length > 0)
+            return true;
+
+        return filter["type"].toStr() switch
+        {
+            "text" => parsed == null ? rawSearch.Length > 0 : filter["value"].toStr().Length > 0,
+            "date_range" => filter["from"].toStr().Length > 0 || filter["to"].toStr().Length > 0,
+            "multi_select" or "autocomplete" => filter["values_count"].toInt() > 0,
+            "number_conditions" => isListColumnFilterNumberStateActive(filter),
+            "boolean" => filter["value"].toStr().Length > 0,
+            _ => parsed != null,
+        };
+    }
+
+    private static bool isListColumnFilterNumberStateActive(FwDict filter)
+    {
+        return tryGetListColumnFilterNumber(filter["equal"], out _)
+            || tryGetListColumnFilterNumber(filter["not_equal"], out _)
+            || tryGetListColumnFilterNumber(filter["gte"], out _)
+            || tryGetListColumnFilterNumber(filter["lte"], out _)
+            || (tryGetListColumnFilterNumber(filter["from"], out _) && tryGetListColumnFilterNumber(filter["to"], out _))
+            || (tryGetListColumnFilterNumber(filter["not_between_from"], out _) && tryGetListColumnFilterNumber(filter["not_between_to"], out _));
     }
 
     private static void applyLegacyTextDisplayValues(FwDict filter, string rawValue)
@@ -425,7 +458,12 @@ public partial class FwDynamicController
         ]);
     }
 
-    private bool applyListColumnFilterSearch(string fieldName, string value)
+    private static string listColumnFilterSearchString(object? value)
+    {
+        return value is not string && value is (IDictionary or IList) ? Utils.jsonEncode(value) : value.toStr();
+    }
+
+    private bool applyListColumnFilterSearch(string fieldName, object? value)
     {
         var defs = listColumnFilterDefs();
         if (defs[fieldName] is not FwDict def)
@@ -433,14 +471,34 @@ public partial class FwDynamicController
         if (!def["filterable"].toBool() || def["type"].toStr() == "none")
             return true;
 
-        var raw = Utils.jsonDecodeDict(value);
+        var raw = value switch
+        {
+            FwDict dict => dict,
+            IDictionary dictionary when value is not string => new FwDict(dictionary),
+            _ => Utils.jsonDecodeDict(value.toStr()),
+        };
         if (raw == null)
+            return false;
+        if (!isRecognizedListColumnFilterPayload(def, raw))
             return false;
         if (applyListColumnFilter(def, raw))
             return true;
 
         _ = applyTypedListColumnFilter(def, raw);
         return true;
+    }
+
+    private static bool isRecognizedListColumnFilterPayload(FwDict filter, FwDict raw)
+    {
+        var requestType = raw["type"].toStr();
+        if (requestType is "blank" or "not_blank")
+            return true;
+        if (raw["op"].toStr() is "blank" or "not_blank")
+            return true;
+        if (requestType.Length == 0)
+            return false;
+
+        return normalizeListColumnFilterType(requestType) == filter["type"].toStr();
     }
 
     private bool applyTypedListColumnFilter(FwDict filter, FwDict raw)
@@ -552,15 +610,27 @@ public partial class FwDynamicController
 
     private bool applyListColumnFilterBoolean(FwDict filter, FwDict raw)
     {
-        var value = raw["value"].toStr().Trim().ToLowerInvariant();
-        if (value.Length == 0 || value == "all")
+        var value = normalizeListColumnFilterBooleanValue(raw["value"]);
+        if (value.Length == 0)
             return false;
         if (value == "blank" || value == "not_blank")
             return appendListColumnFilterBlank(filter, value == "not_blank");
 
         var field = db.qid(filter["filter_field"].toStr());
-        list_where += $" AND {field} = {addListColumnFilterParam(filter, "bool", value is "1" or "true" or "yes" or "y" ? 1 : 0)}";
+        list_where += $" AND {field} = {addListColumnFilterParam(filter, "bool", value == "1" ? 1 : 0)}";
         return true;
+    }
+
+    private static string normalizeListColumnFilterBooleanValue(object? raw)
+    {
+        return raw.toStr().Trim().ToLowerInvariant() switch
+        {
+            "1" or "true" or "yes" or "y" => "1",
+            "0" or "false" or "no" or "n" => "0",
+            "blank" => "blank",
+            "not_blank" => "not_blank",
+            _ => "",
+        };
     }
 
     private bool appendListColumnFilterCompare(FwDict filter, string field, string op, string suffix, decimal value)
