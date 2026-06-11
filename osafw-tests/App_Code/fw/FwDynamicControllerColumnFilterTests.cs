@@ -312,8 +312,8 @@ public class FwDynamicControllerColumnFilterTests
         StringAssert.Contains(controller.WhereSql, "[status] IN (@cf_status_in_0,@cf_status_in_1)");
         StringAssert.Contains(controller.WhereSql, "([amount] < @cf_amount_notfrom_2 OR [amount] > @cf_amount_notto_3)");
         StringAssert.Contains(controller.WhereSql, "[flag] = @cf_flag_bool_4");
-        Assert.AreEqual(0L, controller.WhereParams["cf_status_in_0"]);
-        Assert.AreEqual(10L, controller.WhereParams["cf_status_in_1"]);
+        Assert.AreEqual("0", controller.WhereParams["cf_status_in_0"]);
+        Assert.AreEqual("10", controller.WhereParams["cf_status_in_1"]);
         Assert.AreEqual(3m, controller.WhereParams["cf_amount_notfrom_2"]);
         Assert.AreEqual(7m, controller.WhereParams["cf_amount_notto_3"]);
         Assert.AreEqual(1, controller.WhereParams["cf_flag_bool_4"]);
@@ -344,7 +344,7 @@ public class FwDynamicControllerColumnFilterTests
         });
 
         StringAssert.Contains(controller.WhereSql, "[lookup_id] IN (@cf_dict_link_auto_iname_in_0)");
-        Assert.AreEqual(12L, controller.WhereParams["cf_dict_link_auto_iname_in_0"]);
+        Assert.AreEqual("12", controller.WhereParams["cf_dict_link_auto_iname_in_0"]);
     }
 
     [TestMethod]
@@ -389,7 +389,6 @@ public class FwDynamicControllerColumnFilterTests
         Assert.IsInstanceOfType(filter["options"], typeof(FwList));
         Assert.AreEqual(2, ((FwList)filter["options"]!).Count);
         Assert.AreSame(filter["options"], altFilter["options"]);
-        Assert.AreSame(filter["options"], header["filter_options"]);
     }
 
     [TestMethod]
@@ -412,9 +411,10 @@ public class FwDynamicControllerColumnFilterTests
         var altHeader = controller.HeaderFor("lookup_model_alt_id");
         var filter = FilterFor(header);
         var altFilter = FilterFor(altHeader);
-        Assert.AreEqual("Selected Lookup", filter["display"]);
+        Assert.AreEqual(1, filter["values_count"]);
+        Assert.IsInstanceOfType(filter["selected_options"], typeof(FwList));
+        Assert.AreEqual("Selected Lookup", ((FwList)filter["selected_options"]!)[0]["iname"]);
         Assert.AreSame(filter["options"], altFilter["options"]);
-        Assert.AreSame(filter["options"], header["filter_options"]);
     }
 
     [TestMethod]
@@ -468,6 +468,7 @@ public class FwDynamicControllerColumnFilterTests
 
         StringAssert.Contains(html, "data-column-filter-type=\"multi_select\"");
         StringAssert.Contains(html, "name=\"search[inline_status]\"");
+        StringAssert.Contains(html, "fw-column-filter-summary is-active");
         StringAssert.Contains(html, "<option value=\"A\" selected>Active</option>");
     }
 
@@ -483,7 +484,7 @@ public class FwDynamicControllerColumnFilterTests
                 Path.Combine(RepoRoot(), "osafw-app", "App_Data", "template", "common", "list", "filters", "cell.html"),
                 Path.Combine(tempRoot, "common", "list", "filters", "cell.html"));
             File.WriteAllText(Path.Combine(tempRoot, "test", "index", "driver.html"), "<~/common/list/filters/cell>");
-            File.WriteAllText(Path.Combine(tempRoot, "test", "index", "list_filter_custom.html"), "<span data-custom-filter=\"<~filter[field]>\"><~filter[display]></span>");
+            File.WriteAllText(Path.Combine(tempRoot, "test", "index", "list_filter_custom.html"), "<span data-custom-filter=\"<~filter[field]>\"><~filter[selected_options] repeat inline><~iname></~filter[selected_options]></span>");
 
             var fw = TestHelpers.CreateFw(new Dictionary<string, string?> { ["appSettings:template"] = tempRoot });
             var fields = ExplicitFilterFields();
@@ -517,8 +518,13 @@ public class FwDynamicControllerColumnFilterTests
         controller.BuildHeaders();
 
         var header = controller.HeaderFor("dict_link_auto_iname");
-        Assert.AreEqual("autocomplete", header["filter_type"]);
-        Assert.AreEqual("/Admin/DynamicColumnFilterTests/(Autocomplete)?model=LookupOptionsModel&q=", header["autocomplete_url"]);
-        Assert.IsInstanceOfType(header["filter_options"], typeof(FwList));
+        var filter = FilterFor(header);
+        Assert.AreEqual("autocomplete", filter["type"]);
+        Assert.AreEqual("/Admin/DynamicColumnFilterTests/(Autocomplete)?model=LookupOptionsModel&q=", filter["autocomplete_url"]);
+        Assert.IsFalse(header.ContainsKey("filter_type"));
+        Assert.IsFalse(header.ContainsKey("filter_options"));
+
+        var multiFilter = FilterFor(controller.HeaderFor("inline_status"));
+        Assert.IsInstanceOfType(multiFilter["options"], typeof(FwList));
     }
 }

@@ -163,6 +163,8 @@ For Vue screens, set `component` to a registered Vue component name. The compone
 }
 ```
 
+Vue header metadata is nested under `header.filter`; use `header.filter.type`, `header.filter.options`, `header.filter.autocomplete_url`, and `header.filter.component` rather than flattened header keys.
+
 ### Generated layout heuristics
 
 Developer-generated and virtual controllers build a two-column `show_fields` / `showform_fields` layout from schema metadata when a controller-specific config does not define those arrays.

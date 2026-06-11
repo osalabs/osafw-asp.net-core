@@ -135,7 +135,6 @@ public partial class FwDynamicController
             ["field"] = field,
             ["field_name"] = field,
             ["label"] = label,
-            ["field_name_visible"] = label,
             ["filter_field"] = field,
             ["type"] = "text",
             ["filterable"] = true,
@@ -144,9 +143,7 @@ public partial class FwDynamicController
         var formDef = formDefs[field] as FwDict ?? [];
         foreach (var entry in formDef)
         {
-            if (entry.Key == "type")
-                def["source_field_type"] = entry.Value;
-            else if (!def.ContainsKey(entry.Key))
+            if (!def.ContainsKey(entry.Key))
                 def[entry.Key] = entry.Value;
         }
 
@@ -159,7 +156,10 @@ public partial class FwDynamicController
         if (def["filter_field"].toStr().Length == 0)
             def["filter_field"] = field;
 
-        var schema = schemaForListColumnFilter(def);
+        var table = string.IsNullOrEmpty(list_view) ? model0?.table_name ?? "" : list_view;
+        var filterField = def["filter_field"].toStr();
+        var schema = Regex.IsMatch(table, @"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$")
+            && Regex.IsMatch(filterField, @"^[A-Za-z_][A-Za-z0-9_]*$") ? db.schemaField(table, filterField) : [];
         if (schema.Count > 0)
         {
             if (def["field_storage_type"].toStr().Length == 0)
@@ -168,24 +168,25 @@ public partial class FwDynamicController
                 def["field_db_type"] = schema["type"];
         }
 
-        if (!isExplicit && !hasListColumnFilterInferenceSource(formDef, def, schema))
+        if (!isExplicit
+            && formDef.Count == 0
+            && schema.Count == 0
+            && !def.ContainsKey("options")
+            && def["lookup_tpl"].toStr().Length == 0
+            && def["lookup_model"].toStr().Length == 0)
             return [];
 
         def["type"] = normalizeListColumnFilterType(explicitType.Length > 0 ? explicitType : inferListColumnFilterType(field, formDef, def));
         if (def["type"].toStr() == "none")
             def["filterable"] = false;
 
-        normalizeListColumnFilterTemplate(def);
+        var template = def["template"].toStr();
+        if (template.Length > 0 && template != "custom")
+        {
+            logger(LogLevel.WARN, "Unsupported list column filter template '", template, "' for ", def["field"], "; use template=\"custom\".");
+            def.Remove("template");
+        }
         return def;
-    }
-
-    private bool hasListColumnFilterInferenceSource(FwDict formDef, FwDict def, FwDict schema)
-    {
-        return formDef.Count > 0
-            || schema.Count > 0
-            || def.ContainsKey("options")
-            || def["lookup_tpl"].toStr().Length > 0
-            || def["lookup_model"].toStr().Length > 0;
     }
 
     private string inferListColumnFilterType(string field, FwDict formDef, FwDict def)
@@ -238,38 +239,6 @@ public partial class FwDynamicController
         };
     }
 
-    private void normalizeListColumnFilterTemplate(FwDict def)
-    {
-        var template = def["template"].toStr();
-        if (template.Length == 0)
-            return;
-
-        if (template == "custom")
-            return;
-
-        logger(LogLevel.WARN, "Unsupported list column filter template '", template, "' for ", def["field"], "; use template=\"custom\".");
-        def.Remove("template");
-    }
-
-    private FwDict schemaForListColumnFilter(FwDict def)
-    {
-        var table = string.IsNullOrEmpty(list_view) ? model0?.table_name ?? "" : list_view;
-        var field = def["filter_field"].toStr();
-        if (!isSimpleListColumnFilterTable(table) || !isSimpleListColumnFilterField(field))
-            return [];
-
-        return db.schemaField(table, field);
-    }
-
-    private static bool isSimpleListColumnFilterTable(string value)
-    {
-        return Regex.IsMatch(value, @"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$");
-    }
-
-    private static bool isSimpleListColumnFilterField(string value)
-    {
-        return Regex.IsMatch(value, @"^[A-Za-z_][A-Za-z0-9_]*$");
-    }
 
     private void enrichListColumnFilterHeaders()
     {
@@ -294,31 +263,30 @@ public partial class FwDynamicController
                 ["label"] = header["field_name_visible"],
                 ["filterable"] = false,
             };
-            header["filter_type"] = "none";
-            header["is_filterable"] = false;
         }
     }
 
     private void prepareListColumnFilterHeader(FwDict header, FwDict filter)
     {
         filter["search_value"] = header["search_value"];
-        applyListColumnFilterDisplayValues(filter, decodeListColumnFilterJson(filter["search_value"].toStr()), filter["search_value"].toStr());
+        var rawSearch = filter["search_value"].toStr();
+        var parsed = Utils.jsonDecodeDict(rawSearch);
+        applyListColumnFilterState(filter, parsed, rawSearch);
         if (filter["type"].toStr() == "multi_select")
             filter["options"] = loadListColumnFilterOptions(filter, filter["values_csv"].toStr());
 
-        filter["display"] = listColumnFilterDisplayText(filter);
-        filter["active_class"] = filter["display"].toStr().Length > 0 ? " is-active" : "";
+        if (filter["type"].toStr() is "multi_select" or "autocomplete")
+        {
+            var values = listColumnFilterValuesFrom(filter["values_csv"]);
+            filter["values_count"] = values.Count;
+            filter["selected_options"] = listColumnFilterSelectedOptions(filter, values);
+        }
+        filter["is_active"] = parsed != null || (filter["type"].toStr() == "text" && rawSearch.Length > 0);
 
         header["filter"] = filter;
-        header["filter_type"] = filter["type"];
-        header["is_filterable"] = filter["filterable"];
-        header["filter_component"] = filter["component"];
-        header["filter_options"] = filter["options"] is IList ? filter["options"] : new FwList();
-        header["autocomplete_url"] = filter["autocomplete_url"];
-        header["filter_def"] = filter;
     }
 
-    private void applyListColumnFilterDisplayValues(FwDict filter, FwDict? parsed, string rawValue)
+    private void applyListColumnFilterState(FwDict filter, FwDict? parsed, string rawValue)
     {
         if (parsed == null)
         {
@@ -358,7 +326,12 @@ public partial class FwDynamicController
                 filter["not_between_to"] = parsed["not_between_to"];
                 break;
             case "boolean":
-                filter["value"] = parsed["value"];
+                filter["value"] = parsed["value"].toStr().Trim().ToLowerInvariant() switch
+                {
+                    "1" or "true" or "yes" or "y" => "1",
+                    "0" or "false" or "no" or "n" => "0",
+                    var value => value,
+                };
                 break;
         }
     }
@@ -384,79 +357,32 @@ public partial class FwDynamicController
         filter["value"] = rawValue;
     }
 
-    private string listColumnFilterDisplayText(FwDict filter)
+    private static FwList listColumnFilterSelectedOptions(FwDict filter, StrList values)
     {
-        return filter["blank_op"].toStr() switch
+        FwList result = [];
+        foreach (var value in values)
         {
-            "blank" => "blank",
-            "not_blank" => "not blank",
-            _ => filter["type"].toStr() switch
+            var id = value;
+            var label = value;
+            if (filter["type"].toStr() == "autocomplete")
             {
-                "date_range" => rangeDisplay(filter["from"].toStr(), filter["to"].toStr()),
-                "multi_select" => valuesDisplay(listColumnFilterValuesFrom(filter["values_csv"]), v => optionLabel(filter, v)),
-                "autocomplete" => valuesDisplay(listColumnFilterValuesFrom(filter["values_csv"]), autocompleteLabel),
-                "number_conditions" => numberDisplay(filter),
-                "boolean" => filter["value"].toStr() switch
+                id = autocompleteValue(value);
+                label = autocompleteLabel(value);
+            }
+            else if (filter["options"] is IList optionRows)
+            {
+                foreach (FwDict option in optionRows)
                 {
-                    "1" or "true" or "yes" or "y" => "Yes",
-                    "0" or "false" or "no" or "n" => "No",
-                    _ => "",
-                },
-                _ => "",
-            },
-        };
-    }
+                    if (option["id"].toStr() != value)
+                        continue;
+                    label = option["iname"].toStr(value);
+                    break;
+                }
+            }
 
-    private static string rangeDisplay(string from, string to)
-    {
-        if (from.Length > 0 && to.Length > 0)
-            return from == to ? from : $"{from} - {to}";
-        if (from.Length > 0)
-            return $">= {from}";
-        return to.Length > 0 ? $"<= {to}" : "";
-    }
-
-    private static string valuesDisplay(StrList values, Func<string, string> labelFor)
-    {
-        if (values.Count == 1)
-            return labelFor(values[0]);
-        return values.Count > 1 ? $"{values.Count} selected" : "";
-    }
-
-    private string optionLabel(FwDict filter, string value)
-    {
-        if (filter["options"] is IList optionRows)
-            foreach (FwDict option in optionRows)
-                if (option["id"].toStr() == value)
-                    return option["iname"].toStr(value);
-        return value;
-    }
-
-    private static string numberDisplay(FwDict filter)
-    {
-        var equal = filter["equal"].toStr();
-        if (equal.Length > 0)
-            return $"= {equal}";
-
-        StrList parts = [];
-        addDisplayPart(parts, filter["not_equal"].toStr(), "!= ");
-        addDisplayPart(parts, filter["gte"].toStr(), ">= ");
-        addDisplayPart(parts, filter["lte"].toStr(), "<= ");
-        addRangePart(parts, filter["from"].toStr(), filter["to"].toStr(), "");
-        addRangePart(parts, filter["not_between_from"].toStr(), filter["not_between_to"].toStr(), "not ");
-        return string.Join(", ", parts);
-    }
-
-    private static void addDisplayPart(StrList parts, string value, string prefix)
-    {
-        if (value.Length > 0)
-            parts.Add(prefix + value);
-    }
-
-    private static void addRangePart(StrList parts, string from, string to, string prefix)
-    {
-        if (from.Length > 0 || to.Length > 0)
-            parts.Add(prefix + (from.Length > 0 && to.Length > 0 ? $"{from} - {to}" : $"{from}{to}"));
+            result.Add(new FwDict { ["id"] = id, ["iname"] = label });
+        }
+        return result;
     }
 
     private FwList loadListColumnFilterOptions(FwDict filter, string selectedValues)
@@ -507,7 +433,7 @@ public partial class FwDynamicController
         if (!def["filterable"].toBool() || def["type"].toStr() == "none")
             return true;
 
-        var raw = decodeListColumnFilterJson(value);
+        var raw = Utils.jsonDecodeDict(value);
         if (raw == null)
             return false;
         if (applyListColumnFilter(def, raw))
@@ -515,11 +441,6 @@ public partial class FwDynamicController
 
         _ = applyTypedListColumnFilter(def, raw);
         return true;
-    }
-
-    private static FwDict? decodeListColumnFilterJson(string value)
-    {
-        return value.TrimStart().StartsWith('{') ? Utils.jsonDecode(value) as FwDict : null;
     }
 
     private bool applyTypedListColumnFilter(FwDict filter, FwDict raw)
@@ -567,7 +488,8 @@ public partial class FwDynamicController
             _ => "%" + value + "%",
         };
 
-        list_where += $" AND {db.sqlTextExpr(sqlListColumnFilterField(filter))} {sqlOp} {addListColumnFilterParam(filter, "text", paramValue)}";
+        var field = db.qid(filter["filter_field"].toStr());
+        list_where += $" AND {db.sqlTextExpr(field)} {sqlOp} {addListColumnFilterParam(filter, "text", paramValue)}";
         return true;
     }
 
@@ -579,7 +501,7 @@ public partial class FwDynamicController
         if (from == null && to == null)
             return false;
 
-        var field = sqlListColumnFilterField(filter);
+        var field = db.qid(filter["filter_field"].toStr());
         var isDateOnly = filter["is_date_only"].toBool() || filter["field_storage_type"].toStr() == "date";
         if (from != null)
         {
@@ -611,7 +533,7 @@ public partial class FwDynamicController
 
     private bool applyListColumnFilterNumber(FwDict filter, FwDict raw)
     {
-        var field = sqlListColumnFilterField(filter);
+        var field = db.qid(filter["filter_field"].toStr());
         var applied = false;
         if (tryGetListColumnFilterNumber(raw["equal"], out var equal) || tryGetListColumnFilterNumber(raw["value"], out equal))
             applied |= appendListColumnFilterCompare(filter, field, "=", "eq", equal);
@@ -636,7 +558,8 @@ public partial class FwDynamicController
         if (value == "blank" || value == "not_blank")
             return appendListColumnFilterBlank(filter, value == "not_blank");
 
-        list_where += $" AND {sqlListColumnFilterField(filter)} = {addListColumnFilterParam(filter, "bool", value is "1" or "true" or "yes" or "y" ? 1 : 0)}";
+        var field = db.qid(filter["filter_field"].toStr());
+        list_where += $" AND {field} = {addListColumnFilterParam(filter, "bool", value is "1" or "true" or "yes" or "y" ? 1 : 0)}";
         return true;
     }
 
@@ -665,7 +588,7 @@ public partial class FwDynamicController
 
     private bool appendListColumnFilterBlank(FwDict filter, bool isNotBlank)
     {
-        var field = sqlListColumnFilterField(filter);
+        var field = db.qid(filter["filter_field"].toStr());
         var textExpr = db.sqlTextExpr(field);
         list_where += isNotBlank
             ? $" AND ({field} IS NOT NULL AND {textExpr} <> '')"
@@ -680,9 +603,10 @@ public partial class FwDynamicController
 
         var sqlParams = new StrList();
         foreach (var value in values.Take(LIST_COLUMN_FILTER_MULTI_VALUE_LIMIT))
-            sqlParams.Add(addListColumnFilterParam(filter, "in", normalizeListColumnFilterParamValue(filter, value)));
+            sqlParams.Add(addListColumnFilterParam(filter, "in", filter["type"].toStr() == "autocomplete" ? autocompleteValue(value) : value));
 
-        list_where += $" AND {sqlListColumnFilterField(filter)} IN ({string.Join(",", sqlParams)})";
+        var field = db.qid(filter["filter_field"].toStr());
+        list_where += $" AND {field} IN ({string.Join(",", sqlParams)})";
         return true;
     }
 
@@ -698,42 +622,20 @@ public partial class FwDynamicController
         return "@" + param;
     }
 
-    private string sqlListColumnFilterField(FwDict filter)
-    {
-        return db.qid(filter["filter_field"].toStr());
-    }
-
-    private static object normalizeListColumnFilterParamValue(FwDict filter, string value)
-    {
-        if (filter["type"].toStr() == "autocomplete")
-            value = autocompleteValue(value);
-
-        return filter["field_storage_type"].toStr() switch
-        {
-            "int" => value.toLong(),
-            "float" => value.toFloat(),
-            "decimal" => value.toDecimal(),
-            _ => value,
-        };
-    }
-
     private static StrList listColumnFilterValuesFrom(object? raw)
     {
         var values = new StrList();
         if (raw is IList list && raw is not string)
             foreach (var item in list)
-                addListColumnFilterValue(values, item);
+            {
+                var str = item.toStr().Trim();
+                if (str.Length > 0)
+                    values.Add(str);
+            }
         else
             foreach (var item in raw.toStr().Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                addListColumnFilterValue(values, item);
+                values.Add(item);
         return new StrList(values.Take(LIST_COLUMN_FILTER_MULTI_VALUE_LIMIT));
-    }
-
-    private static void addListColumnFilterValue(StrList values, object? value)
-    {
-        var str = value.toStr().Trim();
-        if (str.Length > 0)
-            values.Add(str);
     }
 
     private static string autocompleteValue(string value)

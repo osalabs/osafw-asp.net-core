@@ -36,7 +36,7 @@
                 this.$emit('on-show-customize-columns', e);
             },
             hasCustomColumnFilters() {
-                return this.fwStore.list_headers.some(header => header.filter_type && header.filter_type !== 'none');
+                return this.fwStore.list_headers.some(header => header.filter && header.filter.type && header.filter.type !== 'none');
             },
             onToggleDensity(e) {
                 const classes = ['table-sm', 'table-dense', 'table-normal'];

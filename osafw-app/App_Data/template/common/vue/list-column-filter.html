@@ -1,5 +1,5 @@
 <script type="text/x-template" id="list-column-filter-template">
-    <component v-if="header.filter_component" :is="header.filter_component" :header="header"></component>
+    <component v-if="filter.component" :is="filter.component" :header="header"></component>
     <span v-else-if="filterType==='none'" class="text-muted">-</span>
     <div v-else-if="filterType==='text'" class="fw-column-filter fw-column-filter-inline fw-column-filter-vue" data-column-filter-type="text">
         <div class="input-group input-group-sm flex-nowrap">
@@ -28,7 +28,29 @@
                 data-bs-boundary="viewport"
                 aria-expanded="false"
                 :title="header.field_name_visible">
-            <span class="text-truncate"><template v-if="displayText">{{ displayText }}</template><template v-else>&nbsp;</template></span>
+            <span class="text-truncate">
+                <template v-if="displayState.kind === 'blank'">`blank`</template>
+                <template v-else-if="displayState.kind === 'not_blank'">`not blank`</template>
+                <template v-else-if="displayState.kind === 'value'">{{ displayState.value }}</template>
+                <template v-else-if="displayState.kind === 'gte'">&gt;= {{ displayState.value }}</template>
+                <template v-else-if="displayState.kind === 'lte'">&lt;= {{ displayState.value }}</template>
+                <template v-else-if="displayState.kind === 'range'">{{ displayState.from }} - {{ displayState.to }}</template>
+                <template v-else-if="displayState.kind === 'selected_count'">{{ displayState.count }} `selected`</template>
+                <template v-else-if="displayState.kind === 'yes'">`yes`</template>
+                <template v-else-if="displayState.kind === 'no'">`no`</template>
+                <template v-else-if="displayState.kind === 'number'">
+                    <template v-for="(part, index) in displayState.parts" :key="index">
+                        <template v-if="index">, </template>
+                        <template v-if="part.kind === 'equal'">= {{ part.value }}</template>
+                        <template v-else-if="part.kind === 'not_equal'">!= {{ part.value }}</template>
+                        <template v-else-if="part.kind === 'gte'">&gt;= {{ part.value }}</template>
+                        <template v-else-if="part.kind === 'lte'">&lt;= {{ part.value }}</template>
+                        <template v-else-if="part.kind === 'between'">{{ part.from }} - {{ part.to }}</template>
+                        <template v-else-if="part.kind === 'not_between'">`not` {{ part.from }} - {{ part.to }}</template>
+                    </template>
+                </template>
+                <template v-else>&nbsp;</template>
+            </span>
         </button>
         <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
             <template v-if="filterType==='date_range'">
@@ -135,52 +157,55 @@
         }),
         computed: {
             ...mapStores(fwStore),
+            filter() {
+                return this.header.filter || {};
+            },
             filterType() {
-                return this.header.filter_type || 'text';
+                return this.filter.type || 'text';
             },
             options() {
-                return this.header.filter_options || [];
+                return Array.isArray(this.filter.options) ? this.filter.options : [];
             },
             autocompleteUrl() {
-                return this.header.autocomplete_url || '';
+                return this.filter.autocomplete_url || '';
             },
-            displayText() {
+            displayState() {
                 const parsed = this.parseSearchValue(this.header.search_value);
-                if (!parsed) return '';
-                if (parsed.type === 'blank') return 'blank';
-                if (parsed.type === 'not_blank') return 'not blank';
+                if (!parsed) return {};
+                if (parsed.type === 'blank') return { kind: 'blank' };
+                if (parsed.type === 'not_blank') return { kind: 'not_blank' };
 
                 if (parsed.type === 'date_range') {
                     const from = parsed.from || '';
                     const to = parsed.to || '';
-                    if (from && to) return from === to ? from : from + ' - ' + to;
-                    if (from) return '>= ' + from;
-                    if (to) return '<= ' + to;
+                    if (from && to) return from === to ? { kind: 'value', value: from } : { kind: 'range', from, to };
+                    if (from) return { kind: 'gte', value: from };
+                    if (to) return { kind: 'lte', value: to };
                 }
 
                 if (parsed.type === 'multi_select') {
                     const values = (parsed.values || []).map(v => String(v));
-                    if (values.length === 1) return this.optionLabel(values[0]);
-                    if (values.length > 1) return values.length + ' selected';
+                    if (values.length === 1) return { kind: 'value', value: this.optionLabel(values[0]) };
+                    if (values.length > 1) return { kind: 'selected_count', count: values.length };
                 }
 
                 if (parsed.type === 'autocomplete') {
                     const values = (parsed.values || []).map(v => String(v));
-                    if (values.length === 1) return this.autocompleteLabel(values[0]);
-                    if (values.length > 1) return values.length + ' selected';
+                    if (values.length === 1) return { kind: 'value', value: this.autocompleteLabel(values[0]) };
+                    if (values.length > 1) return { kind: 'selected_count', count: values.length };
                 }
 
-                if (parsed.type === 'number_conditions') return this.numberDisplay(parsed);
+                if (parsed.type === 'number_conditions') return this.numberDisplayState(parsed);
 
                 if (parsed.type === 'boolean') {
-                    if (['1', 'true', 'yes', 'y'].includes(String(parsed.value).toLowerCase())) return 'Yes';
-                    if (['0', 'false', 'no', 'n'].includes(String(parsed.value).toLowerCase())) return 'No';
+                    if (['1', 'true', 'yes', 'y'].includes(String(parsed.value).toLowerCase())) return { kind: 'yes' };
+                    if (['0', 'false', 'no', 'n'].includes(String(parsed.value).toLowerCase())) return { kind: 'no' };
                 }
 
-                return '';
+                return {};
             },
             isActive() {
-                return !!this.parseSearchValue(this.header.search_value);
+                return !!this.displayState.kind;
             }
         },
         watch: {
@@ -350,24 +375,24 @@
             hasFilterValue(value) {
                 return value !== undefined && value !== null && String(value).length > 0;
             },
-            numberDisplay(parsed) {
-                if (this.hasFilterValue(parsed.equal)) return '= ' + parsed.equal;
+            numberDisplayState(parsed) {
                 let parts = [];
                 const notEqual = this.hasFilterValue(parsed.not_equal) ? parsed.not_equal : parsed.not_equals;
-                if (this.hasFilterValue(notEqual)) parts.push('!= ' + notEqual);
-                if (this.hasFilterValue(parsed.gte)) parts.push('>= ' + parsed.gte);
-                if (this.hasFilterValue(parsed.lte)) parts.push('<= ' + parsed.lte);
+                if (this.hasFilterValue(parsed.equal)) parts.push({ kind: 'equal', value: parsed.equal });
+                if (this.hasFilterValue(notEqual)) parts.push({ kind: 'not_equal', value: notEqual });
+                if (this.hasFilterValue(parsed.gte)) parts.push({ kind: 'gte', value: parsed.gte });
+                if (this.hasFilterValue(parsed.lte)) parts.push({ kind: 'lte', value: parsed.lte });
                 if (this.hasFilterValue(parsed.from) || this.hasFilterValue(parsed.to)) {
                     const from = this.hasFilterValue(parsed.from) ? parsed.from : '';
                     const to = this.hasFilterValue(parsed.to) ? parsed.to : '';
-                    parts.push(from + ' - ' + to);
+                    parts.push({ kind: 'between', from, to });
                 }
                 if (this.hasFilterValue(parsed.not_between_from) || this.hasFilterValue(parsed.not_between_to)) {
                     const from = this.hasFilterValue(parsed.not_between_from) ? parsed.not_between_from : '';
                     const to = this.hasFilterValue(parsed.not_between_to) ? parsed.not_between_to : '';
-                    parts.push('not ' + from + ' - ' + to);
+                    parts.push({ kind: 'not_between', from, to });
                 }
-                return parts.length ? parts.join(', ') : '';
+                return parts.length ? { kind: 'number', parts } : {};
             }
         }
     });

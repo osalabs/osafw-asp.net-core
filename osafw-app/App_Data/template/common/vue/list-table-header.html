@@ -24,7 +24,7 @@
             <th></th>
             <th v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
             <th v-for="header in fwStore.list_headers" :key="header.field_name">
-                <list-column-filter v-if="header.filter_type && (header.filter_type === 'none' || !isCalculatedField(header.field_name))" :header="header"></list-column-filter>
+                <list-column-filter v-if="hasColumnFilter(header)" :header="header"></list-column-filter>
                 <input v-else type="text" class="form-control form-control-sm"
                        v-model="header.search_value"
                        :disabled="isCalculatedField(header.field_name)"
@@ -97,6 +97,10 @@
             },
             isCalculatedField(fieldName) {
                 return this.listCalculatedFields.includes(fieldName);
+            },
+            hasColumnFilter(header) {
+                const type = header.filter && header.filter.type;
+                return !!type && (type === 'none' || !this.isCalculatedField(header.field_name));
             }
         }
     });

@@ -546,6 +546,20 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void jsonDecodeDictAndList_ReturnExpectedShapes()
+        {
+            var dict = Utils.jsonDecodeDict("{\"AAA\":1}");
+            Assert.IsNotNull(dict);
+            Assert.AreEqual(1L, dict!["AAA"]);
+            Assert.IsNull(Utils.jsonDecodeDict("[1,2]"));
+
+            var list = Utils.jsonDecodeList("[1,{\"AAA\":2}]");
+            Assert.IsNotNull(list);
+            Assert.AreEqual(2, list!.Count);
+            Assert.IsNull(Utils.jsonDecodeList("{\"AAA\":1}"));
+        }
+
+        [TestMethod()]
         public void jsonDecodeOrThrowMalformed_Throws()
         {
             try

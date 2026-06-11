@@ -932,6 +932,32 @@ public class Utils
     }
 
     /// <summary>
+    /// Converts JSON text into a framework dictionary, or null when the payload is malformed or not an object.
+    /// </summary>
+    public static FwDict? jsonDecodeDict(string str)
+    {
+        return jsonDecode(str) as FwDict;
+    }
+
+    public static FwDict? jsonDecodeDict(object str)
+    {
+        return jsonDecodeDict(str.toStr());
+    }
+
+    /// <summary>
+    /// Converts JSON text into a framework object list, or null when the payload is malformed or not an array.
+    /// </summary>
+    public static ObjList? jsonDecodeList(string str)
+    {
+        return jsonDecode(str) as ObjList;
+    }
+
+    public static ObjList? jsonDecodeList(object str)
+    {
+        return jsonDecodeList(str.toStr());
+    }
+
+    /// <summary>
     /// Converts JSON text into framework values and throws when the payload is malformed.
     /// </summary>
     public static object? jsonDecodeOrThrow(string str)
