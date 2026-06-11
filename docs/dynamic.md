@@ -26,6 +26,7 @@ Common config keys include:
 - `is_dynamic_index` – enable dynamic list with `view_list_defaults` and `view_list_map`
 - `is_dynamic_index_edit` – allow inline editing (`list_edit`, `edit_list_defaults`)
 - `view_list_custom` – fields visible by default
+- `list_column_filters` – optional typed per-column filters for dynamic/Vue list tables
 - `view_list_custom_trusted` - subset of `view_list_custom` fields allowed to render `cellFormatter` HTML in Vue lists; other custom cells are escaped text by default
 - `is_dynamic_show` and `is_dynamic_showform` – enable dynamic screens
 - `form_tabs` – optional tab definitions
@@ -66,6 +67,103 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 - **filter_for / filter_by / filter_field**: wire dependent selects (example provided in the `select` type section).
 - **lookup_by_value**: for `autocomplete` fields, store the typed value instead of id.
 - **lookup_id / admin_url**: build links for `plaintext_link`.
+
+### List column filters
+
+`list_column_filters.enabled` opts a Dynamic or Vue list into typed per-column filters. The default is disabled, and plain `FwController` screens keep the legacy text-only `search[field]` behavior.
+
+```json
+"list_column_filters": {
+  "enabled": true,
+  "fields": {
+    "iname": { "type": "text" },
+    "fdate_pop": { "type": "date_range" },
+    "demo_dicts_id": {
+      "type": "multi_select",
+      "lookup_model": "DemoDicts"
+    },
+    "status": {
+      "type": "multi_select",
+      "lookup_tpl": "/common/sel/status.sel"
+    },
+    "ffloat": { "type": "number_conditions" },
+    "is_active": { "type": "boolean" },
+    "large_lookup_id": {
+      "type": "autocomplete",
+      "autocomplete_url": "/Admin/LargeLookups/(Autocomplete)?q="
+    },
+    "unsafe_calc": { "type": "none" }
+  }
+}
+```
+
+Supported types are `text`, `date_range`, `multi_select`, `autocomplete`, `number_conditions`, `boolean`, and `none`. Every type supports blank/not blank. Text filters render inline as a compact operator/input group with operator labels `~`, `=`, `!=`, `!~`, `^`, `!^`, `$`, `!$`, `B`, and `NB`; the empty operator is the default and behaves like contains. Structured filters render as one-line dropdown cells; changes inside the dropdown are draft-only until the user clicks `Apply`, while `Clear` removes that column's `search[field]` value.
+
+Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`, `!abc`, `^abc` for starts-with, `$abc` for ends-with, `!^abc` for does-not-start-with, and `!$abc` for does-not-end-with) and also accept JSON such as `{"type":"text","op":"starts_with","value":"abc"}`. Number conditions support `equal`, `not_equal`, `gte`, `lte`, inclusive `from`/`to`, and strict `not_between_from`/`not_between_to`. Typed filters submit JSON through the same `search[field]` key and are converted to parameterized SQL server-side.
+
+`fields` is optional. When it is omitted, Dynamic infers typed filters for visible simple fields from form definitions and table schema. Calculated fields, aliases, dotted fields, and expressions need an explicit entry. `filter_field` can point a visible list alias to the real simple list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
+
+To customize an inferred filter, add the field under `list_column_filters.fields` and override only the parts that differ:
+
+```json
+"list_column_filters": {
+  "enabled": true,
+  "fields": {
+    "customer_iname": {
+      "type": "autocomplete",
+      "filter_field": "customers_id",
+      "autocomplete_url": "/Admin/Customers/(Autocomplete)?q="
+    },
+    "status": {
+      "type": "multi_select",
+      "options": {
+        "0": "Active",
+        "10": "Pending"
+      }
+    }
+  }
+}
+```
+
+For custom server behavior in a Dynamic controller, override `applyListColumnFilter(FwDict def, FwDict rawValue)` and return `true` after appending a safe predicate. Read only your whitelisted field, and put user values into `list_where_params`. The normalized `def` includes `field`, `field_name`, `type`, and `filter_field`:
+
+```csharp
+protected override bool applyListColumnFilter(FwDict def, FwDict rawValue)
+{
+    if (def["field_name"].toStr() != "score_band")
+        return false;
+
+    var band = rawValue["value"].toStr();
+    if (band == "high")
+    {
+        list_where += " AND [score] >= @score_band";
+        list_where_params["score_band"] = 80;
+        return true;
+    }
+
+    return false;
+}
+```
+
+For custom UI on server-rendered Dynamic screens, set `template` to `"custom"` and add `index/list_filter_custom.html` under the controller template directory. That controller-local partial is included from the common filter cell and can branch on `filter[field]`; it should render a compact one-line trigger or input and write committed JSON to `search[field]`.
+
+```json
+"score_band": {
+  "type": "text",
+  "template": "custom"
+}
+```
+
+For Vue screens, set `component` to a registered Vue component name. The component receives `header`, owns its compact/dropdown UI, writes `header.search_value`, and calls `fwStore.setFilters({})` to reload:
+
+```json
+"score_band": {
+  "type": "text",
+  "component": "orders-score-band-filter"
+}
+```
+
+Vue header metadata is nested under `header.filter`; use `header.filter.type`, `header.filter.options`, `header.filter.autocomplete_url`, and `header.filter.component` rather than flattened header keys.
 
 ### Generated layout heuristics
 

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -536,6 +537,39 @@ namespace osafw.Tests
             var inner = h1["EEE"] as FwDict;
             Assert.IsNotNull(inner);
             Assert.AreEqual("sub", inner["AAA"]);
+        }
+
+        [TestMethod()]
+        public void jsonDecodeMalformed_ReturnsNull()
+        {
+            Assert.IsNull(Utils.jsonDecode("{not-json"));
+        }
+
+        [TestMethod()]
+        public void jsonDecodeDictAndList_ReturnExpectedShapes()
+        {
+            var dict = Utils.jsonDecodeDict("{\"AAA\":1}");
+            Assert.IsNotNull(dict);
+            Assert.AreEqual(1L, dict!["AAA"]);
+            Assert.IsNull(Utils.jsonDecodeDict("[1,2]"));
+
+            var list = Utils.jsonDecodeList("[1,{\"AAA\":2}]");
+            Assert.IsNotNull(list);
+            Assert.AreEqual(2, list!.Count);
+            Assert.IsNull(Utils.jsonDecodeList("{\"AAA\":1}"));
+        }
+
+        [TestMethod()]
+        public void jsonDecodeOrThrowMalformed_Throws()
+        {
+            try
+            {
+                Utils.jsonDecodeOrThrow("{not-json");
+                Assert.Fail("Expected malformed JSON to throw.");
+            }
+            catch (JsonException)
+            {
+            }
         }
 
         [TestMethod()]

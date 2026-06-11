@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public abstract class FwController
+public abstract partial class FwController
 {
     public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. 0 (public access), 1(min logged level), 100(max admin level)
 
@@ -127,7 +127,7 @@ public abstract class FwController
         }
 
         // CACHE MISS - load from file
-        var parsedObj = Utils.jsonDecode(Utils.getFileContent(full_path));
+        var parsedObj = Utils.jsonDecodeOrThrow(Utils.getFileContent(full_path));
         if (parsedObj is not FwDict parsed)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + full_path);
 
@@ -394,6 +394,7 @@ public abstract class FwController
         session_key ??= "_filter_" + fw.G["controller.action"];
 
         FwDict sfilter = fw.SessionDict(session_key) ?? [];
+        FwDict? saved_filter_search = null;
         void clearUserFilter()
         {
             f.Remove("userfilters_id");
@@ -426,7 +427,17 @@ public abstract class FwController
                 if (uf.Count > 0)
                 {
                     if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
-                        f = f1;
+                    {
+                        if (f1["f"] is FwDict fSplit && f1["search"] is FwDict searchSplit)
+                        {
+                            f = fSplit;
+                            saved_filter_search = searchSplit;
+                        }
+                        else
+                        {
+                            f = f1;
+                        }
+                    }
                     if (!uf["is_system"].toBool())
                     {
                         f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
@@ -470,7 +481,12 @@ public abstract class FwController
         // advanced search
         string session_key_search = "_filtersearch_" + fw.G["controller.action"];
         list_filter_search = reqh("search");
-        if (list_filter_search.Count == 0 && !is_dofilter)
+        if (saved_filter_search != null)
+        {
+            list_filter_search = saved_filter_search;
+            fw.SessionDict(session_key_search, list_filter_search);
+        }
+        else if (list_filter_search.Count == 0 && !is_dofilter)
         {
             //read from session
             list_filter_search = fw.SessionDict(session_key_search) ?? [];
@@ -492,7 +508,9 @@ public abstract class FwController
         FwDict f = [];
         session_key ??= "_filter_" + fw.G["controller.action"];
         fw.SessionDict(session_key, f);
+        fw.SessionDict("_filtersearch_" + fw.G["controller.action"], []);
         this.list_filter = f;
+        this.list_filter_search = [];
     }
 
     /// <summary>
@@ -703,53 +721,62 @@ public abstract class FwController
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
-
-            var qfieldname = db.qid(fieldname);
-            var fieldname_sql = db.sqlTextExpr(qfieldname);
-            var fieldname_sql_num = db.sqlNumberExpr(qfieldname);
-            var fieldname_sql_date = db.sqlDateExpr(qfieldname); //for date search
-
-            string op = value[..1];
-            string op2 = value.Length >= 2 ? value[..2] : string.Empty;
-
-            string v = value[1..];
-            if (op2 == "!=" || op2 == "<=" || op2 == ">=")
-                v = value[2..];
-
-            var qv = db.q(v); // quoted value
-            if (DateUtils.isDateStr(v))
-            {
-                //if input looks like a date - compare as date
-                fieldname_sql = fieldname_sql_date;
-                qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
-            }
-            else
-            {
-                if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
-                {
-                    //numerical comparison
-                    fieldname_sql = fieldname_sql_num;
-                    qv = db.qdec(v).toStr();
-                }
-            }
-
-            string op_value = op2 switch
-            {
-                // first - check for 2-char operators
-                "!=" => $" <> {qv}",
-                "<=" => $" <= {qv}",
-                ">=" => $" >= {qv}",
-                _ => op switch
-                {
-                    "=" => $" = {qv}",
-                    "<" => $" < {qv}",
-                    ">" => $" > {qv}",
-                    "!" => $" NOT LIKE {db.q($"%{v}%")}",
-                    _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
-                },// then check for 1-char operators
-            };
-            list_where += $" AND {fieldname_sql} {op_value}";
+            appendListSearchAdvancedField(fieldname, value);
         }
+    }
+
+    /// <summary>
+    /// Appends the legacy string-syntax predicate for one submitted list search field.
+    /// </summary>
+    protected virtual void appendListSearchAdvancedField(string fieldname, string value)
+    {
+        var qfieldname = db.qid(fieldname);
+        var fieldname_sql = db.sqlTextExpr(qfieldname);
+        var fieldname_sql_num = db.sqlNumberExpr(qfieldname);
+        var fieldname_sql_date = db.sqlDateExpr(qfieldname); //for date search
+
+        string op = value[..1];
+        string op2 = value.Length >= 2 ? value[..2] : string.Empty;
+
+        string v = value[1..];
+        if (op2 == "!=" || op2 == "<=" || op2 == ">=")
+            v = value[2..];
+
+        var qv = db.q(v); // quoted value
+        if (DateUtils.isDateStr(v))
+        {
+            //if input looks like a date - compare as date
+            fieldname_sql = fieldname_sql_date;
+            qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
+        }
+        else
+        {
+            if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
+            {
+                //numerical comparison
+                fieldname_sql = fieldname_sql_num;
+                qv = db.qdec(v).toStr();
+            }
+        }
+
+        string op_value = op2 switch
+        {
+            // first - check for 2-char operators
+            "!=" => $" <> {qv}",
+            "<=" => $" <= {qv}",
+            ">=" => $" >= {qv}",
+            _ => op switch
+            {
+                "=" => $" = {qv}",
+                "<" => $" < {qv}",
+                ">" => $" > {qv}",
+                "!" => $" NOT LIKE {db.q($"%{v}%")}",
+                "^" => $" LIKE {db.q($"{v}%")}",
+                "$" => $" LIKE {db.q($"%{v}")}",
+                _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
+            },// then check for 1-char operators
+        };
+        list_where += $" AND {fieldname_sql} {op_value}";
     }
 
     /// <summary>
@@ -1402,7 +1429,8 @@ public abstract class FwController
     /// Builds list headers from the active user view and submitted column search values.
     /// </summary>
     /// <param name="is_cols">When true, also inject rendered column metadata into <c>list_rows</c>; use false for JSON responses.</param>
-    public virtual void setViewList(bool is_cols = true)
+    /// <param name="is_column_filters">When false, skip typed column filter UI metadata while still building field headers for data queries.</param>
+    public virtual void setViewList(bool is_cols = true, bool is_column_filters = true)
     {
         list_user_view = getListUserView();
 
@@ -1415,7 +1443,6 @@ public abstract class FwController
             var fieldName = header["field_name"].toStr();
             header["search_value"] = list_filter_search?[fieldName];
         }
-
         if (is_cols)
         {
             var hcustom = Utils.qh(view_list_custom);

@@ -762,12 +762,15 @@ Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disp
 
 #### Other Common Templates
 - **list/** - Directory with common templates for list screens.
+  - `list/filters/*.html` renders opt-in typed list column filters for Dynamic/Vue-compatible server-rendered tables. The shared `thead.html` delegates each search cell to `list/filters/cell.html`, which chooses text, date range, multi-select/autocomplete, number, boolean, or none based on the nested `filter` metadata on each `list_headers` row. Text filters stay inline as a compact operator/input group; other typed filters render a one-line dropdown trigger with draft controls plus `Apply` and `Clear`.
+  - Custom server-rendered column filters use static controller-local overrides: set `list_column_filters.fields[field].template` to `custom`, then add `index/list_filter_custom.html` under the controller template directory. The partial receives the same header context as the common cell, so use nested `filter[...]` values such as `filter[type]`, `filter[field]`, `filter[label]`, `filter[search_value]`, `filter[is_active]`, `filter[selected_options]`, and the shared `list/filters/summary.html` partial when useful. Keep the visible cell one line high and commit the typed JSON into the hidden `search[field]` input only on `Apply` for dropdown-style filters.
 - **form/** - Directory with common templates for form screens.
 - **form/show/** - Directory with common templates for showing records. Used in Dynamic controllers.
 - **form/showform/** - Directory with common templates for edit forms. Used in Dynamic controllers.
 - **form/showdelete/** - Directory with common templates for delete confirmation screens.
 - **activitylogs/** - Directory with common templates for displaying activity logs.
 - **vue/** - Directory with Vue.js components for Vue-based controllers.
+  - `vue/list-column-filter.html` is the shared Vue table-header filter component. It reads nested `header.filter` metadata, keeps using `header.search_value`, and serializes typed filters back through `search[field]` JSON. Custom `filter.component` implementations are still supported and should own their own compact/dropdown UI.
 - **virtual/** - Directory with standard templates for Virtual controllers.
 - **icons/** - Directory for custom svg icons.
 - **list/return_breadcrumbs.html** - Shared origin breadcrumb. Controllers can pass app-local `return_url` plus `return_title`; shared list/form headers render the origin link only when that metadata is present.

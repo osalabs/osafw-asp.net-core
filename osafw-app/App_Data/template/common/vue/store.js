@@ -163,10 +163,24 @@ let state = {
 // merge in fwStoreState if defined
 state = mergeStoreDefaults(state, fwStoreState);
 
+function hasListSearchValue(value) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
+}
+
+function serializeListSearchValue(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    return JSON.stringify(value);
+}
+
 let getters = {
     doubleCount: (state) => state.count * 2, //sample getter
     //return true if state.list_headers contains at least one non-empty search_value
-    isListSearch: (state) => state.list_headers.some(h => h.search_value?.length),
+    isListSearch: (state) => state.list_headers.some(h => hasListSearchValue(h.search_value)),
     //count of hchecked_rows but only true values
     countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
     // get checked rows for request as [id] => 1
@@ -188,7 +202,7 @@ let getters = {
             // initial load - don't set filters, we'll get them from backend
         } else {
             req.dofilter = 1;
-            req.scope = 'list_rows'; // after initial load we only need list_rows
+            req.scope = state.is_list_edit ? 'list_rows,lookups' : 'list_rows';
             Object.keys(state.f).forEach(key => {
                 req['f[' + key + ']'] = state.f[key] ?? ''; //null to empty string
             });
@@ -196,10 +210,10 @@ let getters = {
         // add related_id to request
         if (state.related_id) req.related_id = state.related_id;
 
-        //add search values from headers if search is open
-        if (state.is_list_search_open) {
+        //add active search values from headers on explicit filter requests
+        if (!state.is_initial_load) {
             state.list_headers.forEach(h => {
-                if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
+                if (hasListSearchValue(h.search_value)) req['search[' + h.field_name + ']'] = serializeListSearchValue(h.search_value);
             });
         }
         return req;

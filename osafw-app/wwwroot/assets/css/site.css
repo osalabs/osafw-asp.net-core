@@ -903,6 +903,57 @@ table.list .search {
   display: none;
 }
 
+table.list .search > th {
+  vertical-align: middle;
+}
+
+.fw-column-filter {
+  min-width: 7rem;
+}
+
+.fw-column-filter-inline .input-group {
+  flex-wrap: nowrap;
+}
+
+.fw-column-filter-op {
+  flex: 0 0 3rem;
+  width: 3rem;
+  max-width: 3rem;
+}
+
+.fw-column-filter-inline .input-group-sm > .fw-column-filter-op {
+  padding-left: 2px;
+  padding-right: 2rem;
+}
+
+.fw-column-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 12rem;
+  overflow: hidden;
+}
+
+.fw-column-filter-summary.is-active {
+  color: var(--bs-emphasis-color);
+  border-color: var(--bs-border-color);
+  background-color: var(--bs-tertiary-bg);
+}
+
+.fw-column-filter-summary .text-truncate {
+  min-width: 0;
+}
+
+.fw-column-filter-menu {
+  min-width: 16rem;
+  max-width: 22rem;
+}
+
+.fw-column-filter-multi {
+  min-height: 9rem;
+}
+
 table.list tbody td {
   font-size: var(--fw-table-row-font-size);
 }
@@ -928,6 +979,17 @@ table.list.table-dense :is(.form-control, .form-select) {
 
 table.list.table-dense :is(.form-select) {
   padding-right: 0.5rem !important;
+}
+
+table.list.table-dense .fw-column-filter-op {
+  flex-basis: 2.6rem;
+  width: 2.6rem;
+  max-width: 2.6rem;
+}
+
+table.list.table-dense .fw-column-filter-inline .input-group-sm > .fw-column-filter-op {
+  padding-left: 2px !important;
+  padding-right: 2rem !important;
 }
 
 table.list.table-dense .btn {

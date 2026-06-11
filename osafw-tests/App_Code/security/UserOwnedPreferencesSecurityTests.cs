@@ -401,6 +401,56 @@ public class UserOwnedPreferencesSecurityTests
     }
 
     [TestMethod]
+    public void InitFilter_AuthorizedOwnerSavedFilterRestoresSplitSearchPayload()
+    {
+        var fw = createFw(Users.ACL_MEMBER);
+        var search = new FwDict
+        {
+            ["name"] = Utils.jsonEncode(new FwDict { ["type"] = "text", ["op"] = "starts_with", ["value"] = "Acme" }),
+        };
+        var model = new FilterLookupModel(savedFilterRow(12, addUsersId: 9, isSystem: false, new FwDict
+        {
+            ["f"] = new FwDict { ["s"] = "mine" },
+            ["search"] = search,
+        }));
+        model.init(fw);
+        TestHelpers.RegisterModel(fw, (UserFilters)model);
+        fw.FORM["dofilter"] = "1";
+        fw.FORM["userfilters_id"] = "12";
+        var controller = new TestFilterController(fw);
+
+        var filter = controller.InitFilterForTest("filter:test");
+        var restoredSearch = fw.SessionDict("_filtersearch_AdminDemos.Index") ?? [];
+
+        Assert.AreEqual("mine", filter["s"]);
+        Assert.AreEqual(12, filter["userfilters_id"]);
+        Assert.AreEqual(search["name"], restoredSearch["name"]);
+    }
+
+    [TestMethod]
+    public void InitFilter_OwnedSavedFilterWithLegacyFieldNamesDoesNotUseSplitShape()
+    {
+        var fw = createFw(Users.ACL_MEMBER);
+        var model = new FilterLookupModel(savedFilterRow(12, addUsersId: 9, isSystem: false, new FwDict
+        {
+            ["f"] = "legacy-field",
+            ["search"] = "legacy-search",
+        }));
+        model.init(fw);
+        TestHelpers.RegisterModel(fw, (UserFilters)model);
+        fw.FORM["dofilter"] = "1";
+        fw.FORM["userfilters_id"] = "12";
+        var controller = new TestFilterController(fw);
+
+        var filter = controller.InitFilterForTest("filter:test");
+
+        Assert.AreEqual("legacy-field", filter["f"]);
+        Assert.AreEqual("legacy-search", filter["search"]);
+        Assert.AreEqual(12, filter["userfilters_id"]);
+        Assert.IsTrue(filter.ContainsKey("userfilter"));
+    }
+
+    [TestMethod]
     public void InitFilter_SystemSavedFilterAppliesButClearsEditableMetadata()
     {
         var fw = createFw(Users.ACL_MEMBER);

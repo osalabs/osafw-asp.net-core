@@ -38,5 +38,6 @@ Boundaries
 - User timezone `auto` is stored as an empty `users.timezone` value and is the new-user default; login/settings screens resolve it from the browser timezone into the active session. `UTC` is an explicit stored preference.
 - Dictionary DB single-row reads return empty `DBRow`/`FwDict` for "not found"; `FwModel.one(int)` also returns empty for nonpositive ids, and typed single-row reads return `null`, with `*OrFail` variants for required records.
 - UI rendered by `ParsePage` templates; no Razor.
+- When hosted from a `bin\...\publish` path, `FwConfig` derives `site_root` from the parent folder before `bin`, so deployment scripts must treat the project root as live runtime state for `App_Data`, logs, templates, and uploads.
 - ParsePage allows recursive file-template includes for tree rendering, but stops deeper includes at a fixed crash-protection recursion-depth limit and logs `WARN`.
 - Multi-tenancy per-host via `FwConfig` overrides and caching.

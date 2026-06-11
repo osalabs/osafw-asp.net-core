@@ -96,6 +96,15 @@ public class Demos : FwModel<Demos.Row>
     }
 
     /// <summary>
+    /// Parent lookup lists top-level demos by default while keeping a saved selected parent visible on edit.
+    /// </summary>
+    protected override bool isSelectedLookupFilterBypassAllowed(FwDict? def, FwDict filters)
+    {
+        var hparams = Utils.qh((def?["lookup_params"] ?? string.Empty).toStr());
+        return hparams.ContainsKey("parent") && filters.ContainsKey("parent_id") && filters["parent_id"].toInt() == 0;
+    }
+
+    /// <summary>
     /// Demonstrates typed DB row materialization by calculating a total from numeric demo fields.
     /// </summary>
     /// <param name="id">Primary key of the demo record whose numeric fields should be multiplied.</param>

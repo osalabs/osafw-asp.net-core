@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class FwDynamicController : FwController
+public partial class FwDynamicController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
@@ -848,6 +848,34 @@ public class FwDynamicController : FwController
             return new FwList(arr);
 
         return [];
+    }
+
+    /// <summary>
+    /// Collects fields from the base config and any tab-specific overrides.
+    /// </summary>
+    /// <param name="prefix">The config prefix, such as `show_fields` or `showform_fields`.</param>
+    /// <returns>Combined list of field definitions across all configured tabs.</returns>
+    protected virtual FwList collectFormFields(string prefix)
+    {
+        var allFields = new FwList();
+        if (config[prefix] is IList fields)
+            allFields.AddRange(new FwList(fields));
+
+        if (config["form_tabs"] is IList form_tabs)
+        {
+            foreach (FwDict tab in form_tabs)
+            {
+                var tabCode = tab["tab"].toStr();
+                if (tabCode.Length == 0)
+                    continue;
+
+                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
+                if (tabFields.Count > 0)
+                    allFields.AddRange(tabFields);
+            }
+        }
+
+        return allFields;
     }
 
     /// <summary>

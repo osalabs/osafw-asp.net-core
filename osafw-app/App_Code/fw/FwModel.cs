@@ -784,8 +784,21 @@ public abstract class FwModel : IDisposable
                 var selectedSql = valueFromIname
                     ? lookupSelectedValuesSql(field_iname, selectedValues, whereParams, selectedIsEnumerable)
                     : lookupSelectedIdsSql(field_id, selectedIds, whereParams, selectedIsEnumerable);
-                where.Add($"{db.qid(field_status)} <> @status_deleted");
-                where.Add($"({db.qid(field_status)} = @status_active OR {selectedSql})");
+
+                if (isSelectedLookupFilterBypassAllowed(def, filters))
+                {
+                    var filterSql = where.Count > 0 ? $"({string.Join(" AND ", where)})" : "";
+                    var activeSql = filterSql.Length > 0
+                        ? $"({filterSql} AND {db.qid(field_status)} = @status_active)"
+                        : $"{db.qid(field_status)} = @status_active";
+                    var selectedVisibleSql = $"({db.qid(field_status)} <> @status_deleted AND {selectedSql})";
+                    where = [$"({activeSql} OR {selectedVisibleSql})"];
+                }
+                else
+                {
+                    where.Add($"{db.qid(field_status)} <> @status_deleted");
+                    where.Add($"({db.qid(field_status)} = @status_active OR {selectedSql})");
+                }
             }
             else
                 where.Add($"{db.qid(field_status)} = @status_active");
@@ -801,6 +814,14 @@ FROM {db.qid(table_name)}
 WHERE {(where.Count > 0 ? string.Join(" AND ", where) : "1=1")}
 ORDER BY {getOrderBy()}";
         return labelInactiveLookupOptions(db.arrayp(sql, whereParams));
+    }
+
+    /// <summary>
+    /// Allows a model-specific presentation lookup to show a saved selected row that no longer matches option filters.
+    /// </summary>
+    protected virtual bool isSelectedLookupFilterBypassAllowed(FwDict? def, FwDict filters)
+    {
+        return false;
     }
 
     /// <summary>

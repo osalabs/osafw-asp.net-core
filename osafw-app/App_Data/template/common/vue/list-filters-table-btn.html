@@ -22,7 +22,7 @@
         methods: {
             onToggleSearch(e) {
                 this.fwStore.is_list_search_open = !this.fwStore.is_list_search_open;
-                if (this.fwStore.is_list_search_open) {
+                if (this.fwStore.is_list_search_open && !this.hasCustomColumnFilters()) {
                     //show search hints
                     Toast("WORD to search for contains word<br>" +
                         "!WORD to search for NOT contains word<br>" +
@@ -34,6 +34,9 @@
             },
             onCustomCols(e) {
                 this.$emit('on-show-customize-columns', e);
+            },
+            hasCustomColumnFilters() {
+                return this.fwStore.list_headers.some(header => header.filter && header.filter.type && header.filter.type !== 'none');
             },
             onToggleDensity(e) {
                 const classes = ['table-sm', 'table-dense', 'table-normal'];

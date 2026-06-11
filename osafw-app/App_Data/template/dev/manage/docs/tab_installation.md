@@ -1,5 +1,5 @@
 ### Prerequisites
-- **.NET SDK:** [.NET Core/ASP.NET Core SDK Version]
+- **.NET SDK:** .NET 10 SDK
 - **Database Server:** <~db_type>
 - **Operating System:** [Windows/Linux/MacOS]
 
@@ -9,7 +9,7 @@
 
 2. **Setup Web Server:**
    - Add the Web Server role -> IIS, [SMTP (optional)].
-   - Install .NET SDK (8.0 x64) from [this link](https://aka.ms/dotnet-download).
+   - Install .NET SDK (10.0 x64) from [this link](https://aka.ms/dotnet-download).
    - Install the .NET Core Hosting Bundle from [this link](https://dotnet.microsoft.com/permalink/dotnetcore-current-windows-runtime-bundle-installer).
 
 3. **Install Git and Setup SSH:**
@@ -32,7 +32,7 @@
 
 5. **Configure IIS Website:**
    - Create a new website named `site.domain.name`.
-   - Set the physical path to `C:\inetpub\site.domain.name\bin\Release\net8.0\publish`.
+   - Set the physical path to `C:\inetpub\site.domain.name\bin\Release\net10.0\publish`.
    - Ensure the App Pool is set to "No Managed Code" if applicable.
 
 6. **Set Directory Permissions:**
@@ -40,16 +40,17 @@
      - `C:\inetpub\site.domain.name\App_Data\logs`
      - `C:\inetpub\site.domain.name\upload` or `..\App_Data\upload` (for non-public uploads).
 
-7. **Create Update Script:**
-   - Create a batch script `C:\inetpub\site.domain.name.bat` with the following content:
-     ```bash
-     cd c:\inetpub\site.domain.name
-     git pull
-     %windir%\system32\inetsrv\appcmd stop apppool "site.domain.name"
-     dotnet publish --configuration Release
-     %windir%\system32\inetsrv\appcmd start apppool "site.domain.name"
-     pause
-     ```
+7. **Create Scheduled Deploy Script:**
+   - Copy `scripts\deploy_sample_v2.bat` to a server-local path such as `C:\inetpub\deploy.staging.bat`.
+   - Edit the project-specific settings at the top of the copied script:
+     - `PROJECT_ROOT=C:\inetpub\site.domain.name`
+     - `PROJECT_FILE=osafw-app.csproj`
+     - `TARGET_FOLDER=C:\inetpub\site.domain.name\bin\Release\net10.0\publish`
+     - `GIT_BRANCH=staging` (or the branch for this server)
+     - `DEPLOY_NAME=deploy-staging`
+   - Add a Windows Scheduled Task every 5-10 minutes running the copied script. Use a Windows account that can access Git, the .NET SDK, IIS target folders, and the log/state folder.
+   - The script builds in a temporary git worktree, deploys only after a successful publish, uses `app_offline.htm` during the final copy, and records the last successfully deployed commit.
+   - The script does not run `git clean`; untracked runtime files under `App_Data\db`, `App_Data\logs`, and `upload` are preserved.
 
 8. **Install Let's Encrypt for SSL:**
    - Install the Let's Encrypt client from [this link](https://www.win-acme.com/).

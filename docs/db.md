@@ -97,6 +97,7 @@ Data Protection key XML stored in `fwkeys` is protected with Windows DPAPI befor
 - `tables()`
 - `views()`
 - `tableSchemaFull(table)`
+- `schemaField(table, field)`
 - `listForeignKeys([table])`
 
 ### Typed operations

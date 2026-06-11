@@ -11,7 +11,7 @@
         <th></th>
         <~/common/list/th_empty if="GLOBAL[is_list_btn_left]">
         <~list_headers repeat inline forsearch>
-            <th><input type="text" name="search[<~field_name>]" value="<~search_value>" class="form-control form-control-sm"></th>
+            <~/common/list/filters/cell>
         </~list_headers>
         <~/common/list/th_empty unless="GLOBAL[is_list_btn_left]">
     </tr>

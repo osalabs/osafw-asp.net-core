@@ -164,7 +164,7 @@ public class FwVueController : FwDynamicController
         setListSearchStatus();
 
         if (list_headers.Count == 0)
-            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+            setViewList(false, false); // initialize list headers only; row JSON does not need filter UI options
 
         //only select from db visible fields + id, save as comma-separated string into list_fields
         setListFields();
@@ -191,9 +191,10 @@ public class FwVueController : FwDynamicController
             this.setUserLists(ps);
 
         if (list_headers.Count == 0)
-            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+            setViewList(false, false); // lookup-only JSON does not need filter UI options
 
         FwList showform_fields = collectFormFields("showform_fields");
+        var selectedValuesByLookupModel = listLookupSelectedValuesByLookupModel(showform_fields);
         //FwRow hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
@@ -205,20 +206,54 @@ public class FwVueController : FwDynamicController
 
             var dtype = def["type"].toStr();
             var lookup_model = def["lookup_model"].toStr();
-            if (lookup_model.Length > 0 && dtype != "autocomplete")
+            if (lookup_model.Length > 0 && dtype != "autocomplete" && !lookups.ContainsKey(lookup_model))
             {
                 //all lookup_models, except autocomplete (for those it could be too large)
-                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
+                var selectedValues = selectedValuesByLookupModel[lookup_model] as StrList;
+                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def, selectedValues != null && selectedValues.Count > 0 ? selectedValues : null);
             }
 
             var lookup_tpl = def["lookup_tpl"].toStr();
-            if (lookup_tpl.Length > 0)
+            if (lookup_tpl.Length > 0 && !lookups.ContainsKey(lookup_tpl))
             {
                 lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
             }
         }
 
         ps["lookups"] = lookups;
+    }
+
+    private FwDict listLookupSelectedValuesByLookupModel(FwList showformFields)
+    {
+        FwDict result = [];
+        if (list_rows.Count == 0)
+            return result;
+
+        foreach (FwDict def in showformFields)
+        {
+            var fieldName = def["field"].toStr();
+            var lookupModel = def["lookup_model"].toStr();
+            if (fieldName.Length == 0 || def["type"].toStr() == "autocomplete" || lookupModel.Length == 0)
+                continue;
+
+            foreach (FwDict row in list_rows)
+            {
+                var value = row[fieldName].toStr().Trim();
+                if (value.Length == 0)
+                    continue;
+
+                if (result[lookupModel] is not StrList values)
+                {
+                    values = [];
+                    result[lookupModel] = values;
+                }
+
+                if (!values.Contains(value))
+                    values.Add(value);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -499,33 +534,6 @@ public class FwVueController : FwDynamicController
         }
 
         return tabFields;
-    }
-
-    /// <summary>
-    /// Collect fields from the base config and any tab-specific overrides for Vue payloads.
-    /// </summary>
-    /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
-    /// <returns>Combined list of field definitions across all tabs.</returns>
-    protected FwList collectFormFields(string prefix)
-    {
-        var allFields = new FwList();
-        if (config[prefix] is IList fields)
-            allFields.AddRange(new FwList(fields));
-
-        if (config["form_tabs"] is IList form_tabs)
-        {
-            foreach (FwDict tab in form_tabs)
-            {
-                var tabCode = tab["tab"].toStr();
-                if (tabCode.Length == 0)
-                    continue;
-                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
-                if (tabFields.Count > 0)
-                    allFields.AddRange(tabFields);
-            }
-        }
-
-        return allFields;
     }
 
     /// <summary>
