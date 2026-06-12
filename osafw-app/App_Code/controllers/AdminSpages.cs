@@ -170,6 +170,15 @@ public class AdminSpagesController : FwAdminController
         if (item_old["is_home"] == "1")
             FwCache.remove("home_page"); // reset home page cache if Home page changed
 
+        try
+        {
+            fw.model<RagSources>().queueSpage(id);
+        }
+        catch (Exception ex)
+        {
+            logger(LogLevel.WARN, "Spage indexing queue failed:", ex.Message);
+        }
+
         return this.afterSave(success, id, is_new);
     }
 

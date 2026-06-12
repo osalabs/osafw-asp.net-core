@@ -1,0 +1,11 @@
+<form method="post" action="<~/assistant/url>" class="d-flex flex-column gap-3">
+    <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+    <div class="d-flex align-items-center gap-2">
+        <span class="fs-4 text-primary"><~/common/icons/list-stars></span>
+        <h2 class="h5 mb-0"><~title var></h2>
+    </div>
+    <textarea id="dashboard_assistant_prompt" name="prompt" class="form-control" rows="3" maxlength="4000" placeholder="`Ask a question`"></textarea>
+    <div class="d-flex justify-content-end">
+        <button class="btn btn-primary" type="submit"><~/common/icons/send>`Ask`</button>
+    </div>
+</form>

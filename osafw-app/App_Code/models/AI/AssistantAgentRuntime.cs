@@ -62,6 +62,40 @@ public sealed class AssistantToolRuntime
         fw.logger(LogLevel.DEBUG, "Assistant tool result [", toolName, "] ", summary ?? string.Empty);
     }
 
+    public void RecordRetrievalEvidence(string toolName, string query, FwList results)
+    {
+        if (!HasPersistedRun || results.Count == 0)
+            return;
+
+        var evidence = results
+            .OfType<FwDict>()
+            .Select(static item => new
+            {
+                source_id = item["source_id"].toInt(),
+                chunk_id = item["chunk_id"].toInt(),
+                source_type = item["source_type"].toStr(),
+                title = item["source_title"].toStr(item["article_name"].toStr(item["filename"].toStr())),
+                url = item["url"].toStr(item["source_url"].toStr(item["article_url"].toStr())),
+                page = item["page"].toInt(),
+                section = item["section"].toStr(),
+                score = item["score"].toDouble(),
+                vector_score = item["vector_score"].toDouble(),
+                keyword_score = item["keyword_score"].toDouble(),
+                retrieval_mode = item["retrieval_mode"].toStr()
+            })
+            .Where(static item => item.source_id > 0 || item.chunk_id > 0)
+            .ToList();
+        if (evidence.Count == 0)
+            return;
+
+        fw.model<AssistantRunsEvents>().addEvent(
+            runId,
+            AssistantRunsEvents.TYPE_EVIDENCE,
+            "Evidence: " + toolName,
+            Utils.jsonEncode(new { tool = toolName, query = query ?? string.Empty, evidence })
+        );
+    }
+
     public void RequestClarification(AssistantClarificationDto clarification)
     {
         throw new AssistantClarificationRequestedException(clarification);
@@ -81,6 +115,7 @@ public sealed class AssistantToolCatalog
     {
         var ragTool = new AssistantRagTool(runtime);
         var threadSearchTool = new AssistantThreadAttachmentSearchTool(runtime);
+        var contactSearchTool = new AssistantContactSearchTool(runtime);
         var clarificationTool = new AssistantClarificationTool(runtime);
         var progressTool = new AssistantProgressTool(runtime);
 
@@ -88,6 +123,7 @@ public sealed class AssistantToolCatalog
         [
             Register(ragTool.search, "search_knowledge_base", "rag"),
             Register(threadSearchTool.search, "search_thread_attachments", "thread_files"),
+            Register(contactSearchTool.search, "search_contacts", "contacts"),
             Register(clarificationTool.request, "request_clarification", "clarification"),
             Register(progressTool.report, "report_progress", "progress"),
         ];
@@ -117,7 +153,8 @@ public sealed class AssistantRagTool
     {
         runtime.LogToolCall("search_knowledge_base", new { query, k });
         runtime.AddProgress("Searching knowledge base.");
-        var output = await runtime.Fw.model<DocChunks>().listAssistantSearchResultsAsync(query, Math.Clamp(k, 1, 20)).ConfigureAwait(false);
+        var output = await runtime.Fw.model<RagChunks>().listAssistantSearchResultsAsync(query, Math.Clamp(k, 1, 20)).ConfigureAwait(false);
+        runtime.RecordRetrievalEvidence("search_knowledge_base", query, output);
         runtime.LogToolResult("search_knowledge_base", "Returned " + output.Count + " matches.");
         return output;
     }
@@ -141,7 +178,7 @@ public sealed class AssistantThreadAttachmentSearchTool
         if (messageIds.Count == 0)
             return [];
 
-        var filtered = await runtime.Fw.model<DocChunks>().listAssistantThreadSearchResultsAsync(query, messageIds, Math.Clamp(k, 1, 10)).ConfigureAwait(false);
+        var filtered = await runtime.Fw.model<RagChunks>().listAssistantThreadSearchResultsAsync(query, messageIds, Math.Clamp(k, 1, 10)).ConfigureAwait(false);
         var urlByMessageId = listAttachmentUrlByMessageIds(messageIds);
         foreach (FwDict item in filtered)
         {
@@ -150,6 +187,7 @@ public sealed class AssistantThreadAttachmentSearchTool
                 item["url"] = url;
         }
 
+        runtime.RecordRetrievalEvidence("search_thread_attachments", query, filtered);
         runtime.LogToolResult("search_thread_attachments", "Returned " + filtered.Count + " matches.");
         return filtered;
     }
@@ -176,7 +214,7 @@ select distinct m.id
         ));
 
         var messageIds = rows.Select(static row => row["id"].toInt()).Where(static id => id > 0);
-        return runtime.Fw.model<DocChunks>().listIndexedEntityItemIds(FwEntities.ICODE_ASSISTANT_MESSAGE, messageIds);
+        return runtime.Fw.model<RagChunks>().listIndexedEntityItemIds(FwEntities.ICODE_ASSISTANT_MESSAGE, messageIds);
     }
 
     private Dictionary<int, string> listAttachmentUrlByMessageIds(IEnumerable<int> messageIds)
@@ -217,6 +255,66 @@ select al.item_id as assistant_messages_id,
             result[messageId] = "/Att/" + row["icode"];
         }
         return result;
+    }
+}
+
+public sealed class AssistantContactSearchTool
+{
+    private readonly AssistantToolRuntime runtime;
+
+    public AssistantContactSearchTool(AssistantToolRuntime runtime) => this.runtime = runtime;
+
+    [Description("Search active users/contacts by name, email, login, title, or city using simple LIKE matching.")]
+    public FwList search(
+        [Description("Contact name, email, login, title, or city phrase.")] string query,
+        [Description("Maximum number of contacts to return.")] int k = 5)
+    {
+        runtime.LogToolCall("search_contacts", new { query, k });
+        string search = (query ?? string.Empty).Trim();
+        if (search.Length == 0)
+            return [];
+
+        string sql = $@"select id, fname, lname, iname, email, login, title, city, state
+                          from {runtime.Fw.db.qid("users")}
+                         where status=@status_active
+                           and (
+                                fname like @search
+                                or lname like @search
+                                or iname like @search
+                                or email like @search
+                                or login like @search
+                                or title like @search
+                                or city like @search
+                           )
+                      order by fname, lname, email, id";
+        var rows = runtime.Fw.db.arrayp(runtime.Fw.db.limit(sql, Math.Clamp(k, 1, 10)), DB.h(
+            "@status_active", FwModel.STATUS_ACTIVE,
+            "@search", "%" + search + "%"
+        ));
+
+        var output = new FwList(rows.Count);
+        bool canLinkUsers = runtime.Fw.userAccessLevel >= Users.ACL_MANAGER;
+        foreach (FwDict row in rows)
+        {
+            string name = (row["fname"].toStr() + " " + row["lname"].toStr()).Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                name = row["iname"].toStr(row["email"].toStr(row["login"].toStr()));
+
+            output.Add(new FwDict
+            {
+                ["source_type"] = "user_contact",
+                ["users_id"] = row["id"].toInt(),
+                ["name"] = name,
+                ["title"] = row["title"].toStr(),
+                ["email"] = row["email"].toStr(),
+                ["city"] = row["city"].toStr(),
+                ["state"] = row["state"].toStr(),
+                ["url"] = canLinkUsers ? "/Admin/Users/" + row["id"].toInt() : string.Empty
+            });
+        }
+
+        runtime.LogToolResult("search_contacts", "Returned " + output.Count + " matches.");
+        return output;
     }
 }
 

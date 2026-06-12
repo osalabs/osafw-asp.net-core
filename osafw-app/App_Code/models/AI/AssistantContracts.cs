@@ -37,9 +37,13 @@ public sealed class AssistantResult
               "article_name": { "type": "string" },
               "article_url": { "type": "string" },
               "article_id": { "type": ["integer", "null"] },
-              "att_id": { "type": ["integer", "null"] }
+              "att_id": { "type": ["integer", "null"] },
+              "source_id": { "type": ["integer", "null"] },
+              "chunk_id": { "type": ["integer", "null"] },
+              "source_type": { "type": "string" },
+              "score": { "type": ["number", "null"] }
             },
-            "required": ["name", "url", "page", "section", "filename", "file_url", "article_name", "article_url", "article_id", "att_id"]
+            "required": ["name", "url", "page", "section", "filename", "file_url", "article_name", "article_url", "article_id", "att_id", "source_id", "chunk_id", "source_type", "score"]
           }
         }
       },
@@ -60,6 +64,10 @@ public sealed class AssistantSource
     public string article_url { get; set; } = string.Empty;
     public int? article_id { get; set; }
     public int? att_id { get; set; }
+    public int? source_id { get; set; }
+    public int? chunk_id { get; set; }
+    public string source_type { get; set; } = string.Empty;
+    public double? score { get; set; }
 }
 
 public sealed class AssistantAttachmentDto

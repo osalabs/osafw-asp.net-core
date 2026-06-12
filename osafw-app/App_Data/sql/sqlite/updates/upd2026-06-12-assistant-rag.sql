@@ -15,10 +15,43 @@ CREATE TABLE IF NOT EXISTS kb_articles (
 CREATE UNIQUE INDEX IF NOT EXISTS UX_kb_articles_icode ON kb_articles (icode);
 CREATE INDEX IF NOT EXISTS IX_kb_articles_access ON kb_articles (access_level, status);
 
-CREATE TABLE IF NOT EXISTS doc_chunks (
+CREATE TABLE IF NOT EXISTS rag_sources (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_type           TEXT NOT NULL DEFAULT '',
+  source_key            TEXT NOT NULL DEFAULT '',
   fwentities_id         INTEGER NOT NULL DEFAULT 0,
   item_id               INTEGER NOT NULL DEFAULT 0,
+  att_id                INTEGER NOT NULL DEFAULT 0,
+  iname                 TEXT NOT NULL DEFAULT '',
+  url                   TEXT NOT NULL DEFAULT '',
+  content_hash          TEXT NOT NULL DEFAULT '',
+  source_version        TEXT NOT NULL DEFAULT '',
+  acl_snapshot          TEXT,
+  index_status          TEXT NOT NULL DEFAULT 'pending',
+  queued_at             DATETIME NULL,
+  last_indexed_at       DATETIME NULL,
+  last_error            TEXT,
+  metadata_json         TEXT,
+
+  status                INTEGER NOT NULL DEFAULT 0,
+  add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  add_users_id          INTEGER DEFAULT 0,
+  upd_time              DATETIME,
+  upd_users_id          INTEGER DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS UX_rag_sources_source_key ON rag_sources (source_key);
+CREATE INDEX IF NOT EXISTS IX_rag_sources_queue ON rag_sources (index_status, status, queued_at, id);
+CREATE INDEX IF NOT EXISTS IX_rag_sources_entity ON rag_sources (fwentities_id, item_id, att_id, status);
+
+CREATE TABLE IF NOT EXISTS rag_chunks (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  rag_sources_id        INTEGER NOT NULL DEFAULT 0,
+  fwentities_id         INTEGER NOT NULL DEFAULT 0,
+  item_id               INTEGER NOT NULL DEFAULT 0,
+  att_id                INTEGER NOT NULL DEFAULT 0,
+  source_type           TEXT NOT NULL DEFAULT '',
+  source_title          TEXT NOT NULL DEFAULT '',
+  source_url            TEXT NOT NULL DEFAULT '',
   chunk_index           INTEGER NOT NULL DEFAULT 0,
   iname                 TEXT NOT NULL DEFAULT '',
   idesc                 TEXT NOT NULL DEFAULT '',
@@ -37,9 +70,10 @@ CREATE TABLE IF NOT EXISTS doc_chunks (
   upd_time              DATETIME,
   upd_users_id          INTEGER DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS IX_doc_chunks_entity ON doc_chunks (fwentities_id, item_id, status);
-CREATE INDEX IF NOT EXISTS IX_doc_chunks_embedding ON doc_chunks (embedding_model, embedding_dim, status);
-CREATE INDEX IF NOT EXISTS IX_doc_chunks_backend ON doc_chunks (vector_backend, status);
+CREATE INDEX IF NOT EXISTS IX_rag_chunks_source ON rag_chunks (rag_sources_id, chunk_index, status);
+CREATE INDEX IF NOT EXISTS IX_rag_chunks_entity ON rag_chunks (fwentities_id, item_id, att_id, status);
+CREATE INDEX IF NOT EXISTS IX_rag_chunks_embedding ON rag_chunks (embedding_model, embedding_dim, status);
+CREATE INDEX IF NOT EXISTS IX_rag_chunks_backend ON rag_chunks (vector_backend, status);
 
 CREATE TABLE IF NOT EXISTS assistant_threads (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,14 +184,3 @@ CREATE TABLE IF NOT EXISTS assistant_feedback (
   upd_users_id          INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS IX_assistant_feedback_thread ON assistant_feedback (assistant_threads_id, assistant_runs_id, assistant_messages_id);
-
-INSERT OR IGNORE INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc) VALUES
-(1, 0, 'AI', 'OPENAI_API_KEY', '', 'OpenAI API Key', 'API key used by Assistant and LLM features.'),
-(1, 0, 'AI', 'ASSISTANT_ENABLED', '0', 'Assistant Enabled', 'Set to 1 to enable the assistant UI and queued runs.'),
-(1, 0, 'AI', 'ASSISTANT_VECTOR_MODE', 'auto', 'Assistant Vector Mode', 'Use auto, json, or native. Auto uses SQL Server native vectors when available.'),
-(1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.'),
-(1, 0, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.'),
-(1, 0, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.'),
-(1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for inline indexing. Larger files remain attached but are not indexed.'),
-(1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.'),
-(1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.');

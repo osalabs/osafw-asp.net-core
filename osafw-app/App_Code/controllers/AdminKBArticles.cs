@@ -107,8 +107,8 @@ public class AdminKBArticlesController : FwAdminController
         itemdb["status"] = itemdb["status"].toInt(FwModel.STATUS_ACTIVE);
         id = modelAddOrUpdate(id, itemdb);
 
-        bool indexed = model.reindexKBArticle(id);
-        fw.flash(indexed ? "success" : "info", indexed ? "Knowledge base article indexed." : "Knowledge base article saved. Indexing is pending setup or provider availability.");
+        bool queued = model.reindexKBArticle(id);
+        fw.flash(queued ? "success" : "info", queued ? "Knowledge base article queued for indexing." : "Knowledge base article saved. Indexing is pending assistant setup or provider availability.");
 
         return afterSave(true, id, isNew);
     }
@@ -131,8 +131,8 @@ public class AdminKBArticlesController : FwAdminController
     {
         enforcePost();
         model.checkAccess(id);
-        bool indexed = model.reindexKBArticle(id);
-        fw.flash(indexed ? "success" : "error", indexed ? "Knowledge base article reindexed." : "Knowledge base article could not be indexed. Check assistant setup and logs.");
+        bool queued = model.reindexKBArticle(id);
+        fw.flash(queued ? "success" : "error", queued ? "Knowledge base article queued for reindexing." : "Knowledge base article could not be queued. Check assistant setup and logs.");
         fw.redirect(base_url + "/" + id);
         return null;
     }
@@ -148,7 +148,7 @@ public class AdminKBArticlesController : FwAdminController
             if (entityId <= 0)
                 return 0;
 
-            return db.valuep("select count(*) from doc_chunks where fwentities_id=@fwentities_id and item_id=@item_id and status<>@status_deleted", DB.h(
+            return db.valuep("select count(*) from rag_chunks where fwentities_id=@fwentities_id and item_id=@item_id and status<>@status_deleted", DB.h(
                 "@fwentities_id", entityId,
                 "@item_id", id,
                 "@status_deleted", FwModel.STATUS_DELETED
@@ -187,7 +187,7 @@ public class AdminKBArticlesController : FwAdminController
         try
         {
             var tables = db.tables().Select(static table => table.ToString() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return tables.Contains("kb_articles") && tables.Contains("doc_chunks");
+            return tables.Contains("kb_articles") && tables.Contains("rag_sources") && tables.Contains("rag_chunks");
         }
         catch
         {

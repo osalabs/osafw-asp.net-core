@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace osafw;
 
-public class DocChunks : FwModel<DocChunks.Row>
+public class RagChunks : FwModel<RagChunks.Row>
 {
     public const string VECTOR_MODE_AUTO = "auto";
     public const string VECTOR_MODE_JSON = "json";
@@ -17,8 +17,13 @@ public class DocChunks : FwModel<DocChunks.Row>
     public class Row
     {
         public int id { get; set; }
+        public int rag_sources_id { get; set; }
         public int fwentities_id { get; set; }
         public int item_id { get; set; }
+        public int att_id { get; set; }
+        public string source_type { get; set; } = string.Empty;
+        public string source_title { get; set; } = string.Empty;
+        public string source_url { get; set; } = string.Empty;
         public int chunk_index { get; set; }
         public string iname { get; set; } = string.Empty;
         public string idesc { get; set; } = string.Empty;
@@ -38,10 +43,11 @@ public class DocChunks : FwModel<DocChunks.Row>
     }
 
     private bool? nativeVectorAvailable;
+    private bool? nativeVectorColumnAvailable;
 
-    public DocChunks()
+    public RagChunks()
     {
-        table_name = "doc_chunks";
+        table_name = "rag_chunks";
         is_log_changes = false;
     }
 
@@ -50,6 +56,8 @@ public class DocChunks : FwModel<DocChunks.Row>
         ArgumentNullException.ThrowIfNull(record);
         if (record.Embedding == null || record.Embedding.Count == 0)
             throw new ArgumentException("Embedding vector is required.", nameof(record));
+        if (record.RagSourcesId <= 0)
+            throw new ArgumentException("RagSourcesId is required for embedding records.", nameof(record));
         if (record.ItemId <= 0)
             throw new ArgumentException("ItemId is required for embedding records.", nameof(record));
 
@@ -62,15 +70,21 @@ public class DocChunks : FwModel<DocChunks.Row>
         if (string.IsNullOrWhiteSpace(embeddingModel))
             embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
 
-        db.insert(table_name, DB.h(
+        string embeddingJson = JsonSerializer.Serialize(record.Embedding);
+        int id = add(DB.h(
+            "rag_sources_id", record.RagSourcesId,
             "fwentities_id", fwentitiesId,
             "item_id", record.ItemId,
+            "att_id", record.AttId,
+            "source_type", record.SourceType ?? string.Empty,
+            "source_title", record.SourceTitle ?? string.Empty,
+            "source_url", record.SourceUrl ?? string.Empty,
             "chunk_index", record.ChunkIndex,
             "iname", record.Filename ?? string.Empty,
             "page", record.Page,
             "section", record.Section ?? string.Empty,
             "idesc", record.Text ?? string.Empty,
-            "embedding_json", JsonSerializer.Serialize(record.Embedding),
+            "embedding_json", embeddingJson,
             "embedding_norm", vectorNorm(record.Embedding),
             "embedding_dim", record.Embedding.Count,
             "embedding_model", embeddingModel,
@@ -78,47 +92,30 @@ public class DocChunks : FwModel<DocChunks.Row>
             "metadata_json", record.MetadataJson ?? string.Empty,
             "status", STATUS_ACTIVE
         ));
+
+        updateNativeVectorColumn(id, embeddingJson, record.Embedding.Count);
     }
 
     public async Task<List<ChunkSearchResult>> listByQueryAsync(string query, int limit = 3, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(query))
-            return [];
-
-        var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
-
-        var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
-        return listByEmbedding(queryEmbedding, embeddingModel, limit, null, null);
+        return await listByQueryFilteredAsync(query, limit, null, null, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<FwList> listAssistantSearchResultsAsync(string query, int limit = 10, CancellationToken cancellationToken = default)
     {
+        HashSet<int> entityIds = [];
         int kbEntityId = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_KB);
-        if (kbEntityId <= 0)
+        if (kbEntityId > 0)
+            entityIds.Add(kbEntityId);
+        int spageEntityId = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE);
+        if (spageEntityId > 0)
+            entityIds.Add(spageEntityId);
+        if (entityIds.Count == 0)
             return [];
 
-        var results = await listByQueryFilteredAsync(query, limit, [kbEntityId], null, cancellationToken).ConfigureAwait(false);
-
-        var output = new FwList(results.Count);
-        foreach (var item in results)
-        {
-            var citation = item.Citation;
-            output.Add(new FwDict
-            {
-                ["text"] = item.Text ?? string.Empty,
-                ["filename"] = citation.File,
-                ["page"] = citation.Page,
-                ["section"] = citation.Section,
-                ["fwentities_id"] = citation.FwEntitiesId,
-                ["item_id"] = citation.ItemId,
-                ["url"] = citation.ArticleUrl,
-                ["article_id"] = citation.ArticleId,
-                ["article_name"] = citation.ArticleName,
-                ["article_url"] = citation.ArticleUrl
-            });
-        }
-
-        return output;
+        var results = await listByQueryFilteredAsync(query, limit, entityIds, null, cancellationToken).ConfigureAwait(false);
+        traceRetrieval(query, "knowledge_base", results);
+        return toAssistantResults(results);
     }
 
     public async Task<FwList> listAssistantThreadSearchResultsAsync(string query, IEnumerable<int> messageIds, int limit = 5, CancellationToken cancellationToken = default)
@@ -132,21 +129,8 @@ public class DocChunks : FwModel<DocChunks.Row>
             return [];
 
         var results = await listByQueryFilteredAsync(query, limit, [messageEntityId], ids, cancellationToken).ConfigureAwait(false);
-        var output = new FwList(results.Count);
-        foreach (var item in results)
-        {
-            output.Add(new FwDict
-            {
-                ["text"] = item.Text ?? string.Empty,
-                ["filename"] = item.Citation.File,
-                ["page"] = item.Citation.Page,
-                ["section"] = item.Citation.Section,
-                ["fwentities_id"] = item.Citation.FwEntitiesId,
-                ["item_id"] = item.Citation.ItemId
-            });
-        }
-
-        return output;
+        traceRetrieval(query, "thread_files", results);
+        return toAssistantResults(results);
     }
 
     private async Task<List<ChunkSearchResult>> listByQueryFilteredAsync(string query, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds, CancellationToken cancellationToken)
@@ -154,10 +138,20 @@ public class DocChunks : FwModel<DocChunks.Row>
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
+        var vectorResults = new List<ChunkSearchResult>();
         var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        try
+        {
+            var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
+            vectorResults = listByEmbedding(queryEmbedding, embeddingModel, Math.Max(limit * 3, limit), allowedEntityIds, allowedItemIds);
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.WARN, "RAG vector retrieval failed; using keyword retrieval only: ", ex.Message);
+        }
 
-        var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
-        return listByEmbedding(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds);
+        var keywordResults = listByKeyword(query, Math.Max(limit * 3, limit), allowedEntityIds, allowedItemIds);
+        return mergeHybridResults(vectorResults, keywordResults, limit);
     }
 
     private List<ChunkSearchResult> listByEmbedding(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
@@ -170,7 +164,7 @@ public class DocChunks : FwModel<DocChunks.Row>
         {
             try
             {
-                return mapSearchRows(listByNativeVectorQuery(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds));
+                return mapSearchRows(listByNativeVectorQuery(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
             }
             catch (Exception ex)
             {
@@ -178,7 +172,7 @@ public class DocChunks : FwModel<DocChunks.Row>
             }
         }
 
-        return mapSearchRows(listByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds));
+        return mapSearchRows(listByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
     }
 
     public DBList listByJsonQuery(string qJson, double qNorm, int dimension, string embeddingModel, int limit, HashSet<int>? allowedEntityIds = null, HashSet<int>? allowedItemIds = null)
@@ -199,10 +193,15 @@ public class DocChunks : FwModel<DocChunks.Row>
     {
         string qJson = JsonSerializer.Serialize(queryEmbedding);
         int dimension = queryEmbedding.Count;
-        string distance = $"VECTOR_DISTANCE('cosine', CAST(@JsonQueryVector AS vector({dimension})), CAST(d.embedding_json AS vector({dimension})))";
+        string distance = $"VECTOR_DISTANCE('cosine', CAST(@JsonQueryVector AS vector({dimension})), d.embedding_vector)";
         string sql = $@"select d.id,
+                               d.rag_sources_id,
                                d.fwentities_id,
                                d.item_id,
+                               d.att_id,
+                               d.source_type,
+                               d.source_title,
+                               d.source_url,
                                d.iname,
                                d.page,
                                d.section,
@@ -212,11 +211,26 @@ public class DocChunks : FwModel<DocChunks.Row>
                          where d.status=@status_active
                            and d.embedding_dim=@EmbeddingDim
                            and d.embedding_model=@EmbeddingModel
+                           and d.embedding_vector is not null
                       ##FILTERS##
                       order by {distance}";
         sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
         sql = db.limit(sql, Math.Max(1, limit));
         return db.arrayp(sql, buildSearchParams(qJson, vectorNorm(queryEmbedding), dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds));
+    }
+
+    private List<ChunkSearchResult> listByKeyword(string query, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
+    {
+        string trimmed = (query ?? string.Empty).Trim();
+        if (trimmed.Length == 0)
+            return [];
+
+        string sql = buildKeywordQuerySql(limit);
+        var @params = buildKeywordParams(trimmed, limit, allowedEntityIds, allowedItemIds);
+        sql = sql.Replace("##TERM_FILTERS##", @params["__term_filters"].toStr());
+        @params.Remove("__term_filters");
+        sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
+        return mapSearchRows(db.arrayp(sql, @params), "keyword");
     }
 
     private string resolveVectorBackend(int dimension)
@@ -230,7 +244,12 @@ public class DocChunks : FwModel<DocChunks.Row>
         return isNativeVectorAvailable(dimension) ? VECTOR_MODE_NATIVE : VECTOR_MODE_JSON;
     }
 
-    public bool isNativeVectorAvailable(int dimension = 1536)
+    public bool isNativeVectorAvailable(int dimension = DEFAULT_EMBEDDING_DIMENSION)
+    {
+        return isNativeVectorTypeAvailable() && isNativeVectorColumnAvailable(dimension);
+    }
+
+    public bool isNativeVectorTypeAvailable()
     {
         if (db.dbtype != DB.DBTYPE_SQLSRV)
             return false;
@@ -247,6 +266,25 @@ public class DocChunks : FwModel<DocChunks.Row>
         }
 
         return nativeVectorAvailable.Value;
+    }
+
+    private bool isNativeVectorColumnAvailable(int dimension)
+    {
+        if (db.dbtype != DB.DBTYPE_SQLSRV || !isNativeVectorTypeAvailable())
+            return false;
+        if (nativeVectorColumnAvailable.HasValue)
+            return nativeVectorColumnAvailable.Value;
+
+        try
+        {
+            nativeVectorColumnAvailable = db.valuep("select case when COL_LENGTH(N'dbo.rag_chunks', N'embedding_vector') is null then 0 else 1 end").toBool();
+        }
+        catch
+        {
+            nativeVectorColumnAvailable = false;
+        }
+
+        return nativeVectorColumnAvailable.Value;
     }
 
     private string buildSqlServerJsonQuerySql(int limit)
@@ -270,8 +308,13 @@ scores as (
 )
 select top (@Limit)
        d.id,
+       d.rag_sources_id,
        d.fwentities_id,
        d.item_id,
+       d.att_id,
+       d.source_type,
+       d.source_title,
+       d.source_url,
        d.iname,
        d.page,
        d.section,
@@ -302,8 +345,13 @@ scores as (
   group by d.id
 )
 select d.id,
+       d.rag_sources_id,
        d.fwentities_id,
        d.item_id,
+       d.att_id,
+       d.source_type,
+       d.source_title,
+       d.source_url,
        d.iname,
        d.page,
        d.section,
@@ -319,8 +367,13 @@ select d.id,
     {
         return $@"
 select d.id,
+       d.rag_sources_id,
        d.fwentities_id,
        d.item_id,
+       d.att_id,
+       d.source_type,
+       d.source_title,
+       d.source_url,
        d.iname,
        d.page,
        d.section,
@@ -333,9 +386,44 @@ select d.id,
    and d.embedding_dim=@EmbeddingDim
    and d.embedding_model=@EmbeddingModel
 ##FILTERS##
- group by d.id, d.fwentities_id, d.item_id, d.iname, d.page, d.section, d.idesc, d.embedding_norm
+ group by d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.iname, d.page, d.section, d.idesc, d.embedding_norm
  order by CosineSim desc, d.id
  limit @Limit";
+    }
+
+    private string buildKeywordQuerySql(int limit)
+    {
+        string sql = $@"
+select d.id,
+       d.rag_sources_id,
+       d.fwentities_id,
+       d.item_id,
+       d.att_id,
+       d.source_type,
+       d.source_title,
+       d.source_url,
+       d.iname,
+       d.page,
+       d.section,
+       d.idesc,
+       (
+         case when d.iname like @KeywordLike then 4.0 else 0 end
+         + case when d.source_title like @KeywordLike then 3.0 else 0 end
+         + case when d.section like @KeywordLike then 2.0 else 0 end
+         + case when d.idesc like @KeywordLike then 1.0 else 0 end
+       ) as KeywordScore
+  from {qTable()} d
+ where d.status=@status_active
+   and (
+        d.iname like @KeywordLike
+        or d.source_title like @KeywordLike
+        or d.section like @KeywordLike
+        or d.idesc like @KeywordLike
+        ##TERM_FILTERS##
+   )
+##FILTERS##
+ order by KeywordScore desc, d.id";
+        return db.limit(sql, Math.Max(1, limit));
     }
 
     private string addSearchFilters(string sql, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
@@ -383,24 +471,73 @@ select d.id,
         return @params;
     }
 
-    private List<ChunkSearchResult> mapSearchRows(DBList rows)
+    private FwDict buildKeywordParams(string query, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
+    {
+        var @params = DB.h(
+            "@KeywordLike", "%" + query + "%",
+            "@Limit", Math.Max(1, limit),
+            "@status_active", STATUS_ACTIVE,
+            "@kb_entity_id", fw.model<FwEntities>().idByIcode(FwEntities.ICODE_KB),
+            "@current_access_level", fw.userAccessLevel
+        );
+        if (allowedEntityIds != null && allowedEntityIds.Count > 0)
+            @params["allowed_entity_ids"] = allowedEntityIds.ToList();
+        if (allowedItemIds != null && allowedItemIds.Count > 0)
+            @params["allowed_item_ids"] = allowedItemIds.ToList();
+
+        string termFilters = buildKeywordTermFilters(query, @params);
+        @params["__term_filters"] = termFilters;
+        return @params;
+    }
+
+    private static string buildKeywordTermFilters(string query, FwDict @params)
+    {
+        var terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(static term => term.Length >= 2)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .ToList();
+        if (terms.Count == 0)
+            return string.Empty;
+
+        var parts = new List<string>();
+        for (int i = 0; i < terms.Count; i++)
+        {
+            string param = "@TermLike" + i;
+            @params[param] = "%" + terms[i] + "%";
+            parts.Add($"or d.iname like {param} or d.source_title like {param} or d.section like {param} or d.idesc like {param}");
+        }
+        return string.Join("\n        ", parts);
+    }
+
+    private List<ChunkSearchResult> mapSearchRows(DBList rows, string defaultMode)
     {
         List<ChunkSearchResult> result = new(rows.Count);
         var kbModel = fw.model<KBArticles>();
         int kbEntityId = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_KB);
+        int spageEntityId = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE);
         Dictionary<int, FwDict> kbCache = [];
+        Dictionary<int, FwDict> spageCache = [];
 
         foreach (DBRow row in rows)
         {
+            int chunkId = row["id"].toInt();
+            int sourceId = row["rag_sources_id"].toInt();
             int fwentitiesId = row["fwentities_id"].toInt();
             int itemId = row["item_id"].toInt();
             var citation = new ChunkCitation
             {
-                File = row["iname"],
+                ChunkId = chunkId,
+                SourceId = sourceId,
+                SourceType = row["source_type"].toStr(),
+                SourceTitle = row["source_title"].toStr(),
+                SourceUrl = row["source_url"].toStr(),
+                File = row["iname"].toStr(),
                 Page = row["page"].toInt(),
-                Section = row["section"],
+                Section = row["section"].toStr(),
                 FwEntitiesId = fwentitiesId,
-                ItemId = itemId
+                ItemId = itemId,
+                AttId = row["att_id"].toInt()
             };
             if (fwentitiesId == kbEntityId && itemId > 0)
             {
@@ -411,18 +548,146 @@ select d.id,
                     kb = kbModel.one(itemId).toFwDict();
                     kbCache[itemId] = kb;
                 }
-                citation.ArticleName = kb[kbModel.field_iname].toStr();
+                citation.ArticleName = kb[kbModel.field_iname].toStr(citation.SourceTitle);
+            }
+            else if (fwentitiesId == spageEntityId && itemId > 0)
+            {
+                if (!spageCache.TryGetValue(itemId, out var spage))
+                {
+                    spage = fw.model<Spages>().one(itemId).toFwDict();
+                    spageCache[itemId] = spage;
+                }
+                citation.SourceTitle = string.IsNullOrWhiteSpace(citation.SourceTitle) ? spage["iname"].toStr() : citation.SourceTitle;
+                citation.SourceUrl = string.IsNullOrWhiteSpace(citation.SourceUrl) ? fw.model<Spages>().getFullUrl(itemId) : citation.SourceUrl;
             }
 
+            double vectorScore = row["CosineSim"].toDouble();
+            double keywordScore = row["KeywordScore"].toDouble();
             result.Add(new ChunkSearchResult
             {
-                Text = row["idesc"],
+                ChunkId = chunkId,
+                SourceId = sourceId,
+                Text = row["idesc"].toStr(),
                 Citation = citation,
-                Score = row["CosineSim"].toDouble()
+                Score = vectorScore > 0 ? vectorScore : keywordScore,
+                VectorScore = vectorScore,
+                KeywordScore = keywordScore,
+                RetrievalMode = defaultMode
             });
         }
 
         return result;
+    }
+
+    private List<ChunkSearchResult> mergeHybridResults(List<ChunkSearchResult> vectorResults, List<ChunkSearchResult> keywordResults, int limit)
+    {
+        limit = Math.Max(1, limit);
+        Dictionary<int, ChunkSearchResult> byChunk = [];
+        double maxKeyword = keywordResults.Count == 0 ? 0 : keywordResults.Max(static item => item.KeywordScore);
+
+        for (int i = 0; i < vectorResults.Count; i++)
+        {
+            var item = vectorResults[i];
+            item.Score = item.VectorScore + reciprocalRank(i);
+            item.RetrievalMode = "vector";
+            byChunk[item.ChunkId] = item;
+        }
+
+        for (int i = 0; i < keywordResults.Count; i++)
+        {
+            var item = keywordResults[i];
+            double normalizedKeyword = maxKeyword <= 0 ? 0 : item.KeywordScore / maxKeyword;
+            if (byChunk.TryGetValue(item.ChunkId, out var existing))
+            {
+                existing.KeywordScore = item.KeywordScore;
+                existing.Score = (existing.VectorScore * 0.65) + (normalizedKeyword * 0.35) + reciprocalRank(i);
+                existing.RetrievalMode = "hybrid";
+            }
+            else
+            {
+                item.Score = (normalizedKeyword * 0.8) + reciprocalRank(i);
+                item.RetrievalMode = "keyword";
+                byChunk[item.ChunkId] = item;
+            }
+        }
+
+        int maxPerSource = limit <= 3 ? 1 : 2;
+        Dictionary<int, int> perSource = [];
+        List<ChunkSearchResult> output = [];
+        foreach (var item in byChunk.Values.OrderByDescending(static item => item.Score).ThenBy(static item => item.SourceId).ThenBy(static item => item.ChunkId))
+        {
+            int sourceId = item.SourceId > 0 ? item.SourceId : -item.ChunkId;
+            perSource.TryGetValue(sourceId, out int sourceCount);
+            if (sourceCount >= maxPerSource && output.Count < limit - 1)
+                continue;
+
+            perSource[sourceId] = sourceCount + 1;
+            output.Add(item);
+            if (output.Count >= limit)
+                break;
+        }
+
+        return output;
+    }
+
+    private static double reciprocalRank(int index)
+    {
+        return 1.0 / (60 + index + 1);
+    }
+
+    private FwList toAssistantResults(List<ChunkSearchResult> results)
+    {
+        var output = new FwList(results.Count);
+        foreach (var item in results)
+        {
+            var citation = item.Citation;
+            output.Add(new FwDict
+            {
+                ["text"] = item.Text ?? string.Empty,
+                ["chunk_id"] = item.ChunkId,
+                ["source_id"] = item.SourceId,
+                ["source_type"] = citation.SourceType,
+                ["source_title"] = citation.SourceTitle,
+                ["source_url"] = citation.SourceUrl,
+                ["filename"] = citation.File,
+                ["page"] = citation.Page,
+                ["section"] = citation.Section,
+                ["fwentities_id"] = citation.FwEntitiesId,
+                ["item_id"] = citation.ItemId,
+                ["att_id"] = citation.AttId,
+                ["url"] = !string.IsNullOrWhiteSpace(citation.ArticleUrl) ? citation.ArticleUrl : citation.SourceUrl,
+                ["article_id"] = citation.ArticleId,
+                ["article_name"] = citation.ArticleName,
+                ["article_url"] = citation.ArticleUrl,
+                ["score"] = item.Score,
+                ["vector_score"] = item.VectorScore,
+                ["keyword_score"] = item.KeywordScore,
+                ["retrieval_mode"] = item.RetrievalMode
+            });
+        }
+
+        return output;
+    }
+
+    private void traceRetrieval(string query, string mode, List<ChunkSearchResult> results)
+    {
+        var payload = results.Select(static item => new
+        {
+            source_id = item.SourceId,
+            chunk_id = item.ChunkId,
+            score = item.Score,
+            vector_score = item.VectorScore,
+            keyword_score = item.KeywordScore,
+            retrieval_mode = item.RetrievalMode
+        }).ToList();
+        fw.logger(LogLevel.DEBUG, "Assistant retrieval trace: query=", query, ", mode=", mode, ", results=", Utils.jsonEncode(payload));
+    }
+
+    public void deleteBySource(int sourceId)
+    {
+        if (sourceId <= 0)
+            return;
+        db.del(table_name, DB.h("rag_sources_id", sourceId));
     }
 
     public void deleteByEntity(string entity_icode, int item_id)
@@ -432,6 +697,14 @@ select d.id,
             return;
 
         db.del(table_name, DB.h("fwentities_id", fwentitiesId, "item_id", item_id));
+    }
+
+    public void deleteLegacyByEntity(int fwentitiesId, int itemId)
+    {
+        if (fwentitiesId <= 0 || itemId <= 0)
+            return;
+
+        db.del(table_name, DB.h("rag_sources_id", 0, "fwentities_id", fwentitiesId, "item_id", itemId));
     }
 
     public bool isExistsByEntity(string entity_icode, int item_id)
@@ -492,6 +765,23 @@ select d.id,
         return norm <= 0 ? 0 : dot / norm;
     }
 
+    private void updateNativeVectorColumn(int id, string embeddingJson, int dimension)
+    {
+        if (id <= 0 || !isNativeVectorColumnAvailable(dimension))
+            return;
+
+        try
+        {
+            db.exec($@"update {qTable()}
+                          set embedding_vector=CAST(@EmbeddingJson AS vector({dimension}))
+                        where id=@id", DB.h("@EmbeddingJson", embeddingJson, "@id", id));
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.WARN, "Native vector column update failed; JSON embedding remains available: ", ex.Message);
+        }
+    }
+
     private static double vectorNorm(IReadOnlyList<float> values)
     {
         if (values == null || values.Count == 0)
@@ -505,8 +795,13 @@ select d.id,
 
     public class ChunkEmbedding
     {
+        public int RagSourcesId { get; set; }
         public int FwEntitiesId { get; set; }
         public int ItemId { get; set; }
+        public int AttId { get; set; }
+        public string SourceType { get; set; } = string.Empty;
+        public string SourceTitle { get; set; } = string.Empty;
+        public string SourceUrl { get; set; } = string.Empty;
         public string Filename { get; set; } = string.Empty;
         public int Page { get; set; }
         public string Section { get; set; } = string.Empty;
@@ -519,18 +814,29 @@ select d.id,
 
     public class ChunkSearchResult
     {
+        public int ChunkId { get; set; }
+        public int SourceId { get; set; }
         public string Text { get; set; } = string.Empty;
         public ChunkCitation Citation { get; set; } = new();
         public double Score { get; set; }
+        public double VectorScore { get; set; }
+        public double KeywordScore { get; set; }
+        public string RetrievalMode { get; set; } = string.Empty;
     }
 
     public class ChunkCitation
     {
+        public int ChunkId { get; set; }
+        public int SourceId { get; set; }
+        public string SourceType { get; set; } = string.Empty;
+        public string SourceTitle { get; set; } = string.Empty;
+        public string SourceUrl { get; set; } = string.Empty;
         public string File { get; set; } = string.Empty;
         public int Page { get; set; }
         public string Section { get; set; } = string.Empty;
         public int FwEntitiesId { get; set; }
         public int ItemId { get; set; }
+        public int AttId { get; set; }
         public int ArticleId { get; set; }
         public string ArticleName { get; set; } = string.Empty;
         public string ArticleUrl { get; set; } = string.Empty;

@@ -20,12 +20,50 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID(N'dbo.doc_chunks', N'U') IS NULL
+IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NULL
 BEGIN
-  CREATE TABLE doc_chunks (
+  CREATE TABLE rag_sources (
     id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    source_type           NVARCHAR(64) NOT NULL DEFAULT '',
+    source_key            NVARCHAR(255) NOT NULL DEFAULT '',
     fwentities_id         INT NOT NULL DEFAULT 0,
     item_id               INT NOT NULL DEFAULT 0,
+    att_id                INT NOT NULL DEFAULT 0,
+    iname                 NVARCHAR(255) NOT NULL DEFAULT '',
+    url                   NVARCHAR(1024) NOT NULL DEFAULT '',
+    content_hash          NVARCHAR(64) NOT NULL DEFAULT '',
+    source_version        NVARCHAR(64) NOT NULL DEFAULT '',
+    acl_snapshot          NVARCHAR(MAX),
+    index_status          NVARCHAR(32) NOT NULL DEFAULT 'pending',
+    queued_at             DATETIME2 NULL,
+    last_indexed_at       DATETIME2 NULL,
+    last_error            NVARCHAR(MAX),
+    metadata_json         NVARCHAR(MAX),
+
+    status                TINYINT NOT NULL DEFAULT 0,
+    add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+    add_users_id          INT DEFAULT 0,
+    upd_time              DATETIME2,
+    upd_users_id          INT DEFAULT 0
+  );
+
+  CREATE UNIQUE INDEX UX_rag_sources_source_key ON rag_sources(source_key);
+  CREATE INDEX IX_rag_sources_queue ON rag_sources(index_status, status, queued_at, id);
+  CREATE INDEX IX_rag_sources_entity ON rag_sources(fwentities_id, item_id, att_id, status);
+END
+GO
+
+IF OBJECT_ID(N'dbo.rag_chunks', N'U') IS NULL
+BEGIN
+  CREATE TABLE rag_chunks (
+    id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    rag_sources_id        INT NOT NULL DEFAULT 0,
+    fwentities_id         INT NOT NULL DEFAULT 0,
+    item_id               INT NOT NULL DEFAULT 0,
+    att_id                INT NOT NULL DEFAULT 0,
+    source_type           NVARCHAR(64) NOT NULL DEFAULT '',
+    source_title          NVARCHAR(255) NOT NULL DEFAULT '',
+    source_url            NVARCHAR(1024) NOT NULL DEFAULT '',
     chunk_index           INT NOT NULL DEFAULT 0,
     iname                 NVARCHAR(255) NOT NULL DEFAULT '',
     idesc                 NVARCHAR(MAX) NOT NULL DEFAULT '',
@@ -45,9 +83,10 @@ BEGIN
     upd_users_id          INT DEFAULT 0
   );
 
-  CREATE INDEX IX_doc_chunks_entity ON doc_chunks(fwentities_id, item_id, status);
-  CREATE INDEX IX_doc_chunks_embedding ON doc_chunks(embedding_model, embedding_dim, status);
-  CREATE INDEX IX_doc_chunks_backend ON doc_chunks(vector_backend, status);
+  CREATE INDEX IX_rag_chunks_source ON rag_chunks(rag_sources_id, chunk_index, status);
+  CREATE INDEX IX_rag_chunks_entity ON rag_chunks(fwentities_id, item_id, att_id, status);
+  CREATE INDEX IX_rag_chunks_embedding ON rag_chunks(embedding_model, embedding_dim, status);
+  CREATE INDEX IX_rag_chunks_backend ON rag_chunks(vector_backend, status);
 END
 GO
 
@@ -189,49 +228,4 @@ BEGIN
 
   CREATE INDEX IX_assistant_feedback_thread ON assistant_feedback(assistant_threads_id, assistant_runs_id, assistant_messages_id);
 END
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'OPENAI_API_KEY', '', 'OpenAI API Key', 'API key used by Assistant and LLM features.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='OPENAI_API_KEY');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_ENABLED', '0', 'Assistant Enabled', 'Set to 1 to enable the assistant UI and queued runs.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_ENABLED');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_VECTOR_MODE', 'auto', 'Assistant Vector Mode', 'Use auto, json, or native. Auto uses SQL Server native vectors when available.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_VECTOR_MODE');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MODEL');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MEMORY_ENABLED');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_FILES_PER_MESSAGE');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for inline indexing. Larger files remain attached but are not indexed.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_INDEXED_FILE_BYTES');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_INDEX_CHARS');
-GO
-
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_INDEX_CHUNKS');
 GO

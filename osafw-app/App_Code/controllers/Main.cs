@@ -105,6 +105,8 @@ public class MainController : FwController
         FwDict one;
         FwDict panes = [];
         ps["panes"] = panes;
+        bool isAssistantEnabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
+        ps["is_assistant_enabled"] = isAssistantEnabled;
 
         const int DIFF_DAYS = -7;
         // init const int[] STATUSES with single value FwModel.STATUS_ACTIVE
@@ -154,6 +156,14 @@ public class MainController : FwController
         one["badge_class"] = "text-bg-secondary";
         one["icon"] = "bi-clock";
         panes["plate4"] = one;
+
+        if (isAssistantEnabled)
+        {
+            one = [];
+            one["type"] = "assistant";
+            one["title"] = "AI Assistant";
+            panes["assistant"] = one;
+        }
 
         one = [];
         one["type"] = "barchart";

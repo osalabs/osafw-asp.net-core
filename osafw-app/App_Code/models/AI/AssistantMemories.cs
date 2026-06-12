@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -38,6 +39,10 @@ public class AssistantMemories : FwModel<AssistantMemories.Row>
 
     public int upsertForUser(int usersId, string summary, string terminologyJson = "", string preferencesJson = "", int sourceThreadId = 0)
     {
+        summary = SanitizeMemoryText(summary);
+        terminologyJson = SanitizeMemoryText(terminologyJson);
+        preferencesJson = SanitizeMemoryText(preferencesJson);
+
         var existing = oneByUser(usersId);
         var fields = DB.h(
             "summary", summary ?? string.Empty,
@@ -56,5 +61,20 @@ public class AssistantMemories : FwModel<AssistantMemories.Row>
 
         update(existing.id, fields);
         return existing.id;
+    }
+
+    public static string SanitizeMemoryText(string value)
+    {
+        value = value ?? string.Empty;
+        if (value.Length == 0)
+            return string.Empty;
+
+        value = Regex.Replace(value, @"sk-[A-Za-z0-9_\-]{12,}", "[redacted-secret]", RegexOptions.IgnoreCase);
+        value = Regex.Replace(value, @"(?i)\b(api[_ -]?key|token|secret|password|pwd)\b\s*[:=]\s*['""]?[^,'""\s}\]]+", "$1: [redacted]");
+        value = Regex.Replace(value, @"\b[\w.\-+%]+@[\w.\-]+\.[A-Za-z]{2,}\b", "[redacted-email]");
+        value = Regex.Replace(value, @"(?<!\d)(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}(?!\d)", "[redacted-phone]");
+        value = Regex.Replace(value, @"\b(?:\d[ -]*?){13,19}\b", "[redacted-number]");
+        value = Regex.Replace(value, @"\b\d{3}-\d{2}-\d{4}\b", "[redacted-id]");
+        return value.Trim();
     }
 }

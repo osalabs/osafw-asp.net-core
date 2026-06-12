@@ -3,11 +3,11 @@
 <div class="fw-card">
   <div class="d-flex flex-wrap gap-2 mb-3">
     <a class="btn btn-default" href="<~../url>"><~/common/icons/arrow-left-circle>`Back`</a>
-    <form method="post" action="<~../url>/(DeleteEntity)" onsubmit="return confirm('Delete all embeddings for this entity item?')">
+    <form method="post" action="<~../url>/(DeleteEntity)" onsubmit="return confirm('Delete all RAG sources and chunks for this entity item?')">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
       <input type="hidden" name="entity_icode" value="<~i[entity_icode]>">
       <input type="hidden" name="item_id" value="<~i[item_id]>">
-      <button type="submit" class="btn btn-default"><span class="text-danger"><~/common/icons/x-circle-fill></span>`Delete Entity Chunks`</button>
+      <button type="submit" class="btn btn-default"><span class="text-danger"><~/common/icons/x-circle-fill></span>`Delete Entity Sources`</button>
     </form>
   </div>
 
@@ -16,6 +16,12 @@
     <dd class="col-md-9"><code><~i[entity_icode]></code></dd>
     <dt class="col-md-3">`Item ID`</dt>
     <dd class="col-md-9"><~i[item_id]></dd>
+    <dt class="col-md-3">`Source`</dt>
+    <dd class="col-md-9"><~i[source_title] default="-"> <span class="badge text-bg-light"><~i[source_type]></span></dd>
+    <dt class="col-md-3">`Source ID / Chunk ID`</dt>
+    <dd class="col-md-9"><~i[rag_sources_id]> / <~i[id]></dd>
+    <dt class="col-md-3">`Index Status`</dt>
+    <dd class="col-md-9"><~i[index_status] default="-"></dd>
     <dt class="col-md-3">`Chunk Index`</dt>
     <dd class="col-md-9"><~i[chunk_index]></dd>
     <dt class="col-md-3">`Section`</dt>

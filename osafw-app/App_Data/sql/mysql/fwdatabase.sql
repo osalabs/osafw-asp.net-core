@@ -171,7 +171,7 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc) VA
 (1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.'),
 (1, 0, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.'),
 (1, 0, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.'),
-(1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for inline indexing. Larger files remain attached but are not indexed.'),
+(1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for queued indexing. Larger files remain attached but are not indexed.'),
 (1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.'),
 (1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.');
 
@@ -388,11 +388,47 @@ CREATE TABLE kb_articles (
   KEY IX_kb_articles_access (access_level, status)
 ) DEFAULT CHARSET=utf8mb4;
 
-DROP TABLE IF EXISTS doc_chunks;
-CREATE TABLE doc_chunks (
+DROP TABLE IF EXISTS rag_sources;
+CREATE TABLE rag_sources (
   id                    INT NOT NULL auto_increment,
+  source_type           VARCHAR(64) NOT NULL DEFAULT '',
+  source_key            VARCHAR(255) NOT NULL DEFAULT '',
   fwentities_id         INT NOT NULL DEFAULT 0,
   item_id               INT NOT NULL DEFAULT 0,
+  att_id                INT NOT NULL DEFAULT 0,
+  iname                 VARCHAR(255) NOT NULL DEFAULT '',
+  url                   VARCHAR(1024) NOT NULL DEFAULT '',
+  content_hash          VARCHAR(64) NOT NULL DEFAULT '',
+  source_version        VARCHAR(64) NOT NULL DEFAULT '',
+  acl_snapshot          TEXT,
+  index_status          VARCHAR(32) NOT NULL DEFAULT 'pending',
+  queued_at             TIMESTAMP NULL,
+  last_indexed_at       TIMESTAMP NULL,
+  last_error            TEXT,
+  metadata_json         TEXT,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  add_users_id          INT DEFAULT 0,
+  upd_time              TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  upd_users_id          INT DEFAULT 0,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY UX_rag_sources_source_key (source_key),
+  KEY IX_rag_sources_queue (index_status, status, queued_at, id),
+  KEY IX_rag_sources_entity (fwentities_id, item_id, att_id, status)
+) DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS rag_chunks;
+CREATE TABLE rag_chunks (
+  id                    INT NOT NULL auto_increment,
+  rag_sources_id        INT NOT NULL DEFAULT 0,
+  fwentities_id         INT NOT NULL DEFAULT 0,
+  item_id               INT NOT NULL DEFAULT 0,
+  att_id                INT NOT NULL DEFAULT 0,
+  source_type           VARCHAR(64) NOT NULL DEFAULT '',
+  source_title          VARCHAR(255) NOT NULL DEFAULT '',
+  source_url            VARCHAR(1024) NOT NULL DEFAULT '',
   chunk_index           INT NOT NULL DEFAULT 0,
   iname                 VARCHAR(255) NOT NULL DEFAULT '',
   idesc                 MEDIUMTEXT NOT NULL,
@@ -412,9 +448,10 @@ CREATE TABLE doc_chunks (
   upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
-  KEY IX_doc_chunks_entity (fwentities_id, item_id, status),
-  KEY IX_doc_chunks_embedding (embedding_model, embedding_dim, status),
-  KEY IX_doc_chunks_backend (vector_backend, status)
+  KEY IX_rag_chunks_source (rag_sources_id, chunk_index, status),
+  KEY IX_rag_chunks_entity (fwentities_id, item_id, att_id, status),
+  KEY IX_rag_chunks_embedding (embedding_model, embedding_dim, status),
+  KEY IX_rag_chunks_backend (vector_backend, status)
 ) DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS assistant_threads;

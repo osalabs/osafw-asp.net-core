@@ -1,6 +1,6 @@
 # Assistant, LLM, And Knowledge Base
 
-The assistant is an optional read-only RAG feature for framework apps. It provides threaded chat, knowledge base retrieval, document attachment search, citations, feedback, sharing, and an optional background worker.
+The assistant is an optional read-only RAG starter for framework apps. It provides threaded chat, queued source indexing, hybrid retrieval, citations, feedback, sharing, and an optional background worker.
 
 ## Configuration
 
@@ -16,9 +16,7 @@ The feature is disabled by default. Configure these rows in Site Settings under 
 - `ASSISTANT_MAX_INDEX_CHARS=200000`
 - `ASSISTANT_MAX_INDEX_CHUNKS=80`
 
-Keep `ASSISTANT_WORKER_ENABLED=true` in `appSettings` when queued runs should be processed by the web host. The embedding model is a code constant in `LLM.MODEL_TEXT_EMBEDDING_3_SMALL`.
-
-With `ASSISTANT_ENABLED=false`, the UI reports that the assistant is unavailable. With `ASSISTANT_WORKER_ENABLED=false`, the hosted worker is not registered and queued runs remain queued until another process calls the run processor. Missing tables or a missing OpenAI key must not block application startup.
+Keep `ASSISTANT_WORKER_ENABLED=true` in `appSettings` when queued source indexing and queued chat runs should be processed by the web host. Missing tables or a missing OpenAI key must not block application startup. When the assistant is enabled but `OPENAI_API_KEY` is missing, the `/Main` Assistant block remains visible, and submissions return "Please contact administrator to configure AI Assistant." without creating assistant threads, messages, runs, sources, or chunks.
 
 ## Schema
 
@@ -33,44 +31,67 @@ New databases already include the same tables in the provider-specific `fwdataba
 Core tables:
 
 - `kb_articles`: manager-maintained knowledge base records.
-- `doc_chunks`: chunk text, JSON vector, norm, dimension, embedding model, selected backend, and citation metadata.
-- `assistant_threads`, `assistant_messages`, `assistant_runs`, and `assistant_runs_events`: durable chat and run state.
+- `rag_sources`: one row per indexable source, including KB article bodies, KB attachments, published Spages, and assistant uploads. Source rows carry queue state, content hash, parser version, ACL snapshot, last indexed time, and last error.
+- `rag_chunks`: chunk text, JSON embedding, optional denormalized source/entity fields, vector metadata, stable `source_id`/`chunk_id`, and citation metadata.
+- `assistant_threads`, `assistant_messages`, `assistant_runs`, and `assistant_runs_events`: durable chat, run state, events, and persisted retrieval evidence.
 - `assistant_feedback`: reviewable feedback data.
-- `assistant_memories`: optional per-user memory summaries when enabled.
+- `assistant_memories`: optional per-user compacted/sanitized memory summaries when enabled.
 
-## Knowledge Base
+## Knowledge Base And Sources
 
-Managers can maintain articles at `/Admin/KBArticles`. Saving an active article calls `KBArticles.reindexKBArticle()`, which uses `DocumentEmbeddingService.IndexKBArticleAsync()` to chunk markdown text and store embeddings in `doc_chunks`.
+Managers maintain articles at `/Admin/KBArticles`. Saving or reindexing an article queues `rag_sources` rows instead of calling the embedding provider during the request. The worker later parses, chunks, embeds, and writes `rag_chunks`.
 
-Article access uses numeric `access_level`. Retrieval queries include `KBArticles.buildAccessWhere()`, so users do not receive chunks from articles above their access level.
+Indexed source types:
 
-## Document Attachments
+- KB article body.
+- KB article attachments with supported text/HTML/DOCX-like parsers.
+- Published Spages.
+- Files uploaded to assistant messages.
 
-Assistant messages can include supported uploads. Text, markdown, HTML, RTF text fallback, and DOCX files are parsed and indexed against the assistant message entity. Unsupported file types remain attached but are not indexed. The assistant enforces per-message file-count, indexed-file byte, parsed-character, and chunk-count caps before calling the embedding provider.
+Article access uses numeric `access_level`. Retrieval queries include `KBArticles.buildAccessWhere()`, so live KB retrieval does not return article chunks above the current user's access level. Shared thread links intentionally expose prepared materialized thread content to recipients.
 
-Use `/Admin/DocChunks` to inspect indexed chunks, vector metadata, and backend selection. The screen reports setup-needed if the schema is missing.
+Use `/Admin/RagChunks` to inspect source/chunk state, vector metadata, backend selection, and queue counts. The screen reports setup-needed if the schema is missing.
+
+## Retrieval
+
+Knowledge retrieval uses a hybrid merge:
+
+- Dense vector similarity over embeddings.
+- Keyword/simple `LIKE` scoring over chunk/source text.
+- Source diversity limits so one source does not dominate the top results.
+
+Search results include stable `source_id`, `chunk_id`, retrieval mode, and scores. Tool calls persist evidence in `assistant_runs_events`; final assistant citations are filtered against that evidence before the assistant message is saved. Retrieval traces are also written through the normal framework logger with query, mode, source IDs, chunk IDs, and scores.
+
+Users/contacts are not indexed into `rag_chunks`. The assistant exposes a separate read-only contact search tool that uses simple `LIKE` queries against active `users` rows.
 
 ## Vector Backends
 
-Embeddings are stored as JSON text for portability. The default `ASSISTANT_VECTOR_MODE=auto` detects SQL Server native `vector` support at runtime. When native support is not available, or a native query fails, retrieval falls back to SQL JSON cosine scoring.
-
-Fallback implementations:
+Embeddings are always stored as JSON text for portability. Fallback implementations:
 
 - SQL Server: `OPENJSON`
 - MySQL: `JSON_TABLE`
 - SQLite: `json_each`
 
-The vector distance metric is cosine. The default embedding dimension is 1536 for `text-embedding-3-small`.
+The default `ASSISTANT_VECTOR_MODE=auto` uses SQL Server native vector search only when the database exposes `TYPE_ID(N'vector')` and the optional `rag_chunks.embedding_vector` column exists. From-scratch `fwdatabase.sql` includes commented SQL Server 2025 DDL for developers to apply manually when their server supports native vectors.
+
+The default embedding dimension is 1536 for `text-embedding-3-small`.
 
 ## Assistant Flow
+
+`/Main` shows an AI Assistant dashboard block when `ASSISTANT_ENABLED=true`. The block posts the prompt to `/Assistant`, where the threaded chat continues.
 
 `/Assistant` renders the chat shell. The UI supports send, poll, history search, upload, feedback, share, and cited response display.
 
 The run processor uses Microsoft Agent Framework packages and read-only tools:
 
-- Knowledge base search.
+- Knowledge base and Spages search.
 - Current-thread attachment search.
+- Simple users/contact search with `LIKE`.
 - Clarification requests.
 - Progress events.
 
-The assistant must not execute generated SQL, mutate application records, or redirect users based on model output.
+The assistant must not execute generated SQL, mutate application records, redirect users based on model output, or invent navigation/actions. Future mutating workflows must go through explicit controller/model contracts, POST, XSS tokens, validation, access checks, confirmation, and audit logging.
+
+## Memory
+
+Memory remains optional and disabled by default. When enabled, completed runs compact recent conversation context with the configured LLM, then sanitize likely secrets, credentials, personal contact details, payment numbers, and IDs before storing `assistant_memories`.

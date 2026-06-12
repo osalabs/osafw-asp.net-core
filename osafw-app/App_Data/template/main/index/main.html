@@ -27,6 +27,14 @@
 
 <~/common/form/msg>
 
+<~assistant_dashboard if="is_assistant_enabled" inline>
+<div class="row">
+    <div class="col">
+        <~std_pane sub="panes[assistant]">
+    </div>
+</div>
+</~assistant_dashboard>
+
 <div class="row">
     <div class="col">
         <~std_pane sub="panes[plate1]">

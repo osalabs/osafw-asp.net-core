@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace osafw;
@@ -21,7 +22,8 @@ public sealed class AssistantAppService
         "assistant_runs_events",
         "assistant_feedback",
         "kb_articles",
-        "doc_chunks"
+        "rag_sources",
+        "rag_chunks"
     ];
 
     private readonly FW fw;
@@ -42,10 +44,10 @@ public sealed class AssistantAppService
 
         if (!enabled)
             message = "Assistant is disabled.";
+        else if (!openAiConfigured)
+            message = "Please contact administrator to configure AI Assistant.";
         else if (!tablesReady)
             message = "Assistant tables are not installed.";
-        else if (!openAiConfigured)
-            message = "OpenAI API key is not configured.";
 
         return new AssistantRuntimeStatus
         {
@@ -217,6 +219,44 @@ public sealed class AssistantAppService
         }
     }
 
+    public void BindSourcesToRunEvidence(int runId, AssistantResult result)
+    {
+        if (result == null)
+            return;
+
+        var evidence = listRunEvidenceSources(runId);
+        if (evidence.Count == 0)
+        {
+            result.sources = [];
+            downgradeUncitedConfidence(result);
+            return;
+        }
+
+        List<AssistantSource> valid = [];
+        foreach (var source in result.sources ?? new List<AssistantSource>())
+        {
+            if (!tryFindEvidenceSource(evidence, source, out var bound))
+                continue;
+
+            source.source_id = bound.source_id;
+            source.chunk_id = bound.chunk_id;
+            source.source_type = string.IsNullOrWhiteSpace(source.source_type) ? bound.source_type : source.source_type;
+            source.name = string.IsNullOrWhiteSpace(source.name) ? bound.name : source.name;
+            source.url = string.IsNullOrWhiteSpace(source.url) ? bound.url : source.url;
+            source.page = source.page == 0 ? bound.page : source.page;
+            source.section = string.IsNullOrWhiteSpace(source.section) ? bound.section : source.section;
+            source.score ??= bound.score;
+            valid.Add(source);
+        }
+
+        result.sources = valid
+            .GroupBy(static source => (source.source_id.GetValueOrDefault(), source.chunk_id.GetValueOrDefault()))
+            .Select(static group => group.First())
+            .ToList();
+        if (result.sources.Count == 0)
+            downgradeUncitedConfidence(result);
+    }
+
     private bool areTablesReady()
     {
         try
@@ -228,6 +268,114 @@ public sealed class AssistantAppService
         {
             return false;
         }
+    }
+
+    private Dictionary<string, AssistantSource> listRunEvidenceSources(int runId)
+    {
+        if (runId <= 0)
+            return [];
+
+        Dictionary<string, AssistantSource> result = [];
+        foreach (var row in fw.model<AssistantRunsEvents>().listByRun(runId))
+        {
+            if (row.event_type != AssistantRunsEvents.TYPE_EVIDENCE || string.IsNullOrWhiteSpace(row.payload_json))
+                continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(row.payload_json);
+                if (!doc.RootElement.TryGetProperty("evidence", out var evidence) || evidence.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                foreach (var item in evidence.EnumerateArray())
+                {
+                    int sourceId = jsonInt(item, "source_id");
+                    int chunkId = jsonInt(item, "chunk_id");
+                    if (sourceId <= 0 && chunkId <= 0)
+                        continue;
+
+                    var source = new AssistantSource
+                    {
+                        source_id = sourceId,
+                        chunk_id = chunkId,
+                        source_type = jsonString(item, "source_type"),
+                        name = jsonString(item, "title"),
+                        url = jsonString(item, "url"),
+                        page = jsonInt(item, "page"),
+                        section = jsonString(item, "section"),
+                        score = jsonDouble(item, "score")
+                    };
+                    result[evidenceKey(sourceId, chunkId)] = source;
+                    if (sourceId > 0)
+                        result.TryAdd(evidenceKey(sourceId, 0), source);
+                }
+            }
+            catch
+            {
+                // Ignore malformed evidence events; they should not make citations valid.
+            }
+        }
+
+        return result;
+    }
+
+    private static bool tryFindEvidenceSource(Dictionary<string, AssistantSource> evidence, AssistantSource source, out AssistantSource bound)
+    {
+        int sourceId = source.source_id.GetValueOrDefault();
+        int chunkId = source.chunk_id.GetValueOrDefault();
+        if (evidence.TryGetValue(evidenceKey(sourceId, chunkId), out var exact))
+        {
+            bound = exact;
+            return true;
+        }
+        if (sourceId > 0 && evidence.TryGetValue(evidenceKey(sourceId, 0), out var sourceOnly))
+        {
+            bound = sourceOnly;
+            return true;
+        }
+
+        bound = new AssistantSource();
+        return false;
+    }
+
+    private static string evidenceKey(int sourceId, int chunkId)
+    {
+        return sourceId + ":" + chunkId;
+    }
+
+    private static void downgradeUncitedConfidence(AssistantResult result)
+    {
+        if (!string.IsNullOrWhiteSpace(result.information) || !string.IsNullOrWhiteSpace(result.explanation))
+            result.confidence = Math.Min(result.confidence, 0.25);
+    }
+
+    private static string jsonString(JsonElement item, string name)
+    {
+        return item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : string.Empty;
+    }
+
+    private static int jsonInt(JsonElement item, string name)
+    {
+        if (!item.TryGetProperty(name, out var value))
+            return 0;
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetInt32(out int result) => result,
+            JsonValueKind.String when int.TryParse(value.GetString(), out int result) => result,
+            _ => 0
+        };
+    }
+
+    private static double jsonDouble(JsonElement item, string name)
+    {
+        if (!item.TryGetProperty(name, out var value))
+            return 0;
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetDouble(out double result) => result,
+            JsonValueKind.String when double.TryParse(value.GetString(), out double result) => result,
+            _ => 0
+        };
     }
 
     private HashSet<string> dbTables()
@@ -306,17 +454,18 @@ public sealed class AssistantAppService
             "status", FwModel.STATUS_ACTIVE
         ));
 
-        var embeddingService = new DocumentEmbeddingService(fw);
         string ext = Path.GetExtension(file.FileName);
+        var embeddingService = new DocumentEmbeddingService(fw);
         if (embeddingService.IsSupported(ext) && file.Length <= maxIndexedFileBytes())
         {
             try
             {
-                await embeddingService.IndexAttachmentToEntityAsync(attId, FwEntities.ICODE_ASSISTANT_MESSAGE, messageId, clearExisting: false).ConfigureAwait(false);
+                fw.model<RagSources>().queueAssistantUpload(attId, FwEntities.ICODE_ASSISTANT_MESSAGE, messageId);
+                await Task.CompletedTask.ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                fw.logger(LogLevel.WARN, "Assistant attachment indexing failed:", ex.Message);
+                fw.logger(LogLevel.WARN, "Assistant attachment indexing queue failed:", ex.Message);
             }
         }
         else if (embeddingService.IsSupported(ext))
@@ -367,7 +516,7 @@ select a.*, al.item_id as assistant_messages_id
         ));
 
         Dictionary<int, List<AssistantAttachmentDto>> result = [];
-        var indexedIds = fw.model<DocChunks>().listIndexedEntityItemIds(FwEntities.ICODE_ASSISTANT_MESSAGE, ids);
+        var indexedIds = fw.model<RagChunks>().listIndexedEntityItemIds(FwEntities.ICODE_ASSISTANT_MESSAGE, ids);
         foreach (FwDict row in rows)
         {
             int messageId = row["assistant_messages_id"].toInt();

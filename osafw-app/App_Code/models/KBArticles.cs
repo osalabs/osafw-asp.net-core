@@ -89,21 +89,11 @@ public class KBArticles : FwModel<KBArticles.Row>
     {
         try
         {
-            var article = one(id);
-            if (article.Count == 0)
-                return false;
-
-            var svc = new DocumentEmbeddingService(fw);
-            if (article["status"].toInt() == STATUS_ACTIVE)
-                svc.IndexKBArticleAsync(id).GetAwaiter().GetResult();
-            else
-                svc.DeleteKBArticleEmbeddings(id);
-
-            return true;
+            return fw.model<RagSources>().queueKBArticle(id);
         }
         catch (Exception ex)
         {
-            fw.logger(LogLevel.WARN, "KB reindex failed:", ex.Message);
+            fw.logger(LogLevel.WARN, "KB indexing queue failed:", ex.Message);
             return false;
         }
     }
@@ -112,11 +102,11 @@ public class KBArticles : FwModel<KBArticles.Row>
     {
         try
         {
-            new DocumentEmbeddingService(fw).DeleteKBArticleEmbeddings(id);
+            fw.model<RagSources>().deleteByEntity(FwEntities.ICODE_KB, id);
         }
         catch (Exception ex)
         {
-            fw.logger(LogLevel.WARN, "KB embedding cleanup failed:", ex.Message);
+            fw.logger(LogLevel.WARN, "KB RAG cleanup failed:", ex.Message);
         }
 
         base.delete(id, is_perm);

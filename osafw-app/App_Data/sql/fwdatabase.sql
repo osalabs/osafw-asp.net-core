@@ -296,7 +296,7 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc) VA
 (1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.'),
 (1, 0, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.'),
 (1, 0, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.'),
-(1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for inline indexing. Larger files remain attached but are not indexed.'),
+(1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for queued indexing. Larger files remain attached but are not indexed.'),
 (1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.'),
 (1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.');
 
@@ -506,11 +506,46 @@ CREATE TABLE kb_articles (
   INDEX IX_kb_articles_access (access_level, status)
 );
 
-DROP TABLE IF EXISTS doc_chunks;
-CREATE TABLE doc_chunks (
+DROP TABLE IF EXISTS rag_sources;
+CREATE TABLE rag_sources (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  source_type           NVARCHAR(64) NOT NULL DEFAULT '',
+  source_key            NVARCHAR(255) NOT NULL DEFAULT '',
   fwentities_id         INT NOT NULL DEFAULT 0,
   item_id               INT NOT NULL DEFAULT 0,
+  att_id                INT NOT NULL DEFAULT 0,
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',
+  url                   NVARCHAR(1024) NOT NULL DEFAULT '',
+  content_hash          NVARCHAR(64) NOT NULL DEFAULT '',
+  source_version        NVARCHAR(64) NOT NULL DEFAULT '',
+  acl_snapshot          NVARCHAR(MAX),
+  index_status          NVARCHAR(32) NOT NULL DEFAULT 'pending',
+  queued_at             DATETIME2 NULL,
+  last_indexed_at       DATETIME2 NULL,
+  last_error            NVARCHAR(MAX),
+  metadata_json         NVARCHAR(MAX),
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_rag_sources_source_key UNIQUE (source_key),
+  INDEX IX_rag_sources_queue (index_status, status, queued_at, id),
+  INDEX IX_rag_sources_entity (fwentities_id, item_id, att_id, status)
+);
+
+DROP TABLE IF EXISTS rag_chunks;
+CREATE TABLE rag_chunks (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  rag_sources_id        INT NOT NULL DEFAULT 0,
+  fwentities_id         INT NOT NULL DEFAULT 0,
+  item_id               INT NOT NULL DEFAULT 0,
+  att_id                INT NOT NULL DEFAULT 0,
+  source_type           NVARCHAR(64) NOT NULL DEFAULT '',
+  source_title          NVARCHAR(255) NOT NULL DEFAULT '',
+  source_url            NVARCHAR(1024) NOT NULL DEFAULT '',
   chunk_index           INT NOT NULL DEFAULT 0,
   iname                 NVARCHAR(255) NOT NULL DEFAULT '',
   idesc                 NVARCHAR(MAX) NOT NULL DEFAULT '',
@@ -529,10 +564,15 @@ CREATE TABLE doc_chunks (
   upd_time              DATETIME2,
   upd_users_id          INT DEFAULT 0,
 
-  INDEX IX_doc_chunks_entity (fwentities_id, item_id, status),
-  INDEX IX_doc_chunks_embedding (embedding_model, embedding_dim, status),
-  INDEX IX_doc_chunks_backend (vector_backend, status)
+  INDEX IX_rag_chunks_source (rag_sources_id, chunk_index, status),
+  INDEX IX_rag_chunks_entity (fwentities_id, item_id, att_id, status),
+  INDEX IX_rag_chunks_embedding (embedding_model, embedding_dim, status),
+  INDEX IX_rag_chunks_backend (vector_backend, status)
 );
+
+-- Optional SQL Server 2025 native vector support. Apply manually only when TYPE_ID(N'vector') is available:
+-- ALTER TABLE dbo.rag_chunks ADD embedding_vector VECTOR(1536) NULL;
+-- CREATE VECTOR INDEX IX_rag_chunks_embedding_vector ON dbo.rag_chunks(embedding_vector);
 
 DROP TABLE IF EXISTS assistant_threads;
 CREATE TABLE assistant_threads (

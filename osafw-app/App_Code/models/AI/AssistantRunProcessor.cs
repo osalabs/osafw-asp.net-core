@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,6 +52,22 @@ public sealed class AssistantRunProcessor
         }
 
         return true;
+    }
+
+    public async Task<bool> ProcessNextQueuedSourceAsync(string workerId, CancellationToken cancellationToken)
+    {
+        using var fw = FW.initOffline(configuration);
+        if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED") || !fw.model<LLM>().isConfigured())
+            return false;
+
+        try
+        {
+            return await new DocumentEmbeddingService(fw).ProcessNextQueuedSourceAsync(workerId, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            fw.endRequest();
+        }
     }
 
     public async Task ProcessClaimedRunAsync(FW fw, AssistantRuns.Row run, CancellationToken cancellationToken)
@@ -122,6 +139,7 @@ public sealed class AssistantRunProcessor
 
             persistSession(thread.id, resolveSession(response, session), fw);
             var appResult = extractResponseValue<AssistantResult>(response) ?? fallbackResult(response);
+            appService.BindSourcesToRunEvidence(run.id, appResult);
             appService.EnrichAssistantSources(appResult.sources);
 
             string payloadJson = Utils.jsonEncode(appResult);
@@ -324,14 +342,43 @@ public sealed class AssistantRunProcessor
             return;
 
         var messages = fw.model<AssistantMessages>().listByThread(threadId)
-            .Where(static message => message.role == AssistantMessages.ROLE_USER)
-            .TakeLast(5)
-            .Select(static message => "- " + AssistantMessages.buildPreviewText(message.content_markdown))
+            .Where(static message => message.role == AssistantMessages.ROLE_USER || message.role == AssistantMessages.ROLE_ASSISTANT)
+            .TakeLast(12)
+            .Select(static message => message.role + ": " + AssistantMessages.buildPreviewText(message.content_markdown, 1200))
             .ToList();
         if (messages.Count == 0)
             return;
 
-        fw.model<AssistantMemories>().upsertForUser(usersId, string.Join("\n", messages), sourceThreadId: threadId);
+        var existing = fw.model<AssistantMemories>().oneByUser(usersId);
+        string systemPrompt = fw.parsePage("/assistant", "memory_compaction.md", []);
+        string userPrompt = "Existing memory:\n" + (existing?.summary ?? string.Empty)
+            + "\n\nConversation excerpts:\n" + string.Join("\n", messages)
+            + "\n\nReturn only durable preferences, terminology, and stable context worth remembering.";
+        string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+
+        try
+        {
+            var draft = fw.model<LLM>().responseJson<AssistantMemoryDraft>(
+                string.IsNullOrWhiteSpace(model) ? LLM.MODEL_GPT5_MINI : model,
+                systemPrompt,
+                userPrompt,
+                AssistantMemoryDraft.JsonSchema
+            );
+            if (draft == null)
+                return;
+
+            fw.model<AssistantMemories>().upsertForUser(
+                usersId,
+                draft.summary,
+                Utils.jsonEncode(draft.terminology),
+                Utils.jsonEncode(draft.preferences),
+                sourceThreadId: threadId
+            );
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.WARN, "Assistant memory compaction failed:", ex.Message);
+        }
     }
 
     private static string buildActivityLogDescription(string prompt)
@@ -341,5 +388,32 @@ public sealed class AssistantRunProcessor
             value = value[..180];
 
         return string.IsNullOrWhiteSpace(value) ? "Assistant run completed" : "Assistant run: " + value;
+    }
+
+    private sealed class AssistantMemoryDraft
+    {
+        public string summary { get; set; } = string.Empty;
+        public Dictionary<string, string> terminology { get; set; } = [];
+        public Dictionary<string, string> preferences { get; set; } = [];
+
+        [JsonIgnore]
+        public static string JsonSchema => """
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "summary": { "type": "string" },
+            "terminology": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "preferences": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "required": ["summary", "terminology", "preferences"]
+        }
+        """;
     }
 }

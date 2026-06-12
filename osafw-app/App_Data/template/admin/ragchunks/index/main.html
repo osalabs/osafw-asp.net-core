@@ -3,27 +3,33 @@
 <~/common/form/msg>
 
 <~setup_needed unless="tables_ready" inline>
-  <div class="alert alert-warning" role="alert">`Assistant document chunk tables are not installed. Run the assistant SQL update before reviewing indexed chunks.`</div>
+  <div class="alert alert-warning" role="alert">`Assistant RAG source/chunk tables are not installed. Run the assistant SQL update before reviewing indexed content.`</div>
 </~setup_needed>
 
 <~ready if="tables_ready" inline>
   <div class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="fw-card">
         <div class="text-muted small">`Chunks`</div>
         <div class="fs-3 fw-semibold"><~chunk_count></div>
       </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+      <div class="fw-card">
+        <div class="text-muted small">`Sources`</div>
+        <div class="fs-3 fw-semibold"><~source_count></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="fw-card">
+        <div class="text-muted small">`Queued`</div>
+        <div class="fs-3 fw-semibold"><~queued_count></div>
+      </div>
+    </div>
+    <div class="col-md-3">
       <div class="fw-card">
         <div class="text-muted small">`Vector Mode`</div>
         <div class="fs-5"><~vector_mode></div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="fw-card">
-        <div class="text-muted small">`Embedding Model`</div>
-        <div class="fs-6"><~embedding_model></div>
       </div>
     </div>
   </div>
@@ -61,8 +67,10 @@
         <thead>
           <tr>
             <th>`Chunk`</th>
+            <th>`Source`</th>
             <th>`Entity`</th>
             <th>`Item`</th>
+            <th>`Index`</th>
             <th>`Dim`</th>
             <th>`Backend`</th>
             <th>`Added`</th>
@@ -72,15 +80,17 @@
           <~rows repeat inline>
             <tr>
               <td><a href="<~../url>/<~id>"><~iname default="Chunk"></a><div class="small text-muted"><~section></div></td>
+              <td><~source_title default="-"><div class="small text-muted"><~source_type></div></td>
               <td><code><~entity_icode></code></td>
-              <td><~item_id></td>
+              <td><~item_id><~att_suffix if="att_id" inline> / att <~att_id></~att_suffix></td>
+              <td><span class="badge text-bg-light"><~index_status></span></td>
               <td><~embedding_dim></td>
               <td><span class="badge text-bg-secondary"><~vector_backend></span></td>
               <td><~add_time date="datetime"></td>
             </tr>
           </~rows>
           <~empty unless="rows" inline>
-            <tr><td colspan="6" class="text-center text-muted py-4">`No document chunks found.`</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-4">`No RAG chunks found.`</td></tr>
           </~empty>
         </tbody>
       </table>

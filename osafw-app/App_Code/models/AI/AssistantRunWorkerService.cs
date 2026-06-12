@@ -37,7 +37,9 @@ public sealed class AssistantRunWorkerService : BackgroundService
                 do
                 {
                     var processor = new AssistantRunProcessor(configuration, loggerFactory);
-                    processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleRuns).ConfigureAwait(false);
+                    processed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken).ConfigureAwait(false);
+                    if (!processed)
+                        processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleRuns).ConfigureAwait(false);
                     shouldRecoverStaleRuns = false;
                 }
                 while (processed && !stoppingToken.IsCancellationRequested);

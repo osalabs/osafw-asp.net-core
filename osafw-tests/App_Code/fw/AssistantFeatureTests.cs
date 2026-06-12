@@ -67,23 +67,23 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
-    public void DocChunks_VectorModeJsonBypassesNativeDetection()
+    public void RagChunks_VectorModeJsonBypassesNativeDetection()
     {
         var fw = TestHelpers.CreateFw();
-        registerSettings(fw, new Dictionary<string, string> { ["ASSISTANT_VECTOR_MODE"] = DocChunks.VECTOR_MODE_JSON });
-        var chunks = new DocChunks();
+        registerSettings(fw, new Dictionary<string, string> { ["ASSISTANT_VECTOR_MODE"] = RagChunks.VECTOR_MODE_JSON });
+        var chunks = new RagChunks();
         chunks.init(fw);
 
         string backend = invokePrivate<string>(chunks, "resolveVectorBackend", 1536);
 
-        Assert.AreEqual(DocChunks.VECTOR_MODE_JSON, backend);
+        Assert.AreEqual(RagChunks.VECTOR_MODE_JSON, backend);
     }
 
     [TestMethod]
-    public void DocChunks_JsonFallbackSqlUsesProviderJsonFunctions()
+    public void RagChunks_JsonFallbackSqlUsesProviderJsonFunctions()
     {
         var fw = TestHelpers.CreateFw();
-        var chunks = new DocChunks();
+        var chunks = new RagChunks();
         chunks.init(fw);
 
         string sqlServer = invokePrivate<string>(chunks, "buildSqlServerJsonQuerySql", 3);
@@ -99,7 +99,7 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
-    public void DocChunks_CosineSimilarityOrdersFixtureVectors()
+    public void RagChunks_CosineSimilarityOrdersFixtureVectors()
     {
         var query = new List<float> { 1, 0 };
         var rows = new[]
@@ -110,7 +110,7 @@ public class AssistantFeatureTests
         };
 
         var ordered = rows
-            .OrderByDescending(row => DocChunks.cosineSimilarity(query, row.Vector))
+            .OrderByDescending(row => RagChunks.cosineSimilarity(query, row.Vector))
             .ThenBy(row => row.Id)
             .Select(row => row.Name)
             .ToList();
@@ -191,6 +191,7 @@ public class AssistantFeatureTests
         Assert.IsFalse(names.Contains("lookup_values"));
         CollectionAssert.Contains(names, "search_knowledge_base");
         CollectionAssert.Contains(names, "search_thread_attachments");
+        CollectionAssert.Contains(names, "search_contacts");
     }
 
     [TestMethod]
@@ -218,6 +219,9 @@ public class AssistantFeatureTests
                     name = "Install Guide",
                     article_id = 12,
                     article_url = "/Admin/KBArticles/12",
+                    source_id = 7,
+                    chunk_id = 42,
+                    source_type = RagSources.SOURCE_TYPE_KB_ARTICLE,
                     section = "Setup",
                     page = 1,
                 }
@@ -231,6 +235,52 @@ public class AssistantFeatureTests
         Assert.AreEqual("KB answer", roundTrip.title);
         Assert.AreEqual(1, roundTrip.sources.Count);
         Assert.AreEqual("/Admin/KBArticles/12", roundTrip.sources[0].article_url);
+        Assert.AreEqual(7, roundTrip.sources[0].source_id);
+        Assert.AreEqual(42, roundTrip.sources[0].chunk_id);
+    }
+
+    [TestMethod]
+    public void AssistantRuntimeStatus_MissingOpenAiKeyReturnsAdminConfigurationMessage()
+    {
+        var fw = TestHelpers.CreateFw();
+        registerSettings(fw, new Dictionary<string, string> { ["ASSISTANT_ENABLED"] = "1" });
+
+        var status = new AssistantAppService(fw).RuntimeStatus();
+
+        Assert.IsTrue(status.enabled);
+        Assert.IsFalse(status.openai_configured);
+        Assert.AreEqual("Please contact administrator to configure AI Assistant.", status.message);
+    }
+
+    [TestMethod]
+    public void RagSources_SourceKeyIncludesSourceEntityItemAndAttachment()
+    {
+        string key = RagSources.BuildSourceKey(RagSources.SOURCE_TYPE_KB_ATTACHMENT, 5, 12, 44);
+
+        Assert.AreEqual("kb_attachment:5:12:44", key);
+    }
+
+    [TestMethod]
+    public void RagSources_HashTextIsStableSha256Hex()
+    {
+        string first = RagSources.HashText("hello");
+        string second = RagSources.HashText("hello");
+
+        Assert.AreEqual(first, second);
+        Assert.AreEqual(64, first.Length);
+    }
+
+    [TestMethod]
+    public void AssistantMemories_SanitizeMemoryTextRedactsSecretsAndContacts()
+    {
+        string sanitized = AssistantMemories.SanitizeMemoryText("email a@example.com token=abc123456 phone 312-555-1212 card 4111 1111 1111 1111");
+
+        StringAssert.Contains(sanitized, "[redacted-email]");
+        StringAssert.Contains(sanitized, "token: [redacted]");
+        StringAssert.Contains(sanitized, "[redacted-phone]");
+        StringAssert.Contains(sanitized, "[redacted-number]");
+        Assert.IsFalse(sanitized.Contains("a@example.com"));
+        Assert.IsFalse(sanitized.Contains("312-555-1212"));
     }
 
     private static T invokePrivate<T>(object target, string methodName, params object[] args)
