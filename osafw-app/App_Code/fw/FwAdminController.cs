@@ -38,7 +38,9 @@ public class FwAdminController : FwController
         // Next
 
         // set standard output parse strings
+#pragma warning disable CS0618 // Preserve dispatch to existing project overrides of setPS().
         var ps = this.setPS();
+#pragma warning restore CS0618
 
         // userlists support if necessary
         if (this.is_userlists)

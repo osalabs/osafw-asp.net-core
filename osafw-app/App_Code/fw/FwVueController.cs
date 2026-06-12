@@ -336,7 +336,9 @@ public class FwVueController : FwDynamicController
             };
 
             ps["store"] = store;
+#pragma warning disable CS0618 // Preserve dispatch to existing project overrides of setPS().
             ps = setPS(ps);
+#pragma warning restore CS0618
         }
 
         ps["f"] = this.list_filter;

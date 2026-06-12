@@ -33,9 +33,9 @@ public class MyListsController : FwAdminController
         is_readonly = false;//allow update my stuff
     }
 
-    public override FwDict setPS(FwDict? ps = null)
+    public override FwDict setListPS(FwDict? ps = null)
     {
-        ps = base.setPS(ps);
+        ps = base.setListPS(ps);
         ps["select_entities"] = model.listSelectOptionsEntities();
         return ps;
     }

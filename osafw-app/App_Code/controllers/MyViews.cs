@@ -56,9 +56,9 @@ public class MyViewsController : FwAdminController
         }
     }
 
-    public override FwDict setPS(FwDict? ps = null)
+    public override FwDict setListPS(FwDict? ps = null)
     {
-        var result = base.setPS(ps);
+        var result = base.setListPS(ps);
         result["select_icodes"] = model.listSelectIcodes();
         return result;
     }

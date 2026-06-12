@@ -19,7 +19,7 @@ Common config keys include:
 - `required_fields` – space separated required fields
 - `save_fields` and `save_fields_checkboxes` – fields saved from ShowForm
 - `form_new_defaults` – defaults for new item
-- `search_fields` – fields used for searching
+- `search_fields` – fields used for searching and for the default list search placeholder
 - `list_sortdef` and `list_sortmap` – default sorting
 - `related_field_name` – related id field
 - `list_view` – table or SQL used for listing

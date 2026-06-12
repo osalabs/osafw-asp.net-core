@@ -45,9 +45,9 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
-    public override FwDict setPS(FwDict? ps = null)
+    public override FwDict setListPS(FwDict? ps = null)
     {
-        ps = base.setPS(ps);
+        ps = base.setListPS(ps);
         ps["is_roles"] = model.isRoles();
         return ps;
     }

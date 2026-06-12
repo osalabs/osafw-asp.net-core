@@ -797,7 +797,7 @@ Used for the list (index) view. Typical files:
 - **col_custom.html**: Custom column rendering (optional).
 - **onload.js**: JS to run on jquery page load (optional, can be removed if empty).
 - **load_script.html**: Additional scripts to include (optional, can be removed if empty).
-- **return_url.html, row_click_url.html, userlist_entity.html**: Advanced customizations (optional).
+- **return_url.html, row_click_url.html, userlist_entity.html, list_filter_search_placeholder.html**: Advanced customizations (optional).
 
 ### /show
 Used for the view (read-only) details page. Typical files:

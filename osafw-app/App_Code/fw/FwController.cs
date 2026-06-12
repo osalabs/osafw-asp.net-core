@@ -1198,7 +1198,19 @@ public abstract partial class FwController
         return ps;
     }
 
+    /// <summary>
+    /// Compatibility wrapper for controllers that still override the old list page-state hook.
+    /// </summary>
+    [Obsolete("Use setListPS() instead.")]
     public virtual FwDict setPS(FwDict? ps = null)
+    {
+        return setListPS(ps);
+    }
+
+    /// <summary>
+    /// Builds standard ParsePage state for list screens.
+    /// </summary>
+    public virtual FwDict setListPS(FwDict? ps = null)
     {
         ps ??= [];
 
@@ -1219,6 +1231,8 @@ public abstract partial class FwController
         //for RBAC
         ps["rbac"] = rbac;
 
+        ps["list_filter_search_placeholder_fields"] = buildListFilterSearchPlaceholderFields();
+
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
         {
@@ -1231,6 +1245,37 @@ public abstract partial class FwController
         setPSReturnContext(ps);
 
         return ps;
+    }
+
+    /// <summary>
+    /// Builds default list search placeholder field labels from configured searchable fields.
+    /// </summary>
+    protected virtual string buildListFilterSearchPlaceholderFields()
+    {
+        if (string.IsNullOrWhiteSpace(this.search_fields))
+            return string.Empty;
+
+        StrList fieldNames = [];
+        FwDict fieldsSeen = [];
+
+        foreach (var search_group in Utils.qw(this.search_fields))
+        {
+            foreach (var search_field in search_group.Split(','))
+            {
+                var field = search_field.Trim().TrimStart('!');
+                if (field.Length == 0 || fieldsSeen.ContainsKey(field))
+                    continue;
+
+                fieldsSeen[field] = true;
+                var fieldName = view_list_map[field].toStr();
+                fieldNames.Add(fieldName.Length > 0 ? fieldName : $"[{field}]");
+            }
+        }
+
+        if (fieldNames.Count == 0)
+            return string.Empty;
+
+        return string.Join(", ", fieldNames);
     }
 
     /// <summary>

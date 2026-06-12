@@ -31,7 +31,7 @@
 - `git diff --check`
 - `git diff --stat`
 - Targeted `rg` and `Get-Content` reads for Lookup Manager, virtual controllers, Vue history, breadcrumbs, list row links, and return-url handling.
-- Visual Studio MCP was reachable, but final `solution_info` showed a different open solution (`frycomm.sln`), so it was not used for the final repo build.
+- Visual Studio MCP was reachable, but final `solution_info` showed a different open solution, so it was not used for the final repo build.
 - `dotnet build osafw-app\osafw-app.csproj` was blocked by the running VS/IIS Express process locking `bin\Debug\net10.0\osafw-app.dll`.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=artifacts\assistant_build\` succeeded with 0 warnings and 0 errors; the resulting `osafw-app\artifacts\assistant_build\` output directory was removed afterward.
 - Browser plugin Node connection failed twice with local Windows sandbox startup errors, so Playwright MCP was used as fallback.
