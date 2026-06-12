@@ -3,7 +3,9 @@
 <~/common/list/filter_std>
 
 <ul class="nav nav-tabs">
-  <li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active unless="f[icat]">" href="<~../url>?dofilter=1&f[icat]=">Site</a></li>
+  <li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active if="is_icat_all">" href="<~../url>?dofilter=1">All</a></li>
+  <li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active if="is_icat_site">" href="<~../url>?dofilter=1&f[icat]=">Site</a></li>
+  <li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active if="is_icat_ai">" href="<~../url>?dofilter=1&f[icat]=AI">AI</a></li>
   <!--li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active ifeq="f[icat]" value="section1">" href="<~../url>?dofilter=1&f[icat]=section1">Section1</a></li>
   <li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active ifeq="f[icat]" value="section2">" href="<~../url>?dofilter=1&f[icat]=section2">Section2</a></li-->
 </ul>

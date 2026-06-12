@@ -33,11 +33,29 @@ public class AdminSettingsController : FwAdminController
     {
         base.setListSearch();
 
-        if (!Utils.isEmpty(list_filter["icat"]))
+        if (hasIcatFilter())
         {
             list_where += " and icat=@icat";
             list_where_params["icat"] = list_filter["icat"].toStr();
         }
+    }
+
+    public override FwDict setListPS(FwDict? ps = null)
+    {
+        ps = base.setListPS(ps);
+
+        string icat = list_filter["icat"].toStr();
+        bool hasIcat = hasIcatFilter();
+        ps["is_icat_all"] = !hasIcat;
+        ps["is_icat_site"] = hasIcat && icat.Length == 0;
+        ps["is_icat_ai"] = hasIcat && string.Equals(icat, Settings.ICAT_AI, StringComparison.OrdinalIgnoreCase);
+
+        return ps;
+    }
+
+    private bool hasIcatFilter()
+    {
+        return list_filter.ContainsKey("icat");
     }
 
     public override FwDict ShowFormAction(int id = 0)
