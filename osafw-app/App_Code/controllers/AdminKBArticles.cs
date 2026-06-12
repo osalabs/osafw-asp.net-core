@@ -47,6 +47,7 @@ public class AdminKBArticlesController : FwAdminController
 
         var ps = base.IndexAction() ?? [];
         ps["tables_ready"] = true;
+        ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
         return ps;
     }
 

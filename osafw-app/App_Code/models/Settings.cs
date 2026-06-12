@@ -9,6 +9,8 @@ namespace osafw;
 
 public class Settings : FwModel<Settings.Row>
 {
+    public const string ICAT_AI = "AI";
+
     public class Row
     {
         public int id { get; set; }
@@ -49,6 +51,29 @@ public class Settings : FwModel<Settings.Row>
         return read(icode).toInt();
     }
 
+    public string read(string icode, string defaultValue)
+    {
+        return getValue(icode, defaultValue);
+    }
+
+    public bool readBool(string icode, bool defaultValue = false)
+    {
+        var value = read(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value.toBool();
+    }
+
+    public int readInt(string icode, int defaultValue = 0)
+    {
+        var value = read(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value.toInt(defaultValue);
+    }
+
+    public long readLong(string icode, long defaultValue = 0)
+    {
+        var value = read(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value.toLong(defaultValue);
+    }
+
     /// <summary>
     /// Reads a site setting as a nullable date.
     /// </summary>
@@ -79,6 +104,13 @@ public class Settings : FwModel<Settings.Row>
         var row = oneByIcode(icode);
         return row.TryGetValue("ivalue", out string? value) ? value.toStr() : string.Empty;
     }
+
+    public string getValue(string icode, string defaultValue)
+    {
+        var value = getValue(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value;
+    }
+
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);

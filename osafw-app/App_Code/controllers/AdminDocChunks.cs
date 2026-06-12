@@ -4,18 +4,18 @@ using System.Text.Json;
 
 namespace osafw;
 
-public class AdminDocumentEmbeddingsController : FwController
+public class AdminDocChunksController : FwController
 {
-    public static new int access_level = Users.ACL_MANAGER;
+    public static new int access_level = Users.ACL_SITEADMIN;
 
     public override void init(FW fw)
     {
         base.init(fw);
-        base_url = "/Admin/DocumentEmbeddings";
+        base_url = "/Admin/DocChunks";
     }
 
     /// <summary>
-    /// Allows managers to inspect embedding state without requiring a generated RBAC resource.
+    /// Allows Site Admins to inspect chunk/vector state without requiring a generated RBAC resource.
     /// </summary>
     public override void checkAccess()
     {
@@ -27,12 +27,12 @@ public class AdminDocumentEmbeddingsController : FwController
     {
         var ps = new FwDict
         {
-            ["title"] = "Document Embeddings",
+            ["title"] = "Document Chunks",
             ["base_url"] = base_url,
             ["f"] = reqh("f"),
             ["tables_ready"] = areTablesReady(),
-            ["vector_mode"] = fw.config("ASSISTANT_VECTOR_MODE").toStr(DocChunks.VECTOR_MODE_AUTO),
-            ["embedding_model"] = fw.config("ASSISTANT_EMBEDDING_MODEL").toStr(LLM.MODEL_TEXT_EMBEDDING_3_SMALL),
+            ["vector_mode"] = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", DocChunks.VECTOR_MODE_AUTO),
+            ["embedding_model"] = LLM.MODEL_TEXT_EMBEDDING_3_SMALL,
         };
 
         if (!ps["tables_ready"].toBool())
@@ -122,7 +122,7 @@ public class AdminDocumentEmbeddingsController : FwController
 
         return new FwDict
         {
-            ["title"] = "Document Embedding",
+            ["title"] = "Document Chunk",
             ["i"] = item,
             ["embedding_preview"] = preview,
             ["base_url"] = base_url,
@@ -138,7 +138,7 @@ public class AdminDocumentEmbeddingsController : FwController
             throw new UserException("Entity and item id are required.");
 
         fw.model<DocChunks>().deleteByEntity(entityIcode, itemId);
-        fw.flash("success", "Document embeddings deleted.");
+        fw.flash("success", "Document chunks deleted.");
         fw.redirect(base_url);
         return null;
     }

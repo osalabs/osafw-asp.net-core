@@ -32,10 +32,4 @@ public class FwEntities : FwModel
         return id;
     }
 
-    //find record by icode without creating it
-    public virtual int idByIcode(string icode)
-    {
-        return oneByIcode(icode)[field_id].toInt();
-    }
-
 }

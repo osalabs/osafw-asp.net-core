@@ -20,8 +20,6 @@ public class LLM : FwModel
     public const string MODEL_GPT5 = "gpt-5";
     public const string MODEL_GPT5_MINI = "gpt-5-mini";
     public const string MODEL_GPT5_NANO = "gpt-5-nano";
-    public const string MODEL_GPT4O = "gpt-4o";
-    public const string MODEL_GPT4O_MINI = "gpt-4o-mini";
     public const string MODEL_GPT41 = "gpt-4.1";
     public const string MODEL_GPT41_MINI = "gpt-4.1-mini";
     public const string MODEL_TEXT_EMBEDDING_3_SMALL = "text-embedding-3-small";
@@ -87,9 +85,7 @@ public class LLM : FwModel
         if (text.Length == 0)
             throw new ApplicationException("Text is required for embedding generation.");
 
-        var embeddingModel = string.IsNullOrWhiteSpace(model)
-            ? fw.config("ASSISTANT_EMBEDDING_MODEL").toStr(MODEL_TEXT_EMBEDDING_3_SMALL)
-            : model.Trim();
+        var embeddingModel = string.IsNullOrWhiteSpace(model) ? MODEL_TEXT_EMBEDDING_3_SMALL : model.Trim();
         if (string.IsNullOrWhiteSpace(embeddingModel))
             embeddingModel = MODEL_TEXT_EMBEDDING_3_SMALL;
 
@@ -152,17 +148,14 @@ public class LLM : FwModel
     {
         var key = apiKey();
         if (string.IsNullOrWhiteSpace(key))
-            throw new ApplicationException("OpenAI API key is not configured. Set appSettings.OPENAI_KEY or appSettings.OPENAI_API_KEY.");
+            throw new ApplicationException("OpenAI API key is not configured. Set OPENAI_API_KEY in Site Settings.");
 
         return new OpenAIClient(key);
     }
 
     private string apiKey()
     {
-        var key = fw.config("OPENAI_KEY").toStr();
-        if (string.IsNullOrWhiteSpace(key))
-            key = fw.config("OPENAI_API_KEY").toStr();
-        return key;
+        return fw.model<Settings>().read("OPENAI_API_KEY");
     }
 
     private static JsonElement parseJsonSchema(string json_schema)

@@ -4,13 +4,11 @@ The assistant is an optional read-only RAG feature for framework apps. It provid
 
 ## Configuration
 
-The feature is disabled by default. Add or override these `appSettings` values when enabling it:
+The feature is disabled by default. Configure these rows in Site Settings under the `AI` category:
 
 - `ASSISTANT_ENABLED=true`
-- `ASSISTANT_WORKER_ENABLED=true` to process queued runs in the web host
-- `OPENAI_KEY` or `OPENAI_API_KEY`
+- `OPENAI_API_KEY`
 - `ASSISTANT_MODEL=gpt-5-mini`
-- `ASSISTANT_EMBEDDING_MODEL=text-embedding-3-small`
 - `ASSISTANT_VECTOR_MODE=auto`
 - `ASSISTANT_MEMORY_ENABLED=false`
 - `ASSISTANT_MAX_FILES_PER_MESSAGE=5`
@@ -18,7 +16,9 @@ The feature is disabled by default. Add or override these `appSettings` values w
 - `ASSISTANT_MAX_INDEX_CHARS=200000`
 - `ASSISTANT_MAX_INDEX_CHUNKS=80`
 
-With `ASSISTANT_ENABLED=false`, the UI reports that the assistant is unavailable and the worker is not registered. Missing tables or a missing OpenAI key must not block application startup.
+Keep `ASSISTANT_WORKER_ENABLED=true` in `appSettings` when queued runs should be processed by the web host. The embedding model is a code constant in `LLM.MODEL_TEXT_EMBEDDING_3_SMALL`.
+
+With `ASSISTANT_ENABLED=false`, the UI reports that the assistant is unavailable. With `ASSISTANT_WORKER_ENABLED=false`, the hosted worker is not registered and queued runs remain queued until another process calls the run processor. Missing tables or a missing OpenAI key must not block application startup.
 
 ## Schema
 
@@ -48,7 +48,7 @@ Article access uses numeric `access_level`. Retrieval queries include `KBArticle
 
 Assistant messages can include supported uploads. Text, markdown, HTML, RTF text fallback, and DOCX files are parsed and indexed against the assistant message entity. Unsupported file types remain attached but are not indexed. The assistant enforces per-message file-count, indexed-file byte, parsed-character, and chunk-count caps before calling the embedding provider.
 
-Use `/Admin/DocumentEmbeddings` to inspect indexed chunks, vector metadata, and backend selection. The screen reports setup-needed if the schema is missing.
+Use `/Admin/DocChunks` to inspect indexed chunks, vector metadata, and backend selection. The screen reports setup-needed if the schema is missing.
 
 ## Vector Backends
 

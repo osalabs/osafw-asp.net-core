@@ -27,7 +27,7 @@ public sealed class AssistantRunProcessor
     public async Task<bool> ProcessNextQueuedRunAsync(string workerId, CancellationToken cancellationToken, bool recoverStaleRuns = false)
     {
         using var fw = FW.initOffline(configuration);
-        if (!fw.config("ASSISTANT_ENABLED").toBool())
+        if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED"))
             return false;
 
         if (recoverStaleRuns)
@@ -67,13 +67,11 @@ public sealed class AssistantRunProcessor
         var runtime = new AssistantToolRuntime(fw, thread.id, run.id, thread.users_id.GetValueOrDefault());
         IList<AITool> tools = new AssistantToolCatalog(runtime).Build().Select(static registration => registration.Tool).ToList();
 
-        string apiKey = fw.config("OPENAI_KEY").toStr();
-        if (string.IsNullOrWhiteSpace(apiKey))
-            apiKey = fw.config("OPENAI_API_KEY").toStr();
+        string apiKey = fw.model<Settings>().read("OPENAI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new UserException("OpenAI API key is not configured.");
 
-        string model = fw.config("ASSISTANT_MODEL").toStr(LLM.MODEL_GPT5_MINI);
+        string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
         if (string.IsNullOrWhiteSpace(model))
             model = LLM.MODEL_GPT5_MINI;
 
@@ -186,7 +184,7 @@ public sealed class AssistantRunProcessor
     public static string BuildChatInstructions(FW fw, int usersId)
     {
         AssistantMemories.Row? memory = null;
-        if (fw.config("ASSISTANT_MEMORY_ENABLED").toBool() && usersId > 0)
+        if (fw.model<Settings>().readBool("ASSISTANT_MEMORY_ENABLED") && usersId > 0)
             memory = fw.model<AssistantMemories>().oneByUser(usersId);
 
         var ps = new FwDict
@@ -322,7 +320,7 @@ public sealed class AssistantRunProcessor
 
     private static void updateUserMemoryIfEnabled(FW fw, int threadId, int usersId)
     {
-        if (!fw.config("ASSISTANT_MEMORY_ENABLED").toBool() || usersId <= 0)
+        if (!fw.model<Settings>().readBool("ASSISTANT_MEMORY_ENABLED") || usersId <= 0)
             return;
 
         var messages = fw.model<AssistantMessages>().listByThread(threadId)

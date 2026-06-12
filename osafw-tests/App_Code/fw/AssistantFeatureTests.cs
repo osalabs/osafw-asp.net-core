@@ -26,6 +26,23 @@ public class AssistantFeatureTests
         public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
     }
 
+    private sealed class StaticSettings : Settings
+    {
+        private readonly Dictionary<string, string> values;
+
+        public StaticSettings(Dictionary<string, string>? values = null)
+        {
+            this.values = values ?? [];
+        }
+
+        public override DBRow oneByIcode(string icode)
+        {
+            return values.TryGetValue(icode, out string? value)
+                ? new DBRow(new FwDict { ["id"] = "1", ["icode"] = icode, ["ivalue"] = value })
+                : [];
+        }
+    }
+
     [TestMethod]
     public void LLM_NormalizesFencedJsonWithoutCallingProvider()
     {
@@ -42,6 +59,7 @@ public class AssistantFeatureTests
     public void LLM_IsNotConfiguredWithoutOpenAiKey()
     {
         var fw = TestHelpers.CreateFw();
+        registerSettings(fw);
         var llm = new LLM();
         llm.init(fw);
 
@@ -51,10 +69,8 @@ public class AssistantFeatureTests
     [TestMethod]
     public void DocChunks_VectorModeJsonBypassesNativeDetection()
     {
-        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
-        {
-            ["appSettings:ASSISTANT_VECTOR_MODE"] = DocChunks.VECTOR_MODE_JSON,
-        });
+        var fw = TestHelpers.CreateFw();
+        registerSettings(fw, new Dictionary<string, string> { ["ASSISTANT_VECTOR_MODE"] = DocChunks.VECTOR_MODE_JSON });
         var chunks = new DocChunks();
         chunks.init(fw);
 
@@ -222,5 +238,12 @@ public class AssistantFeatureTests
         var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.IsNotNull(method, methodName + " method not found");
         return (T)method.Invoke(target, args)!;
+    }
+
+    private static void registerSettings(FW fw, Dictionary<string, string>? values = null)
+    {
+        var settings = new StaticSettings(values);
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
     }
 }

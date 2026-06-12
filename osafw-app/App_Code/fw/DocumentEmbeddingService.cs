@@ -136,9 +136,7 @@ public class DocumentEmbeddingService
 
     private async Task<int> indexBlockAsync(RawBlock block, string filename, int fwentitiesId, int itemId, int chunkIndex, CancellationToken cancellationToken)
     {
-        var embeddingModel = fw.config("ASSISTANT_EMBEDDING_MODEL").toStr(LLM.MODEL_TEXT_EMBEDDING_3_SMALL);
-        if (string.IsNullOrWhiteSpace(embeddingModel))
-            embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
 
         int maxChunks = maxIndexChunks();
         foreach (var chunk in TokenAwareChunks(block.Text))
@@ -187,12 +185,12 @@ public class DocumentEmbeddingService
 
     private int maxIndexChars()
     {
-        return Math.Max(1000, fw.config("ASSISTANT_MAX_INDEX_CHARS").toInt(DefaultMaxIndexChars));
+        return Math.Max(1000, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHARS", DefaultMaxIndexChars));
     }
 
     private int maxIndexChunks()
     {
-        return Math.Max(1, fw.config("ASSISTANT_MAX_INDEX_CHUNKS").toInt(DefaultMaxIndexChunks));
+        return Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHUNKS", DefaultMaxIndexChunks));
     }
 
     private string resolveAttachmentPath(FwDict att)

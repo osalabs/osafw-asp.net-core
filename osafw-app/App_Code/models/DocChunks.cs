@@ -57,7 +57,7 @@ public class DocChunks : FwModel<DocChunks.Row>
             ? record.FwEntitiesId
             : fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_ATT);
         string embeddingModel = string.IsNullOrWhiteSpace(record.EmbeddingModel)
-            ? fw.config("ASSISTANT_EMBEDDING_MODEL").toStr(LLM.MODEL_TEXT_EMBEDDING_3_SMALL)
+            ? LLM.MODEL_TEXT_EMBEDDING_3_SMALL
             : record.EmbeddingModel.Trim();
         if (string.IsNullOrWhiteSpace(embeddingModel))
             embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
@@ -85,9 +85,7 @@ public class DocChunks : FwModel<DocChunks.Row>
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var embeddingModel = fw.config("ASSISTANT_EMBEDDING_MODEL").toStr(LLM.MODEL_TEXT_EMBEDDING_3_SMALL);
-        if (string.IsNullOrWhiteSpace(embeddingModel))
-            embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
 
         var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
         return listByEmbedding(queryEmbedding, embeddingModel, limit, null, null);
@@ -156,9 +154,7 @@ public class DocChunks : FwModel<DocChunks.Row>
         if (string.IsNullOrWhiteSpace(query))
             return [];
 
-        var embeddingModel = fw.config("ASSISTANT_EMBEDDING_MODEL").toStr(LLM.MODEL_TEXT_EMBEDDING_3_SMALL);
-        if (string.IsNullOrWhiteSpace(embeddingModel))
-            embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
 
         var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
         return listByEmbedding(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds);
@@ -225,7 +221,7 @@ public class DocChunks : FwModel<DocChunks.Row>
 
     private string resolveVectorBackend(int dimension)
     {
-        string configured = fw.config("ASSISTANT_VECTOR_MODE").toStr(VECTOR_MODE_AUTO).Trim().ToLowerInvariant();
+        string configured = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", VECTOR_MODE_AUTO).Trim().ToLowerInvariant();
         if (configured == VECTOR_MODE_JSON)
             return VECTOR_MODE_JSON;
         if (configured == VECTOR_MODE_NATIVE)

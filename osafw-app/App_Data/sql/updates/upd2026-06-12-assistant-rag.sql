@@ -190,3 +190,48 @@ BEGIN
   CREATE INDEX IX_assistant_feedback_thread ON assistant_feedback(assistant_threads_id, assistant_runs_id, assistant_messages_id);
 END
 GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'OPENAI_API_KEY', '', 'OpenAI API Key', 'API key used by Assistant and LLM features.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='OPENAI_API_KEY');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_ENABLED', '0', 'Assistant Enabled', 'Set to 1 to enable the assistant UI and queued runs.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_ENABLED');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_VECTOR_MODE', 'auto', 'Assistant Vector Mode', 'Use auto, json, or native. Auto uses SQL Server native vectors when available.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_VECTOR_MODE');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MODEL');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MEMORY_ENABLED');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_FILES_PER_MESSAGE');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for inline indexing. Larger files remain attached but are not indexed.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_INDEXED_FILE_BYTES');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_INDEX_CHARS');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
+SELECT 1, 0, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MAX_INDEX_CHUNKS');
+GO

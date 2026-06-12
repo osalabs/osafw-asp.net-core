@@ -1,8 +1,9 @@
 ## What changed
 - Ported the optional Assistant/LLM/Knowledge Base feature as a generic read-only RAG assistant.
 - Replaced the old SQL-generation assistant screen with threaded chat, polling, history, share links, feedback, citations, and file upload display.
-- Added assistant persistence models, run processing, read-only Agent Framework tools, OpenAI chat/embedding wrappers, document parsers, SQL-backed chunks, KB article admin screens, and document embedding admin screens.
+- Added assistant persistence models, run processing, read-only Agent Framework tools, OpenAI chat/embedding wrappers, document parsers, SQL-backed chunks, KB article admin screens, and document chunk admin screens.
 - Added SQL Server, MySQL, and SQLite schema/update scripts plus docs and focused tests.
+- Follow-up feedback moved AI settings to the `settings` table, standardized on `OPENAI_API_KEY`, renamed the debug chunk screen to `/Admin/DocChunks`, removed the sidebar debug link, moved `idByIcode()` to `FwModel`, and made assistant prompts generic for end-user apps.
 
 ## Scope reviewed
 - Startup and local instructions: `AGENTS.md`, `docs/agents/local_instructions.md`, and `docs/README.md`.
@@ -21,6 +22,11 @@
 - `docs/agents/tools/Normalize-TextFiles.ps1 -Check` over edited files - passed.
 - `git diff --check` - passed.
 - Byte-level checks confirmed assistant/admin route literal `url.html` files have no trailing newline byte.
+- Follow-up verification after feedback: `dotnet build osafw-app\osafw-app.csproj -p:OutDir=$PWD\artifacts\assistant_feedback_build\` passed with 0 warnings/errors.
+- Follow-up focused tests: `dotnet test osafw-tests\osafw-tests.csproj --filter "FullyQualifiedName~AssistantFeatureTests|FullyQualifiedName~SecurityQuickFixTests"` passed, 41/41.
+- Follow-up full suite: `dotnet test osafw-tests\osafw-tests.csproj` still has the same unrelated `UploadFileSave_WritesUnderModuleFolder` failure, 633/634 passed.
+- Follow-up browser smoke: `https://localhost:44315/Admin/KBArticles` was reachable but redirected to `/Dev/Configure/(PendingUpdates)`, so the changed KB list could not be visually verified until updates are applied.
+- Follow-up review loop found a bad `common/attr/hidden` template reference for the Site Admin-only chunks link; fixed by conditionally rendering the link with a ParsePage wrapper.
 
 ## Decisions - why
 - The feature remains disabled by default and the optional worker is separately guarded by `ASSISTANT_WORKER_ENABLED` so startup is safe without schema/API keys.
@@ -38,7 +44,7 @@
 - Local app and database smoke checks were blocked by machine state rather than code failures.
 
 ## Risks / follow-ups
-- Manual UI/theme smoke remains required once the local Visual Studio app is actually listening on `https://localhost:44315/`.
+- Manual UI/theme smoke remains required once local pending updates are applied so `/Admin/KBArticles` and `/Admin/DocChunks` can render.
 - SQL Server 2025 native vector mode still needs a live database smoke after local connection/SSPI issues are corrected; JSON fallback is covered by tests.
 - Full suite has one unrelated upload utility failure that should be triaged separately.
 - Production OpenAI key, assistant schema migration, and optional worker enabling are deployment/configuration steps.
@@ -48,11 +54,11 @@
 
 ## Testing instructions
 - Apply the provider-specific assistant migration script before enabling the feature on an existing database.
-- Set `ASSISTANT_ENABLED=true` and configure `OPENAI_KEY` or `OPENAI_API_KEY`.
-- Optionally set `ASSISTANT_WORKER_ENABLED=true` for background processing and adjust assistant upload/indexing caps as needed.
+- Set `ASSISTANT_ENABLED=true` and configure `OPENAI_API_KEY` under the `AI` Site Settings category.
+- Optionally set `ASSISTANT_WORKER_ENABLED=true` in app configuration for background processing and adjust assistant upload/indexing caps in Site Settings as needed.
 - Run `dotnet build osafw-app\osafw-app.csproj`.
 - Run `dotnet test osafw-tests\osafw-tests.csproj --filter "FullyQualifiedName~AssistantFeatureTests|FullyQualifiedName~SecurityQuickFixTests"`.
-- With the app running, smoke `/Assistant`, `/Admin/KBArticles`, and `/Admin/DocumentEmbeddings` in light and dark/theme modes.
+- With the app running, smoke `/Assistant`, `/Admin/KBArticles`, and Site Admin-only `/Admin/DocChunks` in light and dark/theme modes.
 
 ## Reflection
 - The most expensive part was package/API drift plus broad schema/template parity across three providers; future ports should validate package compatibility with a build before deep implementation.

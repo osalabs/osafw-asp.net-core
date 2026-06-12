@@ -35,7 +35,7 @@ public sealed class AssistantAppService
 
     public AssistantRuntimeStatus RuntimeStatus()
     {
-        bool enabled = fw.config("ASSISTANT_ENABLED").toBool();
+        bool enabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
         bool tablesReady = areTablesReady();
         bool openAiConfigured = fw.model<LLM>().isConfigured();
         string message = "";
@@ -329,7 +329,7 @@ public sealed class AssistantAppService
 
     private void validateAssistantFiles(IList<IFormFile> files)
     {
-        int maxFiles = Math.Max(1, fw.config("ASSISTANT_MAX_FILES_PER_MESSAGE").toInt(DefaultMaxFilesPerMessage));
+        int maxFiles = Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", DefaultMaxFilesPerMessage));
         int count = files.Count(file => file != null && file.Length > 0);
         if (count > maxFiles)
             throw new UserException("Upload up to " + maxFiles + " files per assistant message.");
@@ -337,7 +337,7 @@ public sealed class AssistantAppService
 
     private long maxIndexedFileBytes()
     {
-        return Math.Max(1, fw.config("ASSISTANT_MAX_INDEXED_FILE_BYTES").toLong(DefaultMaxIndexedFileBytes));
+        return Math.Max(1, fw.model<Settings>().readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DefaultMaxIndexedFileBytes));
     }
 
     private Dictionary<int, List<AssistantAttachmentDto>> loadAttachmentsByMessageId(IEnumerable<int> messageIds)

@@ -10,7 +10,9 @@ obj/
 
 # Log files
 *.log
-App_Data/logs/deploy-*
+App_Data/logs/*
+!App_Data/logs/.gitkeep
+
 #client-side libs - restored on build
 wwwroot/assets/lib/
 

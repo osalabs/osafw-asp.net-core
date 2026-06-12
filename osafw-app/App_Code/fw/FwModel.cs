@@ -408,6 +408,14 @@ public abstract class FwModel : IDisposable
         return item;
     }
 
+    /// <summary>
+    /// Returns an item's numeric id by icode without creating a missing record.
+    /// </summary>
+    public virtual int idByIcode(string icode)
+    {
+        return oneByIcode(icode)[field_id].toInt();
+    }
+
     public virtual DBRow oneByIcodeOrFail(string icode)
     {
         var item = oneByIcode(icode);
