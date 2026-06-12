@@ -10,7 +10,7 @@ obj/
 
 # Log files
 *.log
-
+App_Data/logs/deploy-*
 #client-side libs - restored on build
 wwwroot/assets/lib/
 

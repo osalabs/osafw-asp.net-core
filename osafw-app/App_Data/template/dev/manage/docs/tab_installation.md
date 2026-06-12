@@ -41,15 +41,26 @@
      - `C:\inetpub\site.domain.name\upload` or `..\App_Data\upload` (for non-public uploads).
 
 7. **Create Scheduled Deploy Script:**
-   - Copy `scripts\deploy_sample_v2.bat` to a server-local path such as `C:\inetpub\deploy.staging.bat`.
-   - Edit the project-specific settings at the top of the copied script:
-     - `PROJECT_ROOT=C:\inetpub\site.domain.name`
-     - `PROJECT_FILE=osafw-app.csproj`
-     - `TARGET_FOLDER=C:\inetpub\site.domain.name\bin\Release\net10.0\publish`
-     - `GIT_BRANCH=staging` (or the branch for this server)
-     - `DEPLOY_NAME=deploy-staging`
-   - Add a Windows Scheduled Task every 5-10 minutes running the copied script. Use a Windows account that can access Git, the .NET SDK, IIS target folders, and the log/state folder.
-   - The script builds in a temporary git worktree, deploys only after a successful publish, uses `app_offline.htm` during the final copy, and records the last successfully deployed commit.
+   - Keep deploy scripts in the repo under `scripts\`; do not copy them to `C:\inetpub`. Updates to deploy scripts are applied on the next run after the server repo is reset to the newer commit.
+   - Edit committed profile scripts once per project/environment:
+     - `scripts\deploy_production.ps1` for manual production deployments.
+     - `scripts\deploy_scheduled_develop.ps1` for a scheduled develop deployment.
+     - `scripts\deploy_scheduled_staging.ps1` for a scheduled staging deployment when needed.
+   - Profile scripts usually only set `$EnvironmentName`, `$GitBranch`, and `$DeployName`; `scripts\deploy_core.ps1` auto-detects repo root, project file, publish target, logs, state, status, and lock paths.
+   - Validate the scheduled profile before registering the task:
+     ```powershell
+     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\deploy_scheduled_develop.ps1 -Check
+     ```
+   - Register or update the scheduled task from an elevated PowerShell prompt. By default this registers `scripts\deploy_scheduled_develop.ps1` every 10 minutes:
+     ```powershell
+     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup_deploy_scheduled_task.ps1 -RunAsUser "DOMAIN\deploy-user"
+     ```
+   - Run production manually when needed:
+     ```powershell
+     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\deploy_production.ps1 -Pause
+     ```
+   - Use a dedicated deploy account when possible. It needs Git credentials and Modify rights to the repo, publish target, temp folder, and `osafw-app\App_Data\logs`; local Administrator is not required when those rights are granted. Use `-UseSystem` only when Git credentials are configured for LocalSystem.
+   - The script builds in a temporary git worktree, deploys only after a successful publish, uses `app_offline.htm` during the final copy, and records logs/status/last-successful commit under `osafw-app\App_Data\logs`.
    - The script does not run `git clean`; untracked runtime files under `App_Data\db`, `App_Data\logs`, and `upload` are preserved.
 
 8. **Install Let's Encrypt for SSL:**
