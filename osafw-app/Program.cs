@@ -124,6 +124,8 @@ public static class Program
 #if isFwCronService
         builder.Services.AddHostedService<FwCronService>();
 #endif
+        if (settings["ASSISTANT_WORKER_ENABLED"].toBool())
+            builder.Services.AddHostedService<AssistantRunWorkerService>();
 
         // Build the WebApplication
         var app = builder.Build();

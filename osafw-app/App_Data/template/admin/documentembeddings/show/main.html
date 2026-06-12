@@ -1,0 +1,35 @@
+<~/common/form/page_header_custom>
+
+<div class="fw-card">
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-default" href="<~../url>"><~/common/icons/arrow-left-circle>`Back`</a>
+    <form method="post" action="<~../url>/(DeleteEntity)" onsubmit="return confirm('Delete all embeddings for this entity item?')">
+      <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+      <input type="hidden" name="entity_icode" value="<~i[entity_icode]>">
+      <input type="hidden" name="item_id" value="<~i[item_id]>">
+      <button type="submit" class="btn btn-default"><span class="text-danger"><~/common/icons/x-circle-fill></span>`Delete Entity Chunks`</button>
+    </form>
+  </div>
+
+  <dl class="row mb-0">
+    <dt class="col-md-3">`Entity`</dt>
+    <dd class="col-md-9"><code><~i[entity_icode]></code></dd>
+    <dt class="col-md-3">`Item ID`</dt>
+    <dd class="col-md-9"><~i[item_id]></dd>
+    <dt class="col-md-3">`Chunk Index`</dt>
+    <dd class="col-md-9"><~i[chunk_index]></dd>
+    <dt class="col-md-3">`Section`</dt>
+    <dd class="col-md-9"><~i[section] default="-"></dd>
+    <dt class="col-md-3">`Embedding`</dt>
+    <dd class="col-md-9"><code><~embedding_preview></code></dd>
+    <dt class="col-md-3">`Backend`</dt>
+    <dd class="col-md-9"><span class="badge text-bg-secondary"><~i[vector_backend]></span></dd>
+    <dt class="col-md-3">`Metadata`</dt>
+    <dd class="col-md-9"><pre class="small mb-0"><code><~i[metadata_json]></code></pre></dd>
+  </dl>
+</div>
+
+<section class="fw-card mt-3">
+  <h2 class="h5">`Chunk Text`</h2>
+  <pre class="mb-0 white-space-pre-wrap"><code><~i[idesc]></code></pre>
+</section>

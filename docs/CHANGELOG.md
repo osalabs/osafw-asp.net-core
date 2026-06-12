@@ -4,6 +4,7 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-06-12
 
+- Breaking: optional Assistant/LLM/Knowledge Base support now uses Microsoft Agent Framework packages and SQL-backed RAG tables instead of the old Semantic Kernel SQL-generation prototype. Apps that enable the feature must apply `osafw-app/App_Data/sql/updates/upd2026-06-12-assistant-rag.sql` or the matching MySQL/SQLite update, configure OpenAI settings, and remove any app-specific dependency on generated assistant SQL or redirect payloads.
 - Breaking: `FwController.setPS()` is obsolete; list-screen page-state customizations should override `setListPS()` instead. Existing `setPS()` overrides still dispatch through the compatibility wrapper, but warning-as-error builds must rename overrides and direct calls.
 
 ## 2026-06-09

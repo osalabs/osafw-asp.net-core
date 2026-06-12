@@ -13,6 +13,9 @@ public class FwEntities : FwModel
     //constants for standard entities
     public const string ICODE_USERS = "users";
     public const string ICODE_ASSISTANT = "assistant";
+    public const string ICODE_ASSISTANT_MESSAGE = "assistant_message";
+    public const string ICODE_ATT = "att";
+    public const string ICODE_KB = "kb";
     public FwEntities() : base()
     {
         table_name = "fwentities";
@@ -27,6 +30,12 @@ public class FwEntities : FwModel
         if (id == 0)
             id = add(DB.h(field_icode, icode, field_iname, Utils.name2human(icode)));
         return id;
+    }
+
+    //find record by icode without creating it
+    public virtual int idByIcode(string icode)
+    {
+        return oneByIcode(icode)[field_id].toInt();
     }
 
 }

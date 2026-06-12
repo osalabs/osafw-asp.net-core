@@ -1,0 +1,89 @@
+<h1><~title></h1>
+
+<~/common/form/msg>
+
+<~setup_needed unless="tables_ready" inline>
+  <div class="alert alert-warning" role="alert">`Assistant document embedding tables are not installed. Run the assistant SQL update before reviewing indexed chunks.`</div>
+</~setup_needed>
+
+<~ready if="tables_ready" inline>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <div class="fw-card">
+        <div class="text-muted small">`Chunks`</div>
+        <div class="fs-3 fw-semibold"><~chunk_count></div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="fw-card">
+        <div class="text-muted small">`Vector Mode`</div>
+        <div class="fs-5"><~vector_mode></div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="fw-card">
+        <div class="text-muted small">`Embedding Model`</div>
+        <div class="fs-6"><~embedding_model></div>
+      </div>
+    </div>
+  </div>
+
+  <form class="fw-card" method="get" action="<~../url>">
+    <input type="hidden" name="dofilter" value="1">
+    <div class="row g-2 align-items-end">
+      <div class="col-md">
+        <label class="form-label" for="f_s">`Search`</label>
+        <input id="f_s" name="f[s]" value="<~f[s]>" class="form-control" type="search">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="f_entity">`Entity`</label>
+        <select id="f_entity" name="f[entity]" class="form-select">
+          <option value="">`All`</option>
+          <~entities select="f[entity]">
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="f_backend">`Backend`</label>
+        <select id="f_backend" name="f[backend]" class="form-select">
+          <option value="">`All`</option>
+          <~backend_options select="f[backend]">
+        </select>
+      </div>
+      <div class="col-md-auto">
+        <button class="btn btn-primary" type="submit"><~/common/icons/search>`Filter`</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="fw-list-card mt-3">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>`Chunk`</th>
+            <th>`Entity`</th>
+            <th>`Item`</th>
+            <th>`Dim`</th>
+            <th>`Backend`</th>
+            <th>`Added`</th>
+          </tr>
+        </thead>
+        <tbody>
+          <~rows repeat inline>
+            <tr>
+              <td><a href="<~../url>/<~id>"><~iname default="Chunk"></a><div class="small text-muted"><~section></div></td>
+              <td><code><~entity_icode></code></td>
+              <td><~item_id></td>
+              <td><~embedding_dim></td>
+              <td><span class="badge text-bg-secondary"><~vector_backend></span></td>
+              <td><~add_time date="datetime"></td>
+            </tr>
+          </~rows>
+          <~empty unless="rows" inline>
+            <tr><td colspan="6" class="text-center text-muted py-4">`No document chunks found.`</td></tr>
+          </~empty>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</~ready>

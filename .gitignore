@@ -8,6 +8,9 @@
 *.sublime-workspace
 /osafw-app/upload/*
 !/osafw-app/upload/.gitkeep
+/osafw-app/App_Data/db/*.sqlite
+/osafw-app/App_Data/db/*.sqlite-shm
+/osafw-app/App_Data/db/*.sqlite-wal
 /osafw-tests/obj
 /osafw-tests/bin
 /TestsProject/obj

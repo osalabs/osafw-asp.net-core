@@ -20,6 +20,11 @@
         <~/common/icons/grid-fill><~/main/index/title>
       </a>
     </li>
+    <li class="nav-item">
+      <a href="<~/assistant/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="Assistant">">
+        <~/common/icons/list-stars>`Assistant`
+      </a>
+    </li>
 
     <~GLOBAL[menu_items] repeat inline>
       <li class="nav-item">
@@ -69,6 +74,16 @@
       <li class="nav-item">
         <a href="<~/admin/lookups/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminLookups">">
           <~/common/icons/search><~/admin/lookups/title>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="<~/admin/kbarticles/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminKBArticles">">
+          <~/common/icons/files><~/admin/kbarticles/title>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="<~/admin/documentembeddings/url>" class="nav-link <~/common/cl/active ifeq="GLOBAL[controller]" value="AdminDocumentEmbeddings">">
+          <~/common/icons/journal-arrow-up><~/admin/documentembeddings/title>
         </a>
       </li>
     </~admin80_menu>

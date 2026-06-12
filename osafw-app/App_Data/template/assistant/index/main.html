@@ -1,11 +1,319 @@
-<div class="form-block m-auto">
-  <h1 class="fw-bold text-body-emphasis mb-3 text-center"><~title></h1>
+<div class="container-fluid assistant-shell" id="assistantApp"
+     data-xss="<~SESSION[XSS]>"
+     data-base-url="<~/assistant/url>">
+  <div class="page-header">
+    <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
+      <div class="page-header-title flex-grow-1">
+        <h1 class="page-title mb-0"><~title></h1>
+      </div>
+      <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
+        <a href="<~/assistant/url>" class="btn btn-default"><~/common/icons/plus>`New Chat`</a>
+        <button type="button" class="btn btn-default" data-assistant-share <~/common/attr/disabled unless="thread_id">><~/common/icons/box-arrow-up-right>`Share`</button>
+      </div>
+    </div>
+  </div>
 
-  <~form>
+  <~/common/form/msg>
 
+  <div class="alert alert-warning <~hidden if="is_assistant_available" inline>d-none</~hidden>" role="alert" data-assistant-unavailable>
+    <strong>`Assistant unavailable.`</strong>
+    <span><~assistant_status_message default="Assistant setup is incomplete."></span>
+  </div>
+
+  <div class="row g-3">
+    <aside class="col-lg-3">
+      <div class="fw-card h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <h2 class="h5 mb-0 flex-grow-1">`History`</h2>
+          <span class="badge text-bg-secondary" data-assistant-history-count>0</span>
+        </div>
+        <div class="input-group input-group-sm mb-3">
+          <span class="input-group-text"><~/common/icons/search></span>
+          <input type="search" class="form-control" data-assistant-history-search placeholder="Search chats">
+        </div>
+        <div class="list-group assistant-history" data-assistant-history></div>
+      </div>
+    </aside>
+
+    <section class="col-lg-9">
+      <div class="fw-card h-100 d-flex flex-column">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <h2 class="h5 mb-0 flex-grow-1" data-assistant-thread-title>`New chat`</h2>
+          <span class="badge text-bg-secondary" data-assistant-status>`Idle`</span>
+        </div>
+
+        <div class="assistant-message-list border rounded p-3 bg-body-tertiary" data-assistant-messages>
+          <div class="text-muted text-center py-5" data-assistant-empty>`Ask a question about indexed knowledge base articles or attached documents.`</div>
+        </div>
+
+        <div class="assistant-progress small text-muted py-2" data-assistant-progress></div>
+
+        <form class="mt-auto" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
+          <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+          <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
+          <div class="input-group">
+            <textarea name="prompt" rows="2" class="form-control" placeholder="Ask a read-only question" data-assistant-prompt <~/common/attr/disabled unless="is_assistant_available">></textarea>
+            <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+            <input type="file" class="form-control form-control-sm w-auto" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
+            <span class="form-text">`Supported text, markdown, HTML, and DOCX files are indexed for this thread.`</span>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
 </div>
 
-<~/common/form/msg>
+<script type="application/json" id="assistantStatusJson"><~assistant_status_json noescape></script>
+<script type="application/json" id="assistantHistoryJson"><~assistant_history_json noescape></script>
+<script type="application/json" id="assistantThreadJson"><~assistant_thread_json noescape></script>
 
-<~output if="is_run">
+<div class="modal fade" id="assistantShareModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">`Share Chat`</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" for="assistantShareUrl">`Share URL`</label>
+        <input id="assistantShareUrl" type="text" class="form-control" readonly data-assistant-share-url>
+      </div>
+    </div>
+  </div>
+</div>
 
+<script>
+(function () {
+  const root = document.getElementById('assistantApp');
+  if (!root) return;
+
+  const baseUrl = root.dataset.baseUrl || '/Assistant';
+  const xss = root.dataset.xss || '';
+  const status = parseJson(document.getElementById('assistantStatusJson')?.textContent, {});
+  let history = parseJson(document.getElementById('assistantHistoryJson')?.textContent, []);
+  let thread = parseJson(document.getElementById('assistantThreadJson')?.textContent, null);
+  let pollTimer = null;
+  let lastMessageId = maxId(thread && thread.messages);
+  let lastEventId = maxId(thread && thread.events);
+
+  const els = {
+    form: root.querySelector('[data-assistant-form]'),
+    prompt: root.querySelector('[data-assistant-prompt]'),
+    files: root.querySelector('[data-assistant-files]'),
+    threadInput: root.querySelector('[data-assistant-thread-input]'),
+    messages: root.querySelector('[data-assistant-messages]'),
+    empty: root.querySelector('[data-assistant-empty]'),
+    progress: root.querySelector('[data-assistant-progress]'),
+    history: root.querySelector('[data-assistant-history]'),
+    historyCount: root.querySelector('[data-assistant-history-count]'),
+    historySearch: root.querySelector('[data-assistant-history-search]'),
+    title: root.querySelector('[data-assistant-thread-title]'),
+    status: root.querySelector('[data-assistant-status]'),
+    share: root.querySelector('[data-assistant-share]'),
+  };
+
+  renderHistory();
+  renderThread();
+  schedulePollIfNeeded();
+
+  els.form && els.form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (!status.enabled || !status.tables_ready || !status.openai_configured) return;
+
+    const prompt = els.prompt.value.trim();
+    if (!prompt && (!els.files.files || els.files.files.length === 0)) return;
+
+    const body = new FormData(els.form);
+    body.set('prompt', prompt);
+    setBusy(true);
+    try {
+      const data = await postForm(baseUrl, body);
+      if (data.thread) {
+        thread = data.thread;
+        if (data.message) thread.messages = (thread.messages || []).concat([data.message]);
+        thread.active_run = data.run || thread.active_run;
+        lastMessageId = maxId(thread.messages);
+        lastEventId = maxId(thread.events);
+        els.prompt.value = '';
+        els.files.value = '';
+        els.threadInput.value = thread.id;
+        renderThread();
+        await refreshHistory();
+        schedulePollIfNeeded();
+      }
+    } catch (err) {
+      showProgress(err.message || 'Assistant request failed.');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  els.historySearch && els.historySearch.addEventListener('change', refreshHistory);
+
+  els.share && els.share.addEventListener('click', async function () {
+    if (!thread || !thread.id) return;
+    const body = new FormData();
+    body.set('XSS', xss);
+    const data = await postForm(`${baseUrl}/(Share)/${thread.id}`, body);
+    if (data.share && data.share.share_url) {
+      const input = document.querySelector('[data-assistant-share-url]');
+      if (input) input.value = data.share.share_url;
+      if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(document.getElementById('assistantShareModal')).show();
+    }
+  });
+
+  root.addEventListener('click', async function (event) {
+    const button = event.target.closest('[data-assistant-feedback]');
+    if (!button || !thread) return;
+    const body = new FormData();
+    body.set('XSS', xss);
+    body.set('thread_id', thread.id);
+    body.set('message_id', button.dataset.messageId || '');
+    body.set('run_id', thread.active_run && thread.active_run.id ? thread.active_run.id : '');
+    body.set('feedback_type', button.dataset.assistantFeedback);
+    await postForm(`${baseUrl}/(Feedback)`, body);
+    button.disabled = true;
+  });
+
+  async function poll() {
+    if (!thread || !thread.id) return;
+    try {
+      const data = await getJson(`${baseUrl}/(Poll)/${thread.id}?last_message_id=${lastMessageId}&last_event_id=${lastEventId}`);
+      const poll = data.poll || {};
+      if (poll.thread) {
+        thread.last_run_status = poll.thread.last_run_status;
+        thread.last_run_status_id = poll.thread.last_run_status_id;
+        thread.active_run = poll.run || thread.active_run;
+      }
+      if (poll.messages && poll.messages.length) {
+        thread.messages = mergeById(thread.messages || [], poll.messages);
+        lastMessageId = poll.last_message_id || maxId(thread.messages);
+      }
+      if (poll.events && poll.events.length) {
+        thread.events = mergeById(thread.events || [], poll.events);
+        lastEventId = poll.last_event_id || maxId(thread.events);
+      }
+      renderThread();
+      schedulePollIfNeeded();
+    } catch (err) {
+      showProgress(err.message || 'Polling failed.');
+    }
+  }
+
+  function schedulePollIfNeeded() {
+    clearTimeout(pollTimer);
+    if (!thread || !thread.active_run) return;
+    const active = ['queued', 'processing'].includes((thread.active_run.status || '').toLowerCase());
+    if (active) pollTimer = setTimeout(poll, 2500);
+  }
+
+  function renderHistory() {
+    els.history.innerHTML = '';
+    history.forEach(item => {
+      const link = document.createElement('a');
+      link.className = 'list-group-item list-group-item-action';
+      link.href = `${baseUrl}?thread_id=${encodeURIComponent(item.id)}`;
+      link.innerHTML = `<div class="d-flex gap-2 align-items-start"><div class="flex-grow-1"><div class="fw-semibold">${escapeHtml(item.iname || 'New chat')}</div><small class="text-muted">${escapeHtml(item.preview || '')}</small></div><span class="badge text-bg-secondary">${escapeHtml(item.last_run_status || '')}</span></div>`;
+      els.history.appendChild(link);
+    });
+    els.historyCount.textContent = history.length;
+  }
+
+  function renderThread() {
+    els.title.textContent = thread && thread.iname ? thread.iname : 'New chat';
+    els.status.textContent = thread && thread.last_run_status ? thread.last_run_status : 'Idle';
+    els.share.disabled = !(thread && thread.id && thread.is_owner);
+    els.threadInput.value = thread && thread.id ? thread.id : '';
+    const messages = thread && thread.messages ? thread.messages : [];
+    els.empty.classList.toggle('d-none', messages.length > 0);
+    Array.from(els.messages.querySelectorAll('[data-message-id]')).forEach(node => node.remove());
+    messages.forEach(message => els.messages.appendChild(renderMessage(message)));
+    renderEvents(thread && thread.events ? thread.events : []);
+    els.messages.scrollTop = els.messages.scrollHeight;
+  }
+
+  function renderMessage(message) {
+    const wrap = document.createElement('article');
+    wrap.className = `assistant-message mb-3 ${message.role === 'user' ? 'assistant-message-user' : ''}`;
+    wrap.dataset.messageId = message.id;
+    const tone = message.role === 'user' ? 'text-bg-primary' : 'bg-body border';
+    const sources = (message.sources || []).map(renderSource).join('');
+    const attachments = (message.attachments || []).map(file => {
+      const indexStatus = file.index_status || (file.is_indexed ? 'indexed' : 'not indexed');
+      const badgeClass = file.is_indexed ? 'text-bg-success' : 'text-bg-secondary';
+      return `<span class="badge ${badgeClass} me-1" title="${escapeAttr(indexStatus)}">${escapeHtml(file.iname || file.icode || 'file')}</span>`;
+    }).join('');
+    const feedback = message.role === 'assistant' ? `<div class="mt-2 d-flex gap-2"><button type="button" class="btn btn-sm btn-default" data-assistant-feedback="helpful" data-message-id="${message.id}">Helpful</button><button type="button" class="btn btn-sm btn-default" data-assistant-feedback="not_helpful" data-message-id="${message.id}">Not Helpful</button></div>` : '';
+    wrap.innerHTML = `<div class="card ${tone}"><div class="card-body"><div class="assistant-message-body">${escapeHtml(message.content_markdown || '')}</div>${attachments ? `<div class="mt-2">${attachments}</div>` : ''}${sources ? `<div class="mt-3 d-flex flex-column gap-2">${sources}</div>` : ''}${feedback}<div class="small text-muted mt-2">${escapeHtml(message.add_time || '')}</div></div></div>`;
+    return wrap;
+  }
+
+  function renderSource(source, index) {
+    const label = source.name || source.article_name || source.filename || `Source ${index + 1}`;
+    const meta = [source.section, source.page ? `p. ${source.page}` : ''].filter(Boolean).join(' ');
+    const href = source.url || source.article_url || source.file_url || '';
+    const content = `<span class="fw-semibold">${escapeHtml(label)}</span>${meta ? `<span class="small text-muted ms-2">${escapeHtml(meta)}</span>` : ''}`;
+    return href ? `<a class="assistant-citation border rounded p-2 text-decoration-none" href="${escapeAttr(href)}">${content}</a>` : `<div class="assistant-citation border rounded p-2">${content}</div>`;
+  }
+
+  function renderEvents(events) {
+    showProgress(events.slice(-3).map(event => event.content || event.event_type || '').join(' | '));
+  }
+
+  async function refreshHistory() {
+    const q = els.historySearch ? els.historySearch.value : '';
+    const data = await getJson(`${baseUrl}/(History)?q=${encodeURIComponent(q)}`);
+    history = data.items || [];
+    renderHistory();
+  }
+
+  async function postForm(url, body) {
+    const res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' }, body });
+    return readJsonResponse(res);
+  }
+
+  async function getJson(url) {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    return readJsonResponse(res);
+  }
+
+  async function readJsonResponse(res) {
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error && data.error.message ? data.error.message : res.statusText);
+    return data;
+  }
+
+  function setBusy(isBusy) {
+    els.form.querySelectorAll('button, textarea, input').forEach(el => el.disabled = isBusy || (!status.enabled || !status.tables_ready || !status.openai_configured));
+    if (isBusy) showProgress('Queued...');
+  }
+
+  function showProgress(text) {
+    els.progress.textContent = text || '';
+  }
+
+  function parseJson(value, fallback) {
+    try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
+  }
+
+  function maxId(items) {
+    return (items || []).reduce((max, item) => Math.max(max, Number(item.id || 0)), 0);
+  }
+
+  function mergeById(existing, incoming) {
+    const map = new Map((existing || []).map(item => [item.id, item]));
+    (incoming || []).forEach(item => map.set(item.id, item));
+    return Array.from(map.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/`/g, '&#96;');
+  }
+})();
+</script>

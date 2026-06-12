@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 namespace osafw.Tests;
 
@@ -63,11 +65,6 @@ public class SecurityQuickFixTests
     private sealed class TestPasswordController : PasswordController
     {
         public void UseModel(Users users) => model = users;
-    }
-
-    private sealed class TestAssistantController : AssistantController
-    {
-        public bool ApplyAssistantResultForTest(AssistantResult result) => applyAssistantResult(result);
     }
 
     private sealed class PostGuardController : FwController
@@ -213,30 +210,26 @@ public class SecurityQuickFixTests
     }
 
     [TestMethod]
-    public void Assistant_UnsafeRedirectWithSqlFailsClosed()
+    public void Assistant_LegacySqlAndRedirectPayloadIsIgnored()
     {
-        var fw = createFw();
-        var users = new LoginUsers();
-        users.init(fw);
-        TestHelpers.RegisterModel(fw, (Users)users);
-        var controller = new TestAssistantController();
-        controller.init(fw);
-        var result = new AssistantResult
+        string payload = """
         {
-            redirect_url = "https://evil.example.test/phish",
-            sql = "select 1",
-            title = "Unsafe response",
-            explanation = "This SQL must not be stored.",
-        };
+          "title": "Unsafe response",
+          "explanation": "This SQL must not be stored.",
+          "information": "Safe answer",
+          "sql": "select * from users",
+          "redirect_url": "https://evil.example.test/phish",
+          "sources": [],
+          "confidence": 0.25
+        }
+        """;
 
-        Assert.ThrowsExactly<RedirectException>(() => controller.ApplyAssistantResultForTest(result));
+        var result = JsonSerializer.Deserialize<AssistantResult>(payload);
 
-        Assert.AreEqual("/Assistant", fw.response.Headers["Location"].ToString());
-        Assert.AreEqual("", fw.G["llm_sql"].toStr());
-        Assert.AreEqual("", fw.G["llm_title"].toStr());
-        Assert.AreEqual("", fw.G["llm_explanation"].toStr());
-        var ps = controller.IndexAction();
-        Assert.IsFalse(ps.ContainsKey("is_sql_result"));
+        Assert.IsNotNull(result);
+        Assert.AreEqual("Unsafe response", result.title);
+        Assert.AreEqual("Safe answer", result.information);
+        Assert.IsFalse(typeof(AssistantResult).GetProperties().Any(static prop => prop.Name == "sql" || prop.Name == "redirect_url"));
     }
 
     [TestMethod]

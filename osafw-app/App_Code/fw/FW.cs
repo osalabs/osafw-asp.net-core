@@ -88,6 +88,7 @@ public class FW : IDisposable
     public HttpResponse response = null!;
     private readonly ISession? session;
     private readonly bool isOffline;
+    private readonly Dictionary<string, string> offlineSession = new(StringComparer.Ordinal);
 
     public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
@@ -307,11 +308,17 @@ public class FW : IDisposable
     //by default Session is for strings
     public string Session(string name)
     {
-        return session?.GetString(name) ?? "";
+        if (session != null)
+            return session.GetString(name) ?? "";
+
+        return offlineSession.TryGetValue(name, out string? value) ? value : "";
     }
     public void Session(string name, string value)
     {
-        session?.SetString(name, value);
+        if (session != null)
+            session.SetString(name, value);
+        else
+            offlineSession[name] = value ?? string.Empty;
     }
 
     /// <summary>
@@ -320,21 +327,33 @@ public class FW : IDisposable
     /// <param name="name">Session key to remove.</param>
     public void SessionRemove(string name)
     {
-        session?.Remove(name);
+        if (session != null)
+            session.Remove(name);
+        else
+            offlineSession.Remove(name);
     }
 
     public int? SessionInt(string name)
     {
-        return session?.GetInt32(name);
+        if (session != null)
+            return session.GetInt32(name);
+
+        return int.TryParse(Session(name), out int value) ? value : null;
     }
     public void SessionInt(string name, int value)
     {
-        session?.SetInt32(name, value);
+        if (session != null)
+            session.SetInt32(name, value);
+        else
+            offlineSession[name] = value.ToString();
     }
 
     public bool SessionBool(string name)
     {
-        var data = session?.Get(name);
+        if (session == null)
+            return bool.TryParse(Session(name), out bool value) && value;
+
+        var data = session.Get(name);
         if (data == null)
         {
             return false;
@@ -343,17 +362,22 @@ public class FW : IDisposable
     }
     public void SessionBool(string name, bool value)
     {
-        session?.Set(name, BitConverter.GetBytes(value));
+        if (session != null)
+            session.Set(name, BitConverter.GetBytes(value));
+        else
+            offlineSession[name] = value.ToString();
     }
 
     public FwDict? SessionDict(string name)
     {
-        string? data = session?.GetString(name);
+        string? data = session != null ? session.GetString(name) : Session(name);
+        if (string.IsNullOrEmpty(data))
+            return null;
         return data == null ? null : (FwDict)Utils.deserialize(data);
     }
     public void SessionDict(string name, FwDict value)
     {
-        session?.SetString(name, Utils.serialize(value));
+        Session(name, Utils.serialize(value));
     }
 
 

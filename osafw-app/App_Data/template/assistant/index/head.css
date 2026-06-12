@@ -1,4 +1,35 @@
-.form-block {
-  width: 100%;
-  max-width: 685px;
+.assistant-shell {
+  min-height: calc(100vh - 12rem);
+}
+
+.assistant-history {
+  max-height: calc(100vh - 14rem);
+  overflow: auto;
+}
+
+.assistant-message-list {
+  min-height: 24rem;
+  max-height: calc(100vh - 22rem);
+  overflow: auto;
+}
+
+.assistant-message {
+  max-width: 56rem;
+}
+
+.assistant-message-user {
+  margin-left: auto;
+}
+
+.assistant-message-body {
+  white-space: pre-wrap;
+}
+
+.assistant-citation {
+  border-color: var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+}
+
+.assistant-progress {
+  min-height: 2rem;
 }
