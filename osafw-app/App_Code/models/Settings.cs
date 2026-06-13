@@ -131,6 +131,20 @@ public class Settings : FwModel<Settings.Row>
         }
     }
 
+    /// <summary>
+    /// Lists categories currently used by settings rows for the admin settings tabs.
+    /// </summary>
+    public FwList listCategories()
+    {
+        FwList rows = db.arrayp($@"
+select icat
+  from {db.qid(table_name)}
+ group by icat
+ order by case when icat='' then 0 else 1 end, icat", DB.h());
+
+        return rows;
+    }
+
     // check if item exists for a given icode
     public override bool isExists(object uniq_key, int not_id)
     {

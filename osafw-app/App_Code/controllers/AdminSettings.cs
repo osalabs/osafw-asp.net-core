@@ -44,11 +44,8 @@ public class AdminSettingsController : FwAdminController
     {
         ps = base.setListPS(ps);
 
-        string icat = list_filter["icat"].toStr();
-        bool hasIcat = hasIcatFilter();
-        ps["is_icat_all"] = !hasIcat;
-        ps["is_icat_site"] = hasIcat && icat.Length == 0;
-        ps["is_icat_ai"] = hasIcat && string.Equals(icat, Settings.ICAT_AI, StringComparison.OrdinalIgnoreCase);
+        ps["has_icat_filter"] = hasIcatFilter();
+        ps["settings_categories"] = model.listCategories();
 
         return ps;
     }

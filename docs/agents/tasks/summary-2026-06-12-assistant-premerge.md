@@ -8,14 +8,18 @@
 - Moved `RagChunks` and `RagSources` under `osafw-app/App_Code/models/AI/` with the existing `osafw` namespace.
 - Kept memory enabled as optional, but changed storage to LLM compaction plus sanitizer redaction before upsert.
 - Updated Assistant docs, dashboard docs, changelog, SQL Server/MySQL/SQLite full schemas and update scripts, focused tests, and admin/debug templates.
-- Fixed the Admin Settings category tabs so unfiltered settings are shown under `All`, uncategorized settings stay under `Site`, and `icat=AI` settings show under a dedicated `AI` tab.
+- Fixed the Admin Settings category tabs so they auto-build from `settings.icat` values: unfiltered settings are shown under `All`, empty category rows stay under `Site`, and AI rows show under the database-provided `AI` tab.
+- Removed the default sidebar Assistant link; users enter Assistant through the `/Main` dashboard pane.
+- Moved the `/Main` Assistant pane into the lower-right dashboard slot under `Events per day`, gave it `bi-stars`, linked the pane icon/title to `/Assistant`, and moved `Active Users` under `Last Events`.
+- Reworked `/Assistant` into a centered composer-first start state, thread-focused content area, modal history, custom file upload button, and drag/drop file support while keeping the existing JSON endpoints.
+- Follow-up feedback removed the non-breaking Assistant entry-point changelog note, added the `bi-stars` icon into the dashboard Assistant title, moved Settings tab URL/active/label rendering into ParsePage, vertically aligned the Assistant topbar actions with the title, and reduced Assistant CSS by moving layout/border/shadow work to Bootstrap utility classes.
 
 ## Scope reviewed
 - `docs/agents/local_instructions.md`, `docs/README.md`, `docs/assistant.md`, `docs/db.md`, `docs/crud.md`, `docs/templates.md`, `docs/dashboard.md`.
 - Existing Assistant/KB implementation: assistant controllers, `DocChunks`/`RagChunks`, `DocumentEmbeddingService`, KB/Spages models, worker, run processor, templates, SQL scripts, and focused tests.
 - Prior task context from `docs/agents/tasks/index.md`, `summary-2026-06-12-assistant-port.md`, and the local review draft summary.
 - Review-loop focus: source queue lifecycle, no-key behavior, migration paths, retrieval evidence, memory compaction, dashboard form handoff, and route/template contracts.
-- Feedback pass focus: Admin Settings category filtering and AI settings visibility.
+- Feedback pass focus: data-driven Settings tabs, dashboard/sidebar placement, and Assistant UI layout.
 
 ## Commands used / verification
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_premerge_build\` - passed after the Settings tab fix.
@@ -26,8 +30,10 @@
 - `rg -n "DocChunks|doc_chunks|AdminDocChunks|Admin/DocChunks|models[/\\]RagChunks|models[/\\]RagSources" osafw-app osafw-tests docs --glob "!docs/drafts/**" --glob "!docs/agents/tasks/**"` - no matches.
 - Targeted SQL check over provider update scripts confirmed no table/data migration commands remain; only create-table/index DDL plus idempotent `settings` seed inserts remain.
 - Admin Settings tab self-review confirmed the old `f[icat]=` Site link was not filtering because empty categories were skipped; the controller now treats an explicit empty category as a filter.
-- Browser smoke on `https://localhost:44315/Admin/Settings/` verified `All`, `Site`, and `AI` tab active classes, AI rows on `f[icat]=AI`, and no Assistant/OpenAI rows on `f[icat]=`.
-- Review loop: sub-agent reviewer found migration, queue-claim, and failed-reindex issues; after fixes, focused re-review reported no blocker/high/medium issues and allowed the loop to stop. Later feedback-only schema/model move and Settings tab fix were self-reviewed against `docs/agents/code_reviewer.md`; no issues found.
+- Browser smoke on the VS-hosted app at `https://localhost:44315/` verified no sidebar Assistant item, dashboard ordering/linking/icon behavior, Settings `All`/`Site`/`AI` tabs and filters, Assistant centered composer, hidden file inputs with visible file buttons, no-key unavailable message, and History modal opening. Follow-up smoke also verified the dashboard Assistant title icon, template-rendered Settings tabs, no Assistant rows on `Site`, no client script syntax errors, and Assistant title/actions center alignment.
+- Visual Studio MCP confirmed the expected solution/startup project were loaded before browser verification; it also built the solution and launched the app without debugging after C# changes.
+- Concise verification evidence was captured in `docs/agents/artifacts/assistant-premerge-verification-2026-06-13.md`.
+- Review loop: sub-agent reviewer found migration, queue-claim, and failed-reindex issues; after fixes, focused re-review reported no blocker/high/medium issues and allowed the loop to stop. Final feedback pass used an independent read-only reviewer against the changed Settings/dashboard/sidebar/Assistant UI/docs diff; no issues found and the review loop can stop.
 
 ## Decisions - why
 - Use a separate task summary from the architecture review because this task changes runtime behavior, schema, templates, docs, and tests.
@@ -44,16 +50,18 @@
 - User feedback clarified that `doc_chunks` migration/backfill is unnecessary because the update scripts have not been applied yet; removed rename/alter/drop/backfill DML from the assistant update scripts and kept idempotent AI settings inserts.
 - Moved `RagChunks.cs` and `RagSources.cs` into `osafw-app\App_Code\models\AI\`; the namespace stayed `osafw`, so no call-site churn was needed.
 - Initial replacement indexing deleted rows before embeddings were regenerated; changed to build chunks first, then delete/insert/mark indexed.
-- The Settings page previously used `unless="f[icat]"` for the Site tab while the controller ignored empty `icat`, so AI rows appeared on Site. Added separate `All`, `Site`, and `AI` states.
+- The Settings page previously used hardcoded tabs and the controller ignored explicit empty `icat`, so AI rows appeared on Site. Replaced the tabs with database-driven category rows, treated `f[icat]=` as an empty-category filter, and moved URL/label/active tab presentation into the ParsePage template.
+- ParsePage treats backticks as translation markers, so JavaScript template literals inside inline templates render invalid client script. Replaced Assistant inline script template literals with string concatenation and kept backticks only in translated HTML text.
+- Visual Studio MCP could not stop the user's no-debug run because it reported no active debugging session; the port was not listening after the failed launch/build, so the app was relaunched from VS after the compile fix.
 
 ## Risks / follow-ups
 - Provider-specific update scripts were reviewed statically but not executed against live SQL Server/MySQL/SQLite databases.
 - The assistant update scripts now create assistant/KB/RAG schema objects and seed AI setting rows; administrators still need to fill `OPENAI_API_KEY` and enable `ASSISTANT_ENABLED`.
 - Full `dotnet test` was not run; focused Assistant tests and app build passed.
-- Browser smoke used the local SQL Server-backed app only; provider-specific SQL scripts still need database execution in their target engines.
+- Browser smoke used the local SQL Server-backed VS app only; provider-specific SQL scripts still need database execution in their target engines.
 
 ## Heuristics (keep terse)
-- No stable framework facts, reusable heuristics, or ADRs were added. The implementation followed existing agent guidance; no `AGENTS.md` change was needed.
+- Added a 2026-06-12 heuristic to `docs/agents/heuristics.md`: avoid JavaScript template literals inside ParsePage templates because backticks are translation markers. No stable framework facts or ADRs were added; no `AGENTS.md` change was needed.
 
 ## Testing instructions
 - Apply the matching provider update script, configure `ASSISTANT_ENABLED=true` and `OPENAI_API_KEY`, then run/observe the worker to process queued `rag_sources`.
@@ -62,5 +70,6 @@
 
 ## Reflection
 - The task was slowed mostly by cross-provider migration details and a parallel build/test lock. Future Assistant/RAG changes should avoid parallelizing builds that share project intermediates.
-- The sub-agent review was useful: it caught migration and worker-race issues that compile/tests would not falsify.
+- The sub-agent review was useful: it caught migration and worker-race issues that compile/tests would not falsify, and the final smaller reviewer pass was quick enough to use instead of a self-review fallback.
+- Inline JavaScript in ParsePage templates should avoid JavaScript template literals because the parser consumes backtick-delimited text.
 - For future schema-heavy assistant work, review legacy upgrade behavior before runtime code polish, and decide early whether each provider preserves or intentionally clears draft data.

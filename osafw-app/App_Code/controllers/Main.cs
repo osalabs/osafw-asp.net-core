@@ -162,6 +162,8 @@ public class MainController : FwController
             one = [];
             one["type"] = "assistant";
             one["title"] = "AI Assistant";
+            one["url"] = "/Assistant";
+            one["icon"] = "bi-stars";
             panes["assistant"] = one;
         }
 

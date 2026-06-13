@@ -27,14 +27,6 @@
 
 <~/common/form/msg>
 
-<~assistant_dashboard if="is_assistant_enabled" inline>
-<div class="row">
-    <div class="col">
-        <~std_pane sub="panes[assistant]">
-    </div>
-</div>
-</~assistant_dashboard>
-
 <div class="row">
     <div class="col">
         <~std_pane sub="panes[plate1]">
@@ -62,11 +54,14 @@
 <div class="row">
     <div class="col col-sm-5">
         <~std_pane sub="panes[tabledata]">
+        <~std_pane sub="panes[progress]">
         <~#std_pane sub="panes[htmldata]">
     </div>
     <div class="col col-sm-7">
         <~std_pane sub="panes[linechart]">
-        <~std_pane sub="panes[progress]">
+        <~assistant_dashboard if="is_assistant_enabled" inline>
+        <~std_pane sub="panes[assistant]">
+        </~assistant_dashboard>
     </div>
 </div>
 

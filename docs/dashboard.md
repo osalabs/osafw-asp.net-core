@@ -6,7 +6,7 @@ For dashboard card visual rules, theme behavior, icon treatment, and spacing exa
 
 The built-in `MainController` panes are sample framework dashboard data. Some sample aggregates use conventional current-user filters for lower-access sessions, while panes such as `Users by Type` remain framework samples. Production apps should replace or scope dashboard panes with app-specific authorization predicates instead of treating the sample aggregates as domain-ready access control.
 
-When `ASSISTANT_ENABLED=true`, `/Main` also renders a compact AI Assistant pane that posts the prompt to `/Assistant`. The pane remains visible if the OpenAI key is missing; submission then returns the standard administrator-configuration message without creating assistant or RAG records.
+When `ASSISTANT_ENABLED=true`, `/Main` renders a compact AI Assistant pane in the dashboard content area. The pane posts the prompt to `/Assistant`, and its title/icon link to the full assistant shell. The pane remains visible if the OpenAI key is missing; submission then returns the standard administrator-configuration message without creating assistant or RAG records.
 
 ## Built-in Panel Templates
 

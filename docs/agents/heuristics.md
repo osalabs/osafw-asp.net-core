@@ -1,6 +1,6 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2026-06-03
+Updated: 2026-06-12
 
 - Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
 - For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
@@ -35,6 +35,7 @@ Updated: 2026-06-03
 - 2026-05-11: When agent workflow changes, keep `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, and task-summary expectations aligned.
 - 2026-05-11: Keep dictionary single-row reads empty-row based, but use `null` for typed single-row reads so missing records cannot masquerade as default DTOs.
 - 2026-05-11: For ParsePage recursion protection, prefer a file-include depth limit over cycle detection so legitimate recursive tree templates can render.
+- 2026-06-12: Avoid JavaScript template literals inside ParsePage templates; backticks are translation markers and can corrupt rendered inline scripts.
 - 2026-05-12: When reading `appSettings`, load its direct children into `FwConfig` settings; do not introduce an `appSettings` key inside the runtime settings dictionary.
 - 2026-05-14: For runtime SQL shared by providers, prefer `DB` expression helpers over raw provider functions like `GETDATE`, `DATEADD`, `CONCAT`, or `CAST(... AS date)`.
 - 2026-05-18: With SQL-backed ASP.NET Core session, avoid writing session on every request; unnecessary writes can race and overwrite newer login state.

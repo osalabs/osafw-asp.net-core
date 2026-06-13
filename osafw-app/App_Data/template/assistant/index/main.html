@@ -1,17 +1,17 @@
-<div class="container-fluid assistant-shell" id="assistantApp"
+<div class="container-fluid assistant-shell py-3 py-md-4" id="assistantApp" data-assistant-root
      data-xss="<~SESSION[XSS]>"
-     data-base-url="<~/assistant/url>">
-  <div class="page-header">
-    <div class="page-header-row page-header-row-title d-flex flex-wrap align-items-center gap-2">
-      <div class="page-header-title flex-grow-1">
-        <h1 class="page-title mb-0"><~title></h1>
-      </div>
-      <div class="page-header-actions d-flex flex-wrap align-items-center gap-2">
-        <a href="<~/assistant/url>" class="btn btn-default"><~/common/icons/plus>`New Chat`</a>
-        <button type="button" class="btn btn-default" data-assistant-share <~/common/attr/disabled unless="thread_id">><~/common/icons/box-arrow-up-right>`Share`</button>
-      </div>
+     data-base-url="<~/assistant/url>"
+     data-share="<~share>">
+  <header class="assistant-topbar d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <div class="assistant-title-block">
+      <h1 class="assistant-title h2 d-inline-flex align-items-center gap-2 mb-0"><span class="text-primary"><~/common/icons/stars></span><~title></h1>
     </div>
-  </div>
+    <div class="assistant-topbar-actions d-flex flex-wrap align-items-center gap-2">
+      <a href="<~/assistant/url>" class="btn btn-default"><~/common/icons/plus>`New Chat`</a>
+      <button type="button" class="btn btn-default" data-assistant-share <~/common/attr/disabled unless="thread_id">><~/common/icons/box-arrow-up-right>`Share`</button>
+      <button type="button" class="btn btn-default" data-assistant-history-open><i class="bi bi-clock-history me-1"></i>`History`</button>
+    </div>
+  </header>
 
   <~/common/form/msg>
 
@@ -20,54 +20,85 @@
     <span><~assistant_status_message default="Assistant setup is incomplete."></span>
   </div>
 
-  <div class="row g-3">
-    <aside class="col-lg-3">
-      <div class="fw-card h-100">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <h2 class="h5 mb-0 flex-grow-1">`History`</h2>
-          <span class="badge text-bg-secondary" data-assistant-history-count>0</span>
-        </div>
-        <div class="input-group input-group-sm mb-3">
-          <span class="input-group-text"><~/common/icons/search></span>
-          <input type="search" class="form-control" data-assistant-history-search placeholder="Search chats">
-        </div>
-        <div class="list-group assistant-history" data-assistant-history></div>
+  <section class="assistant-landing" data-assistant-landing>
+    <div class="assistant-landing-stack w-100">
+      <div class="assistant-landing-copy text-center">
+        <h2 class="h3 mb-2">`What can I help with?`</h2>
       </div>
-    </aside>
-
-    <section class="col-lg-9">
-      <div class="fw-card h-100 d-flex flex-column">
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <h2 class="h5 mb-0 flex-grow-1" data-assistant-thread-title>`New chat`</h2>
-          <span class="badge text-bg-secondary" data-assistant-status>`Idle`</span>
-        </div>
-
-        <div class="assistant-message-list border rounded p-3 bg-body-tertiary" data-assistant-messages>
-          <div class="text-muted text-center py-5" data-assistant-empty>`Ask a question about indexed knowledge base articles or attached documents.`</div>
-        </div>
-
-        <div class="assistant-progress small text-muted py-2" data-assistant-progress></div>
-
-        <form class="mt-auto" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
-          <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-          <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
-          <div class="input-group">
-            <textarea name="prompt" rows="2" class="form-control" placeholder="Ask a read-only question" data-assistant-prompt <~/common/attr/disabled unless="is_assistant_available">></textarea>
-            <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
+      <form class="assistant-composer-card border rounded bg-body shadow-sm p-3" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
+        <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+        <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
+        <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask a read-only question`" data-assistant-prompt data-assistant-autofocus <~/common/attr/disabled unless="is_assistant_available">></textarea>
+        <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
+          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
+            <span class="assistant-file-count" data-assistant-file-count></span>
           </div>
-          <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-            <input type="file" class="form-control form-control-sm w-auto" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
-            <span class="form-text">`Supported text, markdown, HTML, and DOCX files are indexed for this thread.`</span>
+          <button type="submit" class="assistant-send-btn btn btn-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0" title="`Send`" <~/common/attr/disabled unless="is_assistant_available">>
+            <i class="bi bi-arrow-up"></i>
+            <span class="visually-hidden">`Send`</span>
+          </button>
+        </div>
+        <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
+        <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
+      </form>
+    </div>
+  </section>
+
+  <section class="assistant-thread-layout d-none d-grid gap-3" data-assistant-thread-panel>
+    <div class="assistant-thread-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h2 class="h4 mb-0" data-assistant-thread-title>`New chat`</h2>
+      <span class="badge text-bg-secondary" data-assistant-status>`Idle`</span>
+    </div>
+
+    <div class="alert alert-info d-none" role="alert" data-assistant-readonly>`This shared thread is read-only.`</div>
+
+    <div class="assistant-message-list d-grid gap-3 py-1" data-assistant-messages></div>
+    <div class="assistant-progress small text-muted" data-assistant-progress></div>
+
+    <footer class="assistant-footer">
+      <form class="assistant-composer-card border rounded bg-body shadow-sm p-3" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
+        <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+        <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
+        <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask a follow-up`" data-assistant-prompt <~/common/attr/disabled unless="is_assistant_available">></textarea>
+        <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
+          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
+            <span class="assistant-file-count" data-assistant-file-count></span>
           </div>
-        </form>
-      </div>
-    </section>
-  </div>
+          <button type="submit" class="assistant-send-btn btn btn-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0" title="`Send`" <~/common/attr/disabled unless="is_assistant_available">>
+            <i class="bi bi-arrow-up"></i>
+            <span class="visually-hidden">`Send`</span>
+          </button>
+        </div>
+        <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
+        <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
+      </form>
+    </footer>
+  </section>
 </div>
 
 <script type="application/json" id="assistantStatusJson"><~assistant_status_json noescape></script>
 <script type="application/json" id="assistantHistoryJson"><~assistant_history_json noescape></script>
 <script type="application/json" id="assistantThreadJson"><~assistant_thread_json noescape></script>
+
+<div class="modal fade" id="assistantHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">`Assistant History`</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <span class="input-group-text"><~/common/icons/search></span>
+          <input type="search" class="form-control" data-assistant-history-search placeholder="`Search previous chats`">
+        </div>
+        <div class="assistant-history" data-assistant-history></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="assistantShareModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -91,72 +122,92 @@
 
   const baseUrl = root.dataset.baseUrl || '/Assistant';
   const xss = root.dataset.xss || '';
+  const share = root.dataset.share || '';
   const status = parseJson(document.getElementById('assistantStatusJson')?.textContent, {});
   let history = parseJson(document.getElementById('assistantHistoryJson')?.textContent, []);
   let thread = parseJson(document.getElementById('assistantThreadJson')?.textContent, null);
   let pollTimer = null;
+  let historySearchTimer = null;
   let lastMessageId = maxId(thread && thread.messages);
   let lastEventId = maxId(thread && thread.events);
 
   const els = {
-    form: root.querySelector('[data-assistant-form]'),
-    prompt: root.querySelector('[data-assistant-prompt]'),
-    files: root.querySelector('[data-assistant-files]'),
-    threadInput: root.querySelector('[data-assistant-thread-input]'),
+    landing: root.querySelector('[data-assistant-landing]'),
+    threadPanel: root.querySelector('[data-assistant-thread-panel]'),
     messages: root.querySelector('[data-assistant-messages]'),
-    empty: root.querySelector('[data-assistant-empty]'),
     progress: root.querySelector('[data-assistant-progress]'),
-    history: root.querySelector('[data-assistant-history]'),
-    historyCount: root.querySelector('[data-assistant-history-count]'),
-    historySearch: root.querySelector('[data-assistant-history-search]'),
+    history: document.querySelector('[data-assistant-history]'),
+    historySearch: document.querySelector('[data-assistant-history-search]'),
+    historyOpen: root.querySelector('[data-assistant-history-open]'),
     title: root.querySelector('[data-assistant-thread-title]'),
     status: root.querySelector('[data-assistant-status]'),
     share: root.querySelector('[data-assistant-share]'),
+    readonly: root.querySelector('[data-assistant-readonly]'),
   };
+
+  const composers = Array.from(root.querySelectorAll('[data-assistant-form]')).map((form, index) => {
+    const state = {
+      id: index,
+      form,
+      prompt: form.querySelector('[data-assistant-prompt]'),
+      files: form.querySelector('[data-assistant-files]'),
+      fileButton: form.querySelector('[data-assistant-file-button]'),
+      fileCount: form.querySelector('[data-assistant-file-count]'),
+      pendingFilesEl: form.querySelector('[data-assistant-pending-files]'),
+      threadInput: form.querySelector('[data-assistant-thread-input]'),
+      pendingFiles: [],
+      nextFileId: 1
+    };
+
+    form.addEventListener('submit', event => submitComposer(event, state));
+    form.addEventListener('dragenter', event => onDragEnter(event, state));
+    form.addEventListener('dragover', event => onDragEnter(event, state));
+    form.addEventListener('dragleave', event => onDragLeave(event, state));
+    form.addEventListener('drop', event => onDrop(event, state));
+    state.prompt && state.prompt.addEventListener('input', () => {
+      autosizeComposer(state.prompt);
+      updateComposerState();
+    });
+    state.prompt && state.prompt.addEventListener('paste', event => onPaste(event, state));
+    state.fileButton && state.fileButton.addEventListener('click', () => state.files && state.files.click());
+    state.files && state.files.addEventListener('change', event => {
+      addPendingFiles(state, event.target.files || []);
+      event.target.value = '';
+    });
+    state.pendingFilesEl && state.pendingFilesEl.addEventListener('click', event => {
+      const button = event.target.closest('[data-assistant-file-remove]');
+      if (!button) return;
+      removePendingFile(state, button.dataset.assistantFileRemove);
+    });
+
+    return state;
+  });
 
   renderHistory();
   renderThread();
+  updateComposerState();
   schedulePollIfNeeded();
 
-  els.form && els.form.addEventListener('submit', async function (event) {
-    event.preventDefault();
-    if (!status.enabled || !status.tables_ready || !status.openai_configured) return;
-
-    const prompt = els.prompt.value.trim();
-    if (!prompt && (!els.files.files || els.files.files.length === 0)) return;
-
-    const body = new FormData(els.form);
-    body.set('prompt', prompt);
-    setBusy(true);
+  els.historyOpen && els.historyOpen.addEventListener('click', async function () {
     try {
-      const data = await postForm(baseUrl, body);
-      if (data.thread) {
-        thread = data.thread;
-        if (data.message) thread.messages = (thread.messages || []).concat([data.message]);
-        thread.active_run = data.run || thread.active_run;
-        lastMessageId = maxId(thread.messages);
-        lastEventId = maxId(thread.events);
-        els.prompt.value = '';
-        els.files.value = '';
-        els.threadInput.value = thread.id;
-        renderThread();
-        await refreshHistory();
-        schedulePollIfNeeded();
-      }
+      await refreshHistory();
     } catch (err) {
-      showProgress(err.message || 'Assistant request failed.');
-    } finally {
-      setBusy(false);
+      showProgress(err.message || 'History failed.');
     }
+    const modalEl = document.getElementById('assistantHistoryModal');
+    if (window.bootstrap && bootstrap.Modal && modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
   });
 
-  els.historySearch && els.historySearch.addEventListener('change', refreshHistory);
+  els.historySearch && els.historySearch.addEventListener('input', function () {
+    clearTimeout(historySearchTimer);
+    historySearchTimer = setTimeout(refreshHistory, 250);
+  });
 
   els.share && els.share.addEventListener('click', async function () {
-    if (!thread || !thread.id) return;
+    if (!thread || !thread.id || thread.is_readonly) return;
     const body = new FormData();
     body.set('XSS', xss);
-    const data = await postForm(`${baseUrl}/(Share)/${thread.id}`, body);
+    const data = await postForm(baseUrl + '/(Share)/' + encodeURIComponent(thread.id), body);
     if (data.share && data.share.share_url) {
       const input = document.querySelector('[data-assistant-share-url]');
       if (input) input.value = data.share.share_url;
@@ -173,14 +224,51 @@
     body.set('message_id', button.dataset.messageId || '');
     body.set('run_id', thread.active_run && thread.active_run.id ? thread.active_run.id : '');
     body.set('feedback_type', button.dataset.assistantFeedback);
-    await postForm(`${baseUrl}/(Feedback)`, body);
+    await postForm(baseUrl + '/(Feedback)', body);
     button.disabled = true;
   });
+
+  async function submitComposer(event, state) {
+    event.preventDefault();
+    if (!isAvailable() || isReadonly()) return;
+
+    const prompt = state.prompt.value.trim();
+    if (!prompt && state.pendingFiles.length === 0) return;
+
+    const body = new FormData();
+    body.set('XSS', xss);
+    body.set('thread_id', thread && thread.id ? thread.id : '');
+    body.set('prompt', prompt);
+    state.pendingFiles.forEach(item => body.append('files', item.file, item.file.name));
+
+    setBusy(true);
+    try {
+      const data = await postForm(baseUrl, body);
+      if (data.thread) {
+        thread = data.thread;
+        if (data.message) thread.messages = (thread.messages || []).concat([data.message]);
+        thread.active_run = data.run || thread.active_run;
+        lastMessageId = maxId(thread.messages);
+        lastEventId = maxId(thread.events);
+        clearComposers();
+        setThreadInputs(thread.id);
+        renderThread();
+        await refreshHistory();
+        schedulePollIfNeeded();
+      }
+    } catch (err) {
+      showProgress(err.message || 'Assistant request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function poll() {
     if (!thread || !thread.id) return;
     try {
-      const data = await getJson(`${baseUrl}/(Poll)/${thread.id}?last_message_id=${lastMessageId}&last_event_id=${lastEventId}`);
+      let url = baseUrl + '/(Poll)/' + encodeURIComponent(thread.id) + '?last_message_id=' + encodeURIComponent(lastMessageId) + '&last_event_id=' + encodeURIComponent(lastEventId);
+      if (share) url += '&share=' + encodeURIComponent(share);
+      const data = await getJson(url);
       const poll = data.poll || {};
       if (poll.thread) {
         thread.last_run_status = poll.thread.last_run_status;
@@ -210,52 +298,80 @@
   }
 
   function renderHistory() {
+    if (!els.history) return;
     els.history.innerHTML = '';
+    if (!history.length) {
+      els.history.innerHTML = '<div class="text-muted text-center py-4">No chats yet.</div>';
+      return;
+    }
     history.forEach(item => {
       const link = document.createElement('a');
-      link.className = 'list-group-item list-group-item-action';
-      link.href = `${baseUrl}?thread_id=${encodeURIComponent(item.id)}`;
-      link.innerHTML = `<div class="d-flex gap-2 align-items-start"><div class="flex-grow-1"><div class="fw-semibold">${escapeHtml(item.iname || 'New chat')}</div><small class="text-muted">${escapeHtml(item.preview || '')}</small></div><span class="badge text-bg-secondary">${escapeHtml(item.last_run_status || '')}</span></div>`;
+      link.className = 'assistant-history-row d-block py-3 text-reset text-decoration-none border-bottom';
+      link.href = baseUrl + '?thread_id=' + encodeURIComponent(item.id);
+      link.innerHTML = '<div class="fw-semibold">' + escapeHtml(item.iname || 'New chat') + '</div>'
+        + '<div class="small text-muted">' + escapeHtml(item.preview || '') + '</div>'
+        + (item.last_run_status ? '<span class="badge text-bg-secondary mt-2">' + escapeHtml(item.last_run_status) + '</span>' : '');
       els.history.appendChild(link);
     });
-    els.historyCount.textContent = history.length;
   }
 
   function renderThread() {
+    const hasThread = !!(thread && thread.id);
+    root.classList.toggle('assistant-has-thread', hasThread);
+    els.landing && els.landing.classList.toggle('d-none', hasThread);
+    els.threadPanel && els.threadPanel.classList.toggle('d-none', !hasThread);
     els.title.textContent = thread && thread.iname ? thread.iname : 'New chat';
     els.status.textContent = thread && thread.last_run_status ? thread.last_run_status : 'Idle';
     els.share.disabled = !(thread && thread.id && thread.is_owner);
-    els.threadInput.value = thread && thread.id ? thread.id : '';
+    els.readonly && els.readonly.classList.toggle('d-none', !isReadonly());
+    setThreadInputs(thread && thread.id ? thread.id : '');
+
     const messages = thread && thread.messages ? thread.messages : [];
-    els.empty.classList.toggle('d-none', messages.length > 0);
-    Array.from(els.messages.querySelectorAll('[data-message-id]')).forEach(node => node.remove());
-    messages.forEach(message => els.messages.appendChild(renderMessage(message)));
+    els.messages.innerHTML = '';
+    if (hasThread && messages.length === 0) {
+      els.messages.innerHTML = '<div class="assistant-empty text-muted bg-body-tertiary border rounded">No messages in this thread.</div>';
+    } else {
+      messages.forEach(message => els.messages.appendChild(renderMessage(message)));
+    }
     renderEvents(thread && thread.events ? thread.events : []);
-    els.messages.scrollTop = els.messages.scrollHeight;
+    if (els.messages) els.messages.scrollTop = els.messages.scrollHeight;
+    updateComposerState();
+    focusLandingComposer(hasThread);
   }
 
   function renderMessage(message) {
+    const role = message.role === 'user' ? 'user' : 'assistant';
     const wrap = document.createElement('article');
-    wrap.className = `assistant-message mb-3 ${message.role === 'user' ? 'assistant-message-user' : ''}`;
+    wrap.className = 'assistant-message assistant-message-' + role + ' d-flex w-100';
     wrap.dataset.messageId = message.id;
-    const tone = message.role === 'user' ? 'text-bg-primary' : 'bg-body border';
     const sources = (message.sources || []).map(renderSource).join('');
     const attachments = (message.attachments || []).map(file => {
       const indexStatus = file.index_status || (file.is_indexed ? 'indexed' : 'not indexed');
       const badgeClass = file.is_indexed ? 'text-bg-success' : 'text-bg-secondary';
-      return `<span class="badge ${badgeClass} me-1" title="${escapeAttr(indexStatus)}">${escapeHtml(file.iname || file.icode || 'file')}</span>`;
+      return '<span class="badge ' + badgeClass + ' me-1" title="' + escapeAttr(indexStatus) + '">' + escapeHtml(file.iname || file.icode || 'file') + '</span>';
     }).join('');
-    const feedback = message.role === 'assistant' ? `<div class="mt-2 d-flex gap-2"><button type="button" class="btn btn-sm btn-default" data-assistant-feedback="helpful" data-message-id="${message.id}">Helpful</button><button type="button" class="btn btn-sm btn-default" data-assistant-feedback="not_helpful" data-message-id="${message.id}">Not Helpful</button></div>` : '';
-    wrap.innerHTML = `<div class="card ${tone}"><div class="card-body"><div class="assistant-message-body">${escapeHtml(message.content_markdown || '')}</div>${attachments ? `<div class="mt-2">${attachments}</div>` : ''}${sources ? `<div class="mt-3 d-flex flex-column gap-2">${sources}</div>` : ''}${feedback}<div class="small text-muted mt-2">${escapeHtml(message.add_time || '')}</div></div></div>`;
+    const feedback = role === 'assistant'
+      ? '<div class="assistant-response-actions d-flex flex-wrap gap-2 mt-3">'
+        + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>'
+        + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>'
+        + '</div>'
+      : '';
+    const time = message.add_time ? '<div class="small text-muted mt-2">' + escapeHtml(message.add_time) + '</div>' : '';
+    wrap.innerHTML = '<div class="assistant-bubble border rounded bg-body shadow-sm p-3"><div class="assistant-message-body">' + escapeHtml(message.content_markdown || '') + '</div>'
+      + (attachments ? '<div class="assistant-attachments d-flex flex-wrap gap-2 mt-3">' + attachments + '</div>' : '')
+      + (sources ? '<div class="assistant-sources d-flex flex-wrap gap-2 mt-3">' + sources + '</div>' : '')
+      + feedback
+      + time
+      + '</div>';
     return wrap;
   }
 
   function renderSource(source, index) {
-    const label = source.name || source.article_name || source.filename || `Source ${index + 1}`;
-    const meta = [source.section, source.page ? `p. ${source.page}` : ''].filter(Boolean).join(' ');
+    const label = source.name || source.article_name || source.filename || 'Source ' + (index + 1);
+    const meta = [source.section, source.page ? 'p. ' + source.page : '', source.source_id ? 'source ' + source.source_id : '', source.chunk_id ? 'chunk ' + source.chunk_id : ''].filter(Boolean).join(' | ');
     const href = source.url || source.article_url || source.file_url || '';
-    const content = `<span class="fw-semibold">${escapeHtml(label)}</span>${meta ? `<span class="small text-muted ms-2">${escapeHtml(meta)}</span>` : ''}`;
-    return href ? `<a class="assistant-citation border rounded p-2 text-decoration-none" href="${escapeAttr(href)}">${content}</a>` : `<div class="assistant-citation border rounded p-2">${content}</div>`;
+    const content = '<span class="fw-semibold">' + escapeHtml(label) + '</span>' + (meta ? '<span class="small text-muted d-block">' + escapeHtml(meta) + '</span>' : '');
+    return href ? '<a class="assistant-citation d-block border rounded bg-body-tertiary text-reset text-decoration-none px-3 py-2" href="' + escapeAttr(href) + '">' + content + '</a>' : '<div class="assistant-citation d-block border rounded bg-body-tertiary px-3 py-2">' + content + '</div>';
   }
 
   function renderEvents(events) {
@@ -264,9 +380,60 @@
 
   async function refreshHistory() {
     const q = els.historySearch ? els.historySearch.value : '';
-    const data = await getJson(`${baseUrl}/(History)?q=${encodeURIComponent(q)}`);
+    const data = await getJson(baseUrl + '/(History)?q=' + encodeURIComponent(q));
     history = data.items || [];
     renderHistory();
+  }
+
+  function addPendingFiles(state, fileList) {
+    Array.from(fileList || []).forEach(file => {
+      state.pendingFiles.push({ id: state.id + '-' + state.nextFileId++, file });
+    });
+    renderPendingFiles(state);
+    updateComposerState();
+  }
+
+  function removePendingFile(state, id) {
+    state.pendingFiles = state.pendingFiles.filter(item => item.id !== id);
+    renderPendingFiles(state);
+    updateComposerState();
+  }
+
+  function renderPendingFiles(state) {
+    if (!state.pendingFilesEl) return;
+    state.pendingFilesEl.innerHTML = state.pendingFiles.map(item => '<span class="assistant-file-pill"><span>' + escapeHtml(item.file.name) + '</span><button type="button" class="btn-close" data-assistant-file-remove="' + escapeAttr(item.id) + '" aria-label="Remove"></button></span>').join('');
+    if (state.fileCount) state.fileCount.textContent = state.pendingFiles.length ? state.pendingFiles.length + ' file' + (state.pendingFiles.length === 1 ? '' : 's') : '';
+  }
+
+  function onPaste(event, state) {
+    const files = [];
+    Array.from(event.clipboardData?.items || []).forEach(item => {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    });
+    if (files.length) {
+      event.preventDefault();
+      addPendingFiles(state, files);
+    }
+  }
+
+  function onDragEnter(event, state) {
+    if (isReadonly() || !isAvailable()) return;
+    event.preventDefault();
+    state.form.classList.add('is-dragover');
+  }
+
+  function onDragLeave(event, state) {
+    if (!state.form.contains(event.relatedTarget)) state.form.classList.remove('is-dragover');
+  }
+
+  function onDrop(event, state) {
+    if (isReadonly() || !isAvailable()) return;
+    event.preventDefault();
+    state.form.classList.remove('is-dragover');
+    addPendingFiles(state, event.dataTransfer?.files || []);
   }
 
   async function postForm(url, body) {
@@ -286,12 +453,63 @@
   }
 
   function setBusy(isBusy) {
-    els.form.querySelectorAll('button, textarea, input').forEach(el => el.disabled = isBusy || (!status.enabled || !status.tables_ready || !status.openai_configured));
+    root.classList.toggle('assistant-busy', isBusy);
+    composers.forEach(state => state.form.dataset.busy = isBusy ? '1' : '');
     if (isBusy) showProgress('Queued...');
+    updateComposerState();
+  }
+
+  function updateComposerState() {
+    const disabled = !isAvailable() || isReadonly();
+    composers.forEach(state => {
+      const hasContent = (state.prompt.value || '').trim().length > 0 || state.pendingFiles.length > 0;
+      const busy = state.form.dataset.busy === '1';
+      state.form.querySelectorAll('textarea, input, button').forEach(el => {
+        const isSubmit = el.matches('button[type="submit"]');
+        el.disabled = disabled || busy || (isSubmit && !hasContent);
+      });
+      if (state.threadInput) state.threadInput.disabled = false;
+      autosizeComposer(state.prompt);
+    });
+  }
+
+  function clearComposers() {
+    composers.forEach(state => {
+      state.prompt.value = '';
+      state.pendingFiles = [];
+      renderPendingFiles(state);
+      autosizeComposer(state.prompt);
+    });
+  }
+
+  function setThreadInputs(value) {
+    composers.forEach(state => {
+      if (state.threadInput) state.threadInput.value = value || '';
+    });
+  }
+
+  function focusLandingComposer(hasThread) {
+    if (hasThread) return;
+    const target = root.querySelector('[data-assistant-autofocus]');
+    if (target && document.activeElement === document.body) requestAnimationFrame(() => target.focus());
+  }
+
+  function autosizeComposer(el) {
+    if (!el) return;
+    el.style.height = '0px';
+    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
   }
 
   function showProgress(text) {
     els.progress.textContent = text || '';
+  }
+
+  function isAvailable() {
+    return !!(status.enabled && status.tables_ready && status.openai_configured);
+  }
+
+  function isReadonly() {
+    return !!(thread && thread.is_readonly);
   }
 
   function parseJson(value, fallback) {
@@ -313,7 +531,7 @@
   }
 
   function escapeAttr(value) {
-    return escapeHtml(value).replace(/`/g, '&#96;');
+    return escapeHtml(value).replace(new RegExp(String.fromCharCode(96), 'g'), '&#96;');
   }
 })();
 </script>

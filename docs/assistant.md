@@ -4,7 +4,7 @@ The assistant is an optional read-only RAG starter for framework apps. It provid
 
 ## Configuration
 
-The feature is disabled by default. Configure these rows in Site Settings under the `AI` category:
+The feature is disabled by default. Configure these rows in Site Settings under the `AI` category. Site Settings category tabs are generated from the `settings.icat` values currently present in the database.
 
 - `ASSISTANT_ENABLED=true`
 - `OPENAI_API_KEY`
@@ -78,9 +78,9 @@ The default embedding dimension is 1536 for `text-embedding-3-small`.
 
 ## Assistant Flow
 
-`/Main` shows an AI Assistant dashboard block when `ASSISTANT_ENABLED=true`. The block posts the prompt to `/Assistant`, where the threaded chat continues.
+`/Main` shows an AI Assistant dashboard block when `ASSISTANT_ENABLED=true`. The block posts the prompt to `/Assistant`, where the threaded chat continues. The default sidebar does not include a separate Assistant link.
 
-`/Assistant` renders the chat shell. The UI supports send, poll, history search, upload, feedback, share, and cited response display.
+`/Assistant` renders the chat shell. The UI starts with a centered composer, then switches to the thread view after a chat starts. It supports send, poll, history search in a modal, button-driven file upload, drag-and-drop files, feedback, share, and cited response display.
 
 The run processor uses Microsoft Agent Framework packages and read-only tools:
 
