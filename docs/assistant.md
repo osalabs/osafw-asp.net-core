@@ -16,7 +16,7 @@ The feature is disabled by default. Configure these rows in Site Settings under 
 - `ASSISTANT_MAX_INDEX_CHARS=200000`
 - `ASSISTANT_MAX_INDEX_CHUNKS=80`
 
-Keep `ASSISTANT_WORKER_ENABLED=true` in `appSettings` when queued source indexing and queued chat runs should be processed by the web host. Missing tables or a missing OpenAI key must not block application startup. When the assistant is enabled but `OPENAI_API_KEY` is missing, the `/Main` Assistant block remains visible, and submissions return "Please contact administrator to configure AI Assistant." without creating assistant threads, messages, runs, sources, or chunks.
+Keep `ASSISTANT_WORKER_ENABLED=true` in `appSettings` when queued source indexing and queued chat runs should be processed by the web host. Chat submissions require this worker-enabled host, or an equivalent external processor using the same queue contracts, so disabled-worker setups show a setup warning instead of creating runs that stay queued forever. Missing tables or a missing OpenAI key must not block application startup. When the assistant is enabled but `OPENAI_API_KEY` is missing, the `/Main` Assistant block remains visible, and submissions return "Please contact administrator to configure AI Assistant." without creating assistant threads, messages, runs, sources, or chunks.
 
 ## Schema
 

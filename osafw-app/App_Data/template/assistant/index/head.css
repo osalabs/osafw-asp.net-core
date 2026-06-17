@@ -21,6 +21,8 @@
 
 .assistant-message-list {
   min-height: 20rem;
+  align-content: start;
+  align-items: start;
 }
 
 .assistant-empty {
@@ -36,6 +38,10 @@
 
 .assistant-message-assistant {
   justify-content: flex-start;
+}
+
+.assistant-message {
+  align-items: flex-start;
 }
 
 .assistant-bubble {
@@ -105,30 +111,20 @@
   font-size: .875rem;
 }
 
-.assistant-send-btn {
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: 0 0 auto;
+.assistant-composer-meta {
+  flex-wrap: wrap;
 }
 
-.assistant-file-pill {
-  display: inline-flex;
-  gap: .5rem;
-  align-items: center;
-  max-width: 100%;
-  padding: .35rem .6rem;
-  border: 1px solid var(--fw-border-color-subtle);
-  border-radius: 999px;
-  background: var(--bs-tertiary-bg);
+.assistant-sample-prompts .btn {
+  white-space: normal;
 }
 
-.assistant-file-pill span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.assistant-pending-files .badge {
+  max-width: min(100%, 20rem);
+  font-weight: 500;
 }
 
-.assistant-file-pill .btn-close {
+.assistant-pending-files .btn-close {
   width: .65rem;
   height: .65rem;
   padding: .25rem;

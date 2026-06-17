@@ -194,5 +194,6 @@ public sealed class AssistantRuntimeStatus
     public bool enabled { get; set; }
     public bool tables_ready { get; set; }
     public bool openai_configured { get; set; }
+    public bool worker_enabled { get; set; }
     public string message { get; set; } = string.Empty;
 }

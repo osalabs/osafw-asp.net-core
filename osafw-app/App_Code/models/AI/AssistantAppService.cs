@@ -28,6 +28,7 @@ public sealed class AssistantAppService
         bool enabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
         bool tablesReady = isTablesReady();
         bool openAiConfigured = fw.model<LLM>().isConfigured();
+        bool workerEnabled = fw.config("ASSISTANT_WORKER_ENABLED").toBool();
         string message = "";
 
         if (!enabled)
@@ -36,12 +37,15 @@ public sealed class AssistantAppService
             message = "Please contact administrator to configure AI Assistant.";
         else if (!tablesReady)
             message = "Assistant tables are not installed.";
+        else if (!workerEnabled)
+            message = "Assistant worker is not enabled. Enable appSettings.ASSISTANT_WORKER_ENABLED on a host that should process assistant chat runs.";
 
         return new AssistantRuntimeStatus
         {
             enabled = enabled,
             tables_ready = tablesReady,
             openai_configured = openAiConfigured,
+            worker_enabled = workerEnabled,
             message = message
         };
     }
@@ -132,7 +136,7 @@ public sealed class AssistantAppService
     public async Task<(AssistantThreadDto thread, AssistantMessageDto message, AssistantRunDto run)> CreateOrContinueTurnAsync(int usersId, int threadId, string prompt, FwDict? clarificationAnswers, IList<IFormFile>? files)
     {
         var status = RuntimeStatus();
-        if (!status.enabled || !status.tables_ready || !status.openai_configured)
+        if (!status.enabled || !status.tables_ready || !status.openai_configured || !status.worker_enabled)
             throw new UserException(status.message);
 
         bool hasText = !string.IsNullOrWhiteSpace(prompt);

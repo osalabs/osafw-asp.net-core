@@ -25,19 +25,21 @@
       <div class="assistant-landing-copy text-center">
         <h2 class="h3 mb-2">`What can I help with?`</h2>
       </div>
+      <div class="assistant-sample-prompts d-flex flex-wrap justify-content-center gap-2 mb-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-assistant-sample-prompt="Find documents about PTO policy" <~/common/attr/disabled unless="is_assistant_available">>`Find documents about PTO policy`</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-assistant-sample-prompt="Who can help with onboarding?" <~/common/attr/disabled unless="is_assistant_available">>`Who can help with onboarding?`</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-assistant-sample-prompt="Where do I manage KB articles?" <~/common/attr/disabled unless="is_assistant_available">>`Where do I manage KB articles?`</button>
+      </div>
       <form class="assistant-composer-card border rounded bg-body shadow-sm p-3" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
         <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
         <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
-        <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask a read-only question`" data-assistant-prompt data-assistant-autofocus <~/common/attr/disabled unless="is_assistant_available">></textarea>
+        <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask about company documents, contacts, or where to go`" data-assistant-prompt data-assistant-autofocus <~/common/attr/disabled unless="is_assistant_available">></textarea>
         <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
           <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2">
             <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
             <span class="assistant-file-count" data-assistant-file-count></span>
           </div>
-          <button type="submit" class="assistant-send-btn btn btn-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0" title="`Send`" <~/common/attr/disabled unless="is_assistant_available">>
-            <i class="bi bi-arrow-up"></i>
-            <span class="visually-hidden">`Send`</span>
-          </button>
+          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
         </div>
         <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
         <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
@@ -66,10 +68,7 @@
             <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
             <span class="assistant-file-count" data-assistant-file-count></span>
           </div>
-          <button type="submit" class="assistant-send-btn btn btn-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0" title="`Send`" <~/common/attr/disabled unless="is_assistant_available">>
-            <i class="bi bi-arrow-up"></i>
-            <span class="visually-hidden">`Send`</span>
-          </button>
+          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
         </div>
         <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
         <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
@@ -183,6 +182,17 @@
     return state;
   });
 
+  root.querySelectorAll('[data-assistant-sample-prompt]').forEach(button => {
+    button.addEventListener('click', function () {
+      const state = composers[0];
+      if (!state || !state.prompt || state.prompt.disabled) return;
+      state.prompt.value = this.dataset.assistantSamplePrompt || this.textContent.trim();
+      autosizeComposer(state.prompt);
+      updateComposerState();
+      state.prompt.focus();
+    });
+  });
+
   renderHistory();
   renderThread();
   updateComposerState();
@@ -246,7 +256,7 @@
       const data = await postForm(baseUrl, body);
       if (data.thread) {
         thread = data.thread;
-        if (data.message) thread.messages = (thread.messages || []).concat([data.message]);
+        if (data.message) thread.messages = mergeById(thread.messages || [], [data.message]);
         thread.active_run = data.run || thread.active_run;
         lastMessageId = maxId(thread.messages);
         lastEventId = maxId(thread.events);
@@ -401,7 +411,7 @@
 
   function renderPendingFiles(state) {
     if (!state.pendingFilesEl) return;
-    state.pendingFilesEl.innerHTML = state.pendingFiles.map(item => '<span class="assistant-file-pill"><span>' + escapeHtml(item.file.name) + '</span><button type="button" class="btn-close" data-assistant-file-remove="' + escapeAttr(item.id) + '" aria-label="Remove"></button></span>').join('');
+    state.pendingFilesEl.innerHTML = state.pendingFiles.map(item => '<span class="badge text-bg-light border text-dark d-inline-flex align-items-center gap-1 py-2"><span class="text-truncate">' + escapeHtml(item.file.name) + '</span><button type="button" class="btn-close assistant-file-remove" data-assistant-file-remove="' + escapeAttr(item.id) + '" aria-label="Remove"></button></span>').join('');
     if (state.fileCount) state.fileCount.textContent = state.pendingFiles.length ? state.pendingFiles.length + ' file' + (state.pendingFiles.length === 1 ? '' : 's') : '';
   }
 
@@ -505,7 +515,7 @@
   }
 
   function isAvailable() {
-    return !!(status.enabled && status.tables_ready && status.openai_configured);
+    return !!(status.enabled && status.tables_ready && status.openai_configured && status.worker_enabled);
   }
 
   function isReadonly() {

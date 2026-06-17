@@ -62,7 +62,7 @@ public class AssistantController : FwController
             ["assistant_history_json"] = Utils.jsonEncode(history),
             ["assistant_thread_json"] = thread == null ? "null" : Utils.jsonEncode(thread),
             ["assistant_status_message"] = status.message,
-            ["is_assistant_available"] = status.enabled && status.tables_ready && status.openai_configured,
+            ["is_assistant_available"] = status.enabled && status.tables_ready && status.openai_configured && status.worker_enabled,
             ["is_assistant_enabled"] = status.enabled,
             ["is_tables_ready"] = status.tables_ready,
             ["is_openai_configured"] = status.openai_configured,
