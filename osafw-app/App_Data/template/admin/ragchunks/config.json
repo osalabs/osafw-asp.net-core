@@ -1,0 +1,170 @@
+{
+    "model": "RagChunks",
+    "is_readonly": true,
+    "search_fields": "iname source_title section idesc entity_icode source_type vector_backend index_status",
+    "list_sortdef": "add_time desc",
+    "list_sortmap": {
+        "id": "id",
+        "iname": "iname",
+        "source_title": "source_title",
+        "entity_icode": "entity_icode",
+        "item_id": "item_id",
+        "index_status": "index_status",
+        "embedding_dim": "embedding_dim",
+        "vector_backend": "vector_backend",
+        "add_time": "add_time"
+    },
+    "list_view": "(select d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.chunk_index, d.iname, d.idesc, d.page, d.section, d.embedding_dim, d.embedding_model, d.vector_backend, d.metadata_json, d.status, d.add_time, d.upd_time, rs.index_status, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode from rag_chunks d left join rag_sources rs on rs.id=d.rag_sources_id left join fwentities e on e.id=d.fwentities_id) t",
+    "is_dynamic_index": true,
+    "view_list_defaults": "iname source_title entity_icode item_id index_status embedding_dim vector_backend add_time",
+    "view_list_map": {
+        "id": "ID",
+        "iname": "Chunk",
+        "source_title": "Source",
+        "source_type": "Source Type",
+        "entity_icode": "Entity",
+        "item_id": "Item",
+        "att_id": "Attachment",
+        "chunk_index": "Chunk #",
+        "section": "Section",
+        "index_status": "Index",
+        "embedding_dim": "Dim",
+        "embedding_model": "Embedding Model",
+        "vector_backend": "Backend",
+        "add_time": "Added"
+    },
+    "view_list_custom": "iname source_title entity_icode index_status vector_backend",
+    "is_dynamic_show": true,
+    "show_fields": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-7"
+        },
+        {
+            "field": "iname",
+            "label": "Chunk",
+            "type": "plaintext"
+        },
+        {
+            "field": "idesc",
+            "label": "Chunk Text",
+            "type": "plaintext"
+        },
+        {
+            "field": "section",
+            "label": "Section",
+            "type": "plaintext"
+        },
+        {
+            "field": "metadata_json",
+            "label": "Metadata",
+            "type": "plaintext"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-5"
+        },
+        {
+            "field": "id",
+            "label": "Chunk ID",
+            "type": "plaintext"
+        },
+        {
+            "field": "rag_sources_id",
+            "label": "Source ID",
+            "type": "plaintext"
+        },
+        {
+            "field": "entity_icode",
+            "label": "Entity",
+            "type": "plaintext"
+        },
+        {
+            "field": "item_id",
+            "label": "Item ID",
+            "type": "plaintext"
+        },
+        {
+            "field": "att_id",
+            "label": "Attachment ID",
+            "type": "plaintext"
+        },
+        {
+            "field": "source_title",
+            "label": "Source",
+            "type": "plaintext"
+        },
+        {
+            "field": "source_type",
+            "label": "Source Type",
+            "type": "plaintext"
+        },
+        {
+            "field": "source_url",
+            "label": "Source URL",
+            "type": "plaintext"
+        },
+        {
+            "field": "index_status",
+            "label": "Index Status",
+            "type": "plaintext"
+        },
+        {
+            "field": "last_error",
+            "label": "Last Error",
+            "type": "plaintext"
+        },
+        {
+            "field": "last_indexed_at",
+            "label": "Last Indexed",
+            "type": "date_long"
+        },
+        {
+            "field": "content_hash",
+            "label": "Content Hash",
+            "type": "plaintext"
+        },
+        {
+            "field": "embedding_preview",
+            "label": "Embedding",
+            "type": "plaintext"
+        },
+        {
+            "field": "embedding_dim",
+            "label": "Embedding Dim",
+            "type": "plaintext"
+        },
+        {
+            "field": "embedding_model",
+            "label": "Embedding Model",
+            "type": "plaintext"
+        },
+        {
+            "field": "vector_backend",
+            "label": "Backend",
+            "type": "plaintext"
+        },
+        {
+            "field": "add_time",
+            "label": "Added",
+            "type": "added"
+        },
+        {
+            "field": "upd_time",
+            "label": "Updated",
+            "type": "updated"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ]
+}

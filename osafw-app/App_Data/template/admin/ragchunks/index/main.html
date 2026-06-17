@@ -1,99 +1,18 @@
-<h1><~title></h1>
-
-<~/common/form/msg>
+<~/common/list/page_header>
 
 <~setup_needed unless="tables_ready" inline>
   <div class="alert alert-warning" role="alert">`Assistant RAG source/chunk tables are not installed. Run the assistant SQL update before reviewing indexed content.`</div>
 </~setup_needed>
 
 <~ready if="tables_ready" inline>
-  <div class="row g-3 mb-3">
-    <div class="col-md-3">
-      <div class="fw-card">
-        <div class="text-muted small">`Chunks`</div>
-        <div class="fs-3 fw-semibold"><~chunk_count></div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="fw-card">
-        <div class="text-muted small">`Sources`</div>
-        <div class="fs-3 fw-semibold"><~source_count></div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="fw-card">
-        <div class="text-muted small">`Queued`</div>
-        <div class="fs-3 fw-semibold"><~queued_count></div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="fw-card">
-        <div class="text-muted small">`Vector Mode`</div>
-        <div class="fs-5"><~vector_mode></div>
-      </div>
-    </div>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <span class="badge text-bg-light border text-dark">`Chunks` <span class="fw-semibold"><~chunk_count></span></span>
+    <span class="badge text-bg-light border text-dark">`Sources` <span class="fw-semibold"><~source_count></span></span>
+    <span class="badge text-bg-light border text-dark">`Queued` <span class="fw-semibold"><~queued_count></span></span>
+    <span class="badge text-bg-light border text-dark">`Vector Mode` <span class="fw-semibold"><~vector_mode></span></span>
+    <span class="badge text-bg-light border text-dark">`Embedding` <span class="fw-semibold"><~embedding_model></span></span>
   </div>
 
-  <form class="fw-card" method="get" action="<~../url>">
-    <input type="hidden" name="dofilter" value="1">
-    <div class="row g-2 align-items-end">
-      <div class="col-md">
-        <label class="form-label" for="f_s">`Search`</label>
-        <input id="f_s" name="f[s]" value="<~f[s]>" class="form-control" type="search">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label" for="f_entity">`Entity`</label>
-        <select id="f_entity" name="f[entity]" class="form-select">
-          <option value="">`All`</option>
-          <~entities select="f[entity]">
-        </select>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label" for="f_backend">`Backend`</label>
-        <select id="f_backend" name="f[backend]" class="form-select">
-          <option value="">`All`</option>
-          <~backend_options select="f[backend]">
-        </select>
-      </div>
-      <div class="col-md-auto">
-        <button class="btn btn-primary" type="submit"><~/common/icons/search>`Filter`</button>
-      </div>
-    </div>
-  </form>
-
-  <div class="fw-list-card mt-3">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th>`Chunk`</th>
-            <th>`Source`</th>
-            <th>`Entity`</th>
-            <th>`Item`</th>
-            <th>`Index`</th>
-            <th>`Dim`</th>
-            <th>`Backend`</th>
-            <th>`Added`</th>
-          </tr>
-        </thead>
-        <tbody>
-          <~rows repeat inline>
-            <tr>
-              <td><a href="<~../url>/<~id>"><~iname default="Chunk"></a><div class="small text-muted"><~section></div></td>
-              <td><~source_title default="-"><div class="small text-muted"><~source_type></div></td>
-              <td><code><~entity_icode></code></td>
-              <td><~item_id><~att_suffix if="att_id" inline> / att <~att_id></~att_suffix></td>
-              <td><span class="badge text-bg-light"><~index_status></span></td>
-              <td><~embedding_dim></td>
-              <td><span class="badge text-bg-secondary"><~vector_backend></span></td>
-              <td><~add_time date="datetime"></td>
-            </tr>
-          </~rows>
-          <~empty unless="rows" inline>
-            <tr><td colspan="8" class="text-center text-muted py-4">`No RAG chunks found.`</td></tr>
-          </~empty>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <~/common/list/filter_std>
+  <~list_table>
 </~ready>

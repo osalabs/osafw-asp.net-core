@@ -1,0 +1,207 @@
+{
+    "model": "KBArticles",
+    "required_fields": "iname content_markdown",
+    "save_fields": [
+        "icode",
+        "iname",
+        "idesc",
+        "content_markdown",
+        "access_level",
+        "status"
+    ],
+    "form_new_defaults": {
+        "access_level": 1,
+        "status": 0
+    },
+    "search_fields": "icode iname idesc content_markdown",
+    "list_sortdef": "upd_time desc",
+    "list_sortmap": {
+        "id": "id",
+        "icode": "icode",
+        "iname": "iname",
+        "access_level": "access_level",
+        "status": "status",
+        "add_time": "add_time",
+        "upd_time": "upd_time"
+    },
+    "is_dynamic_index": true,
+    "view_list_defaults": "iname icode access_level status upd_time",
+    "view_list_map": {
+        "id": "ID",
+        "iname": "Title",
+        "icode": "Code",
+        "idesc": "Description",
+        "access_level": "Access",
+        "status": "Status",
+        "add_time": "Added",
+        "upd_time": "Updated"
+    },
+    "view_list_custom": "iname status",
+    "list_column_filters": {
+        "enabled": true,
+        "fields": {
+            "iname": {
+                "type": "text"
+            },
+            "icode": {
+                "type": "text"
+            },
+            "access_level": {
+                "type": "multi_select",
+                "lookup_tpl": "access_level.sel"
+            },
+            "status": {
+                "type": "multi_select",
+                "lookup_tpl": "/common/sel/status.sel"
+            },
+            "upd_time": {
+                "type": "date_range",
+                "field_storage_type": "datetime"
+            }
+        }
+    },
+    "is_dynamic_show": true,
+    "show_fields": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-8"
+        },
+        {
+            "field": "iname",
+            "label": "Title",
+            "type": "plaintext"
+        },
+        {
+            "field": "icode",
+            "label": "Code",
+            "type": "plaintext"
+        },
+        {
+            "field": "idesc",
+            "label": "Description",
+            "type": "markdown"
+        },
+        {
+            "field": "content_markdown",
+            "label": "Content",
+            "type": "markdown"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-4"
+        },
+        {
+            "field": "access_level",
+            "label": "Access Level",
+            "type": "plaintext",
+            "lookup_tpl": "access_level.sel"
+        },
+        {
+            "field": "status",
+            "label": "Status",
+            "type": "plaintext",
+            "lookup_tpl": "/common/sel/status.sel"
+        },
+        {
+            "field": "add_time",
+            "label": "Added",
+            "type": "added"
+        },
+        {
+            "field": "upd_time",
+            "label": "Updated",
+            "type": "updated"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ],
+    "is_dynamic_showform": true,
+    "showform_fields": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-8"
+        },
+        {
+            "field": "iname",
+            "label": "Title",
+            "type": "input",
+            "required": true,
+            "maxlength": 255,
+            "attrs_control": "autofocus"
+        },
+        {
+            "field": "icode",
+            "label": "Code",
+            "type": "input",
+            "maxlength": 80,
+            "validate": "exists"
+        },
+        {
+            "field": "idesc",
+            "label": "Description",
+            "type": "textarea",
+            "rows": "3"
+        },
+        {
+            "field": "content_markdown",
+            "label": "Content",
+            "type": "textarea",
+            "required": true,
+            "rows": "16",
+            "class_control": "font-monospace"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-4"
+        },
+        {
+            "field": "id",
+            "label": "ID",
+            "type": "id"
+        },
+        {
+            "field": "access_level",
+            "label": "Access Level",
+            "type": "select",
+            "lookup_tpl": "access_level.sel"
+        },
+        {
+            "field": "status",
+            "label": "Status",
+            "type": "select",
+            "lookup_tpl": "/common/sel/status.sel"
+        },
+        {
+            "field": "add_time",
+            "label": "Added",
+            "type": "added"
+        },
+        {
+            "field": "upd_time",
+            "label": "Updated",
+            "type": "updated"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ]
+}

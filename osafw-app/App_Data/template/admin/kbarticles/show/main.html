@@ -1,28 +1,10 @@
-<~/common/form/page_header_custom>
+<~/common/form/page_header>
 
-<div class="fw-card">
-  <div class="d-flex flex-wrap gap-2 mb-3">
-    <a class="btn btn-primary" href="<~../url>/<~id>/edit"><~/common/icons/pencil-square>`Edit`</a>
-    <form method="post" action="<~../url>/(Reindex)/<~id>">
-      <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button class="btn btn-default" type="submit"><~/common/icons/arrow-repeat>`Reindex`</button>
-    </form>
-    <a class="btn btn-default" href="<~../url>"><~/common/icons/arrow-left-circle>`Back`</a>
-  </div>
+<form id="FView" class="fw-card">
+  <~/common/form/tabs if="form_tabs">
 
-  <dl class="row mb-0">
-    <dt class="col-md-3">`Code`</dt>
-    <dd class="col-md-9"><code><~i[icode]></code></dd>
-    <dt class="col-md-3">`Description`</dt>
-    <dd class="col-md-9"><~i[idesc] default="-" markdown noescape></dd>
-    <dt class="col-md-3">`Access Level`</dt>
-    <dd class="col-md-9"><~i[access_level]></dd>
-    <dt class="col-md-3">`Indexed Chunks`</dt>
-    <dd class="col-md-9"><span class="badge text-bg-secondary"><~chunk_count></span></dd>
-  </dl>
-</div>
-
-<section class="fw-card mt-3">
-  <h2 class="h5">`Content`</h2>
-  <div class="border rounded p-3 bg-body-tertiary"><~i[content_markdown] markdown noescape></div>
-</section>
+  <fieldset>
+    <~form>
+  </fieldset>
+</form>
+<~/common/activitylogs/main if="is_activity_logs">

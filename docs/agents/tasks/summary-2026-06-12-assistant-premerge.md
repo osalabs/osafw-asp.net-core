@@ -13,13 +13,14 @@
 - Moved the `/Main` Assistant pane into the lower-right dashboard slot under `Events per day`, gave it `bi-stars`, linked the pane icon/title to `/Assistant`, and moved `Active Users` under `Last Events`.
 - Reworked `/Assistant` into a centered composer-first start state, thread-focused content area, modal history, custom file upload button, and drag/drop file support while keeping the existing JSON endpoints.
 - Follow-up feedback removed the non-breaking Assistant entry-point changelog note, added the `bi-stars` icon into the dashboard Assistant title, moved Settings tab URL/active/label rendering into ParsePage, vertically aligned the Assistant topbar actions with the title, and reduced Assistant CSS by moving layout/border/shadow work to Bootstrap utility classes.
+- Rebuilt `/Admin/KBArticles` and `/Admin/RagChunks` on `FwDynamicController` with `config.json` field/list definitions, standard Dynamic page headers/filter/list/form shells, compact RAG status badges, and small custom partials only for KB/RAG-specific actions, badges, and filters.
 
 ## Scope reviewed
 - `docs/agents/local_instructions.md`, `docs/README.md`, `docs/assistant.md`, `docs/db.md`, `docs/crud.md`, `docs/templates.md`, `docs/dashboard.md`.
 - Existing Assistant/KB implementation: assistant controllers, `DocChunks`/`RagChunks`, `DocumentEmbeddingService`, KB/Spages models, worker, run processor, templates, SQL scripts, and focused tests.
 - Prior task context from `docs/agents/tasks/index.md`, `summary-2026-06-12-assistant-port.md`, and the local review draft summary.
 - Review-loop focus: source queue lifecycle, no-key behavior, migration paths, retrieval evidence, memory compaction, dashboard form handoff, and route/template contracts.
-- Feedback pass focus: data-driven Settings tabs, dashboard/sidebar placement, and Assistant UI layout.
+- Feedback pass focus: data-driven Settings tabs, dashboard/sidebar placement, Assistant UI layout, and Dynamic-controller parity for the KB/RAG admin screens.
 
 ## Commands used / verification
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_premerge_build\` - passed after the Settings tab fix.
@@ -32,8 +33,11 @@
 - Admin Settings tab self-review confirmed the old `f[icat]=` Site link was not filtering because empty categories were skipped; the controller now treats an explicit empty category as a filter.
 - Browser smoke on the VS-hosted app at `https://localhost:44315/` verified no sidebar Assistant item, dashboard ordering/linking/icon behavior, Settings `All`/`Site`/`AI` tabs and filters, Assistant centered composer, hidden file inputs with visible file buttons, no-key unavailable message, and History modal opening. Follow-up smoke also verified the dashboard Assistant title icon, template-rendered Settings tabs, no Assistant rows on `Site`, no client script syntax errors, and Assistant title/actions center alignment.
 - Visual Studio MCP confirmed the expected solution/startup project were loaded before browser verification; it also built the solution and launched the app without debugging after C# changes.
+- Latest KB/RAG feedback pass: `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_premerge_build\` passed after review fixes; `dotnet test osafw-tests\osafw-tests.csproj --filter AssistantFeatureTests -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_premerge_tests\` passed 16/16 after review fixes; `git diff --check` passed before review fixes and will be rerun at close.
+- Latest browser smoke at `https://localhost:44315/` after VS build/relaunch verified `/Admin/KBArticles` uses the standard Dynamic filter/table with Add New and RAG Chunks actions, `/Admin/RagChunks` uses the standard Dynamic filter/table with compact badges plus Entity/Backend filters and no Add New action, `/Admin/KBArticles/new` loads the standard edit shell without autosave, and browser console errors were empty. A second smoke after review fixes confirmed the same list/form signals.
 - Concise verification evidence was captured in `docs/agents/artifacts/assistant-premerge-verification-2026-06-13.md`.
 - Review loop: sub-agent reviewer found migration, queue-claim, and failed-reindex issues; after fixes, focused re-review reported no blocker/high/medium issues and allowed the loop to stop. Final feedback pass used an independent read-only reviewer against the changed Settings/dashboard/sidebar/Assistant UI/docs diff; no issues found and the review loop can stop.
+- Latest KB/RAG Dynamic-screen review: sub-agent reviewer was spawned but did not finish after two bounded waits, so the main agent performed the `docs/agents/code_reviewer.md` review locally. Findings fixed: existing KB edit screens needed an explicit standard Save/Cancel row after autosave was removed, and both new Dynamic lists needed `row_click_url.html` partials for standard row navigation/edit links. Review loop can stop after the fixes and rerun checks.
 
 ## Decisions - why
 - Use a separate task summary from the architecture review because this task changes runtime behavior, schema, templates, docs, and tests.
@@ -53,12 +57,15 @@
 - The Settings page previously used hardcoded tabs and the controller ignored explicit empty `icat`, so AI rows appeared on Site. Replaced the tabs with database-driven category rows, treated `f[icat]=` as an empty-category filter, and moved URL/label/active tab presentation into the ParsePage template.
 - ParsePage treats backticks as translation markers, so JavaScript template literals inside inline templates render invalid client script. Replaced Assistant inline script template literals with string concatenation and kept backticks only in translated HTML text.
 - Visual Studio MCP could not stop the user's no-debug run because it reported no active debugging session; the port was not listening after the failed launch/build, so the app was relaunched from VS after the compile fix.
+- The Dynamic edit shell normally adds autosave for existing records, but KB saves queue indexing and the custom save path is optimized for full form posts; the KB edit template keeps the standard layout while intentionally omitting `data-autosave`, and the save path now preserves existing code/access/status on partial submissions.
+- Dynamic list screens need an `index/row_click_url.html` partial when using the common list table; otherwise row clicks and the standard Edit link can render blank targets.
 
 ## Risks / follow-ups
 - Provider-specific update scripts were reviewed statically but not executed against live SQL Server/MySQL/SQLite databases.
 - The assistant update scripts now create assistant/KB/RAG schema objects and seed AI setting rows; administrators still need to fill `OPENAI_API_KEY` and enable `ASSISTANT_ENABLED`.
 - Full `dotnet test` was not run; focused Assistant tests and app build passed.
 - Browser smoke used the local SQL Server-backed VS app only; provider-specific SQL scripts still need database execution in their target engines.
+- `/Admin/RagChunks` remains a read-only inspection screen; it uses the standard Dynamic list table but keeps row actions to View-only and leaves destructive cleanup behind the existing explicit `DeleteEntity` POST action on the detail page.
 
 ## Heuristics (keep terse)
 - Added a 2026-06-12 heuristic to `docs/agents/heuristics.md`: avoid JavaScript template literals inside ParsePage templates because backticks are translation markers. No stable framework facts or ADRs were added; no `AGENTS.md` change was needed.

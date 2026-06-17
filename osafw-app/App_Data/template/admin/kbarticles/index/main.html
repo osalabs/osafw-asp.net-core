@@ -1,54 +1,10 @@
-<h1><~title></h1>
-
-<~/common/form/msg>
+<~/common/list/page_header>
 
 <~setup_needed unless="tables_ready" inline>
   <div class="alert alert-warning" role="alert">`Knowledge base tables are not installed. Run the assistant SQL update before managing articles.`</div>
 </~setup_needed>
 
 <~ready if="tables_ready" inline>
-  <form class="fw-card" method="get" action="<~../url>">
-    <input type="hidden" name="dofilter" value="1">
-    <div class="row g-2 align-items-end">
-      <div class="col-md">
-        <label class="form-label" for="f_s">`Search`</label>
-        <input id="f_s" name="f[s]" value="<~f[s]>" class="form-control" type="search">
-      </div>
-      <div class="col-md-auto d-flex gap-2">
-        <button class="btn btn-primary" type="submit"><~/common/icons/search>`Search`</button>
-        <a class="btn btn-default" href="<~../url>/new"><~/common/icons/plus>`New Article`</a>
-        <~ragchunks_link if="is_site_admin" inline><a class="btn btn-default" href="<~/admin/ragchunks/url>"><~/common/icons/journal-arrow-up>`RAG Chunks`</a></~ragchunks_link>
-      </div>
-    </div>
-  </form>
-
-  <div class="fw-list-card mt-3">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th>`Title`</th>
-            <th>`Code`</th>
-            <th>`Access`</th>
-            <th>`Status`</th>
-            <th>`Updated`</th>
-          </tr>
-        </thead>
-        <tbody>
-          <~list_rows repeat inline>
-            <tr>
-              <td><a href="<~../url>/<~id>"><~iname></a><div class="small text-muted"><~idesc></div></td>
-              <td><code><~icode></code></td>
-              <td><~access_level></td>
-              <td><~status></td>
-              <td><~upd_time date="datetime"></td>
-            </tr>
-          </~list_rows>
-          <~empty unless="list_rows" inline>
-            <tr><td colspan="5" class="text-center text-muted py-4">`No knowledge base articles found.`</td></tr>
-          </~empty>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <~/common/list/filter_std>
+  <~list_table>
 </~ready>

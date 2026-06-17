@@ -1,67 +1,18 @@
-<~/common/form/page_header_custom>
+<~/common/form/page_header_edit>
 
-<form id="FEdit" class="fw-card" method="post" action="<~../url><~edit_id unless="is_new" inline>/<~id></~edit_id>" data-check-changes data-errors="<~error[details] json>">
+<form class="fw-card" id="FEdit" method="post" data-check-changes action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~error[details] json>">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <~/common/list/return_inputs if="return_url">
+  <input type="hidden" name="refresh" value="">
+  <input type="hidden" name="tab" value="<~tab>">
+  <~/common/form/relid>
 
-  <div class="row form-row">
-    <label class="col-form-label col-md-3" for="icode">`Code`</label>
-    <div class="col">
-      <input id="icode" name="item[icode]" maxlength="80" value="<~i[icode]>" type="text" class="form-control">
-      <p class="err-EXISTS">`This code already exists.`</p>
-      <~/common/form/showform/validation_errors if="error[details][icode]">
-    </div>
-  </div>
+  <~/common/form/tabs if="form_tabs">
 
-  <div class="row form-row">
-    <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
-    <div class="col">
-      <input id="iname" name="item[iname]" maxlength="255" value="<~i[iname]>" type="text" class="form-control" required autofocus>
-      <~/common/form/showform/validation_errors if="error[details][iname]">
-    </div>
-  </div>
+  <fieldset <~/common/attr/disabled if="is_readonly">>
+    <~form>
 
-  <div class="row form-row">
-    <label class="col-form-label col-md-3" for="idesc">`Description`</label>
-    <div class="col">
-      <textarea id="idesc" name="item[idesc]" rows="3" class="form-control"><~i[idesc]></textarea>
-    </div>
-  </div>
-
-  <div class="row form-row">
-    <label class="col-form-label col-md-3 required" for="content_markdown">`Content`</label>
-    <div class="col">
-      <textarea id="content_markdown" name="item[content_markdown]" rows="16" class="form-control font-monospace" required><~i[content_markdown]></textarea>
-      <~/common/form/showform/validation_errors if="error[details][content_markdown]">
-    </div>
-  </div>
-
-  <div class="row form-row">
-    <label class="col-form-label col-md-3" for="access_level">`Access Level`</label>
-    <div class="col">
-      <select id="access_level" name="item[access_level]" class="form-select">
-        <~select_options_access_level noescape>
-      </select>
-      <p class="err-ACCESS">`Access level cannot be higher than your access level.`</p>
-    </div>
-  </div>
-
-  <div class="row form-row">
-    <label class="col-form-label col-md-3" for="status">`Status`</label>
-    <div class="col">
-      <select id="status" name="item[status]" class="form-select">
-        <~/common/sel/status.sel select="i[status]">
-      </select>
-    </div>
-  </div>
-
-  <div class="row form-row">
-    <div class="col-md-3 text-end">
-      <p class="form-control-plaintext"><span class="form-saved-status"></span></p>
-    </div>
-    <div class="col d-flex flex-wrap gap-2">
-      <button type="submit" class="btn btn-primary">`Save`</button>
-      <a class="btn btn-default" href="<~cancel_url if="id" inline><~../url>/<~id></~cancel_url><~new_cancel unless="id" inline><~../url></~new_cancel>">`Cancel`</a>
-      <~delete_btn unless="is_new" inline><a class="btn btn-default" href="<~../url>/<~id>/delete"><span class="text-danger"><~/common/icons/x-circle-fill></span>`Delete`</a></~delete_btn>
-    </div>
-  </div>
+    <~/common/form/actions_std if="id">
+    <~/common/form/actions_std_responsive unless="id">
+  </fieldset>
 </form>

@@ -1,17 +1,24 @@
 using System;
+using System.Collections;
 using System.Linq;
 using System.Text.Json;
 
 namespace osafw;
 
-public class AdminRagChunksController : FwController
+public class AdminRagChunksController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
+
+    protected RagChunks model = null!;
 
     public override void init(FW fw)
     {
         base.init(fw);
         base_url = "/Admin/RagChunks";
+        loadControllerConfig();
+        model = model0 as RagChunks ?? throw new FwConfigUndefinedModelException();
+        db = model.getDB();
+        is_readonly = true;
     }
 
     /// <summary>
@@ -23,85 +30,48 @@ public class AdminRagChunksController : FwController
             throw new AuthException("Bad access - Not authorized");
     }
 
-    public FwDict IndexAction()
+    public override FwDict IndexAction()
     {
-        var ps = new FwDict
+        if (!areTablesReady())
         {
-            ["title"] = "RAG Chunks",
-            ["base_url"] = base_url,
-            ["f"] = reqh("f"),
-            ["tables_ready"] = areTablesReady(),
-            ["vector_mode"] = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", RagChunks.VECTOR_MODE_AUTO),
-            ["embedding_model"] = LLM.MODEL_TEXT_EMBEDDING_3_SMALL,
-        };
-
-        if (!ps["tables_ready"].toBool())
-            return ps;
-
-        var f = ps["f"] as FwDict ?? [];
-        string search = f["s"].toStr().Trim();
-        string entity = f["entity"].toStr().Trim();
-        string backend = f["backend"].toStr().Trim();
-
-        string where = "d.status<>@status_deleted";
-        var args = DB.h("@status_deleted", FwModel.STATUS_DELETED);
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            where += " and (d.iname like @search or d.source_title like @search or d.section like @search or d.idesc like @search)";
-            args["@search"] = "%" + search + "%";
-        }
-        if (!string.IsNullOrWhiteSpace(entity))
-        {
-            where += " and e.icode=@entity";
-            args["@entity"] = entity;
-        }
-        if (!string.IsNullOrWhiteSpace(backend))
-        {
-            where += " and d.vector_backend=@backend";
-            args["@backend"] = backend;
+            var psNotReady = new FwDict
+            {
+                ["title"] = "RAG Chunks",
+                ["base_url"] = base_url,
+                ["count"] = 0,
+                ["f"] = reqh("f"),
+                ["tables_ready"] = false,
+            };
+            setRagIndexMetadata(psNotReady, false);
+            return psNotReady;
         }
 
-        string sql = $@"select d.id,
-                               d.fwentities_id,
-                               d.item_id,
-                               d.rag_sources_id,
-                               d.att_id,
-                               d.source_type,
-                               d.source_title,
-                               d.source_url,
-                               d.chunk_index,
-                               d.iname,
-                               d.page,
-                               d.section,
-                               d.embedding_dim,
-                               d.embedding_model,
-                               d.vector_backend,
-                               d.add_time,
-                               rs.index_status,
-                               e.icode as entity_icode
-                          from {db.qid("rag_chunks")} d
-                     left join {db.qid("rag_sources")} rs on rs.id=d.rag_sources_id
-                     left join {db.qid("fwentities")} e on e.id=d.fwentities_id
-                         where {where}
-                      order by d.add_time desc, d.id desc";
-        ps["rows"] = db.arrayp(db.limit(sql, 100), args);
-        ps["entities"] = db.arrayp($@"select distinct e.icode as id, e.icode as iname
-                                        from {db.qid("rag_chunks")} d
-                                        join {db.qid("fwentities")} e on e.id=d.fwentities_id
-                                       where d.status<>@status_deleted
-                                    order by e.icode", DB.h("@status_deleted", FwModel.STATUS_DELETED));
-        ps["backend_options"] = new FwList
-        {
-            DB.h("id", RagChunks.VECTOR_MODE_JSON, "iname", "JSON"),
-            DB.h("id", RagChunks.VECTOR_MODE_NATIVE, "iname", "Native")
-        };
-        ps["chunk_count"] = db.valuep("select count(*) from rag_chunks where status<>@status_deleted", DB.h("@status_deleted", FwModel.STATUS_DELETED)).toInt();
-        ps["source_count"] = db.valuep("select count(*) from rag_sources where status<>@status_deleted", DB.h("@status_deleted", FwModel.STATUS_DELETED)).toInt();
-        ps["queued_count"] = db.valuep("select count(*) from rag_sources where status<>@status_deleted and index_status in (@statuses)", DB.h("@status_deleted", FwModel.STATUS_DELETED, "statuses", new StrList { RagSources.INDEX_STATUS_PENDING, RagSources.INDEX_STATUS_STALE })).toInt();
+        var ps = base.IndexAction();
+        ps["tables_ready"] = true;
+        setRagIndexMetadata(ps, true);
         return ps;
     }
 
-    public FwDict ShowAction(int id)
+    public override void setListSearch()
+    {
+        base.setListSearch();
+
+        string entity = list_filter["entity"].toStr().Trim();
+        if (!string.IsNullOrWhiteSpace(entity))
+        {
+            list_where += " and entity_icode=@entity";
+            list_where_params["entity"] = entity;
+        }
+
+        string backend = list_filter["backend"].toStr().Trim();
+        if (!string.IsNullOrWhiteSpace(backend))
+        {
+            list_where += " and vector_backend=@backend";
+            list_where_params["backend"] = backend;
+        }
+    }
+
+    public override FwDict ShowAction(int id)
     {
         if (!areTablesReady())
             throw new UserException("Assistant tables are not installed.");
@@ -129,14 +99,29 @@ public class AdminRagChunksController : FwController
             if (preview.Length > 160)
                 preview = preview[..160] + "...";
         }
+        item["embedding_preview"] = preview;
 
-        return new FwDict
+        var ps = new FwDict();
+        setAddUpdUser(ps, item);
+
+        if (is_dynamic_show)
         {
-            ["title"] = "RAG Chunk",
-            ["i"] = item,
-            ["embedding_preview"] = preview,
-            ["base_url"] = base_url,
-        };
+            if (config["form_tabs"] is IList formTabs && formTabs.Count > 1)
+                ps["form_tabs"] = new FwList(formTabs);
+
+            ps["fields"] = prepareShowFields(item, ps);
+        }
+
+        ps["id"] = id;
+        ps["i"] = item;
+        ps["embedding_preview"] = preview;
+        setPSReturnContext(ps);
+        ps["related_id"] = related_id;
+        ps["base_url"] = base_url;
+        ps["is_readonly"] = true;
+        ps["tab"] = form_tab;
+        ps["rbac"] = rbac;
+        return ps;
     }
 
     public FwDict? DeleteEntityAction()
@@ -151,6 +136,38 @@ public class AdminRagChunksController : FwController
         fw.flash("success", "RAG sources and chunks deleted.");
         fw.redirect(base_url);
         return null;
+    }
+
+    private void setRagIndexMetadata(FwDict ps, bool includeDatabaseState)
+    {
+        ps["vector_mode"] = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", RagChunks.VECTOR_MODE_AUTO);
+        ps["embedding_model"] = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        ps["backend_options"] = new FwList
+        {
+            DB.h("id", RagChunks.VECTOR_MODE_JSON, "iname", "JSON"),
+            DB.h("id", RagChunks.VECTOR_MODE_NATIVE, "iname", "Native")
+        };
+
+        if (!includeDatabaseState)
+        {
+            ps["entities"] = new FwList();
+            ps["chunk_count"] = 0;
+            ps["source_count"] = 0;
+            ps["queued_count"] = 0;
+            return;
+        }
+
+        ps["entities"] = db.arrayp($@"select distinct e.icode as id, e.icode as iname
+                                        from {db.qid("rag_chunks")} d
+                                        join {db.qid("fwentities")} e on e.id=d.fwentities_id
+                                       where d.status<>@status_deleted
+                                    order by e.icode", DB.h("@status_deleted", FwModel.STATUS_DELETED));
+        ps["chunk_count"] = db.valuep("select count(*) from rag_chunks where status<>@status_deleted", DB.h("@status_deleted", FwModel.STATUS_DELETED)).toInt();
+        ps["source_count"] = db.valuep("select count(*) from rag_sources where status<>@status_deleted", DB.h("@status_deleted", FwModel.STATUS_DELETED)).toInt();
+        ps["queued_count"] = db.valuep("select count(*) from rag_sources where status<>@status_deleted and index_status in (@statuses)", DB.h(
+            "@status_deleted", FwModel.STATUS_DELETED,
+            "statuses", new StrList { RagSources.INDEX_STATUS_PENDING, RagSources.INDEX_STATUS_STALE }
+        )).toInt();
     }
 
     private bool areTablesReady()

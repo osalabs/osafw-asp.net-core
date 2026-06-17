@@ -4,6 +4,8 @@
 - Updated `scripts/setup_deploy_scheduled_task.ps1` to infer the develop scheduled profile, preview defaults with `-Check`, and refuse non-scheduled profiles unless explicitly overridden.
 - Added `osafw-app/wwwroot/offline.htm` for `app_offline.htm` deployments.
 - Updated the Dev Manage installation doc to reference .NET 10, repo-contained PowerShell deploy profiles, and the Task Scheduler setup helper.
+- Added `docs/deploy.md` as a concise admin runbook for production, staging, and develop deployments.
+- Linked `docs/deploy.md` from `docs/README.md` and the Dev Manage installation doc.
 - Added a domain note that `FwConfig` derives `site_root` from the parent before `bin` when hosted from a publish path.
 - Added narrow ignore rules for deploy status/state/lock files under `osafw-app\App_Data\logs`.
 
@@ -13,6 +15,7 @@
 - `osafw-app/osafw-app.csproj` target framework and publish shape.
 - `FwConfig` `site_root` derivation.
 - Dev Manage installation docs.
+- Documentation map and new deploy runbook.
 - Git tracking for `osafw-app/App_Data/db`, `osafw-app/App_Data/logs`, and `osafw-app/upload`.
 
 ## Commands used / verification
@@ -31,11 +34,17 @@
 - `git status --short --ignored ...` - confirmed `deploy-production.log`, `deploy-production.status.json`, and `main.log` are ignored.
 - `git ls-files -- osafw-app/App_Data/db osafw-app/App_Data/logs osafw-app/upload` - confirmed only `osafw-app/App_Data/logs/.gitkeep` and `osafw-app/upload/.gitkeep` are tracked in those runtime folders.
 - Self-review using `docs/agents/code_reviewer.md` completed; fixed profile/core exit-code propagation and normal-deploy write-access preflight during review.
+- `Get-Content docs\deploy.md` review - confirmed the runbook is concise and admin-facing.
+- `rg -n "deploy\.md|deploy_production|deploy_scheduled_develop|deploy_scheduled_staging|setup_deploy" docs\README.md docs\deploy.md osafw-app\App_Data\template\dev\manage\docs\tab_installation.md` - confirmed runbook links and script references.
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check -Path docs\deploy.md,docs\README.md,osafw-app\App_Data\template\dev\manage\docs\tab_installation.md,docs\agents\tasks\summary-2026-06-09-deploy-script.md` - passed; all UTF-8 without BOM and CRLF.
+- `git diff --check -- docs\deploy.md docs\README.md osafw-app\App_Data\template\dev\manage\docs\tab_installation.md` - passed.
+- `rg -n "[ \t]+$" docs\deploy.md docs\README.md osafw-app\App_Data\template\dev\manage\docs\tab_installation.md docs\agents\tasks\summary-2026-06-09-deploy-script.md` - no trailing whitespace.
 
 ## Decisions - why
 - Moved to repo-contained PowerShell profiles so deploy scripts are maintained through normal commits and server-local edits are avoided.
 - Kept legacy `deploy_sample.bat` unchanged rather than turning it into a wrapper.
 - Added staging in addition to production/develop because original deployment usage includes live/staging/develop instances.
+- Kept `docs/deploy.md` concise and admin-facing instead of duplicating implementation details from `deploy_core.ps1`.
 - Recommended PowerShell as the default mechanism because structured errors, JSON/webhook/status handling, path/date operations, and Scheduled Task registration are less brittle than batch control flow.
 - The Task Scheduler helper must be run elevated, but the scheduled deploy account should usually be a dedicated deploy account rather than local Administrator; it only needs Git credentials and filesystem rights when using `app_offline.htm`.
 - Used a temporary git worktree so publish can happen before the live repo hard reset, minimizing downtime on small Windows instances.

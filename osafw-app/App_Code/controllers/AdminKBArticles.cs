@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class AdminKBArticlesController : FwAdminController
+public class AdminKBArticlesController : FwDynamicController
 {
     public static new int access_level = Users.ACL_MANAGER;
 
@@ -13,15 +13,10 @@ public class AdminKBArticlesController : FwAdminController
     public override void init(FW fw)
     {
         base.init(fw);
-        model = fw.model<KBArticles>();
-        model0 = model;
-
         base_url = "/Admin/KBArticles";
-        required_fields = "iname content_markdown";
-        save_fields = "icode iname idesc content_markdown access_level status";
-        search_fields = "icode iname idesc content_markdown";
-        list_sortdef = "upd_time desc";
-        list_sortmap = Utils.qh("id|id icode|icode iname|iname access_level|access_level upd_time|upd_time status|status");
+        loadControllerConfig();
+        model = model0 as KBArticles ?? throw new FwConfigUndefinedModelException();
+        db = model.getDB();
     }
 
     /// <summary>
@@ -33,7 +28,7 @@ public class AdminKBArticlesController : FwAdminController
             throw new AuthException("Bad access - Not authorized");
     }
 
-    public override FwDict? IndexAction()
+    public override FwDict IndexAction()
     {
         if (!areTablesReady())
         {
@@ -41,11 +36,14 @@ public class AdminKBArticlesController : FwAdminController
             {
                 ["title"] = "Knowledge Base",
                 ["base_url"] = base_url,
+                ["count"] = 0,
+                ["f"] = reqh("f"),
                 ["tables_ready"] = false,
+                ["is_site_admin"] = fw.model<Users>().isSiteAdmin(),
             };
         }
 
-        var ps = base.IndexAction() ?? [];
+        var ps = base.IndexAction();
         ps["tables_ready"] = true;
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
         return ps;
@@ -63,6 +61,9 @@ public class AdminKBArticlesController : FwAdminController
 
     public override FwDict ShowAction(int id)
     {
+        if (!areTablesReady())
+            throw new UserException("Knowledge base tables are not installed.");
+
         model.checkAccess(id);
         var ps = base.ShowAction(id) ?? [];
         ps["chunk_count"] = countArticleChunks(id);
@@ -71,21 +72,14 @@ public class AdminKBArticlesController : FwAdminController
 
     public override FwDict ShowFormAction(int id = 0)
     {
+        if (!areTablesReady())
+            throw new UserException("Knowledge base tables are not installed.");
+
         if (id > 0)
             model.checkAccess(id);
 
-        if (id == 0)
-        {
-            form_new_defaults = new FwDict
-            {
-                ["access_level"] = Users.ACL_MEMBER,
-                ["status"] = FwModel.STATUS_ACTIVE
-            };
-        }
-
         var ps = base.ShowFormAction(id) ?? [];
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
-        ps["select_options_access_level"] = accessLevelOptions((ps["i"] as FwDict ?? [])["access_level"].toStr());
         ps["chunk_count"] = id > 0 ? countArticleChunks(id) : 0;
         return ps;
     }
@@ -95,22 +89,52 @@ public class AdminKBArticlesController : FwAdminController
         route_onerror = FW.ACTION_SHOW_FORM;
         checkReadOnly();
 
+        if (!areTablesReady())
+            throw new UserException("Knowledge base tables are not installed.");
+
+        if (id > 0)
+            model.checkAccess(id);
+
+        if (reqb("refresh"))
+        {
+            fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
+            return null;
+        }
+
         var item = reqh("item");
+        var itemOld = id > 0 ? model.one(id) : [];
         var isNew = id == 0;
         if (string.IsNullOrWhiteSpace(item["icode"].toStr()))
-            item["icode"] = buildArticleCode(item["iname"].toStr(), id);
+            item["icode"] = itemOld.Count > 0 && string.IsNullOrWhiteSpace(item["iname"].toStr())
+                ? itemOld["icode"].toStr()
+                : buildArticleCode(item["iname"].toStr(), id);
 
         Validate(id, item);
 
         var itemdb = FormUtils.filter(item, save_fields);
-        itemdb["access_level"] = itemdb["access_level"].toInt(Users.ACL_MEMBER);
-        itemdb["status"] = itemdb["status"].toInt(FwModel.STATUS_ACTIVE);
+        itemdb["access_level"] = itemdb.ContainsKey("access_level")
+            ? itemdb["access_level"].toInt(Users.ACL_MEMBER)
+            : itemOld["access_level"].toInt(Users.ACL_MEMBER);
+        itemdb["status"] = itemdb.ContainsKey("status")
+            ? itemdb["status"].toInt(FwModel.STATUS_ACTIVE)
+            : itemOld["status"].toInt(FwModel.STATUS_ACTIVE);
         id = modelAddOrUpdate(id, itemdb);
 
         bool queued = model.reindexKBArticle(id);
         fw.flash(queued ? "success" : "info", queued ? "Knowledge base article queued for indexing." : "Knowledge base article saved. Indexing is pending assistant setup or provider availability.");
 
         return afterSave(true, id, isNew);
+    }
+
+    public override string applyViewListConversions(string fieldname, FwDict row, FwDict hconversions)
+    {
+        if (fieldname == "access_level")
+            return FormUtils.selectTplName("/admin/kbarticles/access_level.sel", row[fieldname].toStr());
+
+        if (fieldname == "status")
+            return FormUtils.selectTplName("/common/sel/status.sel", row[fieldname].toStr());
+
+        return base.applyViewListConversions(fieldname, row, hconversions);
     }
 
     public override void Validate(int id, FwDict item)
@@ -158,18 +182,6 @@ public class AdminKBArticlesController : FwAdminController
         {
             return 0;
         }
-    }
-
-    private string accessLevelOptions(string selected)
-    {
-        var rows = new FwList
-        {
-            DB.h("id", Users.ACL_MEMBER, "iname", "Member"),
-            DB.h("id", Users.ACL_MANAGER, "iname", "Manager"),
-            DB.h("id", Users.ACL_ADMIN, "iname", "Administrator"),
-            DB.h("id", Users.ACL_SITEADMIN, "iname", "Site Administrator")
-        };
-        return FormUtils.selectOptions(rows, selected);
     }
 
     private static string buildArticleCode(string value, int id)
