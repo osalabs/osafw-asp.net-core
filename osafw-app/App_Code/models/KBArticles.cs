@@ -109,6 +109,25 @@ public class KBArticles : FwModel<KBArticles.Row>
         return fw.model<RagChunks>().countByEntity(FwEntities.ICODE_KB, id);
     }
 
+    public bool updateContentIfBlank(int id, string contentMarkdown)
+    {
+        contentMarkdown = contentMarkdown?.Trim() ?? string.Empty;
+        if (id <= 0 || string.IsNullOrWhiteSpace(contentMarkdown))
+            return false;
+
+        int affected = db.exec($@"update {qTable()}
+                                     set content_markdown=@content_markdown,
+                                         upd_time={db.sqlNOW()},
+                                         upd_users_id=@upd_users_id
+                                   where id=@id
+                                     and (content_markdown is null or content_markdown='')", DB.h(
+            "@content_markdown", contentMarkdown,
+            "@upd_users_id", fw.userId,
+            "@id", id
+        ));
+        return affected > 0;
+    }
+
     public bool reindexKBArticle(int id)
     {
         try

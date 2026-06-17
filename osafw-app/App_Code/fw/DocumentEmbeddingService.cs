@@ -14,9 +14,13 @@ public class DocumentEmbeddingService
 {
     private const int DefaultMaxIndexChars = 200000;
     private const int DefaultMaxIndexChunks = 80;
+    private const int MaxSummaryPromptChars = 24000;
+    private const int MaxSummaryOutputChars = 6000;
 
     private readonly FW fw;
     private readonly List<IDocumentParser> parsers;
+
+    private sealed record ParsedAttachmentDocument(int AttId, string Filename, string Text, IReadOnlyList<string> Sections);
 
     public DocumentEmbeddingService(FW fw)
     {
@@ -81,6 +85,9 @@ public class DocumentEmbeddingService
                 RagSources.SOURCE_TYPE_ASSISTANT_UPLOAD => await buildAttachmentSourceChunksAsync(source, cancellationToken).ConfigureAwait(false),
                 _ => []
             };
+
+            if (source.source_type == RagSources.SOURCE_TYPE_KB_ATTACHMENT && chunks.Count > 0)
+                await autofillKBArticleContentFromAttachmentsAsync(source.item_id, cancellationToken).ConfigureAwait(false);
 
             if (chunks.Count > 0)
             {
@@ -207,17 +214,189 @@ public class DocumentEmbeddingService
     private async Task<List<RagChunks.ChunkEmbedding>> buildFileChunksAsync(RagSources.Row source, string filepath, string ext, string filename, CancellationToken cancellationToken)
     {
         var records = new List<RagChunks.ChunkEmbedding>();
-        var parser = parsers.FirstOrDefault(p => p.CanParse(ext));
-        if (parser == null)
+        var parsed = await parseFileAsync(filepath, ext, cancellationToken).ConfigureAwait(false);
+        if (parsed == null)
             return records;
 
-        var parsed = await parser.ParseAsync(filepath, cancellationToken).ConfigureAwait(false);
         var blocks = parsed.Blocks.Count > 0 ? parsed.Blocks : MarkdownChunker.SplitToBlocks(parsed.Markdown).ToList();
         int chunkIndex = 0;
         foreach (var block in limitBlocks(blocks))
             chunkIndex = await appendBlockChunksAsync(source, block, filename, chunkIndex, records, cancellationToken).ConfigureAwait(false);
 
         return records;
+    }
+
+    private async Task autofillKBArticleContentFromAttachmentsAsync(int kbId, CancellationToken cancellationToken)
+    {
+        if (kbId <= 0)
+            return;
+
+        var kbModel = fw.model<KBArticles>();
+        var article = kbModel.one(kbId);
+        if (article.Count == 0 || !string.IsNullOrWhiteSpace(article["content_markdown"].toStr()))
+            return;
+
+        var documents = await listParsedKBAttachmentsAsync(kbId, cancellationToken).ConfigureAwait(false);
+        if (documents.Count == 0)
+            return;
+
+        string summary;
+        try
+        {
+            summary = await generateKBAttachmentSummaryAsync(article, documents, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            fw.logger(LogLevel.WARN, "KB attachment summary generation failed; using fallback summary: ", ex.Message);
+            summary = renderKBAttachmentSummaryFallback(article["iname"].toStr(), documents);
+        }
+
+        if (string.IsNullOrWhiteSpace(summary))
+            summary = renderKBAttachmentSummaryFallback(article["iname"].toStr(), documents);
+
+        if (kbModel.updateContentIfBlank(kbId, trimSummary(summary)))
+            fw.model<RagSources>().queueKBArticleBody(kbId);
+    }
+
+    private async Task<List<ParsedAttachmentDocument>> listParsedKBAttachmentsAsync(int kbId, CancellationToken cancellationToken)
+    {
+        List<ParsedAttachmentDocument> result = [];
+        var atts = fw.model<Att>().listByEntity(FwEntities.ICODE_KB, kbId);
+        foreach (FwDict att in atts)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            int attId = att["id"].toInt();
+            string ext = normalizeExtension(att["ext"].toStr());
+            if (attId <= 0 || !IsSupported(ext))
+                continue;
+
+            string filepath = resolveAttachmentPath(att);
+            if (string.IsNullOrWhiteSpace(filepath) || !File.Exists(filepath))
+                continue;
+
+            var parsed = await parseFileAsync(filepath, ext, cancellationToken).ConfigureAwait(false);
+            if (parsed == null)
+                continue;
+
+            var blocks = parsed.Blocks.Count > 0 ? parsed.Blocks : MarkdownChunker.SplitToBlocks(parsed.Markdown).ToList();
+            string text = string.Join("\n\n", blocks.Select(static block => block.Text).Where(static text => !string.IsNullOrWhiteSpace(text))).Trim();
+            if (string.IsNullOrWhiteSpace(text))
+                text = parsed.Markdown.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            var sections = blocks
+                .Select(static block => block.Section?.Trim() ?? string.Empty)
+                .Where(static section => section.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToList();
+            result.Add(new ParsedAttachmentDocument(attId, att["fname"].toStr(att["iname"].toStr()), text, sections));
+        }
+
+        return result;
+    }
+
+    private async Task<ParseResult?> parseFileAsync(string filepath, string ext, CancellationToken cancellationToken)
+    {
+        var parser = parsers.FirstOrDefault(p => p.CanParse(ext));
+        if (parser == null)
+            return null;
+
+        return await parser.ParseAsync(filepath, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string> generateKBAttachmentSummaryAsync(FwDict article, List<ParsedAttachmentDocument> documents, CancellationToken cancellationToken)
+    {
+        string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+        if (string.IsNullOrWhiteSpace(model))
+            model = LLM.MODEL_GPT5_MINI;
+
+        string systemPrompt = renderKBAttachmentSummarySystemPrompt();
+        string userPrompt = renderKBAttachmentSummaryUserPrompt(article["iname"].toStr(), documents);
+        return await fw.model<LLM>().responseTextAsync(model, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+    }
+
+    private string renderKBAttachmentSummarySystemPrompt()
+    {
+        return fw.parsePage("/assistant/prompts", "kb_summary_system.md", []).Trim();
+    }
+
+    private string renderKBAttachmentSummaryUserPrompt(string articleTitle, List<ParsedAttachmentDocument> documents)
+    {
+        return fw.parsePage("/assistant/prompts", "kb_summary_user.md", buildKBAttachmentSummaryPromptData(articleTitle, documents)).Trim();
+    }
+
+    private string renderKBAttachmentSummaryFallback(string articleTitle, List<ParsedAttachmentDocument> documents)
+    {
+        return fw.parsePage("/assistant/prompts", "kb_summary_fallback.md", buildKBAttachmentSummaryFallbackData(articleTitle, documents)).Trim();
+    }
+
+    private static FwDict buildKBAttachmentSummaryPromptData(string articleTitle, List<ParsedAttachmentDocument> documents)
+    {
+        FwList rows = [];
+        int remaining = MaxSummaryPromptChars;
+        foreach (var document in documents)
+        {
+            if (remaining <= 0)
+                break;
+
+            string text = truncate(document.Text, Math.Min(remaining, 6000));
+            remaining -= text.Length;
+            rows.Add(DB.h(
+                "filename", document.Filename,
+                "sections_text", string.Join("; ", document.Sections),
+                "text", text
+            ));
+        }
+
+        return DB.h(
+            "article_title", articleTitle?.Trim() ?? string.Empty,
+            "documents", rows
+        );
+    }
+
+    private static FwDict buildKBAttachmentSummaryFallbackData(string articleTitle, List<ParsedAttachmentDocument> documents)
+    {
+        FwList rows = [];
+        foreach (var document in documents)
+        {
+            rows.Add(DB.h(
+                "filename", document.Filename,
+                "sections_preview", string.Join("; ", document.Sections.Take(4))
+            ));
+        }
+
+        FwList highlights = [];
+        foreach (var document in documents.Take(5))
+        {
+            highlights.Add(DB.h(
+                "filename", document.Filename,
+                "highlight", truncate(Regex.Replace(document.Text, @"\s+", " ").Trim(), 700)
+            ));
+        }
+
+        return DB.h(
+            "article_title", articleTitle?.Trim() ?? string.Empty,
+            "documents", rows,
+            "highlights", highlights
+        );
+    }
+
+    private static string trimSummary(string summary)
+    {
+        summary = (summary ?? string.Empty).Trim();
+        if (summary.StartsWith("```", StringComparison.Ordinal))
+        {
+            var lines = Regex.Split(summary, "\r\n|\r|\n").ToList();
+            if (lines.Count > 0 && lines[0].StartsWith("```", StringComparison.Ordinal))
+                lines.RemoveAt(0);
+            if (lines.Count > 0 && lines[^1].Trim().StartsWith("```", StringComparison.Ordinal))
+                lines.RemoveAt(lines.Count - 1);
+            summary = string.Join(Environment.NewLine, lines).Trim();
+        }
+        return truncate(summary, MaxSummaryOutputChars).Trim();
     }
 
     private async Task<List<RagChunks.ChunkEmbedding>> buildTextChunksAsync(RagSources.Row source, string text, string filename, string section, CancellationToken cancellationToken)
@@ -319,6 +498,14 @@ public class DocumentEmbeddingService
         string html = Regex.Replace(text, @"<(script|style|noscript|template|svg|canvas)[\s\S]*?</\1>", " ", RegexOptions.IgnoreCase);
         html = Regex.Replace(html, @"<(p|div|section|article|br|li|tr|h[1-6])[^>]*>", "\n", RegexOptions.IgnoreCase);
         return Regex.Replace(WebUtility.HtmlDecode(Regex.Replace(html, "<[^>]+>", " ")), @"[ \t]{2,}", " ").Trim();
+    }
+
+    private static string truncate(string value, int maxLength)
+    {
+        value ??= string.Empty;
+        if (maxLength <= 0 || value.Length <= maxLength)
+            return value;
+        return value[..maxLength].TrimEnd() + "\n\n[truncated]";
     }
 
     private static string normalizeExtension(string ext)

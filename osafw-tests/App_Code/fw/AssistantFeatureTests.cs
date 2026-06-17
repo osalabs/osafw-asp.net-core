@@ -1,6 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -128,6 +131,97 @@ public class AssistantFeatureTests
         Assert.IsTrue(chunks.Count > 1);
         Assert.IsTrue(chunks.All(chunk => chunk.Length <= 100));
         Assert.AreEqual(text.Substring(80, 20), chunks[1][..20]);
+    }
+
+    [TestMethod]
+    public void DocumentEmbeddingService_TrimSummaryRemovesMarkdownFence()
+    {
+        string normalized = invokePrivateStatic<string>(typeof(DocumentEmbeddingService), "trimSummary", """
+        ```markdown
+        ## Summary
+
+        Uploaded file summary.
+        ```
+        """);
+
+        Assert.AreEqual("## Summary\r\n\r\nUploaded file summary.", normalized.Replace("\r\n", "\n").Replace("\n", "\r\n"));
+    }
+
+    [TestMethod]
+    public void DocumentEmbeddingService_KBSummaryTemplatesUseUploadedFileDetails()
+    {
+        var documentType = typeof(DocumentEmbeddingService).GetNestedType("ParsedAttachmentDocument", BindingFlags.NonPublic);
+        Assert.IsNotNull(documentType);
+        var constructor = documentType!.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Single(ctor => ctor.GetParameters().Length == 4);
+        var documents = (IList)System.Activator.CreateInstance(typeof(List<>).MakeGenericType(documentType))!;
+        documents.Add(constructor.Invoke(
+        [
+            7,
+            "guide.txt",
+            "Install the package. Configure settings. Restart the app.",
+            new List<string> { "Install", "Configure" }
+        ]));
+
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:template"] = Path.Combine(repoRoot(), "osafw-app", "App_Data", "template")
+        });
+        var service = new DocumentEmbeddingService(fw);
+
+        string system = invokePrivate<string>(service, "renderKBAttachmentSummarySystemPrompt");
+        string user = invokePrivate<string>(service, "renderKBAttachmentSummaryUserPrompt", "Guide", documents);
+        string fallback = invokePrivate<string>(service, "renderKBAttachmentSummaryFallback", "Guide", documents);
+
+        StringAssert.Contains(system, "Markdown summaries");
+        StringAssert.Contains(user, "Create Markdown content");
+        StringAssert.Contains(user, "guide.txt");
+        StringAssert.Contains(user, "Install the package.");
+        StringAssert.Contains(fallback, "guide.txt");
+        StringAssert.Contains(fallback, "Install");
+        StringAssert.Contains(fallback, "Configure");
+        StringAssert.Contains(fallback, "Install the package.");
+    }
+
+    [TestMethod]
+    public void KBArticles_DynamicConfigAllowsBlankContentAndAddsKbFileUploads()
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "admin", "kbarticles", "config.json")));
+        var root = doc.RootElement;
+
+        Assert.AreEqual("iname", root.GetProperty("required_fields").GetString());
+
+        var formFields = root.GetProperty("showform_fields").EnumerateArray().ToList();
+        var content = formFields.Single(field => field.TryGetProperty("field", out var value) && value.GetString() == "content_markdown");
+        Assert.IsFalse(content.TryGetProperty("required", out _));
+        string contentClasses = content.GetProperty("class_control").GetString() ?? string.Empty;
+        StringAssert.Contains(contentClasses, "markdown");
+        StringAssert.Contains(contentClasses, "autoresize");
+        string loadScript = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "admin", "kbarticles", "showform", "load_script.html"));
+        StringAssert.Contains(loadScript, "<~/common/markdown_editor>");
+
+        var upload = formFields.Single(field => field.TryGetProperty("field", out var value) && value.GetString() == "kb_files");
+        Assert.AreEqual("att_files_edit", upload.GetProperty("type").GetString());
+        Assert.AreEqual(AttCategories.CAT_GENERAL, upload.GetProperty("att_category").GetString());
+        Assert.AreEqual("kb_files", upload.GetProperty("att_post_prefix").GetString());
+        Assert.AreEqual(FwEntities.ICODE_KB, upload.GetProperty("fwentity").GetString());
+        Assert.IsTrue(upload.GetProperty("multiple").GetBoolean());
+
+        var showFiles = root.GetProperty("show_fields").EnumerateArray().Single(field => field.TryGetProperty("field", out var value) && value.GetString() == "kb_files");
+        Assert.AreEqual("att_files", showFiles.GetProperty("type").GetString());
+        Assert.AreEqual(AttCategories.CAT_GENERAL, showFiles.GetProperty("att_category").GetString());
+    }
+
+    [TestMethod]
+    public void AdminKBArticles_SaveAttFilesOverridesDynamicEntityBinding()
+    {
+        var method = typeof(AdminKBArticlesController).GetMethod(nameof(AdminKBArticlesController.SaveAttFilesAction), [typeof(int)]);
+        Assert.IsNotNull(method);
+        Assert.AreEqual(typeof(AdminKBArticlesController), method!.DeclaringType);
+
+        string source = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "AdminKBArticles.cs"));
+        StringAssert.Contains(source, "idByIcodeOrAdd(FwEntities.ICODE_KB)");
+        StringAssert.Contains(source, "model.reindexKBArticle(id)");
+        StringAssert.Contains(source, "syncKbFilesFromRequest(id)");
     }
 
     [TestMethod]
@@ -288,6 +382,26 @@ public class AssistantFeatureTests
         var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.IsNotNull(method, methodName + " method not found");
         return (T)method.Invoke(target, args)!;
+    }
+
+    private static T invokePrivateStatic<T>(Type type, string methodName, params object?[] args)
+    {
+        var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.IsNotNull(method, methodName + " method not found");
+        return (T)method.Invoke(null, args)!;
+    }
+
+    private static string repoRoot()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "osafw-asp.net-core.sln")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cannot locate repository root from " + Directory.GetCurrentDirectory());
     }
 
     private static void registerSettings(FW fw, Dictionary<string, string>? values = null)

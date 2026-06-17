@@ -1,6 +1,6 @@
 {
     "model": "KBArticles",
-    "required_fields": "iname content_markdown",
+    "required_fields": "iname",
     "save_fields": [
         "icode",
         "iname",
@@ -90,6 +90,12 @@
             "type": "markdown"
         },
         {
+            "field": "kb_files",
+            "label": "Files",
+            "type": "att_files",
+            "att_category": "general"
+        },
+        {
             "type": "col_end"
         },
         {
@@ -159,9 +165,17 @@
             "field": "content_markdown",
             "label": "Content",
             "type": "textarea",
-            "required": true,
             "rows": "16",
-            "class_control": "font-monospace"
+            "class_control": "markdown autoresize font-monospace"
+        },
+        {
+            "field": "kb_files",
+            "label": "Files",
+            "type": "att_files_edit",
+            "att_category": "general",
+            "att_post_prefix": "kb_files",
+            "multiple": true,
+            "fwentity": "kb"
         },
         {
             "type": "col_end"

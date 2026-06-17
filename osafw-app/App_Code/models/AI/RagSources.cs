@@ -72,6 +72,33 @@ public class RagSources : FwModel<RagSources.Row>
             return true;
         }
 
+        queueKBArticleBody(article);
+        queueKBArticleAttachments(kbId);
+        return true;
+    }
+
+    public bool queueKBArticleBody(int kbId)
+    {
+        if (!canQueueSources() || kbId <= 0)
+            return false;
+
+        var article = fw.model<KBArticles>().one(kbId);
+        if (article.Count == 0)
+            return false;
+
+        if (article["status"].toInt() != STATUS_ACTIVE)
+        {
+            deleteByEntity(FwEntities.ICODE_KB, kbId);
+            return true;
+        }
+
+        queueKBArticleBody(article);
+        return true;
+    }
+
+    private void queueKBArticleBody(FwDict article)
+    {
+        int kbId = article["id"].toInt();
         int kbEntityId = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_KB);
         string title = article["iname"].toStr();
         string text = KBArticleText(article);
@@ -86,9 +113,6 @@ public class RagSources : FwModel<RagSources.Row>
             Utils.jsonEncode(DB.h("access_level", article["access_level"].toInt(Users.ACL_MEMBER))),
             Utils.jsonEncode(DB.h("icode", article["icode"].toStr()))
         );
-
-        queueKBArticleAttachments(kbId);
-        return true;
     }
 
     public bool queueKBArticleAttachments(int kbId)
@@ -99,6 +123,7 @@ public class RagSources : FwModel<RagSources.Row>
         int kbEntityId = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_KB);
         var atts = fw.model<Att>().listByEntity(FwEntities.ICODE_KB, kbId);
         var embeddingService = new DocumentEmbeddingService(fw);
+        HashSet<int> currentSupportedAttIds = [];
         foreach (FwDict att in atts)
         {
             int attId = att["id"].toInt();
@@ -109,6 +134,7 @@ public class RagSources : FwModel<RagSources.Row>
             if (!embeddingService.IsSupported(ext))
                 continue;
 
+            currentSupportedAttIds.Add(attId);
             queueSource(
                 SOURCE_TYPE_KB_ATTACHMENT,
                 kbEntityId,
@@ -121,6 +147,8 @@ public class RagSources : FwModel<RagSources.Row>
                 Utils.jsonEncode(DB.h("ext", ext, "fsize", att["fsize"].toLong()))
             );
         }
+
+        deleteMissingKBAttachmentSources(kbEntityId, kbId, currentSupportedAttIds);
         return true;
     }
 
@@ -337,6 +365,26 @@ output inserted.*;";
             fw.model<RagChunks>().deleteBySource(row["id"].toInt());
 
         db.del(table_name, DB.h("fwentities_id", entityId, "item_id", itemId));
+    }
+
+    private void deleteMissingKBAttachmentSources(int kbEntityId, int kbId, HashSet<int> currentSupportedAttIds)
+    {
+        var rows = db.array(table_name, DB.h(
+            "source_type", SOURCE_TYPE_KB_ATTACHMENT,
+            "fwentities_id", kbEntityId,
+            "item_id", kbId,
+            "status", db.opNOT(STATUS_DELETED)
+        ));
+        foreach (FwDict row in rows)
+        {
+            int sourceId = row["id"].toInt();
+            int attId = row["att_id"].toInt();
+            if (sourceId <= 0 || currentSupportedAttIds.Contains(attId))
+                continue;
+
+            fw.model<RagChunks>().deleteBySource(sourceId);
+            db.del(table_name, DB.h("id", sourceId));
+        }
     }
 
     public bool isTablesReady()

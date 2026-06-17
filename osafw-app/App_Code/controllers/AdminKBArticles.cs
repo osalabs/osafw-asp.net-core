@@ -64,6 +64,7 @@ public class AdminKBArticlesController : FwDynamicController
         model.checkAccess(id);
         var ps = base.ShowAction(id) ?? [];
         ps["chunk_count"] = model.countChunks(id);
+        prepareKbAttachmentFields(ps, id);
         return ps;
     }
 
@@ -78,6 +79,7 @@ public class AdminKBArticlesController : FwDynamicController
         var ps = base.ShowFormAction(id) ?? [];
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
         ps["chunk_count"] = id > 0 ? model.countChunks(id) : 0;
+        prepareKbAttachmentFields(ps, id);
         return ps;
     }
 
@@ -116,6 +118,7 @@ public class AdminKBArticlesController : FwDynamicController
             ? itemdb["status"].toInt(FwModel.STATUS_ACTIVE)
             : itemOld["status"].toInt(FwModel.STATUS_ACTIVE);
         id = modelAddOrUpdate(id, itemdb);
+        syncKbFilesFromRequest(id);
 
         bool queued = model.reindexKBArticle(id);
         fw.flash(queued ? "success" : "info", queued ? "Knowledge base article queued for indexing." : "Knowledge base article saved. Indexing is pending assistant setup or provider availability.");
@@ -150,6 +153,61 @@ public class AdminKBArticlesController : FwDynamicController
         return null;
     }
 
+    /// <summary>
+    /// Uploads KB article files under the KB entity code so RAG attachment indexing sees the same records.
+    /// </summary>
+    public override FwDict SaveAttFilesAction(int id)
+    {
+        enforcePost();
+        checkReadOnly();
+        if (!model.isTablesReady())
+            throw new UserException("Knowledge base tables are not installed.");
+
+        model.checkAccess(id);
+
+        var item = reqh("item");
+        var files = fw.request?.Form?.Files;
+        if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
+            throw new UserException("No file(s) selected");
+
+        var modelAtt = fw.model<Att>();
+        var attCategory = fw.model<AttCategories>().oneByIcode(item["att_category"].toStr(AttCategories.CAT_GENERAL));
+        var itemdb = new FwDict
+        {
+            ["item_id"] = id,
+            ["att_categories_id"] = attCategory.Count > 0 ? attCategory["id"].toInt() : null,
+            ["fwentities_id"] = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_KB),
+            ["status"] = FwModel.STATUS_ACTIVE
+        };
+
+        var addedAtt = modelAtt.uploadMulti(itemdb);
+        if (addedAtt.Count > 0)
+            model.reindexKBArticle(id);
+
+        var response = new FwDict();
+        var json = new FwDict();
+        int attId = addedAtt.Count > 0 ? (addedAtt[0] as FwDict)!["id"].toInt() : 0;
+        json["id"] = attId;
+        if (attId > 0)
+        {
+            var itemNew = modelAtt.one(attId);
+            json["icode"] = itemNew["icode"];
+            json["url"] = modelAtt.getUrl(attId);
+            json["url_preview"] = modelAtt.getUrlPreview(attId);
+            json["iname"] = itemNew["iname"];
+            json["is_image"] = itemNew["is_image"];
+            json["fsize"] = itemNew["fsize"];
+            json["ext"] = itemNew["ext"];
+        }
+        else
+        {
+            json["error"] = new FwDict { ["message"] = "File upload error" };
+        }
+
+        response["_json"] = json;
+        return response;
+    }
+
     private static string buildArticleCode(string value, int id)
     {
         string code = Regex.Replace(value ?? string.Empty, @"^\W+", "");
@@ -158,5 +216,48 @@ public class AdminKBArticlesController : FwDynamicController
         if (string.IsNullOrWhiteSpace(code))
             code = id > 0 ? "kb-" + id : "kb-" + Utils.uuid();
         return code.Length > 80 ? code[..80] : code;
+    }
+
+    private void prepareKbAttachmentFields(FwDict ps, int id)
+    {
+        if (id <= 0 || ps["fields"] is not FwList fields)
+            return;
+
+        foreach (var item in fields)
+        {
+            if (item is not FwDict def)
+                continue;
+
+            string type = def["type"].toStr();
+            if (type != "att_files" && type != "att_files_edit")
+                continue;
+
+            if (def["field"].toStr() != "kb_files")
+                continue;
+
+            def["att_category"] = def["att_category"].toStr(AttCategories.CAT_GENERAL);
+            def["att_files"] = fw.model<Att>().listByEntityCategory(FwEntities.ICODE_KB, id, def["att_category"].toStr());
+            if (type == "att_files_edit")
+            {
+                def["att_upload_url"] = base_url + "/(SaveAttFiles)/" + id;
+                def["att_post_prefix"] = "kb_files";
+                def["fwentity"] = FwEntities.ICODE_KB;
+            }
+        }
+    }
+
+    private void syncKbFilesFromRequest(int id)
+    {
+        if (id <= 0 || req("kb_files") == null)
+            return;
+
+        var postedIds = reqh("kb_files");
+        var existing = fw.model<Att>().listByEntityCategory(FwEntities.ICODE_KB, id, AttCategories.CAT_GENERAL);
+        foreach (FwDict row in existing)
+        {
+            string rowId = row["id"].toStr();
+            if (rowId.Length > 0 && !postedIds.ContainsKey(rowId))
+                fw.model<Att>().delete(rowId.toInt(), true);
+        }
     }
 }

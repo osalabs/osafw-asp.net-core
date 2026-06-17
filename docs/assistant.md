@@ -41,12 +41,20 @@ Core tables:
 
 Managers maintain articles at `/Admin/KBArticles`. Saving or reindexing an article queues `rag_sources` rows instead of calling the embedding provider during the request. The worker later parses, chunks, embeds, and writes `rag_chunks`.
 
+Article Content is optional. New articles can be saved with title/access/status first; the edit screen then exposes a standard multi-file upload block. Uploaded files are attached to the KB article entity and reconciled with RAG sources whenever the article is saved, reindexed, or files are uploaded. Removed files also remove stale KB attachment sources and chunks.
+
+When an article has blank Content and supported attachments are indexed, the worker parses the current attachments and asks the configured LLM for a concise Markdown summary. The write is conditional, so user-authored Content is never overwritten. If summary generation fails but parsing succeeds, the worker logs a warning, writes a deterministic Markdown fallback from filenames, headings, and snippets, and continues indexing the uploaded files. After Content is auto-filled, the article body source is queued so the generated summary is indexed too.
+
+KB attachment summary prompts and fallback Markdown are ParsePage templates under `osafw-app/App_Data/template/assistant/prompts/`. Override `kb_summary_system.md`, `kb_summary_user.md`, and `kb_summary_fallback.md` to customize the generated Content wording without changing runtime code.
+
 Indexed source types:
 
 - KB article body.
 - KB article attachments with supported text/HTML/DOCX-like parsers.
 - Published Spages.
 - Files uploaded to assistant messages.
+
+Unsupported KB article files can still be uploaded and shown on the article, but they are not queued for RAG indexing until a matching parser is added.
 
 Article access uses numeric `access_level`. Retrieval queries include `KBArticles.buildAccessWhere()`, so live KB retrieval does not return article chunks above the current user's access level. Shared thread links intentionally expose prepared materialized thread content to recipients.
 
