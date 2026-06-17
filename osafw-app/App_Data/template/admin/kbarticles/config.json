@@ -36,7 +36,7 @@
         "add_time": "Added",
         "upd_time": "Updated"
     },
-    "view_list_custom": "iname status",
+    "view_list_custom": "iname access_level status",
     "list_column_filters": {
         "enabled": true,
         "fields": {

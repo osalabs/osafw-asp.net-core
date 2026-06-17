@@ -96,6 +96,14 @@ public class RagChunks : FwModel<RagChunks.Row>
         updateNativeVectorColumn(id, embeddingJson, record.Embedding.Count);
     }
 
+    public string adminListViewSql()
+    {
+        return $@"(select d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.chunk_index, d.iname, d.idesc, d.page, d.section, d.embedding_dim, d.embedding_model, d.vector_backend, d.metadata_json, d.status, d.add_time, d.upd_time, rs.index_status, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode
+                    from {qTable()} d
+               left join {fw.model<RagSources>().qTable()} rs on rs.id=d.rag_sources_id
+               left join {fw.model<FwEntities>().qTable()} e on e.id=d.fwentities_id) t";
+    }
+
     public async Task<List<ChunkSearchResult>> listByQueryAsync(string query, int limit = 3, CancellationToken cancellationToken = default)
     {
         return await listByQueryFilteredAsync(query, limit, null, null, cancellationToken).ConfigureAwait(false);
@@ -249,6 +257,61 @@ public class RagChunks : FwModel<RagChunks.Row>
         return isNativeVectorTypeAvailable() && isNativeVectorColumnAvailable(dimension);
     }
 
+    public bool isTablesReady()
+    {
+        try
+        {
+            var tables = db.tables().Select(static table => table.ToString() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return tables.Contains(table_name)
+                && tables.Contains(fw.model<RagSources>().table_name)
+                && tables.Contains(fw.model<FwEntities>().table_name);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public int countActive()
+    {
+        return db.value(table_name, DB.h("status", db.opNOT(STATUS_DELETED)), "count(*)").toInt();
+    }
+
+    public int countByEntity(string entityIcode, int itemId)
+    {
+        if (itemId <= 0)
+            return 0;
+
+        int entityId = fw.model<FwEntities>().idByIcode(entityIcode);
+        if (entityId <= 0)
+            return 0;
+
+        return db.value(table_name, DB.h("fwentities_id", entityId, "item_id", itemId, "status", db.opNOT(STATUS_DELETED)), "count(*)").toInt();
+    }
+
+    public FwList listEntityOptions()
+    {
+        string sql = $@"select distinct e.icode as id, e.icode as iname
+                          from {qTable()} d
+                          join {fw.model<FwEntities>().qTable()} e on e.id=d.fwentities_id
+                         where d.status<>@status_deleted
+                      order by e.icode";
+        return db.arrayp(sql, DB.h("@status_deleted", STATUS_DELETED));
+    }
+
+    public FwDict oneWithSource(int id)
+    {
+        if (id <= 0)
+            return [];
+
+        string sql = $@"select d.*, rs.index_status, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode
+                          from {qTable()} d
+                     left join {fw.model<RagSources>().qTable()} rs on rs.id=d.rag_sources_id
+                     left join {fw.model<FwEntities>().qTable()} e on e.id=d.fwentities_id
+                         where d.id=@id";
+        return db.rowp(sql, DB.h("@id", id));
+    }
+
     public bool isNativeVectorTypeAvailable()
     {
         if (db.dbtype != DB.DBTYPE_SQLSRV)
@@ -277,7 +340,7 @@ public class RagChunks : FwModel<RagChunks.Row>
 
         try
         {
-            nativeVectorColumnAvailable = db.valuep("select case when COL_LENGTH(N'dbo.rag_chunks', N'embedding_vector') is null then 0 else 1 end").toBool();
+            nativeVectorColumnAvailable = db.valuep($"select case when COL_LENGTH(N'dbo.{table_name}', N'embedding_vector') is null then 0 else 1 end").toBool();
         }
         catch
         {
@@ -441,7 +504,7 @@ select d.id,
                 d.fwentities_id<>@kb_entity_id
                 or exists (
                     select 1
-                      from kb_articles k
+                      from {fw.model<KBArticles>().qTable()} k
                      where k.id=d.item_id
                        and k.status=@status_active
                        and {fw.model<KBArticles>().buildAccessWhere("k")}

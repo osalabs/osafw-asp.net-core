@@ -35,6 +35,7 @@ Use this file to find the right document quickly instead of searching the whole 
 - [agents/mcp.md](agents/mcp.md): MCP usage and troubleshooting notes.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history index to search before opening full task summaries.
 - [agents/tools/](agents/tools/): reusable helper scripts for scoped repo search and text normalization.
+- [prompts/](prompts/): reusable prompts for recurring development workflows such as framework upgrades, PR reviews, agent reflection, security hardening, docs consistency, and test stabilization.
 
 ## Which Doc to Use
 
@@ -47,3 +48,4 @@ Use this file to find the right document quickly instead of searching the whole 
 - If the task changes Windows/IIS deployment scripts or setup instructions: read `deploy.md`.
 - If the task adds or renames framework methods, variables, constants, or generated module helpers: read `naming.md`.
 - If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`; search `agents/tasks/index.md` before opening old summaries.
+- If starting a recurring maintenance workflow from a reusable prompt: read `prompts/README.md`, then follow the chosen prompt plus the repo instructions.

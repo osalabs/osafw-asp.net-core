@@ -219,7 +219,7 @@ public class RagSources : FwModel<RagSources.Row>
 
     public Row? claimNextPending(string workerId = "")
     {
-        if (!areTablesReady())
+        if (!isTablesReady())
             return null;
 
         if (db.dbtype == DB.DBTYPE_SQLSRV)
@@ -325,7 +325,7 @@ output inserted.*;";
 
     public void deleteByEntity(string entityIcode, int itemId)
     {
-        if (!areTablesReady())
+        if (!isTablesReady())
             return;
 
         int entityId = fw.model<FwEntities>().idByIcode(entityIcode);
@@ -339,17 +339,30 @@ output inserted.*;";
         db.del(table_name, DB.h("fwentities_id", entityId, "item_id", itemId));
     }
 
-    public bool areTablesReady()
+    public bool isTablesReady()
     {
         try
         {
             var tables = db.tables().Select(static table => table.ToString() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return tables.Contains("rag_sources") && tables.Contains("rag_chunks");
+            return tables.Contains(table_name) && tables.Contains(fw.model<RagChunks>().table_name);
         }
         catch
         {
             return false;
         }
+    }
+
+    public int countActive()
+    {
+        return db.value(table_name, DB.h("status", db.opNOT(STATUS_DELETED)), "count(*)").toInt();
+    }
+
+    public int countQueued()
+    {
+        return db.value(table_name, DB.h(
+            "status", db.opNOT(STATUS_DELETED),
+            "index_status", db.opIN(new StrList { INDEX_STATUS_PENDING, INDEX_STATUS_STALE })
+        ), "count(*)").toInt();
     }
 
     public static string BuildSourceKey(string sourceType, int fwentitiesId, int itemId, int attId)
@@ -393,7 +406,7 @@ output inserted.*;";
     {
         return fw.model<Settings>().readBool("ASSISTANT_ENABLED")
             && fw.model<LLM>().isConfigured()
-            && areTablesReady();
+            && isTablesReady();
     }
 
     private static string trimError(string error)

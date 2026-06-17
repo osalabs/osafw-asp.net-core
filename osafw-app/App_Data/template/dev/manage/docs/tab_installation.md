@@ -41,6 +41,7 @@
      - `C:\inetpub\site.domain.name\upload` or `..\App_Data\upload` (for non-public uploads).
 
 7. **Create Scheduled Deploy Script:**
+   - See `docs\deploy.md` for the full production/staging/develop deployment runbook.
    - Keep deploy scripts in the repo under `scripts\`; do not copy them to `C:\inetpub`. Updates to deploy scripts are applied on the next run after the server repo is reset to the newer commit.
    - Edit committed profile scripts once per project/environment:
      - `scripts\deploy_production.ps1` for manual production deployments.

@@ -2,8 +2,9 @@
   <label class="col-form-label col-md-3" for="ivalue">`Setting content`</label>
   <div class="col-md-5">
        <select id="ivalue" name="item[ivalue]" class="form-select" multiple>
-         <option value=""></option>
-         <~select_options_ivalue select="i[ivalue]">
+         <~settings_options repeat inline>
+         <option value="<~id>" <~/common/attr/selected if="is_selected">><~iname></option>
+         </~settings_options>
        </select>
   </div>
 </div>

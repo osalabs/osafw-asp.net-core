@@ -58,7 +58,6 @@ public class AssistantController : FwController
 
         return new FwDict
         {
-            ["title"] = "Assistant",
             ["assistant_status_json"] = Utils.jsonEncode(status),
             ["assistant_history_json"] = Utils.jsonEncode(history),
             ["assistant_thread_json"] = thread == null ? "null" : Utils.jsonEncode(thread),

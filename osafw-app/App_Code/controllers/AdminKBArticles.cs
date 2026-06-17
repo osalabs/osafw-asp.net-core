@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -30,12 +29,10 @@ public class AdminKBArticlesController : FwDynamicController
 
     public override FwDict IndexAction()
     {
-        if (!areTablesReady())
+        if (!model.isTablesReady())
         {
             return new FwDict
             {
-                ["title"] = "Knowledge Base",
-                ["base_url"] = base_url,
                 ["count"] = 0,
                 ["f"] = reqh("f"),
                 ["tables_ready"] = false,
@@ -61,18 +58,18 @@ public class AdminKBArticlesController : FwDynamicController
 
     public override FwDict ShowAction(int id)
     {
-        if (!areTablesReady())
+        if (!model.isTablesReady())
             throw new UserException("Knowledge base tables are not installed.");
 
         model.checkAccess(id);
         var ps = base.ShowAction(id) ?? [];
-        ps["chunk_count"] = countArticleChunks(id);
+        ps["chunk_count"] = model.countChunks(id);
         return ps;
     }
 
     public override FwDict ShowFormAction(int id = 0)
     {
-        if (!areTablesReady())
+        if (!model.isTablesReady())
             throw new UserException("Knowledge base tables are not installed.");
 
         if (id > 0)
@@ -80,7 +77,7 @@ public class AdminKBArticlesController : FwDynamicController
 
         var ps = base.ShowFormAction(id) ?? [];
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
-        ps["chunk_count"] = id > 0 ? countArticleChunks(id) : 0;
+        ps["chunk_count"] = id > 0 ? model.countChunks(id) : 0;
         return ps;
     }
 
@@ -89,7 +86,7 @@ public class AdminKBArticlesController : FwDynamicController
         route_onerror = FW.ACTION_SHOW_FORM;
         checkReadOnly();
 
-        if (!areTablesReady())
+        if (!model.isTablesReady())
             throw new UserException("Knowledge base tables are not installed.");
 
         if (id > 0)
@@ -126,17 +123,6 @@ public class AdminKBArticlesController : FwDynamicController
         return afterSave(true, id, isNew);
     }
 
-    public override string applyViewListConversions(string fieldname, FwDict row, FwDict hconversions)
-    {
-        if (fieldname == "access_level")
-            return FormUtils.selectTplName("/admin/kbarticles/access_level.sel", row[fieldname].toStr());
-
-        if (fieldname == "status")
-            return FormUtils.selectTplName("/common/sel/status.sel", row[fieldname].toStr());
-
-        return base.applyViewListConversions(fieldname, row, hconversions);
-    }
-
     public override void Validate(int id, FwDict item)
     {
         bool result = validateRequired(id, item, required_fields);
@@ -154,34 +140,14 @@ public class AdminKBArticlesController : FwDynamicController
     public FwDict? ReindexAction(int id)
     {
         enforcePost();
+        if (!model.isTablesReady())
+            throw new UserException("Knowledge base tables are not installed.");
+
         model.checkAccess(id);
         bool queued = model.reindexKBArticle(id);
         fw.flash(queued ? "success" : "error", queued ? "Knowledge base article queued for reindexing." : "Knowledge base article could not be queued. Check assistant setup and logs.");
         fw.redirect(base_url + "/" + id);
         return null;
-    }
-
-    private int countArticleChunks(int id)
-    {
-        if (!areTablesReady())
-            return 0;
-
-        try
-        {
-            int entityId = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_KB);
-            if (entityId <= 0)
-                return 0;
-
-            return db.valuep("select count(*) from rag_chunks where fwentities_id=@fwentities_id and item_id=@item_id and status<>@status_deleted", DB.h(
-                "@fwentities_id", entityId,
-                "@item_id", id,
-                "@status_deleted", FwModel.STATUS_DELETED
-            )).toInt();
-        }
-        catch
-        {
-            return 0;
-        }
     }
 
     private static string buildArticleCode(string value, int id)
@@ -192,18 +158,5 @@ public class AdminKBArticlesController : FwDynamicController
         if (string.IsNullOrWhiteSpace(code))
             code = id > 0 ? "kb-" + id : "kb-" + Utils.uuid();
         return code.Length > 80 ? code[..80] : code;
-    }
-
-    private bool areTablesReady()
-    {
-        try
-        {
-            var tables = db.tables().Select(static table => table.ToString() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return tables.Contains("kb_articles") && tables.Contains("rag_sources") && tables.Contains("rag_chunks");
-        }
-        catch
-        {
-            return false;
-        }
     }
 }

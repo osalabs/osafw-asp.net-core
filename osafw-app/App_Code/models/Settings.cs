@@ -10,6 +10,17 @@ namespace osafw;
 public class Settings : FwModel<Settings.Row>
 {
     public const string ICAT_AI = "AI";
+    public const int INPUT_TEXT = 0;
+    public const int INPUT_TEXTAREA = 10;
+    public const int INPUT_SELECT = 20;
+    public const int INPUT_SELECT_MULTI = 21;
+    public const int INPUT_CHECKBOX = 30;
+    public const int INPUT_RADIO = 40;
+    public const int INPUT_DATE = 50;
+    public const int INPUT_NUMBER = 60;
+    public const int INPUT_SWITCH = 70;
+    public const int INPUT_RANGE = 80;
+    public const int INPUT_CREDENTIAL = 90;
 
     public class Row
     {

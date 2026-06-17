@@ -14,18 +14,6 @@ public sealed class AssistantAppService
     private const int DefaultMaxFilesPerMessage = 5;
     private const long DefaultMaxIndexedFileBytes = 5 * 1024 * 1024;
 
-    private static readonly string[] RequiredTables =
-    [
-        "assistant_threads",
-        "assistant_messages",
-        "assistant_runs",
-        "assistant_runs_events",
-        "assistant_feedback",
-        "kb_articles",
-        "rag_sources",
-        "rag_chunks"
-    ];
-
     private readonly FW fw;
 
     private sealed record AssistantOwnerScope(int usersId, string ownerToken);
@@ -38,7 +26,7 @@ public sealed class AssistantAppService
     public AssistantRuntimeStatus RuntimeStatus()
     {
         bool enabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
-        bool tablesReady = areTablesReady();
+        bool tablesReady = isTablesReady();
         bool openAiConfigured = fw.model<LLM>().isConfigured();
         string message = "";
 
@@ -104,7 +92,7 @@ public sealed class AssistantAppService
 
     public List<AssistantThreadPreviewDto> ListHistory(int usersId, string search = "")
     {
-        if (!areTablesReady())
+        if (!isTablesReady())
             return [];
 
         var owner = resolveOwnerScope(usersId, true);
@@ -257,17 +245,32 @@ public sealed class AssistantAppService
             downgradeUncitedConfidence(result);
     }
 
-    private bool areTablesReady()
+    private bool isTablesReady()
     {
         try
         {
             var tables = dbTables();
-            return RequiredTables.All(required => tables.Contains(required, StringComparer.OrdinalIgnoreCase));
+            return requiredTables().All(required => tables.Contains(required, StringComparer.OrdinalIgnoreCase));
         }
         catch
         {
             return false;
         }
+    }
+
+    private string[] requiredTables()
+    {
+        return
+        [
+            fw.model<AssistantThreads>().table_name,
+            fw.model<AssistantMessages>().table_name,
+            fw.model<AssistantRuns>().table_name,
+            fw.model<AssistantRunsEvents>().table_name,
+            fw.model<AssistantFeedback>().table_name,
+            fw.model<KBArticles>().table_name,
+            fw.model<RagSources>().table_name,
+            fw.model<RagChunks>().table_name
+        ];
     }
 
     private Dictionary<string, AssistantSource> listRunEvidenceSources(int runId)
@@ -385,7 +388,7 @@ public sealed class AssistantAppService
 
     private void ensureTablesReady()
     {
-        if (!areTablesReady())
+        if (!isTablesReady())
             throw new UserException("Assistant tables are not installed.");
     }
 

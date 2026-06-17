@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace osafw;
 
@@ -83,6 +84,29 @@ public class KBArticles : FwModel<KBArticles.Row>
     public string getFullUrl(int id)
     {
         return $"/Admin/KBArticles/{id}";
+    }
+
+    public bool isTablesReady()
+    {
+        try
+        {
+            var tables = db.tables().Select(static table => table.ToString() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return tables.Contains(table_name)
+                && tables.Contains(fw.model<RagSources>().table_name)
+                && tables.Contains(fw.model<RagChunks>().table_name);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public int countChunks(int id)
+    {
+        if (id <= 0 || !isTablesReady())
+            return 0;
+
+        return fw.model<RagChunks>().countByEntity(FwEntities.ICODE_KB, id);
     }
 
     public bool reindexKBArticle(int id)

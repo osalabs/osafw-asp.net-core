@@ -14,7 +14,6 @@
         "vector_backend": "vector_backend",
         "add_time": "add_time"
     },
-    "list_view": "(select d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.chunk_index, d.iname, d.idesc, d.page, d.section, d.embedding_dim, d.embedding_model, d.vector_backend, d.metadata_json, d.status, d.add_time, d.upd_time, rs.index_status, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode from rag_chunks d left join rag_sources rs on rs.id=d.rag_sources_id left join fwentities e on e.id=d.fwentities_id) t",
     "is_dynamic_index": true,
     "view_list_defaults": "iname source_title entity_icode item_id index_status embedding_dim vector_backend add_time",
     "view_list_map": {

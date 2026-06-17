@@ -43,7 +43,7 @@ The canonical schema is in `osafw-app/App_Data/sql/fwdatabase.sql`, with provide
 | `iname` | Human-facing name shown in the admin list and edit form. |
 | `idesc` | Help text shown under the setting name on the edit form. |
 | `input` | Admin form input type selector. See "Admin inputs" below. |
-| `allowed_values` | Reserved option source for select-like inputs. Values are space-separated; use `&nbsp;` inside a value that needs a space. |
+| `allowed_values` | Control metadata. Option controls use space-separated `value|Label` tokens; number/range controls use key/value tokens such as `min|1 max|100 step|1`. Use `&nbsp;` inside labels that need spaces. |
 | `is_user_edit` | Metadata flag for whether administrators are expected to edit the setting. Current `AdminSettingsController` does not enforce it. |
 | `add_time`, `add_users_id`, `upd_time`, `upd_users_id` | Standard audit columns populated through model insert/update paths. |
 
@@ -61,11 +61,11 @@ The canonical schema is in `osafw-app/App_Data/sql/fwdatabase.sql`, with provide
 - Category tabs come from `Settings.listCategories()` and filter on `settings.icat`.
 - The add route redirects back to the list. Settings are intended to be seeded by schema/update scripts or by runtime code.
 - Save updates only `ivalue`; it does not allow changing `icode`, category, input type, labels, or descriptions from the admin form.
-- `ivalue` is required by the current controller validation.
+- Most controls require a submitted `ivalue`. Switches save `0` when omitted; checkbox and multi-select controls may save an empty string; blank credential submissions keep the stored value unchanged.
 - Delete is blocked with `Site Settings cannot be deleted`.
 - Saving clears the `main_menu` cache key.
 
-Because the admin list displays a truncated `ivalue`, do not put secrets in Site Settings unless the operational model accepts that admins with this screen can inspect and edit them.
+Credential settings are redacted in the admin list. Other settings display a truncated `ivalue`, so do not put secrets in non-credential settings unless the operational model accepts that admins with this screen can inspect and edit them.
 
 ## Admin Inputs
 
@@ -75,13 +75,35 @@ The `input` column chooses which form partial renders `ivalue`:
 | --- | --- | --- |
 | `0` | `input_input.html` | Single-line text input. |
 | `10` | `input_textarea.html` | Multi-line textarea. |
-| `20` | `input_select.html` | Select element, but `AdminSettingsController` does not currently populate `select_options_ivalue`. |
-| `21` | `input_selectmulti.html` | Multi-select element, but option population is not currently wired. |
-| `30` | `input_checkbox.html` | Placeholder partial. Do not use without implementing rendering and save handling. |
-| `40` | `input_radio.html` | Placeholder partial. Do not use without implementing rendering and save handling. |
+| `20` | `input_select.html` | Single select from `allowed_values`; submitted values must match an allowed option. |
+| `21` | `input_selectmulti.html` | Multi-select from `allowed_values`; selected values are stored as a comma-separated string. |
+| `30` | `input_checkbox.html` | Checkbox group from `allowed_values`; checked option values are stored as a stable comma-separated string. |
+| `40` | `input_radio.html` | Radio group from `allowed_values`; submitted values must match an allowed option. |
 | `50` | `input_date.html` | Date input with the shared calendar helper; value is formatted through the template date formatter. |
+| `60` | `input_number.html` | HTML number input. The controller validates that `ivalue` is numeric and matches configured min, max, and step metadata before saving. |
+| `70` | `input_switch.html` | Bootstrap 5 switch. Checked saves `1`; unchecked saves `0`. |
+| `80` | `input_range.html` | Range slider plus direct number input. The controller validates number, min, max, and step metadata. |
+| `90` | `input_credential.html` | Textarea for credentials. The current value is never shown in the textarea; blank save keeps the existing value. |
 
-Prefer `0`, `10`, or `50` unless the option-based partials are completed for the target app. If you enable select, multi-select, checkbox, or radio settings, update `AdminSettingsController.ShowFormAction()` and the relevant partials so options and submitted values are handled consistently.
+Option controls read `allowed_values` as space-separated tokens:
+
+```txt
+auto|Auto json|JSON native|Native
+```
+
+For labels containing spaces, encode spaces as `&nbsp;`:
+
+```txt
+safe|Safe&nbsp;Mode fast|Fast
+```
+
+Number and range controls read `allowed_values` as metadata:
+
+```txt
+min|1 max|100 step|1
+```
+
+Credential controls are masking/editing controls only. They do not encrypt the stored value; administrators with database access can still read `settings.ivalue`.
 
 ## Adding A Setting
 
@@ -115,6 +137,7 @@ When choosing metadata:
 - Pick a short `icat` that groups related settings. Leave it empty for the default Site tab.
 - Keep `iname` and `idesc` precise enough for admins to edit without code context.
 - Store canonical values in `ivalue`, such as `0`/`1` for booleans and integer strings for limits.
+- Use `input=90` for API keys, tokens, and similar credentials that should not be echoed on list/edit screens.
 - Keep defaults in sync between seeded rows and any runtime fallback passed to `read(..., defaultValue)`.
 
 ## Common Pitfalls
@@ -122,5 +145,5 @@ When choosing metadata:
 - Missing rows silently read as empty strings. Use typed reads with explicit defaults when a missing setting should not disable a feature accidentally.
 - `write()` can create settings that have no label, category, or admin input metadata. Seed administrator-facing settings explicitly.
 - `is_user_edit` is not an authorization check. Restrict sensitive settings by route access, controller changes, or a dedicated configuration path.
-- Option-based input metadata is schema-ready but not fully wired in the current admin module.
+- A blank credential save preserves the old value. Add a dedicated clear control if a setting needs administrator-driven clearing.
 - If changing settings affects cached UI or derived state, clear the relevant cache keys after writes. The built-in admin save path only clears `main_menu`.

@@ -18,6 +18,8 @@ public class AdminRagChunksController : FwDynamicController
         loadControllerConfig();
         model = model0 as RagChunks ?? throw new FwConfigUndefinedModelException();
         db = model.getDB();
+        list_view = model.adminListViewSql();
+        config["list_view"] = list_view;
         is_readonly = true;
     }
 
@@ -32,12 +34,10 @@ public class AdminRagChunksController : FwDynamicController
 
     public override FwDict IndexAction()
     {
-        if (!areTablesReady())
+        if (!model.isTablesReady())
         {
             var psNotReady = new FwDict
             {
-                ["title"] = "RAG Chunks",
-                ["base_url"] = base_url,
                 ["count"] = 0,
                 ["f"] = reqh("f"),
                 ["tables_ready"] = false,
@@ -73,15 +73,10 @@ public class AdminRagChunksController : FwDynamicController
 
     public override FwDict ShowAction(int id)
     {
-        if (!areTablesReady())
+        if (!model.isTablesReady())
             throw new UserException("Assistant tables are not installed.");
 
-        string sql = $@"select d.*, rs.index_status, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode
-                          from {db.qid("rag_chunks")} d
-                     left join {db.qid("rag_sources")} rs on rs.id=d.rag_sources_id
-                     left join {db.qid("fwentities")} e on e.id=d.fwentities_id
-                         where d.id=@id";
-        var item = db.rowp(sql, DB.h("@id", id));
+        var item = model.oneWithSource(id);
         if (item.Count == 0)
             throw new NotFoundException();
 
@@ -117,7 +112,6 @@ public class AdminRagChunksController : FwDynamicController
         ps["embedding_preview"] = preview;
         setPSReturnContext(ps);
         ps["related_id"] = related_id;
-        ps["base_url"] = base_url;
         ps["is_readonly"] = true;
         ps["tab"] = form_tab;
         ps["rbac"] = rbac;
@@ -127,6 +121,9 @@ public class AdminRagChunksController : FwDynamicController
     public FwDict? DeleteEntityAction()
     {
         enforcePost();
+        if (!model.isTablesReady())
+            throw new UserException("Assistant tables are not installed.");
+
         string entityIcode = reqs("entity_icode");
         int itemId = reqi("item_id");
         if (string.IsNullOrWhiteSpace(entityIcode) || itemId <= 0)
@@ -157,29 +154,10 @@ public class AdminRagChunksController : FwDynamicController
             return;
         }
 
-        ps["entities"] = db.arrayp($@"select distinct e.icode as id, e.icode as iname
-                                        from {db.qid("rag_chunks")} d
-                                        join {db.qid("fwentities")} e on e.id=d.fwentities_id
-                                       where d.status<>@status_deleted
-                                    order by e.icode", DB.h("@status_deleted", FwModel.STATUS_DELETED));
-        ps["chunk_count"] = db.valuep("select count(*) from rag_chunks where status<>@status_deleted", DB.h("@status_deleted", FwModel.STATUS_DELETED)).toInt();
-        ps["source_count"] = db.valuep("select count(*) from rag_sources where status<>@status_deleted", DB.h("@status_deleted", FwModel.STATUS_DELETED)).toInt();
-        ps["queued_count"] = db.valuep("select count(*) from rag_sources where status<>@status_deleted and index_status in (@statuses)", DB.h(
-            "@status_deleted", FwModel.STATUS_DELETED,
-            "statuses", new StrList { RagSources.INDEX_STATUS_PENDING, RagSources.INDEX_STATUS_STALE }
-        )).toInt();
-    }
-
-    private bool areTablesReady()
-    {
-        try
-        {
-            var tables = db.tables().Select(static table => table.ToString() ?? string.Empty).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return tables.Contains("rag_chunks") && tables.Contains("rag_sources") && tables.Contains("fwentities");
-        }
-        catch
-        {
-            return false;
-        }
+        var sources = fw.model<RagSources>();
+        ps["entities"] = model.listEntityOptions();
+        ps["chunk_count"] = model.countActive();
+        ps["source_count"] = sources.countActive();
+        ps["queued_count"] = sources.countQueued();
     }
 }

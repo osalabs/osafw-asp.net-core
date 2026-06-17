@@ -2,7 +2,6 @@
 <table class="table table-sm table-hover list">
     <thead>
         <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
-            <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
             <th data-sort="iname">`Name`</th>
             <th>`Content`</th>
             <!--th data-sort="upd_time">`Updated on`</th-->
@@ -12,9 +11,15 @@
     <tbody class="table-group-divider">
 <~list_rows repeat inline>
         <tr data-url="<~row_click_url>">
-            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
             <td><~iname></td>
-            <td><~ivalue truncate></td>
+            <td>
+                <~switch_value ifeq="input" value="70" inline>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" role="switch" disabled <~/common/attr/checked ifeq="ivalue" value="1">>
+                </div>
+                </~switch_value>
+                <~regular_value ifne="input" value="70" inline><~ivalue_display truncate></~regular_value>
+            </td>
             <!--td><~upd_time></td-->
             <td class="text-nowrap d-print-none text-end">
                 <a href="<~row_click_url>">`Edit`</a>

@@ -3,7 +3,9 @@
   <div class="col-md-5">
        <select id="ivalue" name="item[ivalue]" class="form-select">
          <option value=""></option>
-         <~select_options_ivalue select="i[ivalue]">
+         <~settings_options repeat inline>
+         <option value="<~id>" <~/common/attr/selected if="is_selected">><~iname></option>
+         </~settings_options>
        </select>
   </div>
 </div>

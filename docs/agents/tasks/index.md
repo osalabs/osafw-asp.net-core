@@ -132,3 +132,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-10-pr270-review-fixes.md` - Fixed PR #270 review findings for Vue search persistence, duplicate Vue form-field collection, column-filter inference work, and lookup option caching.
 - `summary-2026-06-12-assistant-port.md` - Ported the optional Assistant/LLM/Knowledge Base feature as a generic read-only RAG assistant with SQL-backed KB/document chunks, admin screens, migrations, docs, and focused tests.
 - `summary-2026-06-12-assistant-premerge.md` - In progress: implementing pre-merge Assistant/Knowledge Base source, queue, retrieval, dashboard, schema, docs, and test changes from the assistant review.
+- `summary-2026-06-17-prompts-folder.md` - Moved reusable development prompts into `docs/prompts/`, added PR review, agent reflection, security, docs-consistency, and test-stabilization prompts, and linked the folder from `docs/README.md`.
