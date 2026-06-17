@@ -89,6 +89,22 @@ function ConvertTo-RepoRelativePath {
     return $fullPath.Substring($repoRootWithSlash.Length)
 }
 
+function ConvertTo-NotificationPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return ""
+    }
+
+    $fullPath = Get-FullDeployPath $Path
+    $repoRootWithSlash = (Get-FullDeployPath $script:RepoRoot) + "\"
+    if (($fullPath + "\").StartsWith($repoRootWithSlash, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $fullPath.Substring($repoRootWithSlash.Length)
+    }
+
+    return Split-Path -Leaf $fullPath
+}
+
 function Get-InferredEnvironmentName {
     param([string]$ScriptName)
 
@@ -147,7 +163,7 @@ function Initialize-DeploySettings {
 
     $script:LogMaxBytes = [long](Get-DeployVariable "LogMaxBytes" 5242880)
     $script:LockStaleMinutes = [int](Get-DeployVariable "LockStaleMinutes" 60)
-    $script:NotifyWebhook = Get-DeployVariable "NotifyWebhook" "https://deploy.engineeredit.com/Notify"
+    $script:NotifyWebhook = Get-DeployVariable "NotifyWebhook" ""
 
     $tempRoot = Get-DeployVariable "TempRoot" $env:TEMP
     if ([string]::IsNullOrWhiteSpace($tempRoot)) {
@@ -257,8 +273,14 @@ function Invoke-LoggedCommand {
     )
 
     Write-DeployLog ("RUN: {0} {1}" -f $FilePath, ($ArgumentList -join " "))
-    $output = & $FilePath @ArgumentList 2>&1
-    $code = $LASTEXITCODE
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = & $FilePath @ArgumentList 2>&1
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
 
     foreach ($line in $output) {
         Write-DeployLog ($line.ToString())
@@ -547,11 +569,11 @@ function Send-DeployNotification {
             branch = $script:GitBranch
             commit = $script:TargetCommit
             machine = $env:COMPUTERNAME
-            repoRoot = $script:RepoRoot
-            appRoot = $script:AppRoot
-            targetFolder = $script:TargetFolder
-            logFile = $script:LogFile
-            statusFile = $script:StatusFile
+            repoRoot = Split-Path -Leaf $script:RepoRoot
+            appRoot = ConvertTo-NotificationPath $script:AppRoot
+            targetFolder = ConvertTo-NotificationPath $script:TargetFolder
+            logFile = ConvertTo-NotificationPath $script:LogFile
+            statusFile = ConvertTo-NotificationPath $script:StatusFile
         }
         Invoke-RestMethod -Uri $script:NotifyWebhook -Method Post -ContentType "application/json" -Body ($payload | ConvertTo-Json -Compress) -TimeoutSec 10 | Out-Null
     } catch {

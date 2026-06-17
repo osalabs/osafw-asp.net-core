@@ -25,9 +25,11 @@ Usually only these values need app-specific changes:
 $EnvironmentName = "Production"
 $GitBranch = "master"
 $DeployName = "deploy-production"
+$NotifyWebhook = ""
 ```
 
 `scripts\deploy_core.ps1` auto-detects repo root, project file, publish target, log folder, status file, state file, and lock folder.
+Set `$NotifyWebhook` to the app-specific deploy notification endpoint when notifications are wanted. Webhook payloads use the repo folder name and repo-relative paths, not absolute server paths.
 
 ## Validate
 
