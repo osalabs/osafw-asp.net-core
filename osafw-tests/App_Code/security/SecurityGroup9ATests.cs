@@ -254,7 +254,8 @@ public class SecurityGroup9ATests
         Assert.IsTrue(developmentOverride.GetProperty("log_pii").GetBoolean());
         Assert.IsTrue(appSettings.TryGetProperty("access_levels", out var accessLevels));
         Assert.IsFalse(appSettings.TryGetProperty("accesss_levels", out _));
-        Assert.IsTrue(accessLevels.TryGetProperty("/Main", out _));
+        Assert.IsTrue(accessLevels.TryGetProperty("/Main", out var mainAccessLevel));
+        Assert.AreEqual(Users.ACL_MEMBER, mainAccessLevel.GetInt32());
     }
 
     private static bool hasUsersIdScope(FwDict parameters)
