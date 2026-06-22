@@ -239,7 +239,7 @@
     body.set('XSS', xss);
     body.set('thread_id', thread.id);
     body.set('message_id', button.dataset.messageId || '');
-    body.set('run_id', thread.active_run && thread.active_run.id ? thread.active_run.id : '');
+    body.set('run_id', button.dataset.runId || '');
     body.set('feedback_type', button.dataset.assistantFeedback);
     await postForm(baseUrl + '/(Feedback)', body);
     button.disabled = true;
@@ -371,11 +371,12 @@
       const badgeClass = file.is_indexed ? 'text-bg-success' : 'text-bg-secondary';
       return '<span class="badge ' + badgeClass + ' me-1" title="' + escapeAttr(indexStatus) + '">' + escapeHtml(file.iname || file.icode || 'file') + '</span>';
     }).join('');
-    const feedback = role === 'assistant'
+    const canFeedback = role === 'assistant' && !isReadonly() && !!message.assistant_runs_id;
+    const responseActions = role === 'assistant'
       ? '<div class="assistant-response-actions d-flex flex-wrap align-items-center gap-2 mt-3">'
         + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-copy-message data-message-id="' + escapeAttr(message.id) + '" title="Copy response" aria-label="Copy response"><i class="bi bi-copy"></i></button>'
-        + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>'
-        + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>'
+        + (canFeedback ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" data-run-id="' + escapeAttr(message.assistant_runs_id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>' : '')
+        + (canFeedback ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" data-run-id="' + escapeAttr(message.assistant_runs_id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>' : '')
         + (message.add_time ? '<span class="small text-muted ms-1 me-1">' + escapeHtml(message.add_time) + '</span>' : '')
         + '</div>'
       : '';
@@ -383,7 +384,7 @@
     wrap.innerHTML = '<div class="assistant-bubble border rounded bg-body shadow-sm p-3"><div class="assistant-message-body">' + escapeHtml(message.content_markdown || '') + '</div>'
       + (attachments ? '<div class="assistant-attachments d-flex flex-wrap gap-2 mt-3">' + attachments + '</div>' : '')
       + (sources ? '<div class="assistant-sources d-flex flex-wrap gap-2 mt-3">' + sources + '</div>' : '')
-      + feedback
+      + responseActions
       + time
       + '</div>';
     return wrap;

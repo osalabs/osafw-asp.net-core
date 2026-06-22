@@ -72,57 +72,58 @@ public sealed class AssistantRunProcessor
 
     public async Task ProcessClaimedRunAsync(FW fw, AssistantRuns.Row run, CancellationToken cancellationToken)
     {
-        var thread = fw.model<AssistantThreads>().oneTyped(run.assistant_threads_id)
-            ?? throw new ApplicationException("Assistant thread not found.");
-        var userMessage = fw.model<AssistantMessages>().oneTyped(run.assistant_messages_id)
-            ?? throw new ApplicationException("Assistant user message not found.");
-
-        initializeUserSession(fw, thread.users_id.GetValueOrDefault());
-
-        var appService = new AssistantAppService(fw);
-        string instructions = BuildChatInstructions(fw, thread.users_id.GetValueOrDefault());
-        var runtime = new AssistantToolRuntime(fw, thread.id, run.id, thread.users_id.GetValueOrDefault());
-        IList<AITool> tools = new AssistantToolCatalog(runtime).Build().Select(static registration => registration.Tool).ToList();
-
-        string apiKey = fw.model<Settings>().read("OPENAI_API_KEY");
-        if (string.IsNullOrWhiteSpace(apiKey))
-            throw new UserException("OpenAI API key is not configured.");
-
-        string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
-        if (string.IsNullOrWhiteSpace(model))
-            model = LLM.MODEL_GPT5_MINI;
-
-        var openAiClient = new OpenAIClient(apiKey);
-#pragma warning disable OPENAI001
-        ResponsesClient responsesClient = openAiClient.GetResponsesClient();
-        ChatClientAgent agent = responsesClient.AsAIAgent(
-            new ChatClientAgentOptions
-            {
-                Name = "Assistant",
-                Description = "Read-only framework knowledge assistant",
-                ChatOptions = new ChatOptions
-                {
-                    Tools = tools,
-                    ToolMode = ChatToolMode.Auto,
-                    AllowMultipleToolCalls = true,
-                }
-            },
-            model,
-            null,
-            loggerFactory,
-            null
-        );
-#pragma warning restore OPENAI001
-
-        var messages = await buildAgentMessagesAsync(fw, thread.id, instructions, cancellationToken).ConfigureAwait(false);
-        AgentSession? session = await loadSessionAsync(agent, thread.provider_thread_id, cancellationToken).ConfigureAwait(false);
-
-        fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_STATUS, "Processing");
-        fw.model<AssistantThreads>().updateLastRunStatus(thread.id, AssistantRuns.STATUS_PROCESSING);
-        fw.logger(LogLevel.DEBUG, "Assistant run start: model=", model, ", thread_id=", thread.id, ", run_id=", run.id, ", messages=", messages.Count, ", tools=", tools.Count);
-
+        AssistantThreads.Row? thread = null;
         try
         {
+            thread = fw.model<AssistantThreads>().oneTyped(run.assistant_threads_id)
+                ?? throw new ApplicationException("Assistant thread not found.");
+            var userMessage = fw.model<AssistantMessages>().oneTyped(run.assistant_messages_id)
+                ?? throw new ApplicationException("Assistant user message not found.");
+
+            initializeUserSession(fw, thread.users_id.GetValueOrDefault());
+
+            var appService = new AssistantAppService(fw);
+            string instructions = BuildChatInstructions(fw, thread.users_id.GetValueOrDefault());
+            var runtime = new AssistantToolRuntime(fw, thread.id, run.id, thread.users_id.GetValueOrDefault());
+            IList<AITool> tools = new AssistantToolCatalog(runtime).Build().Select(static registration => registration.Tool).ToList();
+
+            string apiKey = fw.model<Settings>().read("OPENAI_API_KEY");
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new UserException("OpenAI API key is not configured.");
+
+            string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+            if (string.IsNullOrWhiteSpace(model))
+                model = LLM.MODEL_GPT5_MINI;
+
+            var openAiClient = new OpenAIClient(apiKey);
+#pragma warning disable OPENAI001
+            ResponsesClient responsesClient = openAiClient.GetResponsesClient();
+            ChatClientAgent agent = responsesClient.AsAIAgent(
+                new ChatClientAgentOptions
+                {
+                    Name = "Assistant",
+                    Description = "Read-only framework knowledge assistant",
+                    ChatOptions = new ChatOptions
+                    {
+                        Tools = tools,
+                        ToolMode = ChatToolMode.Auto,
+                        AllowMultipleToolCalls = true,
+                    }
+                },
+                model,
+                null,
+                loggerFactory,
+                null
+            );
+#pragma warning restore OPENAI001
+
+            var messages = await buildAgentMessagesAsync(fw, thread.id, instructions, cancellationToken).ConfigureAwait(false);
+            AgentSession? session = await loadSessionAsync(agent, thread.provider_thread_id, cancellationToken).ConfigureAwait(false);
+
+            fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_STATUS, "Processing");
+            fw.model<AssistantThreads>().updateLastRunStatus(thread.id, AssistantRuns.STATUS_PROCESSING);
+            fw.logger(LogLevel.DEBUG, "Assistant run start: model=", model, ", thread_id=", thread.id, ", run_id=", run.id, ", messages=", messages.Count, ", tools=", tools.Count);
+
             var response = await agent.RunAsync<AssistantResult>(
                 messages,
                 session,
@@ -176,6 +177,12 @@ public sealed class AssistantRunProcessor
         }
         catch (AssistantClarificationRequestedException ex)
         {
+            if (thread == null)
+            {
+                markClaimedRunFailed(fw, run, thread, ex);
+                return;
+            }
+
             string clarificationJson = Utils.jsonEncode(ex.Clarification);
             _ = fw.model<AssistantMessages>().addMessage(
                 thread.id,
@@ -191,11 +198,7 @@ public sealed class AssistantRunProcessor
         }
         catch (Exception ex)
         {
-            string message = ex is UserException ? ex.Message : "Assistant run failed. Try again later.";
-            fw.model<AssistantRuns>().markFailed(run.id, message);
-            fw.model<AssistantThreads>().updateLastRunStatus(thread.id, AssistantRuns.STATUS_FAILED);
-            fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_ERROR, message);
-            fw.logger(LogLevel.ERROR, "Assistant run failed:", ex.Message);
+            markClaimedRunFailed(fw, run, thread, ex);
         }
     }
 
@@ -240,6 +243,17 @@ public sealed class AssistantRunProcessor
             fw.Session("date_format", user["date_format"]);
         if (!Utils.isEmpty(user["time_format"]))
             fw.Session("time_format", user["time_format"]);
+    }
+
+    private static void markClaimedRunFailed(FW fw, AssistantRuns.Row run, AssistantThreads.Row? thread, Exception ex)
+    {
+        string message = ex is UserException ? ex.Message : "Assistant run failed. Try again later.";
+        fw.model<AssistantRuns>().markFailed(run.id, message);
+        int threadId = thread?.id ?? run.assistant_threads_id;
+        if (threadId > 0)
+            fw.model<AssistantThreads>().updateLastRunStatus(threadId, AssistantRuns.STATUS_FAILED);
+        fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_ERROR, message);
+        fw.logger(LogLevel.ERROR, "Assistant run failed:", ex.Message);
     }
 
     private static async Task<List<Microsoft.Extensions.AI.ChatMessage>> buildAgentMessagesAsync(FW fw, int threadId, string instructions, CancellationToken cancellationToken)

@@ -2,6 +2,10 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-06-22
+
+- Breaking: `FwModel.update(id, item)` and typed model `update(id, dto)` now return `false` when the database reports no affected row instead of always returning `true`. Existing callers that ignored the return value are unaffected; callers that checked it should handle missing/not-updated records explicitly.
+
 ## 2026-06-12
 
 - Breaking: optional Assistant/LLM/Knowledge Base support now uses Microsoft Agent Framework packages and SQL-backed RAG source/chunk tables instead of the old Semantic Kernel SQL-generation prototype. Apps that enable the feature must apply `osafw-app/App_Data/sql/updates/upd2026-06-12-assistant-rag.sql` or the matching MySQL/SQLite update, configure AI settings in the `settings` table, keep `appSettings.ASSISTANT_WORKER_ENABLED=true` only where the hosted worker should run, and remove any app-specific dependency on generated assistant SQL or redirect payloads. The embedding debug screen route is `/Admin/RagChunks`, and the chunk model/table names are `RagChunks`/`rag_chunks` with first-class `RagSources`/`rag_sources`.

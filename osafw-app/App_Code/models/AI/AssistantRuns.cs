@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -95,13 +97,20 @@ public class AssistantRuns : FwModel<AssistantRuns.Row>
         if (row == null || row.id <= 0)
             return null;
 
-        update(row.id, DB.h(
+        int affected = db.update(table_name, DB.h(
             "status", STATUS_PROCESSING,
             "worker_id", workerId,
             "claimed_at", DB.NOW,
             "started_at", DB.NOW,
             "attempt_no", row.attempt_no + 1
+        ), DB.h(
+            "id", row.id,
+            "status", STATUS_QUEUED
         ));
+        if (affected <= 0)
+            return null;
+
+        removeCache(row.id);
         return oneTyped(row.id);
     }
 
@@ -122,11 +131,14 @@ update next_run
        attempt_no=coalesce(attempt_no, 0) + 1,
        upd_time={db.sqlNOW()}
 output inserted.*;";
-        return db.rowp<Row>(sql, DB.h(
+        var row = db.rowp<Row>(sql, DB.h(
             "@status_queued", STATUS_QUEUED,
             "@status_processing", STATUS_PROCESSING,
             "@worker_id", workerId
         ));
+        if (row != null && row.id > 0)
+            removeCache(row.id);
+        return row;
     }
 
     public void markCompleted(int id, int resultMessageId = 0, int activityLogsId = 0)
@@ -197,10 +209,50 @@ output inserted.*;";
         ));
     }
 
+    public int idByResultMessage(int messageId)
+    {
+        if (messageId <= 0)
+            return 0;
+
+        string sql = db.limit($@"select id
+                                  from {qTable()}
+                                 where result_messages_id=@result_messages_id
+                                   and status<>@status_deleted
+                              order by id desc", 1);
+        return db.valuep(sql, DB.h("@result_messages_id", messageId, "@status_deleted", STATUS_DELETED)).toInt();
+    }
+
+    public Dictionary<int, int> listResultRunIdsByMessageIds(IEnumerable<int> messageIds)
+    {
+        var ids = messageIds.Where(static id => id > 0).Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        string sql = $@"select id, result_messages_id
+                          from {qTable()}
+                         where result_messages_id in (@message_ids)
+                           and status<>@status_deleted
+                      order by id";
+        var rows = db.arrayp(sql, DB.h(
+            "message_ids", ids,
+            "@status_deleted", STATUS_DELETED
+        ));
+
+        Dictionary<int, int> result = [];
+        foreach (DBRow row in rows)
+        {
+            int messageId = row["result_messages_id"].toInt();
+            int runId = row["id"].toInt();
+            if (messageId > 0 && runId > 0)
+                result[messageId] = runId;
+        }
+        return result;
+    }
+
     public int requeueStaleProcessingRuns(int staleAfterMinutes = 30)
     {
         if (db.dbtype != DB.DBTYPE_SQLSRV)
-            return 0;
+            return requeueStaleProcessingRunsPortable(staleAfterMinutes);
 
         string sql = $@"
 update {qTable()}
@@ -216,11 +268,35 @@ update {qTable()}
    and claimed_at is not null
    and claimed_at < dateadd(minute, -@stale_after_minutes, {db.sqlNOW()})";
 
-        return db.exec(sql, DB.h(
+        int affected = db.exec(sql, DB.h(
             "@status_queued", STATUS_QUEUED,
             "@status_processing", STATUS_PROCESSING,
             "@stale_after_minutes", staleAfterMinutes <= 0 ? 30 : staleAfterMinutes
         ));
+        if (affected > 0)
+            removeCacheAll();
+        return affected;
+    }
+
+    private int requeueStaleProcessingRunsPortable(int staleAfterMinutes)
+    {
+        var cutoff = db.Now().AddMinutes(-(staleAfterMinutes <= 0 ? 30 : staleAfterMinutes));
+        int affected = db.update(table_name, DB.h(
+            "status", STATUS_QUEUED,
+            "worker_id", string.Empty,
+            "error_message", string.Empty,
+            "clarification_json", string.Empty,
+            "claimed_at", null,
+            "started_at", null,
+            "completed_at", null,
+            "upd_time", DB.NOW
+        ), DB.h(
+            "status", STATUS_PROCESSING,
+            "claimed_at", db.opLT(cutoff)
+        ));
+        if (affected > 0)
+            removeCacheAll();
+        return affected;
     }
 
     public static string StatusToCode(int? status)

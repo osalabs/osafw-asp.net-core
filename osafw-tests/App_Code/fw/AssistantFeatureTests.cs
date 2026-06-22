@@ -306,6 +306,119 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
+    public void AssistantRuns_PortableClaimUsesConditionalUpdateAndStaleRecovery()
+    {
+        string source = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRuns.cs"));
+
+        StringAssert.Contains(source, "int affected = db.update(table_name");
+        StringAssert.Contains(source, "\"status\", STATUS_QUEUED");
+        StringAssert.Contains(source, "if (affected <= 0)");
+        StringAssert.Contains(source, "removeCache(row.id);");
+        StringAssert.Contains(source, "return requeueStaleProcessingRunsPortable(staleAfterMinutes);");
+        StringAssert.Contains(source, "var cutoff = db.Now().AddMinutes");
+        StringAssert.Contains(source, "\"claimed_at\", db.opLT(cutoff)");
+        StringAssert.Contains(source, "removeCacheAll();");
+    }
+
+    [TestMethod]
+    public void AssistantRunProcessor_SetupFailuresAreMarkedFailedAfterClaim()
+    {
+        string source = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
+
+        StringAssert.Contains(source, "AssistantThreads.Row? thread = null;");
+        StringAssert.Contains(source, "catch (Exception ex)");
+        StringAssert.Contains(source, "markClaimedRunFailed(fw, run, thread, ex);");
+        StringAssert.Contains(source, "int threadId = thread?.id ?? run.assistant_threads_id;");
+    }
+
+    [TestMethod]
+    public void AssistantAppService_MapMessageIncludesProducingRunId()
+    {
+        var fw = TestHelpers.CreateFw();
+        var service = new AssistantAppService(fw);
+        var message = new AssistantMessages.Row
+        {
+            id = 17,
+            role = AssistantMessages.ROLE_ASSISTANT,
+            message_type = AssistantMessages.TYPE_RESULT,
+            content_markdown = "Answer",
+            add_time = new DateTime(2026, 6, 22, 10, 0, 0)
+        };
+        var attachments = new Dictionary<int, List<AssistantAttachmentDto>>();
+        var runIdsByMessageId = new Dictionary<int, int> { [17] = 42 };
+
+        var dto = invokePrivate<AssistantMessageDto>(service, "mapMessage", message, attachments, runIdsByMessageId);
+
+        Assert.AreEqual(42, dto.assistant_runs_id);
+    }
+
+    [TestMethod]
+    public void AssistantFeedback_UsesMessageRunIdAndReadonlyThreadsHideFeedbackButtons()
+    {
+        string serviceSource = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantAppService.cs"));
+        string template = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "index", "main.html"));
+
+        StringAssert.Contains(serviceSource, "idByResultMessage(messageId)");
+        StringAssert.Contains(serviceSource, "requestedRun = fw.model<AssistantRuns>().oneTyped(runId)");
+        StringAssert.Contains(serviceSource, "throw new UserException(\"Assistant response run not found.\");");
+        StringAssert.Contains(template, "body.set('run_id', button.dataset.runId || '');");
+        StringAssert.Contains(template, "const canFeedback = role === 'assistant' && !isReadonly() && !!message.assistant_runs_id;");
+        StringAssert.Contains(template, "data-run-id=\"' + escapeAttr(message.assistant_runs_id)");
+        Assert.IsFalse(template.Contains("thread.active_run && thread.active_run.id"));
+    }
+
+    [TestMethod]
+    public void AssistantAppService_MapThreadSuppressesRunEventsWhenRequested()
+    {
+        var fw = TestHelpers.CreateFw();
+        var service = new AssistantAppService(fw);
+        var thread = new AssistantThreads.Row
+        {
+            id = 7,
+            icode = "shared-code",
+            iname = "Shared",
+            add_time = new DateTime(2026, 6, 22, 10, 0, 0)
+        };
+        var run = new AssistantRuns.Row { id = 8, assistant_threads_id = 7, status = AssistantRuns.STATUS_COMPLETED };
+        var events = new List<AssistantRunsEvents.Row>
+        {
+            new()
+            {
+                id = 9,
+                assistant_runs_id = 8,
+                event_type = AssistantRunsEvents.TYPE_EVIDENCE,
+                content = "Evidence",
+                payload_json = "{\"private\":true}",
+                add_time = new DateTime(2026, 6, 22, 10, 1, 0)
+            }
+        };
+
+        var dto = invokePrivate<AssistantThreadDto>(
+            service,
+            "mapThread",
+            thread,
+            new List<AssistantMessages.Row>(),
+            events,
+            run,
+            createAssistantOwnerScope(),
+            false
+        );
+
+        Assert.AreEqual(0, dto.events.Count);
+    }
+
+    [TestMethod]
+    public void AssistantShareIcodeFreshSchema_IsUniqueForNonEmptyCodesAcrossProviders()
+    {
+        string sqliteFresh = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "fwdatabase.sql"));
+        string mysqlFresh = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "mysql", "fwdatabase.sql"));
+
+        StringAssert.Contains(sqliteFresh, "CREATE UNIQUE INDEX UX_assistant_threads_icode ON assistant_threads (icode) WHERE icode <> ''");
+        StringAssert.Contains(mysqlFresh, "icode_share           VARCHAR(64) GENERATED ALWAYS AS (NULLIF(icode, '')) STORED");
+        StringAssert.Contains(mysqlFresh, "UNIQUE KEY UX_assistant_threads_icode (icode_share)");
+    }
+
+    [TestMethod]
     public void AssistantResult_CitationPayloadRoundTrips()
     {
         var result = new AssistantResult
@@ -396,6 +509,15 @@ public class AssistantFeatureTests
         var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
         Assert.IsNotNull(method, methodName + " method not found");
         return (T)method.Invoke(null, args)!;
+    }
+
+    private static object createAssistantOwnerScope(int usersId = 0, string ownerToken = "")
+    {
+        var type = typeof(AssistantAppService).GetNestedType("AssistantOwnerScope", BindingFlags.NonPublic);
+        Assert.IsNotNull(type);
+        var constructor = type!.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Single(ctor => ctor.GetParameters().Length == 2);
+        return constructor.Invoke([usersId, ownerToken]);
     }
 
     private static string repoRoot()

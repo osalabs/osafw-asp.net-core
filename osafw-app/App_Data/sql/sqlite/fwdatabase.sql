@@ -541,7 +541,7 @@ CREATE TABLE assistant_threads (
   upd_time              DATETIME,
   upd_users_id          INTEGER DEFAULT 0
 );
-CREATE INDEX IX_assistant_threads_icode ON assistant_threads (icode);
+CREATE UNIQUE INDEX UX_assistant_threads_icode ON assistant_threads (icode) WHERE icode <> '';
 CREATE INDEX IX_assistant_threads_owner ON assistant_threads (users_id, owner_token, status, last_message_at);
 
 CREATE TABLE assistant_messages (

@@ -68,20 +68,22 @@ public sealed class AssistantAppService
         var thread = requireSharedThread(icode);
         var messages = fw.model<AssistantMessages>().listByThread(thread.id);
         var run = fw.model<AssistantRuns>().latestByThread(thread.id);
-        var events = run == null ? [] : fw.model<AssistantRunsEvents>().listByRun(run.id);
-        return mapThread(thread, messages, events, run, owner);
+        return mapThread(thread, messages, [], run, owner, includeEvents: false);
     }
 
     public AssistantPollingResponse PollThread(int threadId, int usersId, string sharedIcode = "", int lastMessageId = 0, int lastEventId = 0)
     {
         ensureTablesReady();
         var owner = resolveOwnerScope(usersId, false);
-        var thread = !string.IsNullOrWhiteSpace(sharedIcode)
+        bool isSharedAccess = !string.IsNullOrWhiteSpace(sharedIcode);
+        var thread = isSharedAccess
             ? requireSharedThread(sharedIcode)
             : requireThread(threadId, owner);
         var run = fw.model<AssistantRuns>().latestByThread(thread.id);
         var messages = fw.model<AssistantMessages>().listByThread(thread.id, lastMessageId);
-        var events = run == null ? [] : fw.model<AssistantRunsEvents>().listByRun(run.id, lastEventId);
+        var events = !isSharedAccess && run != null
+            ? fw.model<AssistantRunsEvents>().listByRun(run.id, lastEventId)
+            : [];
 
         return new AssistantPollingResponse
         {
@@ -90,7 +92,7 @@ public sealed class AssistantAppService
             messages = mapMessages(messages),
             events = mapEvents(events),
             last_message_id = messages.Count > 0 ? messages[^1].id : lastMessageId,
-            last_event_id = events.Count > 0 ? events[^1].id : lastEventId,
+            last_event_id = !isSharedAccess && events.Count > 0 ? events[^1].id : lastEventId,
         };
     }
 
@@ -207,13 +209,45 @@ public sealed class AssistantAppService
         if (string.IsNullOrWhiteSpace(feedbackType) && string.IsNullOrWhiteSpace(comment))
             throw new UserException("Feedback cannot be empty.");
 
-        if (threadId > 0)
+        AssistantMessages.Row? message = messageId > 0
+            ? fw.model<AssistantMessages>().oneTyped(messageId)
+            : null;
+        if (messageId > 0 && message == null)
+            throw new UserException("Assistant message not found.");
+
+        int effectiveThreadId = threadId > 0 ? threadId : message?.assistant_threads_id ?? 0;
+        AssistantRuns.Row? requestedRun = null;
+        if (messageId <= 0 && runId > 0)
         {
-            var owner = resolveOwnerScope(usersId, false);
-            _ = requireThread(threadId, owner);
+            requestedRun = fw.model<AssistantRuns>().oneTyped(runId)
+                ?? throw new UserException("Assistant run not found.");
+            if (effectiveThreadId <= 0)
+                effectiveThreadId = requestedRun.assistant_threads_id;
         }
 
-        fw.model<AssistantFeedback>().addFeedback(usersId, threadId, runId, messageId, feedbackType, comment);
+        if (effectiveThreadId > 0)
+        {
+            var owner = resolveOwnerScope(usersId, false);
+            _ = requireThread(effectiveThreadId, owner);
+        }
+        if (message != null && effectiveThreadId > 0 && message.assistant_threads_id != effectiveThreadId)
+            throw new UserException("Assistant message not found.");
+        if (requestedRun != null && effectiveThreadId > 0 && requestedRun.assistant_threads_id != effectiveThreadId)
+            throw new UserException("Assistant run not found.");
+
+        int resolvedRunId = 0;
+        if (messageId > 0)
+        {
+            resolvedRunId = fw.model<AssistantRuns>().idByResultMessage(messageId);
+            if (resolvedRunId <= 0)
+                throw new UserException("Assistant response run not found.");
+        }
+        else
+        {
+            resolvedRunId = requestedRun?.id ?? 0;
+        }
+
+        fw.model<AssistantFeedback>().addFeedback(usersId, effectiveThreadId, resolvedRunId, messageId, feedbackType, comment);
     }
 
     public void EnrichAssistantSources(List<AssistantSource> sources)
@@ -589,9 +623,9 @@ select a.*, al.item_id as assistant_messages_id
         return "not indexed";
     }
 
-    private AssistantThreadDto mapThread(AssistantThreads.Row thread, List<AssistantMessages.Row> messages, List<AssistantRunsEvents.Row> events, AssistantRuns.Row? run, AssistantOwnerScope owner)
+    private AssistantThreadDto mapThread(AssistantThreads.Row thread, List<AssistantMessages.Row> messages, List<AssistantRunsEvents.Row> events, AssistantRuns.Row? run, AssistantOwnerScope owner, bool includeEvents = true)
     {
-        var messageIds = messages.Select(static message => message.id);
+        var messageIds = messages.Select(static message => message.id).ToList();
         return new AssistantThreadDto
         {
             id = thread.id,
@@ -605,7 +639,7 @@ select a.*, al.item_id as assistant_messages_id
             is_owner = isOwnerThread(thread, owner),
             is_readonly = !isOwnerThread(thread, owner),
             messages = mapMessages(messages, loadAttachmentsByMessageId(messageIds)),
-            events = mapEvents(events),
+            events = includeEvents ? mapEvents(events) : [],
             active_run = mapRun(run),
         };
     }
@@ -630,15 +664,22 @@ select a.*, al.item_id as assistant_messages_id
 
     private List<AssistantMessageDto> mapMessages(List<AssistantMessages.Row> messages, Dictionary<int, List<AssistantAttachmentDto>>? attachments = null)
     {
-        attachments ??= loadAttachmentsByMessageId(messages.Select(static message => message.id));
-        return messages.Select(message => mapMessage(message, attachments)).ToList();
+        var messageIds = messages.Select(static message => message.id).ToList();
+        attachments ??= loadAttachmentsByMessageId(messageIds);
+        var runIdsByMessageId = fw.model<AssistantRuns>().listResultRunIdsByMessageIds(messageIds);
+        return messages.Select(message => mapMessage(message, attachments, runIdsByMessageId)).ToList();
     }
 
-    private AssistantMessageDto mapMessage(AssistantMessages.Row message, Dictionary<int, List<AssistantAttachmentDto>> attachments)
+    private AssistantMessageDto mapMessage(AssistantMessages.Row message, Dictionary<int, List<AssistantAttachmentDto>> attachments, Dictionary<int, int>? runIdsByMessageId = null)
     {
+        int runId = runIdsByMessageId != null && runIdsByMessageId.TryGetValue(message.id, out int mappedRunId)
+            ? mappedRunId
+            : 0;
+
         return new AssistantMessageDto
         {
             id = message.id,
+            assistant_runs_id = runId,
             role = message.role,
             message_type = message.message_type,
             content_markdown = message.content_markdown,

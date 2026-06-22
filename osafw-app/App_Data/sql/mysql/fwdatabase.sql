@@ -458,6 +458,7 @@ DROP TABLE IF EXISTS assistant_threads;
 CREATE TABLE assistant_threads (
   id                    INT NOT NULL auto_increment,
   icode                 VARCHAR(64) NOT NULL DEFAULT '',
+  icode_share           VARCHAR(64) GENERATED ALWAYS AS (NULLIF(icode, '')) STORED,
   users_id              INT NULL,
   owner_token           VARCHAR(64) NOT NULL DEFAULT '',
   iname                 VARCHAR(255) NOT NULL DEFAULT '',
@@ -472,6 +473,7 @@ CREATE TABLE assistant_threads (
   upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
+  UNIQUE KEY UX_assistant_threads_icode (icode_share),
   KEY IX_assistant_threads_icode (icode),
   KEY IX_assistant_threads_owner (users_id, owner_token, status, last_message_at)
 ) DEFAULT CHARSET=utf8mb4;

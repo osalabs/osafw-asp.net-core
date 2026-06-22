@@ -605,7 +605,9 @@ public abstract class FwModel : IDisposable
 
         FwDict where = [];
         where[this.field_id] = id;
-        db.update(table_name, item, where);
+        int affected = db.update(table_name, item, where);
+        if (affected <= 0)
+            return false;
 
         this.removeCache(id); // cleanup cache, so next one read will read new value
 

@@ -120,6 +120,7 @@ public sealed class AssistantRunEventDto
 public sealed class AssistantMessageDto
 {
     public int id { get; set; }
+    public int assistant_runs_id { get; set; }
     public string role { get; set; } = string.Empty;
     public string message_type { get; set; } = string.Empty;
     public string content_markdown { get; set; } = string.Empty;
