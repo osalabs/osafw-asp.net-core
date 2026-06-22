@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS assistant_threads (
   upd_time              DATETIME,
   upd_users_id          INTEGER DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS IX_assistant_threads_icode ON assistant_threads (icode);
+CREATE UNIQUE INDEX IF NOT EXISTS UX_assistant_threads_icode ON assistant_threads (icode) WHERE icode <> '';
 CREATE INDEX IF NOT EXISTS IX_assistant_threads_owner ON assistant_threads (users_id, owner_token, status, last_message_at);
 
 CREATE TABLE IF NOT EXISTS assistant_messages (

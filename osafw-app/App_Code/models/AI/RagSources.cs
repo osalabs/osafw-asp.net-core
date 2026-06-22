@@ -131,7 +131,7 @@ public class RagSources : FwModel<RagSources.Row>
                 continue;
 
             string ext = att["ext"].toStr();
-            if (!embeddingService.IsSupported(ext))
+            if (!embeddingService.CanIndexAttachment(ext, att["fsize"].toLong()))
                 continue;
 
             currentSupportedAttIds.Add(attId);
@@ -193,7 +193,7 @@ public class RagSources : FwModel<RagSources.Row>
             return false;
 
         var embeddingService = new DocumentEmbeddingService(fw);
-        if (!embeddingService.IsSupported(att["ext"].toStr()))
+        if (!embeddingService.CanIndexAttachment(att["ext"].toStr(), att["fsize"].toLong()))
             return false;
 
         int entityId = fw.model<FwEntities>().idByIcodeOrAdd(entityIcode);
@@ -308,6 +308,68 @@ output inserted.*;";
             "@stale", INDEX_STATUS_STALE,
             "@processing", INDEX_STATUS_PROCESSING
         ));
+    }
+
+    /// <summary>
+    /// Returns abandoned indexing claims to the normal stale queue after a worker crash or shutdown.
+    /// </summary>
+    public int requeueStaleProcessingSources(int staleAfterMinutes = 30)
+    {
+        if (!isTablesReady())
+            return 0;
+
+        if (db.dbtype == DB.DBTYPE_SQLSRV)
+            return requeueStaleProcessingSourcesSqlServer(staleAfterMinutes);
+
+        string sql = $@"
+update {qTable()}
+   set index_status=@stale,
+       last_error='',
+       queued_at={db.sqlNOW()},
+       upd_time={db.sqlNOW()}
+ where status<>@status_deleted
+   and index_status=@processing
+   and (
+       upd_time is null
+       or upd_time < @cutoff
+   )";
+
+        var cutoff = db.Now().AddMinutes(-(staleAfterMinutes <= 0 ? 30 : staleAfterMinutes));
+        int affected = db.exec(sql, DB.h(
+            "@stale", INDEX_STATUS_STALE,
+            "@status_deleted", STATUS_DELETED,
+            "@processing", INDEX_STATUS_PROCESSING,
+            "@cutoff", cutoff
+        ));
+        if (affected > 0)
+            removeCacheAll();
+        return affected;
+    }
+
+    private int requeueStaleProcessingSourcesSqlServer(int staleAfterMinutes)
+    {
+        string sql = $@"
+update {qTable()}
+   set index_status=@stale,
+       last_error='',
+       queued_at={db.sqlNOW()},
+       upd_time={db.sqlNOW()}
+ where status<>@status_deleted
+   and index_status=@processing
+   and (
+       upd_time is null
+       or upd_time < dateadd(minute, -@stale_after_minutes, {db.sqlNOW()})
+   )";
+
+        int affected = db.exec(sql, DB.h(
+            "@stale", INDEX_STATUS_STALE,
+            "@status_deleted", STATUS_DELETED,
+            "@processing", INDEX_STATUS_PROCESSING,
+            "@stale_after_minutes", staleAfterMinutes <= 0 ? 30 : staleAfterMinutes
+        ));
+        if (affected > 0)
+            removeCacheAll();
+        return affected;
     }
 
     public Row? oneTyped(int id)

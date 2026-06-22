@@ -12,7 +12,6 @@ public sealed class AssistantAppService
 {
     private const string AnonymousOwnerSessionKey = "assistant_owner_token";
     private const int DefaultMaxFilesPerMessage = 5;
-    private const long DefaultMaxIndexedFileBytes = 5 * 1024 * 1024;
 
     private readonly FW fw;
 
@@ -286,14 +285,7 @@ public sealed class AssistantAppService
             if (!tryFindEvidenceSource(evidence, source, out var bound))
                 continue;
 
-            source.source_id = bound.source_id;
-            source.chunk_id = bound.chunk_id;
-            source.source_type = string.IsNullOrWhiteSpace(source.source_type) ? bound.source_type : source.source_type;
-            source.name = string.IsNullOrWhiteSpace(source.name) ? bound.name : source.name;
-            source.url = string.IsNullOrWhiteSpace(source.url) ? bound.url : source.url;
-            source.page = source.page == 0 ? bound.page : source.page;
-            source.section = string.IsNullOrWhiteSpace(source.section) ? bound.section : source.section;
-            source.score ??= bound.score;
+            bindSourceToEvidence(source, bound);
             valid.Add(source);
         }
 
@@ -331,6 +323,25 @@ public sealed class AssistantAppService
             fw.model<RagSources>().table_name,
             fw.model<RagChunks>().table_name
         ];
+    }
+
+    private static void bindSourceToEvidence(AssistantSource source, AssistantSource bound)
+    {
+        string trustedName = bound.name ?? string.Empty;
+        string trustedUrl = bound.url ?? string.Empty;
+
+        source.source_id = bound.source_id;
+        source.chunk_id = bound.chunk_id;
+        source.source_type = bound.source_type ?? string.Empty;
+        source.name = trustedName;
+        source.url = trustedUrl;
+        source.article_name = trustedName;
+        source.article_url = trustedUrl;
+        source.filename = trustedName;
+        source.file_url = trustedUrl;
+        source.page = bound.page;
+        source.section = bound.section ?? string.Empty;
+        source.score = bound.score;
     }
 
     private Dictionary<string, AssistantSource> listRunEvidenceSources(int runId)
@@ -519,7 +530,7 @@ public sealed class AssistantAppService
 
         string ext = Path.GetExtension(file.FileName);
         var embeddingService = new DocumentEmbeddingService(fw);
-        if (embeddingService.IsSupported(ext) && file.Length <= maxIndexedFileBytes())
+        if (embeddingService.CanIndexAttachment(ext, file.Length))
         {
             try
             {
@@ -549,7 +560,7 @@ public sealed class AssistantAppService
 
     private long maxIndexedFileBytes()
     {
-        return Math.Max(1, fw.model<Settings>().readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DefaultMaxIndexedFileBytes));
+        return new DocumentEmbeddingService(fw).MaxIndexedFileBytes();
     }
 
     private Dictionary<int, List<AssistantAttachmentDto>> loadAttachmentsByMessageId(IEnumerable<int> messageIds)

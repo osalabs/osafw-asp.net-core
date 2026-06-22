@@ -24,12 +24,12 @@ public sealed class AssistantRunWorkerService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         bool shouldProbeQueue = true;
-        bool shouldRecoverStaleRuns = true;
+        bool shouldRecoverStaleQueue = true;
 
         while (!stoppingToken.IsCancellationRequested)
         {
             if (!shouldProbeQueue)
-                shouldRecoverStaleRuns = !await AssistantRuns.WaitForQueuedRunAsync(QueueRecoveryProbeInterval, stoppingToken).ConfigureAwait(false);
+                shouldRecoverStaleQueue = !await AssistantRuns.WaitForQueuedRunAsync(QueueRecoveryProbeInterval, stoppingToken).ConfigureAwait(false);
 
             try
             {
@@ -37,10 +37,10 @@ public sealed class AssistantRunWorkerService : BackgroundService
                 do
                 {
                     var processor = new AssistantRunProcessor(configuration, loggerFactory);
-                    processed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken).ConfigureAwait(false);
+                    processed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
                     if (!processed)
-                        processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleRuns).ConfigureAwait(false);
-                    shouldRecoverStaleRuns = false;
+                        processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
+                    shouldRecoverStaleQueue = false;
                 }
                 while (processed && !stoppingToken.IsCancellationRequested);
 
@@ -53,7 +53,7 @@ public sealed class AssistantRunWorkerService : BackgroundService
             catch
             {
                 shouldProbeQueue = true;
-                shouldRecoverStaleRuns = true;
+                shouldRecoverStaleQueue = true;
                 await Task.Delay(5000, stoppingToken).ConfigureAwait(false);
             }
         }

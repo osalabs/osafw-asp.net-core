@@ -141,6 +141,18 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
+    public void DocumentEmbeddingService_CanIndexAttachmentHonorsConfiguredByteLimit()
+    {
+        var fw = TestHelpers.CreateFw();
+        registerSettings(fw, new Dictionary<string, string> { ["ASSISTANT_MAX_INDEXED_FILE_BYTES"] = "10" });
+        var service = new DocumentEmbeddingService(fw);
+
+        Assert.IsTrue(service.CanIndexAttachment(".txt", 10));
+        Assert.IsFalse(service.CanIndexAttachment(".txt", 11));
+        Assert.IsFalse(service.CanIndexAttachment(".exe", 1));
+    }
+
+    [TestMethod]
     public void DocumentEmbeddingService_TrimSummaryRemovesMarkdownFence()
     {
         string normalized = invokePrivateStatic<string>(typeof(DocumentEmbeddingService), "trimSummary", """
@@ -321,6 +333,21 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
+    public void RagSources_ClaimAndWorkerRecoverStaleProcessingSources()
+    {
+        string sources = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "RagSources.cs"));
+        string processor = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
+        string worker = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunWorkerService.cs"));
+
+        StringAssert.Contains(sources, "public int requeueStaleProcessingSources");
+        StringAssert.Contains(sources, "\"@stale\", INDEX_STATUS_STALE");
+        StringAssert.Contains(sources, "or upd_time < @cutoff");
+        StringAssert.Contains(sources, "and index_status=@processing");
+        StringAssert.Contains(processor, "fw.model<RagSources>().requeueStaleProcessingSources()");
+        StringAssert.Contains(worker, "ProcessNextQueuedSourceAsync(workerId, stoppingToken, shouldRecoverStaleQueue)");
+    }
+
+    [TestMethod]
     public void AssistantRunProcessor_SetupFailuresAreMarkedFailedAfterClaim()
     {
         string source = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
@@ -408,6 +435,50 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
+    public void AssistantAppService_BindSourceToEvidenceOverwritesModelCitationMetadata()
+    {
+        var source = new AssistantSource
+        {
+            source_id = 7,
+            chunk_id = 42,
+            source_type = "model_type",
+            name = "Model supplied name",
+            url = "https://attacker.example/citation",
+            article_name = "Model article",
+            article_url = "https://attacker.example/article",
+            filename = "model.txt",
+            file_url = "https://attacker.example/file",
+            page = 99,
+            section = "Wrong section",
+            score = 0.01
+        };
+        var bound = new AssistantSource
+        {
+            source_id = 7,
+            chunk_id = 42,
+            source_type = RagSources.SOURCE_TYPE_KB_ARTICLE,
+            name = "Trusted KB",
+            url = "/Admin/KBArticles/7",
+            page = 2,
+            section = "Install",
+            score = 0.87
+        };
+
+        invokePrivateStatic<object?>(typeof(AssistantAppService), "bindSourceToEvidence", source, bound);
+
+        Assert.AreEqual(RagSources.SOURCE_TYPE_KB_ARTICLE, source.source_type);
+        Assert.AreEqual("Trusted KB", source.name);
+        Assert.AreEqual("/Admin/KBArticles/7", source.url);
+        Assert.AreEqual("/Admin/KBArticles/7", source.article_url);
+        Assert.AreEqual("/Admin/KBArticles/7", source.file_url);
+        Assert.AreEqual("Trusted KB", source.article_name);
+        Assert.AreEqual("Trusted KB", source.filename);
+        Assert.AreEqual(2, source.page);
+        Assert.AreEqual("Install", source.section);
+        Assert.AreEqual(0.87, source.score.GetValueOrDefault(), 0.0001);
+    }
+
+    [TestMethod]
     public void AssistantShareIcodeFreshSchema_IsUniqueForNonEmptyCodesAcrossProviders()
     {
         string sqliteFresh = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "fwdatabase.sql"));
@@ -416,6 +487,30 @@ public class AssistantFeatureTests
         StringAssert.Contains(sqliteFresh, "CREATE UNIQUE INDEX UX_assistant_threads_icode ON assistant_threads (icode) WHERE icode <> ''");
         StringAssert.Contains(mysqlFresh, "icode_share           VARCHAR(64) GENERATED ALWAYS AS (NULLIF(icode, '')) STORED");
         StringAssert.Contains(mysqlFresh, "UNIQUE KEY UX_assistant_threads_icode (icode_share)");
+    }
+
+    [TestMethod]
+    public void AssistantShareIcodeUpdateScripts_AreUniqueForNonEmptyCodesAcrossProviders()
+    {
+        string sqliteUpdate = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "updates", "upd2026-06-12-assistant-rag.sql"));
+        string mysqlUpdate = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "mysql", "updates", "upd2026-06-12-assistant-rag.sql"));
+
+        StringAssert.Contains(sqliteUpdate, "CREATE UNIQUE INDEX IF NOT EXISTS UX_assistant_threads_icode ON assistant_threads (icode) WHERE icode <> ''");
+        StringAssert.Contains(mysqlUpdate, "icode_share           VARCHAR(64) GENERATED ALWAYS AS (NULLIF(icode, '')) STORED");
+        StringAssert.Contains(mysqlUpdate, "UNIQUE KEY UX_assistant_threads_icode (icode_share)");
+    }
+
+    [TestMethod]
+    public void RagSourcesAndDocumentEmbeddingService_ApplyAttachmentIndexByteLimitBeforeQueueAndParse()
+    {
+        string sources = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "RagSources.cs"));
+        string embedding = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "fw", "DocumentEmbeddingService.cs"));
+
+        StringAssert.Contains(sources, "embeddingService.CanIndexAttachment(ext, att[\"fsize\"].toLong())");
+        StringAssert.Contains(sources, "embeddingService.CanIndexAttachment(att[\"ext\"].toStr(), att[\"fsize\"].toLong())");
+        StringAssert.Contains(embedding, "if (!CanIndexAttachment(ext, att[\"fsize\"].toLong()))");
+        StringAssert.Contains(embedding, "if (attId <= 0 || !CanIndexAttachment(ext, att[\"fsize\"].toLong()))");
+        StringAssert.Contains(embedding, "if (att.Count == 0 || !CanIndexAttachment(att[\"ext\"].toStr(), att[\"fsize\"].toLong()))");
     }
 
     [TestMethod]

@@ -54,7 +54,7 @@ public sealed class AssistantRunProcessor
         return true;
     }
 
-    public async Task<bool> ProcessNextQueuedSourceAsync(string workerId, CancellationToken cancellationToken)
+    public async Task<bool> ProcessNextQueuedSourceAsync(string workerId, CancellationToken cancellationToken, bool recoverStaleSources = false)
     {
         using var fw = FW.initOffline(configuration);
         if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED") || !fw.model<LLM>().isConfigured())
@@ -62,6 +62,13 @@ public sealed class AssistantRunProcessor
 
         try
         {
+            if (recoverStaleSources)
+            {
+                int recoveredCount = fw.model<RagSources>().requeueStaleProcessingSources();
+                if (recoveredCount > 0)
+                    fw.logger(LogLevel.WARN, "Recovered stale RAG sources: ", recoveredCount);
+            }
+
             return await new DocumentEmbeddingService(fw).ProcessNextQueuedSourceAsync(workerId, cancellationToken).ConfigureAwait(false);
         }
         finally

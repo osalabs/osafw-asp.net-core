@@ -12,6 +12,8 @@ namespace osafw;
 
 public class DocumentEmbeddingService
 {
+    public const long DefaultMaxIndexedFileBytes = 5 * 1024 * 1024;
+
     private const int DefaultMaxIndexChars = 200000;
     private const int DefaultMaxIndexChunks = 80;
     private const int MaxSummaryPromptChars = 24000;
@@ -19,6 +21,7 @@ public class DocumentEmbeddingService
 
     private readonly FW fw;
     private readonly List<IDocumentParser> parsers;
+    private long? maxIndexedFileBytes;
 
     private sealed record ParsedAttachmentDocument(int AttId, string Filename, string Text, IReadOnlyList<string> Sections);
 
@@ -37,6 +40,23 @@ public class DocumentEmbeddingService
     {
         ext = normalizeExtension(ext);
         return parsers.Any(parser => parser.CanParse(ext));
+    }
+
+    /// <summary>
+    /// Checks parser support and the configured maximum file size before queued indexing or parsing.
+    /// </summary>
+    public bool CanIndexAttachment(string ext, long fileBytes)
+    {
+        return IsSupported(ext) && fileBytes <= MaxIndexedFileBytes();
+    }
+
+    /// <summary>
+    /// Reads the configured attachment indexing byte cap used by assistant and KB sources.
+    /// </summary>
+    public long MaxIndexedFileBytes()
+    {
+        maxIndexedFileBytes ??= Math.Max(1, fw.model<Settings>().readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DefaultMaxIndexedFileBytes));
+        return maxIndexedFileBytes.Value;
     }
 
     public static IEnumerable<string> TokenAwareChunks(string text, int maxTokens = 512, int overlap = 30)
@@ -133,6 +153,9 @@ public class DocumentEmbeddingService
         else
         {
             var att = fw.model<Att>().one(attId);
+            if (att.Count == 0 || !CanIndexAttachment(att["ext"].toStr(), att["fsize"].toLong()))
+                return;
+
             int entityId = fw.model<FwEntities>().idByIcodeOrAdd(entityIcode);
             fw.model<RagSources>().queueSource(
                 RagSources.SOURCE_TYPE_KB_ATTACHMENT,
@@ -201,7 +224,7 @@ public class DocumentEmbeddingService
             return [];
 
         string ext = normalizeExtension(att["ext"].toStr());
-        if (!IsSupported(ext))
+        if (!CanIndexAttachment(ext, att["fsize"].toLong()))
             return [];
 
         string filepath = resolveAttachmentPath(att);
@@ -268,7 +291,7 @@ public class DocumentEmbeddingService
 
             int attId = att["id"].toInt();
             string ext = normalizeExtension(att["ext"].toStr());
-            if (attId <= 0 || !IsSupported(ext))
+            if (attId <= 0 || !CanIndexAttachment(ext, att["fsize"].toLong()))
                 continue;
 
             string filepath = resolveAttachmentPath(att);
