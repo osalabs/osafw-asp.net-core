@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 
@@ -8,6 +9,7 @@ namespace osafw;
 public class AdminRagChunksController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
+    private const int AdminVectorSearchLimit = 500;
 
     protected RagChunks model = null!;
 
@@ -48,15 +50,32 @@ public class AdminRagChunksController : FwDynamicController
 
         var ps = base.IndexAction();
         ps["tables_ready"] = true;
+        ps["is_list_filter_search_placeholder_custom"] = true;
+        ps["list_filter_search_placeholder"] = "Vector search chunk content";
         setRagIndexMetadata(ps, true);
         return ps;
     }
 
     public override void setListSearch()
     {
-        base.setListSearch();
-
+        string query = list_filter["s"].toStr().Trim();
         string entity = list_filter["entity"].toStr().Trim();
+        string originalSearchFields = search_fields;
+        if (!string.IsNullOrWhiteSpace(query))
+            search_fields = string.Empty;
+
+        try
+        {
+            base.setListSearch();
+        }
+        finally
+        {
+            search_fields = originalSearchFields;
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+            applyVectorSearchFilter(query, entity);
+
         if (!string.IsNullOrWhiteSpace(entity))
         {
             list_where += " and entity_icode=@entity";
@@ -69,6 +88,40 @@ public class AdminRagChunksController : FwDynamicController
             list_where += " and vector_backend=@backend";
             list_where_params["backend"] = backend;
         }
+    }
+
+    private void applyVectorSearchFilter(string query, string entity)
+    {
+        List<int> chunkIds;
+        try
+        {
+            chunkIds = model.listAdminVectorSearchChunkIdsAsync(query, AdminVectorSearchLimit, entity, fw.context.RequestAborted)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch (Exception ex)
+        {
+            fw.flash("error", "RAG vector search failed: " + ex.Message);
+            chunkIds = [];
+        }
+
+        if (chunkIds.Count == 0)
+        {
+            list_where += " and 1=0";
+            return;
+        }
+
+        list_where += " and id in (@admin_vector_chunk_ids)";
+        list_where_params["admin_vector_chunk_ids"] = chunkIds;
+        list_orderby = buildVectorSearchOrderBy(chunkIds);
+    }
+
+    private static string buildVectorSearchOrderBy(List<int> chunkIds)
+    {
+        var cases = chunkIds
+            .Where(static id => id > 0)
+            .Select(static (id, index) => "when " + id + " then " + index);
+        return "case id " + string.Join(" ", cases) + " else " + chunkIds.Count + " end";
     }
 
     public override FwDict ShowAction(int id)

@@ -105,11 +105,16 @@ public sealed class AssistantAppService
         var previews = new List<AssistantThreadPreviewDto>(rows.Count);
         foreach (var row in rows)
         {
+            string title = string.IsNullOrWhiteSpace(row.iname) ? "New chat" : row.iname;
+            string preview = previewMap.TryGetValue(row.id, out var previewText) ? previewText : string.Empty;
+            if (isRedundantHistoryPreview(title, preview))
+                preview = string.Empty;
+
             previews.Add(new AssistantThreadPreviewDto
             {
                 id = row.id,
-                iname = string.IsNullOrWhiteSpace(row.iname) ? "New chat" : row.iname,
-                preview = previewMap.TryGetValue(row.id, out var preview) ? preview : string.Empty,
+                iname = title,
+                preview = preview,
                 last_message_at = formatDate(row.last_message_at ?? row.add_time),
                 last_run_status_id = row.last_run_status,
                 last_run_status = AssistantRuns.StatusToCode(row.last_run_status),
@@ -117,6 +122,23 @@ public sealed class AssistantAppService
             });
         }
         return previews;
+    }
+
+    private static bool isRedundantHistoryPreview(string title, string preview)
+    {
+        string normalizedTitle = compactHistoryText(title);
+        string normalizedPreview = compactHistoryText(preview);
+        if (normalizedTitle.Length == 0 || normalizedPreview.Length == 0)
+            return false;
+
+        return string.Equals(normalizedTitle, normalizedPreview, StringComparison.OrdinalIgnoreCase)
+            || normalizedPreview.StartsWith(normalizedTitle, StringComparison.OrdinalIgnoreCase)
+            || normalizedTitle.StartsWith(normalizedPreview, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string compactHistoryText(string value)
+    {
+        return string.Join(" ", (value ?? string.Empty).Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries)).Trim();
     }
 
     public AssistantThreadShareDto EnsureSharedThread(int usersId, int threadId)

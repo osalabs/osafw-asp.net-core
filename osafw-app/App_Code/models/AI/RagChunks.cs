@@ -126,6 +126,30 @@ public class RagChunks : FwModel<RagChunks.Row>
         return toAssistantResults(results);
     }
 
+    /// <summary>
+    /// Returns chunk ids ranked by vector similarity for the admin RAG chunk search box.
+    /// </summary>
+    public async Task<List<int>> listAdminVectorSearchChunkIdsAsync(string query, int limit = 500, string entityIcode = "", CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return [];
+
+        HashSet<int>? entityIds = null;
+        if (!string.IsNullOrWhiteSpace(entityIcode))
+        {
+            int entityId = fw.model<FwEntities>().idByIcode(entityIcode.Trim());
+            if (entityId <= 0)
+                return [];
+            entityIds = [entityId];
+        }
+
+        var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
+        var results = listChunkIdsByEmbedding(queryEmbedding, embeddingModel, Math.Max(1, limit), entityIds, null);
+        traceRetrieval(query, "admin_rag_chunks", results);
+        return results.Select(static item => item.ChunkId).Where(static id => id > 0).Distinct().Take(Math.Max(1, limit)).ToList();
+    }
+
     public async Task<FwList> listAssistantThreadSearchResultsAsync(string query, IEnumerable<int> messageIds, int limit = 5, CancellationToken cancellationToken = default)
     {
         var ids = messageIds.Where(static id => id > 0).Distinct().ToHashSet();
@@ -183,6 +207,27 @@ public class RagChunks : FwModel<RagChunks.Row>
         return mapSearchRows(listByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
     }
 
+    private List<ChunkSearchResult> listChunkIdsByEmbedding(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
+    {
+        if (queryEmbedding == null || queryEmbedding.Count == 0)
+            return [];
+
+        string backend = resolveVectorBackend(queryEmbedding.Count);
+        if (backend == VECTOR_MODE_NATIVE)
+        {
+            try
+            {
+                return mapSearchIdRows(listVectorIdRowsByNativeQuery(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
+            }
+            catch (Exception ex)
+            {
+                fw.logger(LogLevel.WARN, "Native vector query failed; falling back to JSON scoring:", ex.Message);
+            }
+        }
+
+        return mapSearchIdRows(listVectorIdRowsByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
+    }
+
     public DBList listByJsonQuery(string qJson, double qNorm, int dimension, string embeddingModel, int limit, HashSet<int>? allowedEntityIds = null, HashSet<int>? allowedItemIds = null)
     {
         var sql = db.dbtype switch
@@ -190,6 +235,20 @@ public class RagChunks : FwModel<RagChunks.Row>
             DB.DBTYPE_MYSQL => buildMySqlJsonQuerySql(limit),
             DB.DBTYPE_SQLITE => buildSqliteJsonQuerySql(limit),
             _ => buildSqlServerJsonQuerySql(limit),
+        };
+
+        sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
+        var @params = buildSearchParams(qJson, qNorm, dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds);
+        return db.arrayp(sql, @params);
+    }
+
+    private DBList listVectorIdRowsByJsonQuery(string qJson, double qNorm, int dimension, string embeddingModel, int limit, HashSet<int>? allowedEntityIds = null, HashSet<int>? allowedItemIds = null)
+    {
+        var sql = db.dbtype switch
+        {
+            DB.DBTYPE_MYSQL => buildMySqlJsonIdQuerySql(limit),
+            DB.DBTYPE_SQLITE => buildSqliteJsonIdQuerySql(limit),
+            _ => buildSqlServerJsonIdQuerySql(limit),
         };
 
         sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
@@ -222,6 +281,25 @@ public class RagChunks : FwModel<RagChunks.Row>
                            and d.embedding_vector is not null
                       ##FILTERS##
                       order by {distance}";
+        sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
+        sql = db.limit(sql, Math.Max(1, limit));
+        return db.arrayp(sql, buildSearchParams(qJson, vectorNorm(queryEmbedding), dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds));
+    }
+
+    private DBList listVectorIdRowsByNativeQuery(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
+    {
+        string qJson = JsonSerializer.Serialize(queryEmbedding);
+        int dimension = queryEmbedding.Count;
+        string distance = $"VECTOR_DISTANCE('cosine', CAST(@JsonQueryVector AS vector({dimension})), d.embedding_vector)";
+        string sql = $@"select d.id,
+                               (1.0 - {distance}) as CosineSim
+                          from {qTable()} d
+                         where d.status=@status_active
+                           and d.embedding_dim=@EmbeddingDim
+                           and d.embedding_model=@EmbeddingModel
+                           and d.embedding_vector is not null
+                      ##FILTERS##
+                      order by {distance}, d.id";
         sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
         sql = db.limit(sql, Math.Max(1, limit));
         return db.arrayp(sql, buildSearchParams(qJson, vectorNorm(queryEmbedding), dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds));
@@ -388,6 +466,33 @@ select top (@Limit)
  order by CosineSim desc, d.id";
     }
 
+    private string buildSqlServerJsonIdQuerySql(int limit)
+    {
+        return $@"
+with q as (
+    select [key] as k, try_cast(value as float) as val
+      from openjson(@JsonQueryVector)
+),
+scores as (
+    select d.id,
+           sum(q.val * try_cast(v.value as float)) as dot
+      from {qTable()} d
+      cross apply openjson(d.embedding_json) v
+      join q on q.k = v.[key]
+     where d.status=@status_active
+       and d.embedding_dim=@EmbeddingDim
+       and d.embedding_model=@EmbeddingModel
+  ##FILTERS##
+  group by d.id
+)
+select top (@Limit)
+       d.id,
+       (s.dot / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
+  from scores s
+  join {qTable()} d on d.id=s.id
+ order by CosineSim desc, d.id";
+    }
+
     private string buildSqliteJsonQuerySql(int limit)
     {
         return $@"
@@ -426,6 +531,33 @@ select d.id,
  limit @Limit";
     }
 
+    private string buildSqliteJsonIdQuerySql(int limit)
+    {
+        return $@"
+with q as (
+    select key as k, cast(value as real) as val
+      from json_each(@JsonQueryVector)
+),
+scores as (
+    select d.id,
+           sum(q.val * cast(v.value as real)) as dot
+      from {qTable()} d
+      join json_each(d.embedding_json) v
+      join q on q.k = v.key
+     where d.status=@status_active
+       and d.embedding_dim=@EmbeddingDim
+       and d.embedding_model=@EmbeddingModel
+  ##FILTERS##
+  group by d.id
+)
+select d.id,
+       (s.dot / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
+  from scores s
+  join {qTable()} d on d.id=s.id
+ order by CosineSim desc, d.id
+ limit @Limit";
+    }
+
     private string buildMySqlJsonQuerySql(int limit)
     {
         return $@"
@@ -450,6 +582,23 @@ select d.id,
    and d.embedding_model=@EmbeddingModel
 ##FILTERS##
  group by d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.iname, d.page, d.section, d.idesc, d.embedding_norm
+ order by CosineSim desc, d.id
+ limit @Limit";
+    }
+
+    private string buildMySqlJsonIdQuerySql(int limit)
+    {
+        return $@"
+select d.id,
+       (sum(q.val * v.val) / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
+  from {qTable()} d
+  join json_table(@JsonQueryVector, '$[*]' columns (ord for ordinality, val double path '$')) q
+  join json_table(d.embedding_json, '$[*]' columns (ord for ordinality, val double path '$')) v on v.ord=q.ord
+ where d.status=@status_active
+   and d.embedding_dim=@EmbeddingDim
+   and d.embedding_model=@EmbeddingModel
+##FILTERS##
+ group by d.id, d.embedding_norm
  order by CosineSim desc, d.id
  limit @Limit";
     }
@@ -639,6 +788,23 @@ select d.id,
             });
         }
 
+        return result;
+    }
+
+    private static List<ChunkSearchResult> mapSearchIdRows(DBList rows, string defaultMode)
+    {
+        List<ChunkSearchResult> result = new(rows.Count);
+        foreach (DBRow row in rows)
+        {
+            double vectorScore = row["CosineSim"].toDouble();
+            result.Add(new ChunkSearchResult
+            {
+                ChunkId = row["id"].toInt(),
+                Score = vectorScore,
+                VectorScore = vectorScore,
+                RetrievalMode = defaultMode
+            });
+        }
         return result;
     }
 

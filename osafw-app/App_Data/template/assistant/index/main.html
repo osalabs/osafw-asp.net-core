@@ -226,6 +226,13 @@
   });
 
   root.addEventListener('click', async function (event) {
+    const copyButton = event.target.closest('[data-assistant-copy-message]');
+    if (copyButton && thread) {
+      const message = findThreadMessage(copyButton.dataset.messageId);
+      await copyMessageMarkdown(copyButton, message);
+      return;
+    }
+
     const button = event.target.closest('[data-assistant-feedback]');
     if (!button || !thread) return;
     const body = new FormData();
@@ -316,10 +323,14 @@
     }
     history.forEach(item => {
       const link = document.createElement('a');
+      const title = item.iname || 'New chat';
+      const preview = item.preview && !isRedundantHistoryPreview(title, item.preview)
+        ? '<div class="small text-muted">' + escapeHtml(item.preview) + '</div>'
+        : '';
       link.className = 'assistant-history-row d-block py-3 text-reset text-decoration-none border-bottom';
       link.href = baseUrl + '?thread_id=' + encodeURIComponent(item.id);
-      link.innerHTML = '<div class="fw-semibold">' + escapeHtml(item.iname || 'New chat') + '</div>'
-        + '<div class="small text-muted">' + escapeHtml(item.preview || '') + '</div>'
+      link.innerHTML = '<div class="fw-semibold">' + escapeHtml(title) + '</div>'
+        + preview
         + (item.last_run_status ? '<span class="badge text-bg-secondary mt-2">' + escapeHtml(item.last_run_status) + '</span>' : '');
       els.history.appendChild(link);
     });
@@ -361,12 +372,14 @@
       return '<span class="badge ' + badgeClass + ' me-1" title="' + escapeAttr(indexStatus) + '">' + escapeHtml(file.iname || file.icode || 'file') + '</span>';
     }).join('');
     const feedback = role === 'assistant'
-      ? '<div class="assistant-response-actions d-flex flex-wrap gap-2 mt-3">'
+      ? '<div class="assistant-response-actions d-flex flex-wrap align-items-center gap-2 mt-3">'
+        + '<button type="button" class="btn btn-sm btn-outline-secondary" data-assistant-copy-message data-message-id="' + escapeAttr(message.id) + '"><i class="bi bi-clipboard me-1"></i>Copy</button>'
         + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>'
+        + (message.add_time ? '<span class="small text-muted ms-1 me-1">' + escapeHtml(message.add_time) + '</span>' : '')
         + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>'
         + '</div>'
       : '';
-    const time = message.add_time ? '<div class="small text-muted mt-2">' + escapeHtml(message.add_time) + '</div>' : '';
+    const time = role !== 'assistant' && message.add_time ? '<div class="small text-muted mt-2">' + escapeHtml(message.add_time) + '</div>' : '';
     wrap.innerHTML = '<div class="assistant-bubble border rounded bg-body shadow-sm p-3"><div class="assistant-message-body">' + escapeHtml(message.content_markdown || '') + '</div>'
       + (attachments ? '<div class="assistant-attachments d-flex flex-wrap gap-2 mt-3">' + attachments + '</div>' : '')
       + (sources ? '<div class="assistant-sources d-flex flex-wrap gap-2 mt-3">' + sources + '</div>' : '')
@@ -381,7 +394,7 @@
     const meta = [source.section, source.page ? 'p. ' + source.page : '', source.source_id ? 'source ' + source.source_id : '', source.chunk_id ? 'chunk ' + source.chunk_id : ''].filter(Boolean).join(' | ');
     const href = source.url || source.article_url || source.file_url || '';
     const content = '<span class="fw-semibold">' + escapeHtml(label) + '</span>' + (meta ? '<span class="small text-muted d-block">' + escapeHtml(meta) + '</span>' : '');
-    return href ? '<a class="assistant-citation d-block border rounded bg-body-tertiary text-reset text-decoration-none px-3 py-2" href="' + escapeAttr(href) + '">' + content + '</a>' : '<div class="assistant-citation d-block border rounded bg-body-tertiary px-3 py-2">' + content + '</div>';
+    return href ? '<a class="assistant-citation d-block border rounded bg-body-tertiary text-reset text-decoration-none px-3 py-2" href="' + escapeAttr(href) + '" target="_blank" rel="noopener noreferrer">' + content + '</a>' : '<div class="assistant-citation d-block border rounded bg-body-tertiary px-3 py-2">' + content + '</div>';
   }
 
   function renderEvents(events) {
@@ -498,6 +511,27 @@
     });
   }
 
+  function findThreadMessage(messageId) {
+    const id = Number(messageId || 0);
+    return (thread && thread.messages ? thread.messages : []).find(message => Number(message.id || 0) === id);
+  }
+
+  async function copyMessageMarkdown(button, message) {
+    if (!message || !message.content_markdown) return;
+    try {
+      await navigator.clipboard.writeText(message.content_markdown);
+      const original = button.innerHTML;
+      button.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied';
+      button.disabled = true;
+      setTimeout(() => {
+        button.innerHTML = original;
+        button.disabled = false;
+      }, 1200);
+    } catch (err) {
+      showProgress('Copy failed.');
+    }
+  }
+
   function focusLandingComposer(hasThread) {
     if (hasThread) return;
     const target = root.querySelector('[data-assistant-autofocus]');
@@ -534,6 +568,19 @@
     const map = new Map((existing || []).map(item => [item.id, item]));
     (incoming || []).forEach(item => map.set(item.id, item));
     return Array.from(map.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }
+
+  function isRedundantHistoryPreview(title, preview) {
+    const normalizedTitle = compactHistoryText(title);
+    const normalizedPreview = compactHistoryText(preview);
+    if (!normalizedTitle || !normalizedPreview) return false;
+    return normalizedTitle === normalizedPreview
+      || normalizedPreview.startsWith(normalizedTitle)
+      || normalizedTitle.startsWith(normalizedPreview);
+  }
+
+  function compactHistoryText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
   }
 
   function escapeHtml(value) {

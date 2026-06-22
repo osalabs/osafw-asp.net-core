@@ -237,6 +237,40 @@ public class SecurityGroup9ATests
 
         var log = string.Join("\n", messages);
         Assert.IsTrue(log.Contains("plaintext-password"));
+        Assert.IsTrue(log.Contains("{ plaintext-password }"));
+        Assert.IsFalse(log.Contains("@pwd=plaintext-password"));
+    }
+
+    [TestMethod]
+    public void DbLogging_LogPiiUnwrapsHelperParameterMetadata()
+    {
+        var db = new DB("", DB.DBTYPE_SQLSRV)
+        {
+            is_log_pii = true
+        };
+        var messages = new List<string>();
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => arg?.ToString() ?? ""))));
+        var logMethod = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
+        var paramMethod = typeof(DB).GetMethod("paramValue", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new AssertFailedException("Expected DB.paramValue");
+        var sql = "select * from att_categories where icode=@icode and prio=@prio";
+        var parameters = new FwDict
+        {
+            ["icode"] = paramMethod.Invoke(null, ["icode", "varchar", "general"]),
+            ["prio"] = paramMethod.Invoke(null, ["prio", "int", 10])
+        };
+
+        logMethod.Invoke(db, [sql, parameters]);
+
+        var log = string.Join("\n", messages);
+        Assert.IsTrue(log.Contains("@icode"));
+        Assert.IsTrue(log.Contains("general"));
+        Assert.IsTrue(log.Contains("@prio"));
+        Assert.IsTrue(log.Contains("10"));
+        Assert.IsFalse(log.Contains("FieldName"));
+        Assert.IsFalse(log.Contains("FieldType"));
+        Assert.IsFalse(log.Contains("Value"));
     }
 
     [TestMethod]

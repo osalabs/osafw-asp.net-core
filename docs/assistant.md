@@ -58,7 +58,7 @@ Unsupported KB article files can still be uploaded and shown on the article, but
 
 Article access uses numeric `access_level`. Retrieval queries include `KBArticles.buildAccessWhere()`, so live KB retrieval does not return article chunks above the current user's access level. Shared thread links intentionally expose prepared materialized thread content to recipients.
 
-Use `/Admin/RagChunks` to inspect source/chunk state, vector metadata, backend selection, and queue counts. The screen reports setup-needed if the schema is missing.
+Use `/Admin/RagChunks` to inspect source/chunk state, vector metadata, backend selection, and queue counts. Its main search box runs vector search against chunk content so administrators can test retrieval behavior directly; Entity and Backend remain normal list filters. The screen reports setup-needed if the schema is missing.
 
 ## Retrieval
 

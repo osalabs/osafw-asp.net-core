@@ -1,14 +1,17 @@
-  <div class="col-md-3 col-xl-2">
+<div class="row form-row mt-3">
+  <label class="col-form-label col-md-2 col-xl-1">`Filters`</label>
+  <div class="col-md-4 col-xl-3">
     <label class="form-label" for="f_entity">`Entity`</label>
     <select id="f_entity" name="f[entity]" class="form-select">
       <option value="">`All`</option>
       <~entities select="f[entity]">
     </select>
   </div>
-  <div class="col-md-3 col-xl-2">
+  <div class="col-md-4 col-xl-3">
     <label class="form-label" for="f_backend">`Backend`</label>
     <select id="f_backend" name="f[backend]" class="form-select">
       <option value="">`All`</option>
       <~backend_options select="f[backend]">
     </select>
   </div>
+</div>

@@ -238,11 +238,18 @@ public class RagSources : FwModel<RagSources.Row>
             "status", STATUS_ACTIVE
         );
 
+        int sourceId;
         if (existing.Count == 0)
-            return add(fields);
+            sourceId = add(fields);
+        else
+        {
+            update(existing["id"].toInt(), fields);
+            sourceId = existing["id"].toInt();
+        }
 
-        update(existing["id"].toInt(), fields);
-        return existing["id"].toInt();
+        // The hosted worker processes sources first but waits on the assistant queue signal.
+        AssistantRuns.NotifyQueued();
+        return sourceId;
     }
 
     public Row? claimNextPending(string workerId = "")

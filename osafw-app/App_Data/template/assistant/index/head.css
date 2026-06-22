@@ -54,7 +54,8 @@
 }
 
 .assistant-message-assistant .assistant-bubble {
-  width: min(860px, 100%);
+  width: 100%;
+  max-width: 100%;
 }
 
 .assistant-message-body {
