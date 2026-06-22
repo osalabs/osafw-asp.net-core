@@ -13,6 +13,8 @@ public class RagChunks : FwModel<RagChunks.Row>
     public const string VECTOR_MODE_JSON = "json";
     public const string VECTOR_MODE_NATIVE = "native";
     public const int DEFAULT_EMBEDDING_DIMENSION = 1536;
+    private const double CHUNK_ID_VECTOR_SEARCH_MIN_SCORE = 0.25;
+    private const double CHUNK_ID_VECTOR_SEARCH_SCORE_WINDOW = 0.07;
 
     public class Row
     {
@@ -40,6 +42,55 @@ public class RagChunks : FwModel<RagChunks.Row>
         public int? add_users_id { get; set; }
         public DateTime? upd_time { get; set; }
         public int? upd_users_id { get; set; }
+    }
+
+    public class ChunkEmbedding
+    {
+        public int RagSourcesId { get; set; }
+        public int FwEntitiesId { get; set; }
+        public int ItemId { get; set; }
+        public int AttId { get; set; }
+        public string SourceType { get; set; } = string.Empty;
+        public string SourceTitle { get; set; } = string.Empty;
+        public string SourceUrl { get; set; } = string.Empty;
+        public string Filename { get; set; } = string.Empty;
+        public int Page { get; set; }
+        public string Section { get; set; } = string.Empty;
+        public int ChunkIndex { get; set; }
+        public List<float> Embedding { get; set; } = [];
+        public string EmbeddingModel { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public string MetadataJson { get; set; } = string.Empty;
+    }
+
+    public class ChunkSearchResult
+    {
+        public int ChunkId { get; set; }
+        public int SourceId { get; set; }
+        public string Text { get; set; } = string.Empty;
+        public ChunkCitation Citation { get; set; } = new();
+        public double Score { get; set; }
+        public double VectorScore { get; set; }
+        public double KeywordScore { get; set; }
+        public string RetrievalMode { get; set; } = string.Empty;
+    }
+
+    public class ChunkCitation
+    {
+        public int ChunkId { get; set; }
+        public int SourceId { get; set; }
+        public string SourceType { get; set; } = string.Empty;
+        public string SourceTitle { get; set; } = string.Empty;
+        public string SourceUrl { get; set; } = string.Empty;
+        public string File { get; set; } = string.Empty;
+        public int Page { get; set; }
+        public string Section { get; set; } = string.Empty;
+        public int FwEntitiesId { get; set; }
+        public int ItemId { get; set; }
+        public int AttId { get; set; }
+        public int ArticleId { get; set; }
+        public string ArticleName { get; set; } = string.Empty;
+        public string ArticleUrl { get; set; } = string.Empty;
     }
 
     private bool? nativeVectorAvailable;
@@ -127,9 +178,15 @@ public class RagChunks : FwModel<RagChunks.Row>
     }
 
     /// <summary>
-    /// Returns chunk ids ranked by vector similarity for the admin RAG chunk search box.
+    /// Returns chunk ids ranked by vector similarity.
     /// </summary>
-    public async Task<List<int>> listAdminVectorSearchChunkIdsAsync(string query, int limit = 500, string entityIcode = "", CancellationToken cancellationToken = default)
+    public async Task<List<int>> listChunkIdsByVectorSearchAsync(
+        string query,
+        int limit = 500,
+        string entityIcode = "",
+        CancellationToken cancellationToken = default,
+        double minScore = CHUNK_ID_VECTOR_SEARCH_MIN_SCORE,
+        double scoreWindow = CHUNK_ID_VECTOR_SEARCH_SCORE_WINDOW)
     {
         if (string.IsNullOrWhiteSpace(query))
             return [];
@@ -145,9 +202,10 @@ public class RagChunks : FwModel<RagChunks.Row>
 
         var embeddingModel = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
         var queryEmbedding = await fw.model<LLM>().embeddingForTextAsync(query, embeddingModel, cancellationToken).ConfigureAwait(false);
-        var results = listChunkIdsByEmbedding(queryEmbedding, embeddingModel, Math.Max(1, limit), entityIds, null);
-        traceRetrieval(query, "admin_rag_chunks", results);
-        return results.Select(static item => item.ChunkId).Where(static id => id > 0).Distinct().Take(Math.Max(1, limit)).ToList();
+        var results = listByEmbedding(queryEmbedding, embeddingModel, Math.Max(1, limit), entityIds, null, idsOnly: true);
+        var filtered = filterVectorSearchResults(results, Math.Max(1, limit), minScore, scoreWindow);
+        traceRetrieval(query, "chunk_ids_vector", filtered);
+        return filtered.Select(static item => item.ChunkId).Where(static id => id > 0).Distinct().ToList();
     }
 
     public async Task<FwList> listAssistantThreadSearchResultsAsync(string query, IEnumerable<int> messageIds, int limit = 5, CancellationToken cancellationToken = default)
@@ -186,7 +244,7 @@ public class RagChunks : FwModel<RagChunks.Row>
         return mergeHybridResults(vectorResults, keywordResults, limit);
     }
 
-    private List<ChunkSearchResult> listByEmbedding(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
+    private List<ChunkSearchResult> listByEmbedding(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds, bool idsOnly = false)
     {
         if (queryEmbedding == null || queryEmbedding.Count == 0)
             return [];
@@ -196,7 +254,8 @@ public class RagChunks : FwModel<RagChunks.Row>
         {
             try
             {
-                return mapSearchRows(listByNativeVectorQuery(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
+                var rows = listByNativeVectorQuery(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds, idsOnly);
+                return idsOnly ? mapSearchIdRows(rows, "vector") : mapSearchRows(rows, "vector");
             }
             catch (Exception ex)
             {
@@ -204,37 +263,22 @@ public class RagChunks : FwModel<RagChunks.Row>
             }
         }
 
-        return mapSearchRows(listByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
-    }
-
-    private List<ChunkSearchResult> listChunkIdsByEmbedding(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
-    {
-        if (queryEmbedding == null || queryEmbedding.Count == 0)
-            return [];
-
-        string backend = resolveVectorBackend(queryEmbedding.Count);
-        if (backend == VECTOR_MODE_NATIVE)
-        {
-            try
-            {
-                return mapSearchIdRows(listVectorIdRowsByNativeQuery(queryEmbedding, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
-            }
-            catch (Exception ex)
-            {
-                fw.logger(LogLevel.WARN, "Native vector query failed; falling back to JSON scoring:", ex.Message);
-            }
-        }
-
-        return mapSearchIdRows(listVectorIdRowsByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds), "vector");
+        var jsonRows = listByJsonQuery(JsonSerializer.Serialize(queryEmbedding), vectorNorm(queryEmbedding), queryEmbedding.Count, embeddingModel, limit, allowedEntityIds, allowedItemIds, idsOnly);
+        return idsOnly ? mapSearchIdRows(jsonRows, "vector") : mapSearchRows(jsonRows, "vector");
     }
 
     public DBList listByJsonQuery(string qJson, double qNorm, int dimension, string embeddingModel, int limit, HashSet<int>? allowedEntityIds = null, HashSet<int>? allowedItemIds = null)
     {
+        return listByJsonQuery(qJson, qNorm, dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds, idsOnly: false);
+    }
+
+    private DBList listByJsonQuery(string qJson, double qNorm, int dimension, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds, bool idsOnly)
+    {
         var sql = db.dbtype switch
         {
-            DB.DBTYPE_MYSQL => buildMySqlJsonQuerySql(limit),
-            DB.DBTYPE_SQLITE => buildSqliteJsonQuerySql(limit),
-            _ => buildSqlServerJsonQuerySql(limit),
+            DB.DBTYPE_MYSQL => buildMySqlJsonQuerySql(idsOnly),
+            DB.DBTYPE_SQLITE => buildSqliteJsonQuerySql(idsOnly),
+            _ => buildSqlServerJsonQuerySql(idsOnly),
         };
 
         sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
@@ -242,57 +286,12 @@ public class RagChunks : FwModel<RagChunks.Row>
         return db.arrayp(sql, @params);
     }
 
-    private DBList listVectorIdRowsByJsonQuery(string qJson, double qNorm, int dimension, string embeddingModel, int limit, HashSet<int>? allowedEntityIds = null, HashSet<int>? allowedItemIds = null)
-    {
-        var sql = db.dbtype switch
-        {
-            DB.DBTYPE_MYSQL => buildMySqlJsonIdQuerySql(limit),
-            DB.DBTYPE_SQLITE => buildSqliteJsonIdQuerySql(limit),
-            _ => buildSqlServerJsonIdQuerySql(limit),
-        };
-
-        sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
-        var @params = buildSearchParams(qJson, qNorm, dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds);
-        return db.arrayp(sql, @params);
-    }
-
-    private DBList listByNativeVectorQuery(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
+    private DBList listByNativeVectorQuery(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds, bool idsOnly = false)
     {
         string qJson = JsonSerializer.Serialize(queryEmbedding);
         int dimension = queryEmbedding.Count;
         string distance = $"VECTOR_DISTANCE('cosine', CAST(@JsonQueryVector AS vector({dimension})), d.embedding_vector)";
-        string sql = $@"select d.id,
-                               d.rag_sources_id,
-                               d.fwentities_id,
-                               d.item_id,
-                               d.att_id,
-                               d.source_type,
-                               d.source_title,
-                               d.source_url,
-                               d.iname,
-                               d.page,
-                               d.section,
-                               d.idesc,
-                               (1.0 - {distance}) as CosineSim
-                          from {qTable()} d
-                         where d.status=@status_active
-                           and d.embedding_dim=@EmbeddingDim
-                           and d.embedding_model=@EmbeddingModel
-                           and d.embedding_vector is not null
-                      ##FILTERS##
-                      order by {distance}";
-        sql = addSearchFilters(sql, allowedEntityIds, allowedItemIds);
-        sql = db.limit(sql, Math.Max(1, limit));
-        return db.arrayp(sql, buildSearchParams(qJson, vectorNorm(queryEmbedding), dimension, embeddingModel, limit, allowedEntityIds, allowedItemIds));
-    }
-
-    private DBList listVectorIdRowsByNativeQuery(List<float> queryEmbedding, string embeddingModel, int limit, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
-    {
-        string qJson = JsonSerializer.Serialize(queryEmbedding);
-        int dimension = queryEmbedding.Count;
-        string distance = $"VECTOR_DISTANCE('cosine', CAST(@JsonQueryVector AS vector({dimension})), d.embedding_vector)";
-        string sql = $@"select d.id,
-                               (1.0 - {distance}) as CosineSim
+        string sql = $@"select {buildVectorSelectColumns(idsOnly, "(1.0 - " + distance + ")")}
                           from {qTable()} d
                          where d.status=@status_active
                            and d.embedding_dim=@EmbeddingDim
@@ -428,7 +427,32 @@ public class RagChunks : FwModel<RagChunks.Row>
         return nativeVectorColumnAvailable.Value;
     }
 
-    private string buildSqlServerJsonQuerySql(int limit)
+    private static string buildVectorSelectColumns(bool idsOnly, string scoreSql)
+    {
+        string columns = idsOnly ? "d.id" : @"d.id,
+       d.rag_sources_id,
+       d.fwentities_id,
+       d.item_id,
+       d.att_id,
+       d.source_type,
+       d.source_title,
+       d.source_url,
+       d.iname,
+       d.page,
+       d.section,
+       d.idesc";
+        return columns + @",
+       " + scoreSql + " as CosineSim";
+    }
+
+    private static string buildVectorGroupByColumns(bool idsOnly)
+    {
+        return idsOnly
+            ? "d.id, d.embedding_norm"
+            : "d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.iname, d.page, d.section, d.idesc, d.embedding_norm";
+    }
+
+    private string buildSqlServerJsonQuerySql(bool idsOnly)
     {
         return $@"
 with q as (
@@ -448,52 +472,13 @@ scores as (
   group by d.id
 )
 select top (@Limit)
-       d.id,
-       d.rag_sources_id,
-       d.fwentities_id,
-       d.item_id,
-       d.att_id,
-       d.source_type,
-       d.source_title,
-       d.source_url,
-       d.iname,
-       d.page,
-       d.section,
-       d.idesc,
-       (s.dot / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
+       {buildVectorSelectColumns(idsOnly, "(s.dot / nullif(d.embedding_norm * @QueryNorm, 0))")}
   from scores s
   join {qTable()} d on d.id=s.id
  order by CosineSim desc, d.id";
     }
 
-    private string buildSqlServerJsonIdQuerySql(int limit)
-    {
-        return $@"
-with q as (
-    select [key] as k, try_cast(value as float) as val
-      from openjson(@JsonQueryVector)
-),
-scores as (
-    select d.id,
-           sum(q.val * try_cast(v.value as float)) as dot
-      from {qTable()} d
-      cross apply openjson(d.embedding_json) v
-      join q on q.k = v.[key]
-     where d.status=@status_active
-       and d.embedding_dim=@EmbeddingDim
-       and d.embedding_model=@EmbeddingModel
-  ##FILTERS##
-  group by d.id
-)
-select top (@Limit)
-       d.id,
-       (s.dot / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
-  from scores s
-  join {qTable()} d on d.id=s.id
- order by CosineSim desc, d.id";
-    }
-
-    private string buildSqliteJsonQuerySql(int limit)
+    private string buildSqliteJsonQuerySql(bool idsOnly)
     {
         return $@"
 with q as (
@@ -512,68 +497,17 @@ scores as (
   ##FILTERS##
   group by d.id
 )
-select d.id,
-       d.rag_sources_id,
-       d.fwentities_id,
-       d.item_id,
-       d.att_id,
-       d.source_type,
-       d.source_title,
-       d.source_url,
-       d.iname,
-       d.page,
-       d.section,
-       d.idesc,
-       (s.dot / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
+select {buildVectorSelectColumns(idsOnly, "(s.dot / nullif(d.embedding_norm * @QueryNorm, 0))")}
   from scores s
   join {qTable()} d on d.id=s.id
  order by CosineSim desc, d.id
  limit @Limit";
     }
 
-    private string buildSqliteJsonIdQuerySql(int limit)
+    private string buildMySqlJsonQuerySql(bool idsOnly)
     {
         return $@"
-with q as (
-    select key as k, cast(value as real) as val
-      from json_each(@JsonQueryVector)
-),
-scores as (
-    select d.id,
-           sum(q.val * cast(v.value as real)) as dot
-      from {qTable()} d
-      join json_each(d.embedding_json) v
-      join q on q.k = v.key
-     where d.status=@status_active
-       and d.embedding_dim=@EmbeddingDim
-       and d.embedding_model=@EmbeddingModel
-  ##FILTERS##
-  group by d.id
-)
-select d.id,
-       (s.dot / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
-  from scores s
-  join {qTable()} d on d.id=s.id
- order by CosineSim desc, d.id
- limit @Limit";
-    }
-
-    private string buildMySqlJsonQuerySql(int limit)
-    {
-        return $@"
-select d.id,
-       d.rag_sources_id,
-       d.fwentities_id,
-       d.item_id,
-       d.att_id,
-       d.source_type,
-       d.source_title,
-       d.source_url,
-       d.iname,
-       d.page,
-       d.section,
-       d.idesc,
-       (sum(q.val * v.val) / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
+select {buildVectorSelectColumns(idsOnly, "(sum(q.val * v.val) / nullif(d.embedding_norm * @QueryNorm, 0))")}
   from {qTable()} d
   join json_table(@JsonQueryVector, '$[*]' columns (ord for ordinality, val double path '$')) q
   join json_table(d.embedding_json, '$[*]' columns (ord for ordinality, val double path '$')) v on v.ord=q.ord
@@ -581,24 +515,7 @@ select d.id,
    and d.embedding_dim=@EmbeddingDim
    and d.embedding_model=@EmbeddingModel
 ##FILTERS##
- group by d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.iname, d.page, d.section, d.idesc, d.embedding_norm
- order by CosineSim desc, d.id
- limit @Limit";
-    }
-
-    private string buildMySqlJsonIdQuerySql(int limit)
-    {
-        return $@"
-select d.id,
-       (sum(q.val * v.val) / nullif(d.embedding_norm * @QueryNorm, 0)) as CosineSim
-  from {qTable()} d
-  join json_table(@JsonQueryVector, '$[*]' columns (ord for ordinality, val double path '$')) q
-  join json_table(d.embedding_json, '$[*]' columns (ord for ordinality, val double path '$')) v on v.ord=q.ord
- where d.status=@status_active
-   and d.embedding_dim=@EmbeddingDim
-   and d.embedding_model=@EmbeddingModel
-##FILTERS##
- group by d.id, d.embedding_norm
+ group by {buildVectorGroupByColumns(idsOnly)}
  order by CosineSim desc, d.id
  limit @Limit";
     }
@@ -808,6 +725,21 @@ select d.id,
         return result;
     }
 
+    private static List<ChunkSearchResult> filterVectorSearchResults(List<ChunkSearchResult> results, int limit, double minScore, double scoreWindow)
+    {
+        var ranked = results
+            .Where(static item => item.ChunkId > 0 && item.VectorScore > 0)
+            .OrderByDescending(static item => item.VectorScore)
+            .ThenBy(static item => item.ChunkId)
+            .Take(Math.Max(1, limit))
+            .ToList();
+        if (ranked.Count == 0)
+            return [];
+
+        double cutoff = Math.Max(minScore, ranked[0].VectorScore - Math.Max(0, scoreWindow));
+        return ranked.Where(item => item.VectorScore >= cutoff).ToList();
+    }
+
     private List<ChunkSearchResult> mergeHybridResults(List<ChunkSearchResult> vectorResults, List<ChunkSearchResult> keywordResults, int limit)
     {
         limit = Math.Max(1, limit);
@@ -909,7 +841,7 @@ select d.id,
             keyword_score = item.KeywordScore,
             retrieval_mode = item.RetrievalMode
         }).ToList();
-        fw.logger(LogLevel.DEBUG, "Assistant retrieval trace: query=", query, ", mode=", mode, ", results=", Utils.jsonEncode(payload));
+        fw.logger(LogLevel.DEBUG, "Assistant retrieval trace: query=", query, ", mode=", mode, ", results=", payload);
     }
 
     public void deleteBySource(int sourceId)
@@ -1022,52 +954,4 @@ select d.id,
         return Math.Sqrt(sum);
     }
 
-    public class ChunkEmbedding
-    {
-        public int RagSourcesId { get; set; }
-        public int FwEntitiesId { get; set; }
-        public int ItemId { get; set; }
-        public int AttId { get; set; }
-        public string SourceType { get; set; } = string.Empty;
-        public string SourceTitle { get; set; } = string.Empty;
-        public string SourceUrl { get; set; } = string.Empty;
-        public string Filename { get; set; } = string.Empty;
-        public int Page { get; set; }
-        public string Section { get; set; } = string.Empty;
-        public int ChunkIndex { get; set; }
-        public List<float> Embedding { get; set; } = [];
-        public string EmbeddingModel { get; set; } = string.Empty;
-        public string Text { get; set; } = string.Empty;
-        public string MetadataJson { get; set; } = string.Empty;
-    }
-
-    public class ChunkSearchResult
-    {
-        public int ChunkId { get; set; }
-        public int SourceId { get; set; }
-        public string Text { get; set; } = string.Empty;
-        public ChunkCitation Citation { get; set; } = new();
-        public double Score { get; set; }
-        public double VectorScore { get; set; }
-        public double KeywordScore { get; set; }
-        public string RetrievalMode { get; set; } = string.Empty;
-    }
-
-    public class ChunkCitation
-    {
-        public int ChunkId { get; set; }
-        public int SourceId { get; set; }
-        public string SourceType { get; set; } = string.Empty;
-        public string SourceTitle { get; set; } = string.Empty;
-        public string SourceUrl { get; set; } = string.Empty;
-        public string File { get; set; } = string.Empty;
-        public int Page { get; set; }
-        public string Section { get; set; } = string.Empty;
-        public int FwEntitiesId { get; set; }
-        public int ItemId { get; set; }
-        public int AttId { get; set; }
-        public int ArticleId { get; set; }
-        public string ArticleName { get; set; } = string.Empty;
-        public string ArticleUrl { get; set; } = string.Empty;
-    }
 }

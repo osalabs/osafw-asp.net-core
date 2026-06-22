@@ -1026,7 +1026,7 @@ SELECT 2;";
             // 5. Test Special Operations (BETWEEN, IN)
             fields["fint"] = db.opIN(new[] { 1, 2, 3 }); // Assuming this will be interpreted as an IN operation
             result = db.prepareParams("demos", fields);
-            Assert.Contains("fint IN (@fint_1,@fint_2,@fint_3)", result.sql, "failed result: " + result.sql);
+            Assert.Contains("fint IN (@p0,@p1,@p2)", result.sql, "failed result: " + result.sql);
 
             fields.Clear();
             fields["fdate_pop"] = db.opBETWEEN(DateTime.Today, DateTime.Today.AddDays(1));

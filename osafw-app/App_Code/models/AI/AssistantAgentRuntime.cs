@@ -54,7 +54,7 @@ public sealed class AssistantToolRuntime
     {
         if (HasPersistedRun)
             fw.model<AssistantRunsEvents>().addEvent(runId, AssistantRunsEvents.TYPE_TOOL, "Tool: " + toolName, args == null ? string.Empty : Utils.jsonEncode(args));
-        fw.logger(LogLevel.DEBUG, "Assistant tool call [", toolName, "] args=", args == null ? "{}" : Utils.jsonEncode(args));
+        fw.logger(LogLevel.DEBUG, "Assistant tool call [", toolName, "] args=", args ?? new FwDict());
     }
 
     public void LogToolResult(string toolName, string summary)

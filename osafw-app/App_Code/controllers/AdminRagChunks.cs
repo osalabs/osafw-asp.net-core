@@ -9,7 +9,7 @@ namespace osafw;
 public class AdminRagChunksController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
-    private const int AdminVectorSearchLimit = 500;
+    private const int ADMIN_VECTOR_SEARCH_LIMIT = 500;
 
     protected RagChunks model = null!;
 
@@ -95,7 +95,7 @@ public class AdminRagChunksController : FwDynamicController
         List<int> chunkIds;
         try
         {
-            chunkIds = model.listAdminVectorSearchChunkIdsAsync(query, AdminVectorSearchLimit, entity, fw.context.RequestAborted)
+            chunkIds = model.listChunkIdsByVectorSearchAsync(query, ADMIN_VECTOR_SEARCH_LIMIT, entity, fw.context.RequestAborted)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -111,17 +111,12 @@ public class AdminRagChunksController : FwDynamicController
             return;
         }
 
-        list_where += " and id in (@admin_vector_chunk_ids)";
-        list_where_params["admin_vector_chunk_ids"] = chunkIds;
-        list_orderby = buildVectorSearchOrderBy(chunkIds);
-    }
-
-    private static string buildVectorSearchOrderBy(List<int> chunkIds)
-    {
+        list_where += " and id in (@ids)";
+        list_where_params["ids"] = chunkIds;
         var cases = chunkIds
             .Where(static id => id > 0)
             .Select(static (id, index) => "when " + id + " then " + index);
-        return "case id " + string.Join(" ", cases) + " else " + chunkIds.Count + " end";
+        list_orderby = "case id " + string.Join(" ", cases) + " else " + chunkIds.Count + " end";
     }
 
     public override FwDict ShowAction(int id)

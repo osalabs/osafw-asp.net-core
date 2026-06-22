@@ -197,7 +197,7 @@ public class SecurityGroup9ATests
     {
         var db = new DB("", DB.DBTYPE_SQLSRV);
         var messages = new List<string>();
-        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => arg?.ToString() ?? ""))));
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
         var method = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var sql = "update users set pwd=@pwd where pwd_reset=@reset";
@@ -224,7 +224,7 @@ public class SecurityGroup9ATests
             is_log_pii = true
         };
         var messages = new List<string>();
-        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => arg?.ToString() ?? ""))));
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
         var method = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var sql = "select * from users where pwd=@pwd";
@@ -249,7 +249,7 @@ public class SecurityGroup9ATests
             is_log_pii = true
         };
         var messages = new List<string>();
-        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => arg?.ToString() ?? ""))));
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
         var logMethod = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var paramMethod = typeof(DB).GetMethod("paramValue", BindingFlags.NonPublic | BindingFlags.Static)
@@ -264,13 +264,37 @@ public class SecurityGroup9ATests
         logMethod.Invoke(db, [sql, parameters]);
 
         var log = string.Join("\n", messages);
-        Assert.IsTrue(log.Contains("@icode"));
-        Assert.IsTrue(log.Contains("general"));
-        Assert.IsTrue(log.Contains("@prio"));
-        Assert.IsTrue(log.Contains("10"));
+        Assert.IsTrue(log.Contains("@icode => general"));
+        Assert.IsTrue(log.Contains("@prio => 10"));
         Assert.IsFalse(log.Contains("FieldName"));
         Assert.IsFalse(log.Contains("FieldType"));
         Assert.IsFalse(log.Contains("Value"));
+    }
+
+    [TestMethod]
+    public void DbLogging_ExpandedListParamsUseShortNames()
+    {
+        var method = typeof(DB).GetMethod("expandParams", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new AssertFailedException("Expected DB.expandParams");
+        object?[] args =
+        [
+            "select * from t where id in (@very_long_vector_chunk_ids) and status=@status",
+            new FwDict
+            {
+                ["very_long_vector_chunk_ids"] = new[] { 5, 6 },
+                ["status"] = 127
+            }
+        ];
+
+        method.Invoke(null, args);
+
+        var sql = args[0]?.ToString() ?? string.Empty;
+        var parameters = args[1] as FwDict ?? [];
+        Assert.IsTrue(sql.Contains("id in (@p0,@p1)"), sql);
+        Assert.IsFalse(sql.Contains("very_long_vector_chunk_ids"), sql);
+        Assert.AreEqual(5, parameters["p0"]);
+        Assert.AreEqual(6, parameters["p1"]);
+        Assert.AreEqual(127, parameters["status"]);
     }
 
     [TestMethod]

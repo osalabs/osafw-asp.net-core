@@ -373,10 +373,10 @@
     }).join('');
     const feedback = role === 'assistant'
       ? '<div class="assistant-response-actions d-flex flex-wrap align-items-center gap-2 mt-3">'
-        + '<button type="button" class="btn btn-sm btn-outline-secondary" data-assistant-copy-message data-message-id="' + escapeAttr(message.id) + '"><i class="bi bi-clipboard me-1"></i>Copy</button>'
+        + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-copy-message data-message-id="' + escapeAttr(message.id) + '" title="Copy response" aria-label="Copy response"><i class="bi bi-copy"></i></button>'
         + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>'
-        + (message.add_time ? '<span class="small text-muted ms-1 me-1">' + escapeHtml(message.add_time) + '</span>' : '')
         + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>'
+        + (message.add_time ? '<span class="small text-muted ms-1 me-1">' + escapeHtml(message.add_time) + '</span>' : '')
         + '</div>'
       : '';
     const time = role !== 'assistant' && message.add_time ? '<div class="small text-muted mt-2">' + escapeHtml(message.add_time) + '</div>' : '';
@@ -521,10 +521,15 @@
     try {
       await navigator.clipboard.writeText(message.content_markdown);
       const original = button.innerHTML;
-      button.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied';
+      const originalTitle = button.getAttribute('title') || 'Copy response';
+      button.innerHTML = '<i class="bi bi-check2"></i>';
+      button.setAttribute('title', 'Copied');
+      button.setAttribute('aria-label', 'Copied');
       button.disabled = true;
       setTimeout(() => {
         button.innerHTML = original;
+        button.setAttribute('title', originalTitle);
+        button.setAttribute('aria-label', originalTitle);
         button.disabled = false;
       }, 1200);
     } catch (err) {

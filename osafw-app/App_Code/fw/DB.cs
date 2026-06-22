@@ -1254,15 +1254,15 @@ public class DB : IDisposable
     /// <param name="params">if input params null - make empty hashtable</param>
     private static void expandParams(ref string sql, ref FwDict @params)
     {
+        int generatedListParamIndex = 0;
         foreach (string p in @params.Keys.ToList())
         {
             if (@params[p] is IList arr)
             {
                 var arrstr = new StringBuilder();
-                var paramBase = p.TrimStart('@', '$', ':');
                 for (var i = 0; i <= arr.Count - 1; i++)
                 {
-                    var pnew = paramBase + "_" + i.ToString();
+                    var pnew = nextListParamName(@params, ref generatedListParamIndex);
                     @params[pnew] = arr[i];
                     if (i > 0) arrstr.Append(',');
                     arrstr.Append("@" + pnew);
@@ -1271,6 +1271,22 @@ public class DB : IDisposable
                 @params.Remove(p);
             }
         }
+    }
+
+    private static string nextListParamName(FwDict @params, ref int index, ISet<string>? reservedNames = null)
+    {
+        string name;
+        do
+        {
+            name = "p" + index.ToString();
+            index += 1;
+        }
+        while (@params.ContainsKey(name)
+            || @params.ContainsKey("@" + name)
+            || @params.ContainsKey("$" + name)
+            || @params.ContainsKey(":" + name)
+            || (reservedNames?.Contains(name) ?? false));
+        return name;
     }
 
     private static string namedParam(string name)
@@ -1303,7 +1319,7 @@ public class DB : IDisposable
             }
             else
             {
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " ", is_log_pii ? Utils.jsonEncode(logParamValues(@params), true) : " params=" + string.Join(", ", @params.Keys.Select(namedParam)));
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " ", is_log_pii ? logParamValues(@params) : " params=" + string.Join(", ", @params.Keys.Select(namedParam)));
             }
         }
         else
@@ -2375,6 +2391,9 @@ public class DB : IDisposable
 
         FwDict @params = new(fields.Keys.Count);
         var reW = new Regex(@"\W"); //pre-compile regex
+        HashSet<string> reservedParamNames = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string field in fields.Keys)
+            reservedParamNames.Add(reW.Replace(field, "_") + suffix);
 
         foreach (string fname in fields.Keys)
         {
@@ -2415,14 +2434,14 @@ public class DB : IDisposable
                 else if (dbop.op == DBOps.IN || dbop.op == DBOps.NOTIN)
                 {
                     List<string> sql_params = [];
+                    int listParamIndex = 0;
                     if (dbop.value is IList list)
                     {
-                        var i = 1;
                         foreach (var pvalue in list)
                         {
-                            @params[param_name + "_" + i] = paramValue(fname, fieldType, pvalue);
-                            sql_params.Add("@" + param_name + "_" + i);
-                            i += 1;
+                            var pnew = nextListParamName(@params, ref listParamIndex, reservedParamNames);
+                            @params[pnew] = paramValue(fname, fieldType, pvalue);
+                            sql_params.Add("@" + pnew);
                         }
                     }
                     // [NOT] IN (@p1,@p2,@p3...)
