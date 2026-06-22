@@ -11,6 +11,7 @@ The feature is disabled by default. Configure these rows in Site Settings under 
 - `ASSISTANT_MODEL=gpt-5-mini`
 - `ASSISTANT_VECTOR_MODE=auto`
 - `ASSISTANT_MEMORY_ENABLED=false`
+- `ASSISTANT_RUN_TIMEOUT_SECONDS=120`
 - `ASSISTANT_MAX_FILES_PER_MESSAGE=5`
 - `ASSISTANT_MAX_INDEXED_FILE_BYTES=5242880`
 - `ASSISTANT_MAX_INDEX_CHARS=200000`
@@ -31,7 +32,7 @@ New databases already include the same tables in the provider-specific `fwdataba
 Core tables:
 
 - `kb_articles`: manager-maintained knowledge base records.
-- `rag_sources`: one row per indexable source, including KB article bodies, KB attachments, published Spages, and assistant uploads. Source rows carry queue state, content hash, parser version, ACL snapshot, last indexed time, and last error.
+- `rag_sources`: one row per indexable source, including KB article bodies, KB attachments, published Spages, and assistant uploads. Source rows carry queue state, retry/backoff metadata, content hash, parser version, ACL snapshot, last indexed time, and last error.
 - `rag_chunks`: chunk text, JSON embedding, optional denormalized source/entity fields, vector metadata, stable `source_id`/`chunk_id`, and citation metadata.
 - `assistant_threads`, `assistant_messages`, `assistant_runs`, and `assistant_runs_events`: durable chat, run state, events, and persisted retrieval evidence.
 - `assistant_feedback`: reviewable feedback data.
@@ -40,6 +41,8 @@ Core tables:
 ## Knowledge Base And Sources
 
 Managers maintain articles at `/Admin/KBArticles`. Saving or reindexing an article queues `rag_sources` rows instead of calling the embedding provider during the request. The worker later parses, chunks, embeds, and writes `rag_chunks`.
+
+RAG source indexing is durable background work. Failed sources retain `last_error` and are retried with bounded exponential backoff up to five attempts. Administrators can requeue failed or stuck sources from `/Admin/RagChunks`; requeueing resets retry/backoff metadata and preserves the last error for diagnostics until a later successful index clears it.
 
 Article Content is optional. New articles can be saved with title/access/status first; the edit screen then exposes a standard multi-file upload block. Uploaded files are attached to the KB article entity and reconciled with RAG sources whenever the article is saved, reindexed, or files are uploaded. Removed files also remove stale KB attachment sources and chunks.
 
@@ -58,7 +61,7 @@ Unsupported KB article files can still be uploaded and shown on the article, but
 
 Article access uses numeric `access_level`. Retrieval queries include `KBArticles.buildAccessWhere()`, so live KB retrieval does not return article chunks above the current user's access level. Shared thread links intentionally expose prepared materialized thread content to recipients.
 
-Use `/Admin/RagChunks` to inspect source/chunk state, vector metadata, backend selection, and queue counts. Its main search box runs vector search against chunk content so administrators can test retrieval behavior directly; Entity and Backend remain normal list filters. The screen reports setup-needed if the schema is missing.
+Use `/Admin/RagChunks` to inspect source/chunk state, retry attempts, vector metadata, backend selection, queue counts, failed/stuck sources, assistant run status, and recent retrieval evidence events. Its main search box runs vector search against chunk content so administrators can test retrieval behavior directly; Entity and Backend remain normal list filters. The screen reports setup-needed if the schema is missing.
 
 ## Retrieval
 
@@ -88,7 +91,9 @@ The default embedding dimension is 1536 for `text-embedding-3-small`.
 
 `/Main` shows an AI Assistant dashboard block when `ASSISTANT_ENABLED=true`. The block posts the prompt to `/Assistant`, where the threaded chat continues. The default sidebar does not include a separate Assistant link.
 
-`/Assistant` renders the chat shell. The UI starts with a centered composer, then switches to the thread view after a chat starts. It supports send, poll, history search in a modal, button-driven file upload, drag-and-drop files, feedback, share, and cited response display.
+`/Assistant` renders the chat shell. The UI starts with a centered composer, then switches to the thread view after a chat starts. It supports send, poll, history search in a modal, button-driven file upload, drag-and-drop files, feedback, share, retry, and cited response display.
+
+Assistant chat runs are UI-facing work, not durable reprocessing jobs. Queued or processing runs older than `ASSISTANT_RUN_TIMEOUT_SECONDS` fail with "Assistant response timed out. Try again." instead of being requeued indefinitely. Users can retry the latest completed or failed response; retry creates a fresh run for the same latest user message and does not duplicate the user message. Retry requires owner access, POST, a valid XSS token, and is unavailable on readonly shared-thread views.
 
 The run processor uses Microsoft Agent Framework packages and read-only tools:
 

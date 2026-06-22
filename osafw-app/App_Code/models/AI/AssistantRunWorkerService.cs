@@ -10,6 +10,7 @@ namespace osafw;
 public sealed class AssistantRunWorkerService : BackgroundService
 {
     private static readonly TimeSpan QueueRecoveryProbeInterval = TimeSpan.FromMinutes(5);
+    private const int MaxSourcesBeforeRunCheck = 3;
 
     private readonly IConfiguration configuration;
     private readonly ILoggerFactory loggerFactory;
@@ -34,12 +35,29 @@ public sealed class AssistantRunWorkerService : BackgroundService
             try
             {
                 bool processed;
+                int processedSourcesSinceRunCheck = 0;
                 do
                 {
                     var processor = new AssistantRunProcessor(configuration, loggerFactory);
-                    processed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
-                    if (!processed)
+                    processed = false;
+                    if (processedSourcesSinceRunCheck >= MaxSourcesBeforeRunCheck)
+                    {
                         processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
+                        processedSourcesSinceRunCheck = 0;
+                    }
+
+                    if (!processed)
+                    {
+                        processed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
+                        if (processed)
+                            processedSourcesSinceRunCheck++;
+                    }
+
+                    if (!processed)
+                    {
+                        processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
+                        processedSourcesSinceRunCheck = 0;
+                    }
                     shouldRecoverStaleQueue = false;
                 }
                 while (processed && !stoppingToken.IsCancellationRequested);

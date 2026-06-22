@@ -35,7 +35,9 @@ BEGIN
     source_version        NVARCHAR(64) NOT NULL DEFAULT '',
     acl_snapshot          NVARCHAR(MAX),
     index_status          NVARCHAR(32) NOT NULL DEFAULT 'pending',
+    index_attempt_no      INT NOT NULL DEFAULT 0,
     queued_at             DATETIME2 NULL,
+    next_retry_at         DATETIME2 NULL,
     last_indexed_at       DATETIME2 NULL,
     last_error            NVARCHAR(MAX),
     metadata_json         NVARCHAR(MAX),
@@ -48,9 +50,25 @@ BEGIN
   );
 
   CREATE UNIQUE INDEX UX_rag_sources_source_key ON rag_sources(source_key);
-  CREATE INDEX IX_rag_sources_queue ON rag_sources(index_status, status, queued_at, id);
+  CREATE INDEX IX_rag_sources_queue ON rag_sources(index_status, status, next_retry_at, queued_at, id);
   CREATE INDEX IX_rag_sources_entity ON rag_sources(fwentities_id, item_id, att_id, status);
 END
+GO
+
+IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.rag_sources', N'index_attempt_no') IS NULL
+  ALTER TABLE dbo.rag_sources ADD index_attempt_no INT NOT NULL CONSTRAINT DF_rag_sources_index_attempt_no DEFAULT 0;
+GO
+
+IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.rag_sources', N'next_retry_at') IS NULL
+  ALTER TABLE dbo.rag_sources ADD next_retry_at DATETIME2 NULL;
+GO
+
+IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_rag_sources_queue' AND object_id=OBJECT_ID(N'dbo.rag_sources'))
+  DROP INDEX IX_rag_sources_queue ON dbo.rag_sources;
+GO
+
+IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_rag_sources_queue' AND object_id=OBJECT_ID(N'dbo.rag_sources'))
+  CREATE INDEX IX_rag_sources_queue ON dbo.rag_sources(index_status, status, next_retry_at, queued_at, id);
 GO
 
 IF OBJECT_ID(N'dbo.rag_chunks', N'U') IS NULL
@@ -253,6 +271,11 @@ GO
 INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, allowed_values)
 SELECT 1, 70, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.', ''
 WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_MEMORY_ENABLED');
+GO
+
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, allowed_values)
+SELECT 1, 60, 'AI', 'ASSISTANT_RUN_TIMEOUT_SECONDS', '120', 'Assistant Run Timeout Seconds', 'Maximum queued or processing time for UI-facing assistant responses before they fail and can be retried.', 'min|30 step|1'
+WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='ASSISTANT_RUN_TIMEOUT_SECONDS');
 GO
 
 INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, allowed_values)

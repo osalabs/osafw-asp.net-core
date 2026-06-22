@@ -151,7 +151,7 @@ public class RagChunks : FwModel<RagChunks.Row>
 
     public string adminListViewSql()
     {
-        return $@"(select d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.chunk_index, d.iname, d.idesc, d.page, d.section, d.embedding_dim, d.embedding_model, d.vector_backend, d.metadata_json, d.status, d.add_time, d.upd_time, rs.index_status, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode
+        return $@"(select d.id, d.rag_sources_id, d.fwentities_id, d.item_id, d.att_id, d.source_type, d.source_title, d.source_url, d.chunk_index, d.iname, d.idesc, d.page, d.section, d.embedding_dim, d.embedding_model, d.vector_backend, d.metadata_json, d.status, d.add_time, d.upd_time, rs.index_status, rs.index_attempt_no, rs.next_retry_at, rs.last_error, rs.last_indexed_at, rs.content_hash, e.icode as entity_icode
                     from {qTable()} d
                left join {fw.model<RagSources>().qTable()} rs on rs.id=d.rag_sources_id
                left join {fw.model<FwEntities>().qTable()} e on e.id=d.fwentities_id) t";

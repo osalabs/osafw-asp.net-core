@@ -17,6 +17,8 @@ public class AssistantRuns : FwModel<AssistantRuns.Row>
     public const int STATUS_COMPLETED = 30;
     public const int STATUS_FAILED = 40;
     public const int STATUS_WAITING_FOR_USER = 50;
+    public const int DEFAULT_RUN_TIMEOUT_SECONDS = 120;
+    public const string TIMEOUT_ERROR_MESSAGE = "Assistant response timed out. Try again.";
 
     public class Row
     {
@@ -209,6 +211,20 @@ output inserted.*;";
         ));
     }
 
+    public Row? queuedOrProcessingByThread(int threadId)
+    {
+        string sql = $@"select *
+                          from {qTable()}
+                         where assistant_threads_id=@assistant_threads_id
+                           and status in (@status_queued, @status_processing)
+                      order by id desc";
+        return db.rowp<Row>(db.limit(sql, 1), DB.h(
+            "@assistant_threads_id", threadId,
+            "@status_queued", STATUS_QUEUED,
+            "@status_processing", STATUS_PROCESSING
+        ));
+    }
+
     public int idByResultMessage(int messageId)
     {
         if (messageId <= 0)
@@ -249,54 +265,102 @@ output inserted.*;";
         return result;
     }
 
-    public int requeueStaleProcessingRuns(int staleAfterMinutes = 30)
+    public int failTimedOutActiveRuns(int timeoutSeconds = DEFAULT_RUN_TIMEOUT_SECONDS)
     {
-        if (db.dbtype != DB.DBTYPE_SQLSRV)
-            return requeueStaleProcessingRunsPortable(staleAfterMinutes);
-
+        int effectiveTimeout = Math.Clamp(timeoutSeconds <= 0 ? DEFAULT_RUN_TIMEOUT_SECONDS : timeoutSeconds, 30, 1800);
+        DateTime cutoff = db.Now().AddSeconds(-effectiveTimeout);
         string sql = $@"
-update {qTable()}
-   set status=@status_queued,
-       worker_id='',
-       error_message='',
-       clarification_json='',
-       claimed_at=null,
-       started_at=null,
-       completed_at=null,
-       upd_time={db.sqlNOW()}
- where status=@status_processing
-   and claimed_at is not null
-   and claimed_at < dateadd(minute, -@stale_after_minutes, {db.sqlNOW()})";
-
-        int affected = db.exec(sql, DB.h(
+select *
+  from {qTable()}
+ where status in (@active_statuses)
+   and (
+        (status=@status_queued and add_time<@cutoff)
+        or (
+            status=@status_processing
+            and coalesce(claimed_at, started_at, add_time)<@cutoff
+        )
+   )
+ order by id";
+        var rows = db.arrayp<Row>(sql, DB.h(
+            "active_statuses", new List<int> { STATUS_QUEUED, STATUS_PROCESSING },
             "@status_queued", STATUS_QUEUED,
             "@status_processing", STATUS_PROCESSING,
-            "@stale_after_minutes", staleAfterMinutes <= 0 ? 30 : staleAfterMinutes
+            "@cutoff", cutoff
         ));
+
+        int affected = 0;
+        foreach (var row in rows)
+        {
+            string updateSql = $@"
+update {qTable()}
+   set status=@status_failed,
+       completed_at={db.sqlNOW()},
+       error_message=@timeout_error,
+       upd_time={db.sqlNOW()}
+ where id=@id
+   and status in (@active_statuses)
+   and (
+        (status=@status_queued and add_time<@cutoff)
+        or (
+            status=@status_processing
+            and coalesce(claimed_at, started_at, add_time)<@cutoff
+        )
+   )";
+            int rowAffected = db.exec(updateSql, DB.h(
+                "@id", row.id,
+                "@status_failed", STATUS_FAILED,
+                "@timeout_error", TIMEOUT_ERROR_MESSAGE,
+                "active_statuses", new List<int> { STATUS_QUEUED, STATUS_PROCESSING },
+                "@status_queued", STATUS_QUEUED,
+                "@status_processing", STATUS_PROCESSING,
+                "@cutoff", cutoff
+            ));
+            if (rowAffected <= 0)
+                continue;
+
+            affected++;
+            removeCache(row.id);
+            fw.model<AssistantRunsEvents>().addEvent(row.id, AssistantRunsEvents.TYPE_ERROR, TIMEOUT_ERROR_MESSAGE);
+            var latest = latestByThread(row.assistant_threads_id);
+            if (latest?.id == row.id)
+                fw.model<AssistantThreads>().updateLastRunStatus(row.assistant_threads_id, STATUS_FAILED);
+        }
+
         if (affected > 0)
             removeCacheAll();
         return affected;
     }
 
-    private int requeueStaleProcessingRunsPortable(int staleAfterMinutes)
+    public FwList listDiagnostics(int timeoutSeconds = DEFAULT_RUN_TIMEOUT_SECONDS, int limit = 12)
     {
-        var cutoff = db.Now().AddMinutes(-(staleAfterMinutes <= 0 ? 30 : staleAfterMinutes));
-        int affected = db.update(table_name, DB.h(
-            "status", STATUS_QUEUED,
-            "worker_id", string.Empty,
-            "error_message", string.Empty,
-            "clarification_json", string.Empty,
-            "claimed_at", null,
-            "started_at", null,
-            "completed_at", null,
-            "upd_time", DB.NOW
-        ), DB.h(
-            "status", STATUS_PROCESSING,
-            "claimed_at", db.opLT(cutoff)
+        int effectiveTimeout = Math.Clamp(timeoutSeconds <= 0 ? DEFAULT_RUN_TIMEOUT_SECONDS : timeoutSeconds, 30, 1800);
+        DateTime cutoff = db.Now().AddSeconds(-effectiveTimeout);
+        string sql = $@"
+select r.*, t.iname as thread_name
+  from {qTable()} r
+  left join {fw.model<AssistantThreads>().qTable()} t on t.id=r.assistant_threads_id
+ where r.status in (@diagnostic_statuses)
+ order by case when r.status in (@active_statuses) then 0 else 1 end,
+          r.id desc";
+        var rows = db.arrayp(db.limit(sql, Math.Max(1, limit)), DB.h(
+            "diagnostic_statuses", new List<int> { STATUS_QUEUED, STATUS_PROCESSING, STATUS_FAILED },
+            "active_statuses", new List<int> { STATUS_QUEUED, STATUS_PROCESSING }
         ));
-        if (affected > 0)
-            removeCacheAll();
-        return affected;
+        foreach (FwDict row in rows)
+        {
+            int status = row["status"].toInt();
+            DateTime? started = row["claimed_at"].toDateOrNull();
+            if (!started.HasValue)
+                started = row["started_at"].toDateOrNull();
+            if (!started.HasValue)
+                started = row["add_time"].toDateOrNull();
+
+            row["status_code"] = StatusToCode(status);
+            row["is_timed_out"] = (status == STATUS_QUEUED || status == STATUS_PROCESSING)
+                && started.HasValue
+                && started.Value < cutoff;
+        }
+        return rows;
     }
 
     public static string StatusToCode(int? status)

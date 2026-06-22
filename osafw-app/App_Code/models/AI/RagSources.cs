@@ -22,6 +22,10 @@ public class RagSources : FwModel<RagSources.Row>
     public const string INDEX_STATUS_STALE = "stale";
 
     public const string PARSER_VERSION = "rag-source-v1";
+    public const int MAX_RETRY_ATTEMPTS = 5;
+    public const int RETRY_BACKOFF_BASE_MINUTES = 5;
+    public const int RETRY_BACKOFF_MULTIPLIER = 3;
+    public const int RETRY_BACKOFF_MAX_MINUTES = 240;
 
     public class Row
     {
@@ -37,7 +41,9 @@ public class RagSources : FwModel<RagSources.Row>
         public string source_version { get; set; } = string.Empty;
         public string acl_snapshot { get; set; } = string.Empty;
         public string index_status { get; set; } = string.Empty;
+        public int index_attempt_no { get; set; }
         public DateTime? queued_at { get; set; }
+        public DateTime? next_retry_at { get; set; }
         public DateTime? last_indexed_at { get; set; }
         public string last_error { get; set; } = string.Empty;
         public string metadata_json { get; set; } = string.Empty;
@@ -231,6 +237,8 @@ public class RagSources : FwModel<RagSources.Row>
             "acl_snapshot", aclSnapshot ?? string.Empty,
             "metadata_json", metadataJson ?? string.Empty,
             "last_error", string.Empty,
+            "index_attempt_no", 0,
+            "next_retry_at", null,
             "queued_at", DB.NOW,
             "index_status", existing.Count > 0 && existing["content_hash"].toStr() == (contentHash ?? string.Empty)
                 ? INDEX_STATUS_PENDING
@@ -263,23 +271,47 @@ public class RagSources : FwModel<RagSources.Row>
         string sql = db.limit($@"select *
                                   from {qTable()}
                                  where status<>@status_deleted
-                                   and index_status in (@index_statuses)
-                              order by queued_at, id", 1);
+                                   and (
+                                        index_status in (@claim_statuses)
+                                        or (
+                                            index_status=@failed
+                                            and coalesce(index_attempt_no, 0)<@max_attempts
+                                            and (next_retry_at is null or next_retry_at<={db.sqlNOW()})
+                                        )
+                                   )
+                              order by case when index_status=@failed then 1 else 0 end, next_retry_at, queued_at, id", 1);
         var row = db.rowp<Row>(sql, DB.h(
             "@status_deleted", STATUS_DELETED,
-            "index_statuses", new List<string> { INDEX_STATUS_PENDING, INDEX_STATUS_STALE }
+            "claim_statuses", new List<string> { INDEX_STATUS_PENDING, INDEX_STATUS_STALE },
+            "@failed", INDEX_STATUS_FAILED,
+            "@max_attempts", MAX_RETRY_ATTEMPTS
         ));
         if (row == null || row.id <= 0)
             return null;
 
-        int affected = db.update(table_name, DB.h(
-            "index_status", INDEX_STATUS_PROCESSING,
-            "last_error", string.Empty,
-            "upd_time", DB.NOW
-        ), DB.h(
-            "id", row.id,
-            "index_status", db.opIN(new List<string> { INDEX_STATUS_PENDING, INDEX_STATUS_STALE }),
-            "status", db.opNOT(STATUS_DELETED)
+        string updateSql = $@"
+update {qTable()}
+   set index_status=@processing,
+       index_attempt_no=coalesce(index_attempt_no, 0) + 1,
+       next_retry_at=null,
+       upd_time={db.sqlNOW()}
+ where id=@id
+   and status<>@status_deleted
+   and (
+        index_status in (@claim_statuses)
+        or (
+            index_status=@failed
+            and coalesce(index_attempt_no, 0)<@max_attempts
+            and (next_retry_at is null or next_retry_at<={db.sqlNOW()})
+        )
+   )";
+        int affected = db.exec(updateSql, DB.h(
+            "@id", row.id,
+            "@processing", INDEX_STATUS_PROCESSING,
+            "@status_deleted", STATUS_DELETED,
+            "claim_statuses", new List<string> { INDEX_STATUS_PENDING, INDEX_STATUS_STALE },
+            "@failed", INDEX_STATUS_FAILED,
+            "@max_attempts", MAX_RETRY_ATTEMPTS
         ));
         if (affected <= 0)
             return null;
@@ -294,19 +326,29 @@ public class RagSources : FwModel<RagSources.Row>
     select top (1) *
       from {qTable()} with (rowlock, readpast, updlock)
      where status<>@status_deleted
-       and index_status in (@pending, @stale)
-     order by queued_at, id
+       and (
+            index_status in (@pending, @stale)
+            or (
+                index_status=@failed
+                and coalesce(index_attempt_no, 0)<@max_attempts
+                and (next_retry_at is null or next_retry_at<={db.sqlNOW()})
+            )
+       )
+     order by case when index_status=@failed then 1 else 0 end, next_retry_at, queued_at, id
 )
 update next_source
    set index_status=@processing,
-       last_error='',
+       index_attempt_no=coalesce(index_attempt_no, 0) + 1,
+       next_retry_at=null,
        upd_time={db.sqlNOW()}
 output inserted.*;";
         return db.rowp<Row>(sql, DB.h(
             "@status_deleted", STATUS_DELETED,
             "@pending", INDEX_STATUS_PENDING,
             "@stale", INDEX_STATUS_STALE,
-            "@processing", INDEX_STATUS_PROCESSING
+            "@failed", INDEX_STATUS_FAILED,
+            "@processing", INDEX_STATUS_PROCESSING,
+            "@max_attempts", MAX_RETRY_ATTEMPTS
         ));
     }
 
@@ -324,7 +366,6 @@ output inserted.*;";
         string sql = $@"
 update {qTable()}
    set index_status=@stale,
-       last_error='',
        queued_at={db.sqlNOW()},
        upd_time={db.sqlNOW()}
  where status<>@status_deleted
@@ -351,7 +392,6 @@ update {qTable()}
         string sql = $@"
 update {qTable()}
    set index_status=@stale,
-       last_error='',
        queued_at={db.sqlNOW()},
        upd_time={db.sqlNOW()}
  where status<>@status_deleted
@@ -393,6 +433,8 @@ update {qTable()}
         update(id, DB.h(
             "index_status", INDEX_STATUS_INDEXED,
             "last_error", string.Empty,
+            "index_attempt_no", 0,
+            "next_retry_at", null,
             "last_indexed_at", DB.NOW
         ));
     }
@@ -405,6 +447,8 @@ update {qTable()}
         update(id, DB.h(
             "index_status", INDEX_STATUS_SKIPPED,
             "last_error", reason ?? string.Empty,
+            "index_attempt_no", 0,
+            "next_retry_at", null,
             "last_indexed_at", DB.NOW
         ));
     }
@@ -413,11 +457,40 @@ update {qTable()}
     {
         if (id <= 0)
             return;
+        var row = oneTyped(id);
+        int attemptNo = Math.Max(1, row?.index_attempt_no ?? 1);
+        DateTime? nextRetryAt = attemptNo < MAX_RETRY_ATTEMPTS
+            ? db.Now().AddMinutes(retryDelayMinutes(attemptNo))
+            : null;
         update(id, DB.h(
             "index_status", INDEX_STATUS_FAILED,
             "last_error", trimError(error),
+            "next_retry_at", nextRetryAt,
             "queued_at", DB.NOW
         ));
+    }
+
+    public bool requeueSource(int id)
+    {
+        if (id <= 0 || !isTablesReady())
+            return false;
+
+        int affected = db.update(table_name, DB.h(
+            "index_status", INDEX_STATUS_STALE,
+            "index_attempt_no", 0,
+            "next_retry_at", null,
+            "queued_at", DB.NOW,
+            "upd_time", DB.NOW
+        ), DB.h(
+            "id", id,
+            "status", db.opNOT(STATUS_DELETED)
+        ));
+        if (affected <= 0)
+            return false;
+
+        removeCache(id);
+        AssistantRuns.NotifyQueued();
+        return true;
     }
 
     public void deleteByEntity(string entityIcode, int itemId)
@@ -482,6 +555,47 @@ update {qTable()}
         ), "count(*)").toInt();
     }
 
+    public int countFailed()
+    {
+        return db.value(table_name, DB.h(
+            "status", db.opNOT(STATUS_DELETED),
+            "index_status", INDEX_STATUS_FAILED
+        ), "count(*)").toInt();
+    }
+
+    public FwList listDiagnostics(int limit = 12)
+    {
+        string sql = $@"
+select rs.*, e.icode as entity_icode
+  from {qTable()} rs
+  left join {fw.model<FwEntities>().qTable()} e on e.id=rs.fwentities_id
+ where rs.status<>@status_deleted
+   and rs.index_status in (@diagnostic_statuses)
+ order by case rs.index_status
+          when @processing then 0
+          when @failed then 1
+          when @stale then 2
+          else 3
+        end,
+        rs.next_retry_at,
+        rs.queued_at desc,
+        rs.id desc";
+        var rows = db.arrayp(db.limit(sql, Math.Max(1, limit)), DB.h(
+            "@status_deleted", STATUS_DELETED,
+            "diagnostic_statuses", new List<string> { INDEX_STATUS_PROCESSING, INDEX_STATUS_FAILED, INDEX_STATUS_STALE },
+            "@processing", INDEX_STATUS_PROCESSING,
+            "@failed", INDEX_STATUS_FAILED,
+            "@stale", INDEX_STATUS_STALE
+        ));
+        foreach (FwDict row in rows)
+        {
+            string status = row["index_status"].toStr();
+            row["status_label"] = status;
+            row["can_requeue"] = status == INDEX_STATUS_FAILED || status == INDEX_STATUS_PROCESSING || status == INDEX_STATUS_STALE;
+        }
+        return rows;
+    }
+
     public static string BuildSourceKey(string sourceType, int fwentitiesId, int itemId, int attId)
     {
         return string.Join(":", sourceType?.Trim().ToLowerInvariant() ?? string.Empty, fwentitiesId, itemId, attId);
@@ -491,6 +605,13 @@ update {qTable()}
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(text ?? string.Empty));
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static int retryDelayMinutes(int attemptNo)
+    {
+        int exponent = Math.Max(0, attemptNo - 1);
+        double minutes = RETRY_BACKOFF_BASE_MINUTES * Math.Pow(RETRY_BACKOFF_MULTIPLIER, exponent);
+        return Math.Min(RETRY_BACKOFF_MAX_MINUTES, Math.Max(RETRY_BACKOFF_BASE_MINUTES, (int)Math.Round(minutes)));
     }
 
     public static string KBArticleText(FwDict article)

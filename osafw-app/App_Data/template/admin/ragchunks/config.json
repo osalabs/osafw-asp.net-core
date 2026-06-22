@@ -10,6 +10,8 @@
         "entity_icode": "entity_icode",
         "item_id": "item_id",
         "index_status": "index_status",
+        "index_attempt_no": "index_attempt_no",
+        "next_retry_at": "next_retry_at",
         "embedding_dim": "embedding_dim",
         "vector_backend": "vector_backend",
         "add_time": "add_time"
@@ -27,6 +29,8 @@
         "chunk_index": "Chunk #",
         "section": "Section",
         "index_status": "Index",
+        "index_attempt_no": "Attempts",
+        "next_retry_at": "Next Retry",
         "embedding_dim": "Dim",
         "embedding_model": "Embedding Model",
         "vector_backend": "Backend",
@@ -118,6 +122,16 @@
             "field": "last_error",
             "label": "Last Error",
             "type": "plaintext"
+        },
+        {
+            "field": "index_attempt_no",
+            "label": "Index Attempts",
+            "type": "plaintext"
+        },
+        {
+            "field": "next_retry_at",
+            "label": "Next Retry",
+            "type": "date_long"
         },
         {
             "field": "last_indexed_at",

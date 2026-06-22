@@ -202,6 +202,35 @@ public sealed class AssistantAppService
         return (mapThread(thread, [message], [], run, owner), mapMessage(message, loadAttachmentsByMessageId([message.id])), mapRun(run)!);
     }
 
+    public (AssistantThreadDto thread, AssistantRunDto run) RetryLastResponse(int usersId, int threadId)
+    {
+        var status = RuntimeStatus();
+        if (!status.enabled || !status.tables_ready || !status.openai_configured || !status.worker_enabled)
+            throw new UserException(status.message);
+
+        var owner = resolveOwnerScope(usersId, false);
+        var thread = requireThread(threadId, owner);
+        if (!isOwnerThread(thread, owner))
+            throw new AuthException("Assistant thread not found.");
+
+        var activeRun = fw.model<AssistantRuns>().queuedOrProcessingByThread(thread.id);
+        if (activeRun != null)
+            throw new UserException("Assistant response is already queued.");
+
+        var userMessage = fw.model<AssistantMessages>().latestByThread(thread.id, AssistantMessages.ROLE_USER)
+            ?? throw new UserException("Assistant user message not found.");
+
+        int runId = fw.model<AssistantRuns>().queueRun(thread.id, userMessage.id);
+        fw.model<AssistantThreads>().touch(thread.id);
+        fw.model<AssistantThreads>().updateLastRunStatus(thread.id, AssistantRuns.STATUS_QUEUED);
+        fw.model<AssistantRunsEvents>().addEvent(runId, AssistantRunsEvents.TYPE_STATUS, "Queued");
+
+        var run = fw.model<AssistantRuns>().oneTyped(runId) ?? throw new ApplicationException("Assistant run was not saved.");
+        var refreshedThread = requireThread(thread.id, owner);
+        var messages = fw.model<AssistantMessages>().listByThread(thread.id);
+        return (mapThread(refreshedThread, messages, [], run, owner), mapRun(run)!);
+    }
+
     public void SubmitFeedback(int usersId, int threadId, int runId, int messageId, string feedbackType, string comment)
     {
         ensureTablesReady();

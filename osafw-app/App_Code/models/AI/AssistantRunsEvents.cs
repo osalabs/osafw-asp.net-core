@@ -56,4 +56,25 @@ public class AssistantRunsEvents : FwModel<AssistantRunsEvents.Row>
         sql += " order by id";
         return db.arrayp<Row>(sql, @params);
     }
+
+    public FwList listRecentEvidence(int limit = 12)
+    {
+        string sql = $@"
+select e.*, r.assistant_threads_id, r.assistant_messages_id
+  from {qTable()} e
+  left join {fw.model<AssistantRuns>().qTable()} r on r.id=e.assistant_runs_id
+ where e.status<>@status_deleted
+   and e.event_type=@event_type
+ order by e.id desc";
+        var rows = db.arrayp(db.limit(sql, Math.Max(1, limit)), DB.h(
+            "@status_deleted", STATUS_DELETED,
+            "@event_type", TYPE_EVIDENCE
+        ));
+        foreach (FwDict row in rows)
+        {
+            string payload = row["payload_json"].toStr();
+            row["payload_preview"] = payload.Length > 300 ? payload[..300] + "..." : payload;
+        }
+        return rows;
+    }
 }

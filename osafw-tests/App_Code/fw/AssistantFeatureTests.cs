@@ -318,33 +318,101 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
-    public void AssistantRuns_PortableClaimUsesConditionalUpdateAndStaleRecovery()
+    public void AssistantRuns_PortableClaimUsesConditionalUpdateAndTimeoutFailure()
     {
         string source = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRuns.cs"));
+        string processor = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
 
         StringAssert.Contains(source, "int affected = db.update(table_name");
-        StringAssert.Contains(source, "\"status\", STATUS_QUEUED");
+        StringAssert.Contains(source, "\"status\", STATUS_FAILED");
         StringAssert.Contains(source, "if (affected <= 0)");
         StringAssert.Contains(source, "removeCache(row.id);");
-        StringAssert.Contains(source, "return requeueStaleProcessingRunsPortable(staleAfterMinutes);");
-        StringAssert.Contains(source, "var cutoff = db.Now().AddMinutes");
-        StringAssert.Contains(source, "\"claimed_at\", db.opLT(cutoff)");
+        StringAssert.Contains(source, "public int failTimedOutActiveRuns");
+        StringAssert.Contains(source, "TIMEOUT_ERROR_MESSAGE");
+        StringAssert.Contains(source, "STATUS_QUEUED, STATUS_PROCESSING");
         StringAssert.Contains(source, "removeCacheAll();");
+        StringAssert.Contains(processor, "failTimedOutActiveRuns(timeoutSeconds)");
+        StringAssert.Contains(processor, "CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds))");
+        StringAssert.Contains(processor, "markClaimedRunTimedOut(fw, run);");
     }
 
     [TestMethod]
-    public void RagSources_ClaimAndWorkerRecoverStaleProcessingSources()
+    public void RagSources_ClaimRetriesFailedSourcesWithBackoffAndAdminRequeue()
     {
         string sources = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "RagSources.cs"));
         string processor = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
         string worker = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunWorkerService.cs"));
+        string admin = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "AdminRagChunks.cs"));
 
+        StringAssert.Contains(sources, "public const int MAX_RETRY_ATTEMPTS = 5;");
+        StringAssert.Contains(sources, "public const int RETRY_BACKOFF_BASE_MINUTES = 5;");
+        StringAssert.Contains(sources, "index_attempt_no=coalesce(index_attempt_no, 0) + 1");
+        StringAssert.Contains(sources, "index_status=@failed");
+        StringAssert.Contains(sources, "next_retry_at is null or next_retry_at<=");
+        StringAssert.Contains(sources, "nextRetryAt = attemptNo < MAX_RETRY_ATTEMPTS");
+        StringAssert.Contains(sources, "public bool requeueSource");
+        StringAssert.Contains(sources, "\"index_attempt_no\", 0");
+        Assert.AreEqual(5, invokePrivateStatic<int>(typeof(RagSources), "retryDelayMinutes", 1));
+        Assert.AreEqual(15, invokePrivateStatic<int>(typeof(RagSources), "retryDelayMinutes", 2));
+        Assert.AreEqual(240, invokePrivateStatic<int>(typeof(RagSources), "retryDelayMinutes", 5));
         StringAssert.Contains(sources, "public int requeueStaleProcessingSources");
         StringAssert.Contains(sources, "\"@stale\", INDEX_STATUS_STALE");
         StringAssert.Contains(sources, "or upd_time < @cutoff");
         StringAssert.Contains(sources, "and index_status=@processing");
         StringAssert.Contains(processor, "fw.model<RagSources>().requeueStaleProcessingSources()");
-        StringAssert.Contains(worker, "ProcessNextQueuedSourceAsync(workerId, stoppingToken, shouldRecoverStaleQueue)");
+        StringAssert.Contains(worker, "MaxSourcesBeforeRunCheck = 3");
+        StringAssert.Contains(worker, "processedSourcesSinceRunCheck >= MaxSourcesBeforeRunCheck");
+        StringAssert.Contains(admin, "RequeueSourceAction");
+        StringAssert.Contains(admin, "fw.model<RagSources>().requeueSource(id)");
+    }
+
+    [TestMethod]
+    public void AssistantRetry_QueuesFreshRunForLatestUserMessageWithoutDuplicatingUserMessage()
+    {
+        string service = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantAppService.cs"));
+        string controller = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "Assistant.cs"));
+        string template = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "index", "main.html"));
+        int start = service.IndexOf("public (AssistantThreadDto thread, AssistantRunDto run) RetryLastResponse", StringComparison.Ordinal);
+        int end = service.IndexOf("public void SubmitFeedback", StringComparison.Ordinal);
+        Assert.IsTrue(start > 0 && end > start);
+        string retryMethod = service[start..end];
+
+        StringAssert.Contains(controller, "public FwDict RetryAction(int id)");
+        StringAssert.Contains(controller, "enforcePost();");
+        StringAssert.Contains(retryMethod, "requireThread(threadId, owner)");
+        StringAssert.Contains(retryMethod, "queuedOrProcessingByThread(thread.id)");
+        StringAssert.Contains(retryMethod, "latestByThread(thread.id, AssistantMessages.ROLE_USER)");
+        StringAssert.Contains(retryMethod, "queueRun(thread.id, userMessage.id)");
+        Assert.IsFalse(retryMethod.Contains("addMessage("));
+        StringAssert.Contains(template, "data-assistant-retry");
+        StringAssert.Contains(template, "bi bi-arrow-repeat");
+        StringAssert.Contains(template, "'/(Retry)/' + encodeURIComponent(thread.id)");
+        StringAssert.Contains(template, "isLatestCompletedResponse(message)");
+        StringAssert.Contains(template, "isReadonly()");
+    }
+
+    [TestMethod]
+    public void AdminRagChunks_DiagnosticsExposeSourcesRunsEvidenceAndRequeueAction()
+    {
+        string controller = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "AdminRagChunks.cs"));
+        string template = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "admin", "ragchunks", "index", "main.html"));
+        string sources = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "RagSources.cs"));
+        string runs = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRuns.cs"));
+        string events = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunsEvents.cs"));
+
+        StringAssert.Contains(controller, "diagnostic_sources");
+        StringAssert.Contains(controller, "diagnostic_runs");
+        StringAssert.Contains(controller, "recent_evidence_events");
+        StringAssert.Contains(controller, "RequeueSourceAction");
+        StringAssert.Contains(sources, "public FwList listDiagnostics");
+        StringAssert.Contains(runs, "public FwList listDiagnostics");
+        StringAssert.Contains(events, "public FwList listRecentEvidence");
+        StringAssert.Contains(template, "RAG Source Diagnostics");
+        StringAssert.Contains(template, "Assistant Run Diagnostics");
+        StringAssert.Contains(template, "Recent Retrieval Evidence");
+        StringAssert.Contains(template, "/(RequeueSource)/");
+        StringAssert.Contains(template, "index_attempt_no");
+        StringAssert.Contains(template, "next_retry_at");
     }
 
     [TestMethod]
@@ -498,6 +566,30 @@ public class AssistantFeatureTests
         StringAssert.Contains(sqliteUpdate, "CREATE UNIQUE INDEX IF NOT EXISTS UX_assistant_threads_icode ON assistant_threads (icode) WHERE icode <> ''");
         StringAssert.Contains(mysqlUpdate, "icode_share           VARCHAR(64) GENERATED ALWAYS AS (NULLIF(icode, '')) STORED");
         StringAssert.Contains(mysqlUpdate, "UNIQUE KEY UX_assistant_threads_icode (icode_share)");
+    }
+
+    [TestMethod]
+    public void AssistantOperationalSchema_IncludesRagRetryAndRunTimeoutAcrossProviders()
+    {
+        var files = new[]
+        {
+            Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "fwdatabase.sql"),
+            Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "updates", "upd2026-06-12-assistant-rag.sql"),
+            Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "mysql", "fwdatabase.sql"),
+            Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "mysql", "updates", "upd2026-06-12-assistant-rag.sql"),
+            Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "fwdatabase.sql"),
+            Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "updates", "upd2026-06-12-assistant-rag.sql"),
+        };
+
+        foreach (string file in files)
+        {
+            string sql = File.ReadAllText(file);
+            StringAssert.Contains(sql, "index_attempt_no");
+            StringAssert.Contains(sql, "next_retry_at");
+            StringAssert.Contains(sql, "ASSISTANT_RUN_TIMEOUT_SECONDS");
+            StringAssert.Contains(sql, "next_retry_at");
+            StringAssert.Contains(sql, "queued_at");
+        }
     }
 
     [TestMethod]

@@ -164,6 +164,20 @@ public class AssistantController : FwController
     }
 
     /// <summary>
+    /// Queues a fresh run for the latest user message without duplicating that message.
+    /// </summary>
+    public FwDict RetryAction(int id)
+    {
+        enforcePost();
+        var result = new AssistantAppService(fw).RetryLastResponse(fw.userId, id);
+        return jsonResponse(new FwDict
+        {
+            ["thread"] = result.thread,
+            ["run"] = result.run,
+        });
+    }
+
+    /// <summary>
     /// Stores review feedback for a run/message without mutating knowledge base content.
     /// </summary>
     public FwDict FeedbackAction()

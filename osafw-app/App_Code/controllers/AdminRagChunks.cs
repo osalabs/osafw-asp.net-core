@@ -184,10 +184,28 @@ public class AdminRagChunksController : FwDynamicController
         return null;
     }
 
+    public FwDict? RequeueSourceAction(int id)
+    {
+        enforcePost();
+        if (!model.isTablesReady())
+            throw new UserException("Assistant tables are not installed.");
+
+        bool requeued = fw.model<RagSources>().requeueSource(id);
+        fw.flash(requeued ? "success" : "error", requeued ? "RAG source queued for retry." : "RAG source could not be queued.");
+        fw.redirect(base_url);
+        return null;
+    }
+
     private void setRagIndexMetadata(FwDict ps, bool includeDatabaseState)
     {
         ps["vector_mode"] = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", RagChunks.VECTOR_MODE_AUTO);
         ps["embedding_model"] = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
+        int runTimeoutSeconds = Math.Clamp(
+            fw.model<Settings>().readInt("ASSISTANT_RUN_TIMEOUT_SECONDS", AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS),
+            30,
+            1800
+        );
+        ps["assistant_run_timeout_seconds"] = runTimeoutSeconds;
         ps["backend_options"] = new FwList
         {
             DB.h("id", RagChunks.VECTOR_MODE_JSON, "iname", "JSON"),
@@ -200,6 +218,10 @@ public class AdminRagChunksController : FwDynamicController
             ps["chunk_count"] = 0;
             ps["source_count"] = 0;
             ps["queued_count"] = 0;
+            ps["failed_source_count"] = 0;
+            ps["diagnostic_sources"] = new FwList();
+            ps["diagnostic_runs"] = new FwList();
+            ps["recent_evidence_events"] = new FwList();
             return;
         }
 
@@ -208,5 +230,9 @@ public class AdminRagChunksController : FwDynamicController
         ps["chunk_count"] = model.countActive();
         ps["source_count"] = sources.countActive();
         ps["queued_count"] = sources.countQueued();
+        ps["failed_source_count"] = sources.countFailed();
+        ps["diagnostic_sources"] = sources.listDiagnostics();
+        ps["diagnostic_runs"] = fw.model<AssistantRuns>().listDiagnostics(runTimeoutSeconds);
+        ps["recent_evidence_events"] = fw.model<AssistantRunsEvents>().listRecentEvidence();
     }
 }

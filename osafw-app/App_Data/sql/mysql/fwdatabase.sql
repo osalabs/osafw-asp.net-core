@@ -170,6 +170,7 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 (1, 20, 'AI', 'ASSISTANT_VECTOR_MODE', 'auto', 'Assistant Vector Mode', 'Use auto, json, or native. Auto uses SQL Server native vectors when available.', 'auto|Auto json|JSON native|Native'),
 (1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.', ''),
 (1, 70, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.', ''),
+(1, 60, 'AI', 'ASSISTANT_RUN_TIMEOUT_SECONDS', '120', 'Assistant Run Timeout Seconds', 'Maximum queued or processing time for UI-facing assistant responses before they fail and can be retried.', 'min|30 step|1'),
 (1, 60, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.', 'min|1 step|1'),
 (1, 60, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for queued indexing. Larger files remain attached but are not indexed.', 'min|1 step|1'),
 (1, 60, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.', 'min|1 step|1'),
@@ -402,7 +403,9 @@ CREATE TABLE rag_sources (
   source_version        VARCHAR(64) NOT NULL DEFAULT '',
   acl_snapshot          TEXT,
   index_status          VARCHAR(32) NOT NULL DEFAULT 'pending',
+  index_attempt_no      INT NOT NULL DEFAULT 0,
   queued_at             TIMESTAMP NULL,
+  next_retry_at         TIMESTAMP NULL,
   last_indexed_at       TIMESTAMP NULL,
   last_error            TEXT,
   metadata_json         TEXT,
@@ -415,7 +418,7 @@ CREATE TABLE rag_sources (
 
   PRIMARY KEY (id),
   UNIQUE KEY UX_rag_sources_source_key (source_key),
-  KEY IX_rag_sources_queue (index_status, status, queued_at, id),
+  KEY IX_rag_sources_queue (index_status, status, next_retry_at, queued_at, id),
   KEY IX_rag_sources_entity (fwentities_id, item_id, att_id, status)
 ) DEFAULT CHARSET=utf8mb4;
 

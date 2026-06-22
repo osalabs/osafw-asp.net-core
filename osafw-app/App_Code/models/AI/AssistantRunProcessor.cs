@@ -31,11 +31,16 @@ public sealed class AssistantRunProcessor
         if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED"))
             return false;
 
+        int timeoutSeconds = runTimeoutSeconds(fw);
+        int timedOutCount = fw.model<AssistantRuns>().failTimedOutActiveRuns(timeoutSeconds);
+        if (timedOutCount > 0)
+            fw.logger(LogLevel.WARN, "Failed timed-out assistant runs: ", timedOutCount);
+
         if (recoverStaleRuns)
         {
-            int recoveredCount = fw.model<AssistantRuns>().requeueStaleProcessingRuns();
+            int recoveredCount = fw.model<AssistantRuns>().failTimedOutActiveRuns(timeoutSeconds);
             if (recoveredCount > 0)
-                fw.logger(LogLevel.WARN, "Recovered stale assistant runs: ", recoveredCount);
+                fw.logger(LogLevel.WARN, "Failed stale assistant runs: ", recoveredCount);
         }
 
         var run = fw.model<AssistantRuns>().claimNextQueued(workerId);
@@ -44,7 +49,16 @@ public sealed class AssistantRunProcessor
 
         try
         {
-            await ProcessClaimedRunAsync(fw, run, cancellationToken).ConfigureAwait(false);
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            try
+            {
+                await ProcessClaimedRunAsync(fw, run, linkedCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                markClaimedRunTimedOut(fw, run);
+            }
         }
         finally
         {
@@ -203,6 +217,10 @@ public sealed class AssistantRunProcessor
             fw.model<AssistantThreads>().updateLastRunStatus(thread.id, AssistantRuns.STATUS_WAITING_FOR_USER);
             fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_STATUS, "Waiting for user");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             markClaimedRunFailed(fw, run, thread, ex);
@@ -261,6 +279,24 @@ public sealed class AssistantRunProcessor
             fw.model<AssistantThreads>().updateLastRunStatus(threadId, AssistantRuns.STATUS_FAILED);
         fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_ERROR, message);
         fw.logger(LogLevel.ERROR, "Assistant run failed:", ex.Message);
+    }
+
+    private static void markClaimedRunTimedOut(FW fw, AssistantRuns.Row run)
+    {
+        fw.model<AssistantRuns>().markFailed(run.id, AssistantRuns.TIMEOUT_ERROR_MESSAGE);
+        if (run.assistant_threads_id > 0)
+            fw.model<AssistantThreads>().updateLastRunStatus(run.assistant_threads_id, AssistantRuns.STATUS_FAILED);
+        fw.model<AssistantRunsEvents>().addEvent(run.id, AssistantRunsEvents.TYPE_ERROR, AssistantRuns.TIMEOUT_ERROR_MESSAGE);
+        fw.logger(LogLevel.WARN, "Assistant run timed out: run_id=", run.id);
+    }
+
+    private static int runTimeoutSeconds(FW fw)
+    {
+        return Math.Clamp(
+            fw.model<Settings>().readInt("ASSISTANT_RUN_TIMEOUT_SECONDS", AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS),
+            30,
+            1800
+        );
     }
 
     private static async Task<List<Microsoft.Extensions.AI.ChatMessage>> buildAgentMessagesAsync(FW fw, int threadId, string instructions, CancellationToken cancellationToken)

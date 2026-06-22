@@ -55,6 +55,7 @@
 
     <div class="alert alert-info d-none" role="alert" data-assistant-readonly>`This shared thread is read-only.`</div>
 
+    <div class="assistant-run-status d-none" data-assistant-run-status></div>
     <div class="assistant-message-list d-grid gap-3 py-1" data-assistant-messages></div>
     <div class="assistant-progress small text-muted" data-assistant-progress></div>
 
@@ -142,6 +143,7 @@
     status: root.querySelector('[data-assistant-status]'),
     share: root.querySelector('[data-assistant-share]'),
     readonly: root.querySelector('[data-assistant-readonly]'),
+    runStatus: root.querySelector('[data-assistant-run-status]'),
   };
 
   const composers = Array.from(root.querySelectorAll('[data-assistant-form]')).map((form, index) => {
@@ -233,6 +235,12 @@
       return;
     }
 
+    const retryButton = event.target.closest('[data-assistant-retry]');
+    if (retryButton && thread) {
+      await retryLastResponse(retryButton);
+      return;
+    }
+
     const button = event.target.closest('[data-assistant-feedback]');
     if (!button || !thread) return;
     const body = new FormData();
@@ -275,6 +283,32 @@
       }
     } catch (err) {
       showProgress(err.message || 'Assistant request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retryLastResponse(button) {
+    if (!thread || !thread.id || isReadonly() || !isAvailable()) return;
+
+    const body = new FormData();
+    body.set('XSS', xss);
+    setBusy(true);
+    if (button) button.disabled = true;
+    try {
+      const data = await postForm(baseUrl + '/(Retry)/' + encodeURIComponent(thread.id), body);
+      if (data.thread) {
+        thread = data.thread;
+        thread.active_run = data.run || thread.active_run;
+        lastMessageId = maxId(thread.messages);
+        lastEventId = maxId(thread.events);
+        renderThread();
+        await refreshHistory();
+        schedulePollIfNeeded();
+      }
+    } catch (err) {
+      showProgress(err.message || 'Retry failed.');
+      if (button) button.disabled = false;
     } finally {
       setBusy(false);
     }
@@ -346,6 +380,7 @@
     els.share.disabled = !(thread && thread.id && thread.is_owner);
     els.readonly && els.readonly.classList.toggle('d-none', !isReadonly());
     setThreadInputs(thread && thread.id ? thread.id : '');
+    renderRunStatus();
 
     const messages = thread && thread.messages ? thread.messages : [];
     els.messages.innerHTML = '';
@@ -372,11 +407,13 @@
       return '<span class="badge ' + badgeClass + ' me-1" title="' + escapeAttr(indexStatus) + '">' + escapeHtml(file.iname || file.icode || 'file') + '</span>';
     }).join('');
     const canFeedback = role === 'assistant' && !isReadonly() && !!message.assistant_runs_id;
+    const canRetry = role === 'assistant' && !isReadonly() && isAvailable() && isLatestCompletedResponse(message);
     const responseActions = role === 'assistant'
       ? '<div class="assistant-response-actions d-flex flex-wrap align-items-center gap-2 mt-3">'
         + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-copy-message data-message-id="' + escapeAttr(message.id) + '" title="Copy response" aria-label="Copy response"><i class="bi bi-copy"></i></button>'
         + (canFeedback ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" data-run-id="' + escapeAttr(message.assistant_runs_id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>' : '')
         + (canFeedback ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" data-run-id="' + escapeAttr(message.assistant_runs_id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>' : '')
+        + (canRetry ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-retry title="Try again" aria-label="Try again"><i class="bi bi-arrow-repeat"></i></button>' : '')
         + (message.add_time ? '<span class="small text-muted ms-1 me-1">' + escapeHtml(message.add_time) + '</span>' : '')
         + '</div>'
       : '';
@@ -396,6 +433,21 @@
     const href = source.url || source.article_url || source.file_url || '';
     const content = '<span class="fw-semibold">' + escapeHtml(label) + '</span>' + (meta ? '<span class="small text-muted d-block">' + escapeHtml(meta) + '</span>' : '');
     return href ? '<a class="assistant-citation d-block border rounded bg-body-tertiary text-reset text-decoration-none px-3 py-2" href="' + escapeAttr(href) + '" target="_blank" rel="noopener noreferrer">' + content + '</a>' : '<div class="assistant-citation d-block border rounded bg-body-tertiary px-3 py-2">' + content + '</div>';
+  }
+
+  function renderRunStatus() {
+    if (!els.runStatus) return;
+    const run = thread && thread.active_run ? thread.active_run : null;
+    if (!run || (run.status || '').toLowerCase() !== 'failed') {
+      els.runStatus.classList.add('d-none');
+      els.runStatus.innerHTML = '';
+      return;
+    }
+
+    const canRetry = !isReadonly() && isAvailable();
+    els.runStatus.className = 'assistant-run-status border rounded bg-body-tertiary px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2';
+    els.runStatus.innerHTML = '<div class="small"><span class="fw-semibold text-danger">' + escapeHtml(run.error_message || 'Assistant response failed.') + '</span></div>'
+      + (canRetry ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-retry title="Try again" aria-label="Try again"><i class="bi bi-arrow-repeat"></i></button>' : '');
   }
 
   function renderEvents(events) {
@@ -515,6 +567,13 @@
   function findThreadMessage(messageId) {
     const id = Number(messageId || 0);
     return (thread && thread.messages ? thread.messages : []).find(message => Number(message.id || 0) === id);
+  }
+
+  function isLatestCompletedResponse(message) {
+    const run = thread && thread.active_run ? thread.active_run : null;
+    if (!message || !run) return false;
+    return Number(message.assistant_runs_id || 0) === Number(run.id || 0)
+      && (run.status || '').toLowerCase() === 'completed';
   }
 
   async function copyMessageMarkdown(button, message) {
