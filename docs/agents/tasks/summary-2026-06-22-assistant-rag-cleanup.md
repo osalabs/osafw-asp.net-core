@@ -9,10 +9,12 @@
 - Moved the fixed admin vector-search minimum score into the native/JSON vector SQL, then kept only the best-score window in the caller.
 - Kept DB list-param naming simple and caller-controlled; `AdminRagChunksController` passes `ids` so expanded admin SQL params stay short without generic DB helper overhead.
 - Changed the Assistant response copy action to an icon-only `bi-copy` button with `title="Copy response"` and moved the response datetime after `Not helpful`.
+- Reworked `/Admin/RagChunks` Entity and Backend filters to use the standard status-filter row extension, removing the extra visible `Filters` label.
+- Enabled standard `/Admin/KBArticles` list features: Status/My List row, filter-column/table-density toolbar, customize-columns modal, and My List create modal.
 - Updated focused tests for DB logging, restored `prepareParams` naming, and SQL-side vector score filtering.
 
 ## Scope reviewed
-- Reviewed current `AdminRagChunksController`, `DB`, `RagChunks`, `AssistantAgentRuntime`, Assistant template, `SecurityGroup9ATests`, `DBTests`, and `AssistantFeatureTests`.
+- Reviewed current `AdminRagChunksController`, `AdminKBArticlesController`, `DB`, `RagChunks`, Assistant template, dynamic list templates, `SecurityGroup9ATests`, `DBTests`, and `AssistantFeatureTests`.
 - Re-read machine-local instructions and `docs/README.md`; no shared docs or changelog update needed for this cleanup.
 - Ignored unrelated existing worktree changes: `osafw-app/appsettings.json` and `.jshintrc`.
 
@@ -21,6 +23,9 @@
 - `dotnet build-server shutdown` released a locked compiler server after the first focused test attempt hit an `obj` lock.
 - `dotnet test --filter "Assistant|DbLogging|prepareParams" -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_test\` - passed, 27 tests after the DB short-name test was removed.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_build\` - passed, 0 warnings/errors.
+- `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_build\` - passed after the RAG/KB list UI template updates.
+- Headless Chrome smoke on `https://localhost:44315/Admin/RagChunks` confirmed Status, Entity, and Backend are in the standard filter row with no visible `Filters` label; Filter Columns, Customize Columns, Density, and customize modal are present.
+- Headless Chrome smoke on `https://localhost:44315/Admin/KBArticles` confirmed Status, My List, Filter Columns, Customize Columns, Density, customize modal, and create-My-List modal are present.
 - Earlier Chrome live check on `https://localhost:44315/Admin/RagChunks?dofilter=1&f%5Bs%5D=custom%20report` showed 2 rows, both `Reports documentation`. A later re-smoke after SQL-side threshold changes was blocked because the VS-launched app did not bring `44315` up.
 - Chrome live check on `https://localhost:44315/Assistant?thread_id=7` showed title `AI Assistant - Site Name`, icon-only copy button with `bi-copy`, `title`/`aria-label` `Copy response`, and datetime after `Not helpful`.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check ...` - passed for touched files.
@@ -34,12 +39,15 @@
 - Pushed the fixed cosine-similarity cutoff into vector SQL for efficiency. The best-score window remains after retrieval because it depends on the top result; ordered vector queries mean later rows cannot outrank the rows already returned.
 - Reverted the generic DB `IN` short-name helper after feedback; DB should not pay extra overhead for naming policy.
 - Kept Assistant copy accessibility through `aria-label` instead of visible or hidden text, matching the icon-only request.
+- Used `/common/list/filter_std_status_tbuttons` for RAG/KB list filters so those screens match `DemosDynamic` instead of carrying local filter layout.
+- Added KB index `load_script.html` because the customize-columns and My List modals are template-loaded, not automatic from config.
 
 ## Pitfalls - fixes
 - The focused test suite reflects private RAG SQL helper names/signatures; updated it when the helper signature changed from `limit` to `idsOnly`.
 - Direct test logging originally joined raw `ToString()` values; changed tests to use `FwLogger.dumper()` so they match the real framework logging path.
 - The first Chrome Assistant check showed hidden copy text in `innerText`; replaced it with `aria-label` and reloaded the page to verify no button text remains.
 - The generic DB short-param helper added avoidable overhead and collision handling; removed it and restored DB's prior caller/field-derived naming.
+- KBArticles already had `list_column_filters` config; the missing piece was the standard list filter/mode/modal template wiring plus `is_userlists`.
 
 ## Risks / follow-ups
 - Admin vector search now intentionally returns only rows above the fixed vector score threshold and within the nearest score cluster, not every ranked chunk up to the hard limit.
@@ -53,6 +61,8 @@ No stable heuristics, ADRs, or glossary/domain facts were added.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_build\`
 - Chrome: open `/Admin/RagChunks?dofilter=1&f%5Bs%5D=custom%20report` and confirm the vector search returns the two closest report chunks.
 - Chrome: open an Assistant thread with an assistant response and confirm the copy action is icon-only and the timestamp appears after `Not helpful`.
+- Chrome: open `/Admin/RagChunks` and confirm Entity/Backend appear in the same standard filter row style as Status/My List without a `Filters` label.
+- Chrome: open `/Admin/KBArticles` and confirm Status, My List, Filter Columns, Customize Columns, and Density controls are present.
 
 ## Reflection
 This feedback pass was slowed by a stale compiler-server file lock, a noisy line-ending diff, and one Chrome wrapper API mismatch around reload. Future agents should use the documented `tab.reload()` path for Chrome, run `rg` for old helper/logging names before refactoring, and keep live UI checks narrowly projected to avoid giant browser outputs.

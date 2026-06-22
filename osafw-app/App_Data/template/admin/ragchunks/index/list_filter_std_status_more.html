@@ -1,0 +1,14 @@
+<label class="col-form-label col-md-2 col-xl-1" for="f_entity">`Entity`</label>
+<div class="col-md-3 col-lg-2">
+  <select id="f_entity" name="f[entity]" class="form-select">
+    <option value="">`- all -`</option>
+    <~entities select="f[entity]">
+  </select>
+</div>
+<label class="col-form-label col-md-2 col-xl-1" for="f_backend">`Backend`</label>
+<div class="col-md-3 col-lg-2">
+  <select id="f_backend" name="f[backend]" class="form-select">
+    <option value="">`- all -`</option>
+    <~backend_options select="f[backend]">
+  </select>
+</div>

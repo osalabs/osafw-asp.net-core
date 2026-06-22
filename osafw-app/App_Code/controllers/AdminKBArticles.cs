@@ -16,6 +16,7 @@ public class AdminKBArticlesController : FwDynamicController
         loadControllerConfig();
         model = model0 as KBArticles ?? throw new FwConfigUndefinedModelException();
         db = model.getDB();
+        is_userlists = true;
     }
 
     /// <summary>
