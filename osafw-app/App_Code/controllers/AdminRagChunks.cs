@@ -9,6 +9,7 @@ namespace osafw;
 public class AdminRagChunksController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
+    // Maximum vector-ranked chunks shown in the admin RAG chunk grid.
     private const int ADMIN_VECTOR_SEARCH_LIMIT = 500;
 
     protected RagChunks model = null!;

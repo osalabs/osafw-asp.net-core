@@ -272,32 +272,6 @@ public class SecurityGroup9ATests
     }
 
     [TestMethod]
-    public void DbLogging_ExpandedListParamsUseShortNames()
-    {
-        var method = typeof(DB).GetMethod("expandParams", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new AssertFailedException("Expected DB.expandParams");
-        object?[] args =
-        [
-            "select * from t where id in (@very_long_vector_chunk_ids) and status=@status",
-            new FwDict
-            {
-                ["very_long_vector_chunk_ids"] = new[] { 5, 6 },
-                ["status"] = 127
-            }
-        ];
-
-        method.Invoke(null, args);
-
-        var sql = args[0]?.ToString() ?? string.Empty;
-        var parameters = args[1] as FwDict ?? [];
-        Assert.IsTrue(sql.Contains("id in (@p0,@p1)"), sql);
-        Assert.IsFalse(sql.Contains("very_long_vector_chunk_ids"), sql);
-        Assert.AreEqual(5, parameters["p0"]);
-        Assert.AreEqual(6, parameters["p1"]);
-        Assert.AreEqual(127, parameters["status"]);
-    }
-
-    [TestMethod]
     public void Appsettings_SentryDefaultsDoNotSendPiiOrRequestBodies()
     {
         var appsettingsPath = findRepoFile("osafw-app", "appsettings.json");

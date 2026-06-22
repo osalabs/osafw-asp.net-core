@@ -5,10 +5,11 @@
 - Removed logger-side `Utils.jsonEncode()` calls from DB query logging, Assistant tool logging, and RAG retrieval tracing so `FwLogger.dumper()` handles dictionaries directly.
 - Collapsed duplicate RAG vector search methods by using shared native/JSON query paths with an `idsOnly` switch.
 - Renamed `listAdminVectorSearchChunkIdsAsync()` to `listChunkIdsByVectorSearchAsync()`.
-- Pruned admin vector-search chunk id results to the best-score cluster so weakly similar matches no longer return every chunk.
-- Shortened expanded `IN` parameter names to `@p0`, `@p1`, etc. for both list parameters and `DB.opIN(...)`.
+- Added comments for the new admin/vector-search constants.
+- Moved the fixed admin vector-search minimum score into the native/JSON vector SQL, then kept only the best-score window in the caller.
+- Kept DB list-param naming simple and caller-controlled; `AdminRagChunksController` passes `ids` so expanded admin SQL params stay short without generic DB helper overhead.
 - Changed the Assistant response copy action to an icon-only `bi-copy` button with `title="Copy response"` and moved the response datetime after `Not helpful`.
-- Updated focused tests for DB logging, short `IN` params, vector result pruning, and RAG SQL helper shape.
+- Updated focused tests for DB logging, restored `prepareParams` naming, and SQL-side vector score filtering.
 
 ## Scope reviewed
 - Reviewed current `AdminRagChunksController`, `DB`, `RagChunks`, `AssistantAgentRuntime`, Assistant template, `SecurityGroup9ATests`, `DBTests`, and `AssistantFeatureTests`.
@@ -18,9 +19,9 @@
 ## Commands used / verification
 - `rg` checks confirmed removed helper names and no remaining logger calls wrapping `Utils.jsonEncode(...)` in runtime/test code.
 - `dotnet build-server shutdown` released a locked compiler server after the first focused test attempt hit an `obj` lock.
-- `dotnet test --filter "Assistant|DbLogging|prepareParams" -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_test\` - passed, 29 tests.
+- `dotnet test --filter "Assistant|DbLogging|prepareParams" -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_test\` - passed, 27 tests after the DB short-name test was removed.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_feedback_build\` - passed, 0 warnings/errors.
-- Chrome live check on `https://localhost:44315/Admin/RagChunks?dofilter=1&f%5Bs%5D=custom%20report` showed 2 rows, both `Reports documentation`, and logs used `id in (@p0,@p1)`.
+- Earlier Chrome live check on `https://localhost:44315/Admin/RagChunks?dofilter=1&f%5Bs%5D=custom%20report` showed 2 rows, both `Reports documentation`. A later re-smoke after SQL-side threshold changes was blocked because the VS-launched app did not bring `44315` up.
 - Chrome live check on `https://localhost:44315/Assistant?thread_id=7` showed title `AI Assistant - Site Name`, icon-only copy button with `bi-copy`, `title`/`aria-label` `Copy response`, and datetime after `Not helpful`.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File docs\agents\tools\Normalize-TextFiles.ps1 -Check ...` - passed for touched files.
 - `git -c core.fsmonitor=false diff --check -- ...` - passed for touched files.
@@ -30,18 +31,19 @@
 - Kept `listByJsonQuery(...)` public signature unchanged and moved the new `idsOnly` flag to a private overload.
 - Kept one small select-column helper and one MySQL group-by helper because that removes the native/full/id SQL duplication without hiding provider-specific query structure.
 - DB logging still unwraps `DBParamValue` before dumping so logs show values, not helper metadata.
-- Used a conservative score threshold/window for the admin vector-search id filter, backed by a focused test using the observed `custom report` ranking shape.
+- Pushed the fixed cosine-similarity cutoff into vector SQL for efficiency. The best-score window remains after retrieval because it depends on the top result; ordered vector queries mean later rows cannot outrank the rows already returned.
+- Reverted the generic DB `IN` short-name helper after feedback; DB should not pay extra overhead for naming policy.
 - Kept Assistant copy accessibility through `aria-label` instead of visible or hidden text, matching the icon-only request.
 
 ## Pitfalls - fixes
 - The focused test suite reflects private RAG SQL helper names/signatures; updated it when the helper signature changed from `limit` to `idsOnly`.
 - Direct test logging originally joined raw `ToString()` values; changed tests to use `FwLogger.dumper()` so they match the real framework logging path.
 - The first Chrome Assistant check showed hidden copy text in `innerText`; replaced it with `aria-label` and reloaded the page to verify no button text remains.
-- Self-review found a possible generated `@p0` collision with later normal fields in `prepareParams`; reserved sanitized field param names before generating short list params.
+- The generic DB short-param helper added avoidable overhead and collision handling; removed it and restored DB's prior caller/field-derived naming.
 
 ## Risks / follow-ups
-- Admin vector search now intentionally returns only the nearest score cluster, not every ranked chunk up to the hard limit.
-- The score threshold/window may need tuning after more real data, but the current behavior matches the UAT expectation for `custom report`.
+- Admin vector search now intentionally returns only rows above the fixed vector score threshold and within the nearest score cluster, not every ranked chunk up to the hard limit.
+- The score threshold/window may need tuning after more real data; current automated coverage checks SQL-side threshold generation, while the final live re-smoke was blocked by local app startup.
 
 ## Heuristics (keep terse)
 No stable heuristics, ADRs, or glossary/domain facts were added.

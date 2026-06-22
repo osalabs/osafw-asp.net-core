@@ -89,10 +89,12 @@ public class AssistantFeatureTests
         var chunks = new RagChunks();
         chunks.init(fw);
 
-        string sqlServer = invokePrivate<string>(chunks, "buildSqlServerJsonQuerySql", false);
-        string mySql = invokePrivate<string>(chunks, "buildMySqlJsonQuerySql", false);
-        string sqlite = invokePrivate<string>(chunks, "buildSqliteJsonQuerySql", false);
-        string sqlServerIdsOnly = invokePrivate<string>(chunks, "buildSqlServerJsonQuerySql", true);
+        string sqlServer = invokePrivate<string>(chunks, "buildSqlServerJsonQuerySql", false, false);
+        string mySql = invokePrivate<string>(chunks, "buildMySqlJsonQuerySql", false, false);
+        string sqlite = invokePrivate<string>(chunks, "buildSqliteJsonQuerySql", false, false);
+        string sqlServerIdsOnly = invokePrivate<string>(chunks, "buildSqlServerJsonQuerySql", true, false);
+        string sqlServerIdsOnlyWithScore = invokePrivate<string>(chunks, "buildSqlServerJsonQuerySql", true, true);
+        string mySqlIdsOnlyWithScore = invokePrivate<string>(chunks, "buildMySqlJsonQuerySql", true, true);
 
         StringAssert.Contains(sqlServer.ToLowerInvariant(), "openjson");
         StringAssert.Contains(mySql.ToLowerInvariant(), "json_table");
@@ -101,6 +103,9 @@ public class AssistantFeatureTests
         StringAssert.Contains(mySql, "CosineSim");
         StringAssert.Contains(sqlite, "CosineSim");
         Assert.IsFalse(sqlServerIdsOnly.Contains("source_title"));
+        StringAssert.Contains(sqlServerIdsOnlyWithScore, ">= @MinScore");
+        StringAssert.Contains(mySqlIdsOnlyWithScore.ToLowerInvariant(), " having ");
+        StringAssert.Contains(mySqlIdsOnlyWithScore, ">= @MinScore");
     }
 
     [TestMethod]
@@ -121,29 +126,6 @@ public class AssistantFeatureTests
             .ToList();
 
         CollectionAssert.AreEqual(new[] { "same", "near", "far" }, ordered);
-    }
-
-    [TestMethod]
-    public void RagChunks_VectorChunkIdSearchKeepsBestScoreCluster()
-    {
-        var results = new List<RagChunks.ChunkSearchResult>
-        {
-            new() { ChunkId = 5, VectorScore = 0.5615, Score = 0.5615 },
-            new() { ChunkId = 6, VectorScore = 0.5576, Score = 0.5576 },
-            new() { ChunkId = 8, VectorScore = 0.4906, Score = 0.4906 },
-            new() { ChunkId = 7, VectorScore = 0.4853, Score = 0.4853 },
-            new() { ChunkId = 3, VectorScore = 0.3099, Score = 0.3099 },
-        };
-
-        var filtered = invokePrivateStatic<List<RagChunks.ChunkSearchResult>>(
-            typeof(RagChunks),
-            "filterVectorSearchResults",
-            results,
-            500,
-            0.25,
-            0.07);
-
-        CollectionAssert.AreEqual(new[] { 5, 6 }, filtered.Select(static item => item.ChunkId).ToList());
     }
 
     [TestMethod]
