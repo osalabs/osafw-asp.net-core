@@ -502,6 +502,8 @@ class DevCodeGen
                     codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Environment.NewLine;
 
                 // also reset fw fields if such not exists
+                if (!fields.ContainsKey("icode"))
+                    codegen += "        field_icode = \"\";" + Environment.NewLine;
                 if (!fields.ContainsKey("status"))
                     codegen += "        field_status = \"\";" + Environment.NewLine;
                 if (!fields.ContainsKey("add_users_id"))

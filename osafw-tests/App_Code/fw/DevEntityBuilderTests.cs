@@ -2,12 +2,45 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace osafw.Tests;
 
 [TestClass]
 public class DevEntityBuilderTests
 {
+    [TestMethod]
+    public void ConfigJsonConverter_DoesNotDuplicateModelKeys()
+    {
+        var config = new FwDict
+        {
+            ["model"] = "GeneratedWidgets",
+            ["show_fields"] = new FwList
+            {
+                new FwDict
+                {
+                    ["field"] = "roles_link",
+                    ["type"] = "multi",
+                    ["label"] = "Roles",
+                    ["model"] = "UsersRoles"
+                }
+            }
+        };
+        JsonSerializerOptions options = new()
+        {
+            WriteIndented = true
+        };
+        ConfigJsonConverter converter = new();
+        converter.setOrderedKeys(converter.ordered_keys_controller);
+        options.Converters.Add(converter);
+
+        var json = JsonSerializer.Serialize(config, config.GetType(), options);
+
+        Assert.AreEqual(1, Regex.Matches(json, "\"model\": \"GeneratedWidgets\"").Count);
+        Assert.AreEqual(1, Regex.Matches(json, "\"model\": \"UsersRoles\"").Count);
+    }
+
     [TestMethod]
     public void ParseField_DefaultsForeignKeyWithoutTypeToInt()
     {

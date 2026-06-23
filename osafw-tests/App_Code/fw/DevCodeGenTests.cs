@@ -3,6 +3,7 @@ using osafw;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 
 namespace osafw.Tests;
@@ -12,6 +13,61 @@ public class DevCodeGenTests
 {
     private static readonly Type CodeGenType = typeof(FW).Assembly.GetType("osafw.DevCodeGen")
         ?? throw new InvalidOperationException("DevCodeGen type was not found.");
+
+    [TestMethod]
+    public void CreateModel_ClearsFieldIcodeWhenTableHasNoIcode()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "osafw-codegen-" + Guid.NewGuid().ToString("N"));
+        var modelDir = Path.Combine(tempRoot, "App_Code", "models");
+        Directory.CreateDirectory(modelDir);
+
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(modelDir, "DemoDicts.cs"),
+                """
+                namespace osafw;
+
+                public class DemoDicts : FwModel
+                {
+                    public DemoDicts() : base()
+                    {
+                        db_config = "";
+                        table_name = "demo_dicts";
+                        //###CODEGEN
+                    }
+                }
+                """);
+
+            var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+            {
+                ["appSettings:site_root"] = tempRoot,
+                ["appSettings:log"] = Path.Combine(tempRoot, "main.log")
+            });
+            var entity = new FwDict
+            {
+                ["model_name"] = "GeneratedNoIcode",
+                ["table"] = "generated_no_icode",
+                ["is_fw"] = true,
+                ["fields"] = new FwList
+                {
+                    Field("id", "int", 0, isNullable: false, isIdentity: true),
+                    Field("iname", "varchar", 80, isNullable: false),
+                    Field("status", "int", 0, isNullable: false, defaultValue: "0")
+                }
+            };
+
+            InvokeCreateModel(fw, entity);
+
+            var generated = File.ReadAllText(Path.Combine(modelDir, "GeneratedNoIcode.cs"));
+            StringAssert.Contains(generated, "field_icode = \"\";");
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+                Directory.Delete(tempRoot, recursive: true);
+        }
+    }
 
     [TestMethod]
     public void UpdateControllerConfig_RemovesCopiedDemoTabFields()
@@ -307,6 +363,15 @@ public class DevCodeGenTests
             ?? throw new InvalidOperationException("DevCodeGen.updateControllerConfig was not found.");
 
         method.Invoke(codeGen, new object?[] { entity, config, new FwList() });
+    }
+
+    private static void InvokeCreateModel(FW fw, FwDict entity)
+    {
+        var codeGen = CreateCodeGen(fw);
+        var method = CodeGenType.GetMethod("createModel", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DevCodeGen.createModel was not found.");
+
+        method.Invoke(codeGen, new object?[] { entity });
     }
 
     private static string InvokeBuildLookupInsertSql(FW fw, FwDict item)
