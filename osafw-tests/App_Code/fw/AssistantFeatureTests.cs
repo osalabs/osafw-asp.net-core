@@ -874,9 +874,12 @@ public class AssistantFeatureTests
     {
         string root = repoRoot();
         string processor = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
+        string service = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Code", "models", "AI", "AssistantAppService.cs"));
         string memories = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Code", "models", "AI", "AssistantMemories.cs"));
         string chatPrompt = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Data", "template", "assistant", "prompts", "chat_system.md"));
         string compactionPrompt = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Data", "template", "assistant", "prompts", "memory_compaction.md"));
+        string compactionUserPrompt = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Data", "template", "assistant", "prompts", "memory_compaction_user.md"));
+        string userMessagePrompt = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Data", "template", "assistant", "prompts", "user_message.md"));
         string[] schemaFiles =
         [
             Path.Combine(root, "osafw-app", "App_Data", "sql", "fwdatabase.sql"),
@@ -899,8 +902,18 @@ public class AssistantFeatureTests
         StringAssert.Contains(chatPrompt, "Optional per-user memory summary:");
         StringAssert.Contains(chatPrompt, "<~memory_summary>");
         StringAssert.Contains(compactionPrompt, "Return one concise durable user memory summary.");
+        StringAssert.Contains(compactionUserPrompt, "Existing memory:");
+        StringAssert.Contains(compactionUserPrompt, "<~existing_memory noescape>");
+        StringAssert.Contains(compactionUserPrompt, "Conversation excerpts:");
+        StringAssert.Contains(compactionUserPrompt, "<~conversation_excerpts noescape>");
+        StringAssert.Contains(userMessagePrompt, "<~prompt noescape>");
+        StringAssert.Contains(userMessagePrompt, "Clarification answers:");
+        StringAssert.Contains(userMessagePrompt, "<~clarification_json noescape>");
+        StringAssert.Contains(userMessagePrompt, "Files were uploaded with this message.");
         StringAssert.Contains(processor, "\"required\": [\"summary\"]");
+        StringAssert.Contains(processor, "\"memory_compaction_user.md\"");
         StringAssert.Contains(processor, "fw.model<AssistantMemories>().upsertForUser(");
+        StringAssert.Contains(service, "\"user_message.md\"");
         StringAssert.Contains(memories, "MAX_SUMMARY_LENGTH = 2000");
 
         foreach (string file in schemaFiles)
@@ -914,6 +927,10 @@ public class AssistantFeatureTests
         Assert.IsFalse(processor.Contains("memory_preferences_json"));
         Assert.IsFalse(processor.Contains("draft.terminology"));
         Assert.IsFalse(processor.Contains("draft.preferences"));
+        Assert.IsFalse(processor.Contains("\"Existing memory:\\n\""));
+        Assert.IsFalse(processor.Contains("Conversation excerpts:\\n"));
+        Assert.IsFalse(service.Contains("\"Clarification answers:\\n"));
+        Assert.IsFalse(service.Contains("\"Files were uploaded with this message.\""));
         Assert.IsFalse(memories.Contains("terminology_json"));
         Assert.IsFalse(memories.Contains("preferences_json"));
     }

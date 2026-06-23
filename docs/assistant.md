@@ -50,7 +50,7 @@ When an article has blank Content and supported attachments are indexed, the wor
 
 KB attachment summary prompts and fallback Markdown are ParsePage templates under `osafw-app/App_Data/template/assistant/prompts/`. Override `kb_summary_system.md`, `kb_summary_user.md`, and `kb_summary_fallback.md` to customize the generated Content wording without changing runtime code.
 
-Assistant chat prompts are also under `osafw-app/App_Data/template/assistant/prompts/`. Override `chat_system.md`, `tool_policy.md`, `clarification_prompt.md`, `navigation.md`, or `memory_compaction.md` there when an app needs different assistant behavior.
+Assistant chat prompts are also under `osafw-app/App_Data/template/assistant/prompts/`. Override `chat_system.md`, `tool_policy.md`, `clarification_prompt.md`, `navigation.md`, `user_message.md`, `memory_compaction.md`, or `memory_compaction_user.md` there when an app needs different assistant behavior.
 
 Indexed source types:
 

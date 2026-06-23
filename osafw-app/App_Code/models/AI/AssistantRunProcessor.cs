@@ -409,9 +409,11 @@ public sealed class AssistantRunProcessor
 
         var existing = fw.model<AssistantMemories>().oneByUser(usersId);
         string systemPrompt = fw.parsePage("/assistant/prompts", "memory_compaction.md", []);
-        string userPrompt = "Existing memory:\n" + (existing?.summary ?? string.Empty)
-            + "\n\nConversation excerpts:\n" + string.Join("\n", messages)
-            + "\n\nReturn one concise durable user memory summary only.";
+        string userPrompt = fw.parsePage("/assistant/prompts", "memory_compaction_user.md", new FwDict
+        {
+            { "existing_memory", existing?.summary ?? string.Empty },
+            { "conversation_excerpts", string.Join("\n", messages) },
+        }).Trim();
         string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
 
         try

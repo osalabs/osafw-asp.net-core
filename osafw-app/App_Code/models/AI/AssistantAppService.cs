@@ -914,15 +914,13 @@ select a.*, al.item_id as assistant_messages_id
         return string.IsNullOrWhiteSpace(value) ? "New chat" : value;
     }
 
-    private static string buildUserMessageContent(string prompt, FwDict? clarificationAnswers, bool isFilesProvided)
+    private string buildUserMessageContent(string prompt, FwDict? clarificationAnswers, bool isFilesProvided)
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(prompt))
-            parts.Add(prompt.Trim());
-        if (clarificationAnswers != null && clarificationAnswers.Count > 0)
-            parts.Add("Clarification answers:\n```json\n" + Utils.jsonEncode(clarificationAnswers, true) + "\n```");
-        if (isFilesProvided)
-            parts.Add("Files were uploaded with this message.");
-        return string.Join("\n\n", parts);
+        return fw.parsePage("/assistant/prompts", "user_message.md", new FwDict
+        {
+            { "prompt", prompt.Trim() },
+            { "clarification_json", clarificationAnswers != null && clarificationAnswers.Count > 0 ? Utils.jsonEncode(clarificationAnswers, true) : string.Empty },
+            { "has_files", isFilesProvided ? "1" : string.Empty },
+        }).Trim();
     }
 }
