@@ -135,3 +135,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-17-prompts-folder.md` - Moved reusable development prompts into `docs/prompts/`, added PR review, agent reflection, security, docs-consistency, and test-stabilization prompts, and linked the folder from `docs/README.md`.
 - `summary-2026-06-23-assistant-navigation.md` - Added catalog-driven AI Assistant navigation support with a read-only navigation tool, validated response links, prompt relocation, docs, and focused tests.
 - `summary-2026-06-23-assistant-ui-followup.md` - Fixed Assistant follow-up history, active-run spinner/scroll feedback, and personal Change Password navigation to `/My/Password`.
+- `summary-2026-06-23-assistant-memory-hardening.md` - Simplified Assistant memory to one sanitized per-user summary, removed terminology/preferences JSON fields from unreleased schemas, and patched the local dev DB directly.

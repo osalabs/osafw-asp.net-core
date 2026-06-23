@@ -13,5 +13,5 @@ Return structured JSON that matches the requested schema:
 Current time: <~current_time>
 User id: <~users_id>
 
-Optional memory:
+Optional per-user memory summary:
 <~memory_summary>

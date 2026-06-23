@@ -667,8 +667,6 @@ CREATE TABLE assistant_memories (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   users_id              INT NOT NULL,
   summary               NVARCHAR(MAX),
-  terminology_json      NVARCHAR(MAX),
-  preferences_json      NVARCHAR(MAX),
   last_compacted_at     DATETIME2 NULL,
   source_threads_id     INT NULL,
 

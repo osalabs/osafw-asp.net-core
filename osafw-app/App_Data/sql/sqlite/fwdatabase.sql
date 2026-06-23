@@ -609,8 +609,6 @@ CREATE TABLE assistant_memories (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   users_id              INTEGER NOT NULL,
   summary               TEXT,
-  terminology_json      TEXT,
-  preferences_json      TEXT,
   last_compacted_at     DATETIME NULL,
   source_threads_id     INTEGER NULL,
 

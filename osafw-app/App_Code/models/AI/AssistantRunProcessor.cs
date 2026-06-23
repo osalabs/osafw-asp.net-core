@@ -239,8 +239,6 @@ public sealed class AssistantRunProcessor
             { "current_time", DateTime.Now },
             { "users_id", usersId },
             { "memory_summary", memory?.summary ?? string.Empty },
-            { "memory_terminology_json", memory?.terminology_json ?? string.Empty },
-            { "memory_preferences_json", memory?.preferences_json ?? string.Empty },
         };
 
         return string.Join("\n\n",
@@ -413,7 +411,7 @@ public sealed class AssistantRunProcessor
         string systemPrompt = fw.parsePage("/assistant/prompts", "memory_compaction.md", []);
         string userPrompt = "Existing memory:\n" + (existing?.summary ?? string.Empty)
             + "\n\nConversation excerpts:\n" + string.Join("\n", messages)
-            + "\n\nReturn only durable preferences, terminology, and stable context worth remembering.";
+            + "\n\nReturn one concise durable user memory summary only.";
         string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
 
         try
@@ -430,14 +428,12 @@ public sealed class AssistantRunProcessor
             fw.model<AssistantMemories>().upsertForUser(
                 usersId,
                 draft.summary,
-                Utils.jsonEncode(draft.terminology),
-                Utils.jsonEncode(draft.preferences),
                 sourceThreadId: threadId
             );
         }
         catch (Exception ex)
         {
-            fw.logger(LogLevel.WARN, "Assistant memory compaction failed:", ex.Message);
+            fw.logger(LogLevel.WARN, "Assistant memory compaction failed:", ex.GetType().Name, AssistantMemories.SanitizeMemoryText(ex.Message));
         }
     }
 
@@ -453,8 +449,6 @@ public sealed class AssistantRunProcessor
     private sealed class AssistantMemoryDraft
     {
         public string summary { get; set; } = string.Empty;
-        public Dictionary<string, string> terminology { get; set; } = [];
-        public Dictionary<string, string> preferences { get; set; } = [];
 
         [JsonIgnore]
         public static string JsonSchema => """
@@ -462,17 +456,9 @@ public sealed class AssistantRunProcessor
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "summary": { "type": "string" },
-            "terminology": {
-              "type": "object",
-              "additionalProperties": { "type": "string" }
-            },
-            "preferences": {
-              "type": "object",
-              "additionalProperties": { "type": "string" }
-            }
+            "summary": { "type": "string" }
           },
-          "required": ["summary", "terminology", "preferences"]
+          "required": ["summary"]
         }
         """;
     }

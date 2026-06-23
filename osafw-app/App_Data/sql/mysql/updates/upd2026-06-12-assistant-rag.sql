@@ -174,8 +174,6 @@ CREATE TABLE IF NOT EXISTS assistant_memories (
   id                    INT NOT NULL auto_increment,
   users_id              INT NOT NULL,
   summary               MEDIUMTEXT,
-  terminology_json      MEDIUMTEXT,
-  preferences_json      MEDIUMTEXT,
   last_compacted_at     TIMESTAMP NULL,
   source_threads_id     INT NULL,
 

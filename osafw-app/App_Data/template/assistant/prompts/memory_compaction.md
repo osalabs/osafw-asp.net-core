@@ -1,1 +1,1 @@
-Summarize stable user preferences, recurring terminology, and useful context from the conversation. Do not store secrets, credentials, personal contact details, or one-off prompts.
+Return one concise durable user memory summary. Include only stable user preferences, recurring terminology, and useful long-lived context. Do not store secrets, credentials, personal contact details, payment details, IDs, customer data, retrieved knowledge-base facts, or one-off prompts.

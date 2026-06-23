@@ -848,14 +848,74 @@ public class AssistantFeatureTests
     [TestMethod]
     public void AssistantMemories_SanitizeMemoryTextRedactsSecretsAndContacts()
     {
-        string sanitized = AssistantMemories.SanitizeMemoryText("email a@example.com token=abc123456 phone 312-555-1212 card 4111 1111 1111 1111");
+        string opaqueToken = new string('A', 40);
+        string sanitized = AssistantMemories.SanitizeMemoryText("email a@example.com token=abc123456 Bearer abc.def.ghi Password=dbsecret; phone 312-555-1212 card 4111 1111 1111 1111 " + opaqueToken);
+        string capped = AssistantMemories.SanitizeMemoryText(string.Join(" ", Enumerable.Repeat("preference", 260)));
 
         StringAssert.Contains(sanitized, "[redacted-email]");
         StringAssert.Contains(sanitized, "token: [redacted]");
+        StringAssert.Contains(sanitized, "Bearer [redacted]");
+        StringAssert.Contains(sanitized, "Password: [redacted]");
         StringAssert.Contains(sanitized, "[redacted-phone]");
         StringAssert.Contains(sanitized, "[redacted-number]");
+        StringAssert.Contains(sanitized, "[redacted-token]");
         Assert.IsFalse(sanitized.Contains("a@example.com"));
         Assert.IsFalse(sanitized.Contains("312-555-1212"));
+        Assert.IsFalse(sanitized.Contains("dbsecret"));
+        Assert.IsFalse(sanitized.Contains(opaqueToken));
+        Assert.AreEqual(AssistantMemories.MAX_SUMMARY_LENGTH, capped.Length);
+        Assert.IsFalse(AssistantMemories.IsStorableMemorySummary("[redacted-secret]"));
+        Assert.IsFalse(AssistantMemories.IsStorableMemorySummary("Password: [redacted]"));
+        Assert.IsTrue(AssistantMemories.IsStorableMemorySummary("User prefers concise operational answers."));
+    }
+
+    [TestMethod]
+    public void AssistantMemories_AreSummaryOnlyAcrossRuntimeAndSchemas()
+    {
+        string root = repoRoot();
+        string processor = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
+        string memories = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Code", "models", "AI", "AssistantMemories.cs"));
+        string chatPrompt = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Data", "template", "assistant", "prompts", "chat_system.md"));
+        string compactionPrompt = File.ReadAllText(Path.Combine(root, "osafw-app", "App_Data", "template", "assistant", "prompts", "memory_compaction.md"));
+        string[] schemaFiles =
+        [
+            Path.Combine(root, "osafw-app", "App_Data", "sql", "fwdatabase.sql"),
+            Path.Combine(root, "osafw-app", "App_Data", "sql", "mysql", "fwdatabase.sql"),
+            Path.Combine(root, "osafw-app", "App_Data", "sql", "sqlite", "fwdatabase.sql"),
+            Path.Combine(root, "osafw-app", "App_Data", "sql", "updates", "upd2026-06-12-assistant-rag.sql"),
+            Path.Combine(root, "osafw-app", "App_Data", "sql", "mysql", "updates", "upd2026-06-12-assistant-rag.sql"),
+            Path.Combine(root, "osafw-app", "App_Data", "sql", "sqlite", "updates", "upd2026-06-12-assistant-rag.sql"),
+        ];
+
+        var rowProperties = typeof(AssistantMemories.Row).GetProperties().Select(static property => property.Name).ToList();
+        CollectionAssert.DoesNotContain(rowProperties, "terminology_json");
+        CollectionAssert.DoesNotContain(rowProperties, "preferences_json");
+        var upsertParameters = typeof(AssistantMemories).GetMethod(nameof(AssistantMemories.upsertForUser))!
+            .GetParameters()
+            .Select(static parameter => parameter.Name)
+            .ToList();
+        CollectionAssert.AreEqual(new[] { "usersId", "summary", "sourceThreadId" }, upsertParameters);
+
+        StringAssert.Contains(chatPrompt, "Optional per-user memory summary:");
+        StringAssert.Contains(chatPrompt, "<~memory_summary>");
+        StringAssert.Contains(compactionPrompt, "Return one concise durable user memory summary.");
+        StringAssert.Contains(processor, "\"required\": [\"summary\"]");
+        StringAssert.Contains(processor, "fw.model<AssistantMemories>().upsertForUser(");
+        StringAssert.Contains(memories, "MAX_SUMMARY_LENGTH = 2000");
+
+        foreach (string file in schemaFiles)
+        {
+            string text = File.ReadAllText(file);
+            Assert.IsFalse(text.Contains("terminology_json"), file);
+            Assert.IsFalse(text.Contains("preferences_json"), file);
+        }
+
+        Assert.IsFalse(processor.Contains("memory_terminology_json"));
+        Assert.IsFalse(processor.Contains("memory_preferences_json"));
+        Assert.IsFalse(processor.Contains("draft.terminology"));
+        Assert.IsFalse(processor.Contains("draft.preferences"));
+        Assert.IsFalse(memories.Contains("terminology_json"));
+        Assert.IsFalse(memories.Contains("preferences_json"));
     }
 
     private static T invokePrivate<T>(object target, string methodName, params object[] args)

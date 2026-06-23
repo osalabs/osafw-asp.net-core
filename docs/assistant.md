@@ -124,4 +124,4 @@ During app development, refresh the catalog with `docs/prompts/update_assistant_
 
 ## Memory
 
-Memory remains optional and disabled by default. When enabled, completed runs compact recent conversation context with the configured LLM, then sanitize likely secrets, credentials, personal contact details, payment numbers, and IDs before storing `assistant_memories`.
+Memory remains optional and disabled by default. When enabled, completed runs compact recent conversation context with the configured LLM into one per-user durable summary, then sanitize likely secrets, credentials, personal contact details, payment numbers, IDs, and long opaque tokens before storing `assistant_memories.summary`. Empty or redaction-only summaries are not stored.
