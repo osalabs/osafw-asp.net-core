@@ -513,7 +513,7 @@
                             "label": "Add",
                             "hint": "Add DemoDicts",
                             "url": "/Admin/DemoDicts/new?",
-                            "attrs": "data-fw-lookup=\"add\""
+                            "attrs": "data-fw-lookup=\"add\" data-modal-focus=\"#iname\""
                         },
                         {
                             "class": "on-fw-modal",
@@ -521,7 +521,7 @@
                             "label": "Edit",
                             "hint": "Edit selected DemoDicts",
                             "url": "/Admin/DemoDicts/{id}/edit?",
-                            "attrs": "data-fw-lookup=\"edit\""
+                            "attrs": "data-fw-lookup=\"edit\" data-modal-focus=\"#iname\""
                         },
                         {
                             "is_divider": true

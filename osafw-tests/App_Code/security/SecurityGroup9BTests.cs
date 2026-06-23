@@ -350,6 +350,18 @@ public class SecurityGroup9BTests
         Assert.IsFalse(source.Contains("ConfigureDataProtectionKeyProtection", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public void ErrorHandling_DeveloperExceptionPageRequiresFrameworkDevMode()
+    {
+        var programPath = findRepoFile("osafw-app", "Program.cs");
+        var source = File.ReadAllText(programPath);
+
+        StringAssert.Contains(source, "if (isDevelopmentEnv)");
+        StringAssert.Contains(source, "app.UseDeveloperExceptionPage();");
+        StringAssert.Contains(source, "app.UseExceptionHandler(errorApp =>");
+        Assert.IsFalse(source.Contains("app.Environment.IsDevelopment()", StringComparison.Ordinal));
+    }
+
     private static (FW fw, AdminPolicyUsers users, TestAdminUsersController controller) buildAdminUsersController(int currentAccessLevel, DBRow target)
     {
         var fw = TestHelpers.CreateFw();

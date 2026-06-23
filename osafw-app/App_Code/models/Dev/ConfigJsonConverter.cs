@@ -94,7 +94,6 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "field",
         "type",
         "label",
-        "model",
         "lookup_model",
         "lookup_table",
         "lookup_field",
@@ -168,6 +167,9 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         //write specific keys first
         foreach (var key in ordered_keys)
         {
+            if (hwritten.ContainsKey(key))
+                continue;
+
             if (value.Contains(key))
             {
                 writer.WritePropertyName(key);

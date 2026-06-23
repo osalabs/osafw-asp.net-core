@@ -1011,6 +1011,35 @@ public abstract partial class FwController
     }
 
     /// <summary>
+    /// Indicates a refresh-only form post that should reload ShowForm without persisting submitted values.
+    /// </summary>
+    protected bool isRefreshOnlyRequest()
+    {
+        return reqb("refresh") && !reqb("refresh_save");
+    }
+
+    /// <summary>
+    /// Indicates a refresh-save form post that should persist normally and then reload ShowForm.
+    /// </summary>
+    protected bool isRefreshSaveRequest()
+    {
+        return reqb("refresh") && reqb("refresh_save");
+    }
+
+    /// <summary>
+    /// Routes successful refresh-save submissions back to ShowForm instead of the normal save return target.
+    /// </summary>
+    /// <returns>true when the request was handled and the caller should return null.</returns>
+    protected bool routeRefreshSaveToShowForm(int id)
+    {
+        if (!isRefreshSaveRequest())
+            return false;
+
+        fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
+        return true;
+    }
+
+    /// <summary>
     /// return url for afterSave based on:
     /// if return_url set (and no add new form requested) - go to return_url
     /// id:

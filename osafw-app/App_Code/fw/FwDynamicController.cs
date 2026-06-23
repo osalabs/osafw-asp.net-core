@@ -267,7 +267,7 @@ public partial class FwDynamicController : FwController
         if (id != 0)
             modelOneOrFail(id);
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
@@ -290,6 +290,9 @@ public partial class FwDynamicController : FwController
         FwDict? lookupJson = null;
         if (fw.isJsonExpected() && !string.IsNullOrEmpty(lookupMode))
             lookupJson = buildLookupJson(id);
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new, more_json: lookupJson);
     }

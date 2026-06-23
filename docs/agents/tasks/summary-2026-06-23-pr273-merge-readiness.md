@@ -4,6 +4,7 @@
 - Added Assistant worker loop exception logging.
 - Added an optional SQLite-backed behavior regression for duplicate-run sends, guarded by `isSQLite` so the default build still works without the optional provider.
 - Final review found no remaining release-blocking issues worth another fixer loop.
+- Merged `origin/master` into `assistant`; resolved the `docs/CHANGELOG.md` conflict by keeping both dated breaking-change entries.
 
 ## Scope reviewed
 - PR #273 metadata, local diff against `origin/master...origin/assistant`, and the current worktree fixes.
@@ -18,6 +19,9 @@
 - `docs\agents\tools\Normalize-TextFiles.ps1 -Check` on edited files - passed after normalization.
 - `git diff --check` on edited files - passed.
 - Final self-review used `docs/agents/code_reviewer.md` and re-swept Assistant controller/service, queue/run state, feedback/share access, worker logging, admin RAG/KB mutating actions, settings saves, schema/test summaries, and PR-level diff metadata.
+- `git fetch origin master` - updated `origin/master` from `4ba4aefb` to `a5b42c97`.
+- `git merge origin/master` - one conflict in `docs/CHANGELOG.md`, resolved by preserving both `2026-06-23` and `2026-06-22` entries.
+- `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_master_merge_tests\` - passed, 689/689 after merging `origin/master`.
 
 ## Decisions - why
 - Delegated the first bounded fix pass to a worker for the concurrent-run guard, worker logging, and focused tests while the main agent owns review and final verification.
@@ -25,11 +29,13 @@
 - Kept the duplicate-run test under `isSQLite` because the default build intentionally does not compile SQLite support; the optional provider gives a behavior-level service test without requiring local SQL Server.
 - Performed the final code-review loop in the main agent after the unproductive worker attempts; the final diff is small and verified.
 - No changelog entry was added for this final pass because it changes pre-release Assistant behavior only and does not add a new breaking end-user-app upgrade requirement beyond existing PR #273 entries.
+- The merge conflict was kept as documentation-only resolution because both sides recorded independent breaking-change notes.
 
 ## Pitfalls - fixes
 - Normal `dotnet test` output was locked by IIS Express; used isolated `OutDir` under `artifacts`.
 - The initial SQLite-backed test failed in the default build because SQLite support is compile-symbol gated; wrapped it in `#if isSQLite`.
 - SQLite temp DB cleanup can briefly hit a Windows file handle; disabled pooling and made temp-file deletion best-effort.
+- `origin/master` added a newer changelog section adjacent to the Assistant branch changelog section, causing the only merge conflict.
 
 ## Risks / follow-ups
 - The new guard prevents ordinary duplicate/direct sends while an active run exists, but it is not a database-level per-thread active-run uniqueness guarantee for exact simultaneous cross-request races.
@@ -41,6 +47,7 @@
 
 ## Testing instructions
 - Run `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_pr273_merge_tests\`.
+- After syncing from `master`, run `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_master_merge_tests\`.
 - For the optional duplicate-run behavior test, run `dotnet test osafw-tests\osafw-tests.csproj --filter "FullyQualifiedName~AssistantSend_RejectsQueuedOrProcessingThreadWithoutAddingMessageOrRun" -p:DefineConstants=isSQLite -p:OutDir=C:\DOCS_PROJ\github\osafw-asp.net-core\artifacts\assistant_pr273_sqlite_tests\`.
 - Use isolated `OutDir` when IIS Express or Visual Studio has normal build output locked.
 

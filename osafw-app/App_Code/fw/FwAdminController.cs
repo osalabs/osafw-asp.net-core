@@ -134,7 +134,7 @@ public class FwAdminController : FwController
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
         checkReadOnly();
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
@@ -152,6 +152,9 @@ public class FwAdminController : FwController
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         id = this.modelAddOrUpdate(id, itemdb);
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new);
     }

@@ -41,3 +41,4 @@ Boundaries
 - When hosted from a `bin\...\publish` path, `FwConfig` derives `site_root` from the parent folder before `bin`, so deployment scripts must treat the project root as live runtime state for `App_Data`, logs, templates, and uploads.
 - ParsePage allows recursive file-template includes for tree rendering, but stops deeper includes at a fixed crash-protection recursion-depth limit and logs `WARN`.
 - Multi-tenancy per-host via `FwConfig` overrides and caching.
+- Non-`IS_DEV` request error responses mask server-side exception detail; explicit user-facing exceptions remain visible.

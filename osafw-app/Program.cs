@@ -136,13 +136,27 @@ public static class Program
 
         FwCache.MemoryCache = app.Services.GetRequiredService<IMemoryCache>();
 
-        // If dev - developer exception page
-        if (app.Environment.IsDevelopment())
+        // Detailed exception pages are allowed only when framework dev mode is enabled.
+        if (isDevelopmentEnv)
         {
             app.UseDeveloperExceptionPage();
         }
         else
         {
+            app.UseExceptionHandler(errorApp =>
+            {
+                errorApp.Run(async context =>
+                {
+                    if (!context.Response.HasStarted)
+                    {
+                        context.Response.Clear();
+                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                        context.Response.ContentType = "text/plain; charset=utf-8";
+                        await context.Response.WriteAsync(FW.GENERIC_SERVER_ERROR_MESSAGE);
+                    }
+                });
+            });
+
             // In production - redirect HTTP to HTTPS, optionally UseHsts if needed
             app.UseHttpsRedirection();
             // app.UseHsts(); // if strict-transport

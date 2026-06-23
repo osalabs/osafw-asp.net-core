@@ -110,7 +110,7 @@ public class AdminDemosController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             logger("refresh element:", reqs("refresh")); // id or name of the element refreshed OR "1" if no element id/name
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
@@ -144,6 +144,9 @@ public class AdminDemosController : FwAdminController
             { "att_post_prefix", "att_files1" },
             { "att_category", AttCategories.CAT_GENERAL }
         });
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new);
     }

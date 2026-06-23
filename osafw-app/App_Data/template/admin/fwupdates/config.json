@@ -8,7 +8,6 @@
     "iname": "File",
     "idesc": "SQL"
   },
-  "is_dynamic_index_edit": false,
 
   "store": {
     "lookups_std": {

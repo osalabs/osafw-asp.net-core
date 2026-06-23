@@ -56,7 +56,7 @@ public class AdminSendEmailController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;

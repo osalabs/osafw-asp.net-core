@@ -57,7 +57,7 @@ public class AdminActivityLogsController : FwController
         if (id != 0)
             throw new AuthException("Activity log comments cannot be updated");
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;

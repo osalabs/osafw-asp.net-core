@@ -750,6 +750,8 @@ Remote modal content can namespace duplicate DOM IDs. Generic modal triggers opt
 
 Remote modal triggers copy Bootstrap `data-bs-*` modal options to the generated modal, except trigger/dismiss attributes (`data-bs-toggle`, `data-bs-target`, `data-bs-dismiss`). For a static backdrop, use `data-bs-backdrop="static" data-bs-keyboard="false"`. Use `data-modal-class` to add classes to the generated root `.modal`; keep using `data-modal-dialog-class` or `data-modal-content-class` for dialog/content class overrides.
 
+Remote modals focus the first visible form control after fetched content is loaded and Bootstrap has shown the modal. Set `data-modal-focus="#field_id"` on the trigger to choose a specific focus target, or `data-modal-focus="none"` to leave Bootstrap's default modal focus unchanged. In namespaced lookup modals, a simple `#field_id` selector can target either the rendered ID or the original `data-fw-original-id`.
+
 Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disposeComponents(scope)`. Custom components that attach DOM outside their own scope or need explicit cleanup should either register a component `dispose(scope)` callback or listen for the bubbling `fw-dispose` event.
 
 #### Select/Option List Templates (`/common/sel`)
