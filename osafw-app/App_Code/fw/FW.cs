@@ -45,6 +45,7 @@ public class FW : IDisposable
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
+    internal const string GENERIC_SERVER_ERROR_MESSAGE = "Server Error. Please, contact site administrator!";
 
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = new(StringComparer.OrdinalIgnoreCase); // controller's singletons cache
@@ -722,10 +723,10 @@ public class FW : IDisposable
             //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
             //    + "Session:" + dumper(context.Session));
 
-            if (this.config("log_level").toInt() >= (int)LogLevel.DEBUG)
+            if (this.config("IS_DEV").toBool() && this.config("log_level").toInt() >= (int)LogLevel.DEBUG)
                 throw;
             else
-                errMsg("Server Error. Please, contact site administrator!", Ex);
+                errMsg(GENERIC_SERVER_ERROR_MESSAGE, Ex);
         }
     }
 
@@ -1583,10 +1584,24 @@ public class FW : IDisposable
         this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
     }
 
+    private bool isDetailedErrorVisible()
+    {
+        return this.config("IS_DEV").toBool();
+    }
+
+    private static bool isUserFacingException(Exception ex)
+    {
+        return ex is UserException or AuthException;
+    }
+
     public void errMsg(string msg, Exception? Ex = null)
     {
         FwDict ps = [];
         var tpl_dir = "/error";
+        bool isDetailedError = isDetailedErrorVisible();
+        string publicMsg = !isDetailedError && Ex != null && !isUserFacingException(Ex)
+            ? GENERIC_SERVER_ERROR_MESSAGE
+            : msg;
 
         int code;
         if (Ex is NotFoundException)
@@ -1615,11 +1630,11 @@ public class FW : IDisposable
             this.response.StatusCode = code;
 
         ps["_json"] = true;
-        ps["title"] = msg;
+        ps["title"] = publicMsg;
         ps["error"] = new FwDict
         {
             ["code"] = code,
-            ["message"] = msg,
+            ["message"] = publicMsg,
             ["time"] = DateTime.Now,
             //optional:
             //["category"] = Ex?.GetType().Name,
@@ -1628,12 +1643,12 @@ public class FW : IDisposable
 
         //legacy response: TODO DEPRECATE
         ps["code"] = code;
-        ps["err_msg"] = msg;
+        ps["err_msg"] = publicMsg;
         ps["success"] = false;
-        ps["message"] = msg;
+        ps["message"] = publicMsg;
         ps["err_time"] = DateTime.Now;
 
-        if (this.config("IS_DEV").toBool())
+        if (isDetailedError)
         {
             ps["is_dump"] = true;
             if (Ex != null)
