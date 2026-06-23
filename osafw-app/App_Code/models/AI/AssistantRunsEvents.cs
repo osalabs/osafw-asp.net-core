@@ -10,6 +10,7 @@ public class AssistantRunsEvents : FwModel<AssistantRunsEvents.Row>
     public const string TYPE_TOOL = "tool";
     public const string TYPE_ERROR = "error";
     public const string TYPE_EVIDENCE = "evidence";
+    public const string TYPE_NAVIGATION = "navigation";
 
     public class Row
     {

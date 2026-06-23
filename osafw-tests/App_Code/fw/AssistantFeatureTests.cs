@@ -305,6 +305,140 @@ public class AssistantFeatureTests
         CollectionAssert.Contains(names, "search_knowledge_base");
         CollectionAssert.Contains(names, "search_thread_attachments");
         CollectionAssert.Contains(names, "search_contacts");
+        CollectionAssert.Contains(names, "find_app_navigation");
+    }
+
+    [TestMethod]
+    public void AssistantNavigationCatalog_FiltersByAccessAndBuildsPrefillUrl()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("access_level", Users.ACL_ADMIN.ToString());
+        var catalog = AssistantNavigationCatalog.Parse("""
+        {
+          "version": 1,
+          "controllers": [
+            {
+              "url": "/Admin/Users",
+              "controller": "AdminUsers",
+              "label": "Users",
+              "description": "Manage users and employees.",
+              "keywords": ["users", "employees"],
+              "min_access_level": 90,
+              "actions": ["list", "new"],
+              "list_filters": [
+                { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active" } }
+              ],
+              "prefill_fields": [
+                { "name": "fname", "label": "First Name", "type": "text" },
+                { "name": "lname", "label": "Last Name", "type": "text" }
+              ]
+            },
+            {
+              "url": "/Admin/RagChunks",
+              "controller": "AdminRagChunks",
+              "label": "RAG Diagnostics",
+              "description": "Site admin diagnostics.",
+              "keywords": ["rag"],
+              "min_access_level": 100,
+              "actions": ["list"],
+              "list_filters": [],
+              "prefill_fields": []
+            },
+            {
+              "url": "https://evil.example.test",
+              "controller": "External",
+              "label": "External",
+              "description": "External URL should not be returned.",
+              "keywords": ["external"],
+              "min_access_level": 1,
+              "actions": ["list"],
+              "list_filters": [],
+              "prefill_fields": []
+            }
+          ]
+        }
+        """);
+
+        var rows = catalog.find(fw, "add new employee", "new", prefillJson: """{"fname":"John","lname":"Smith","pwd":"secret"}""");
+
+        Assert.AreEqual(1, rows.Count);
+        var row = (FwDict)rows[0]!;
+        Assert.AreEqual("/Admin/Users/new?item%5Bfname%5D=John&item%5Blname%5D=Smith", row["url"]);
+        Assert.AreEqual("new", row["action"]);
+        StringAssert.Contains(Utils.jsonEncode(row["warnings"] ?? new List<string>()), "Unsupported prefill field: pwd");
+        Assert.AreEqual(0, catalog.find(fw, "external", "list").Count);
+    }
+
+    [TestMethod]
+    public void AssistantNavigationCatalog_BuildsValidatedListFilterUrl()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("access_level", Users.ACL_ADMIN.ToString());
+        var catalog = AssistantNavigationCatalog.Parse("""
+        {
+          "version": 1,
+          "controllers": [
+            {
+              "url": "/Admin/Users",
+              "controller": "AdminUsers",
+              "label": "Users",
+              "description": "Manage users and employees.",
+              "keywords": ["users", "employees"],
+              "min_access_level": 90,
+              "actions": ["list"],
+              "list_filters": [
+                { "name": "s", "label": "Search", "type": "text" },
+                { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive" } }
+              ],
+              "prefill_fields": []
+            }
+          ]
+        }
+        """);
+
+        var rows = catalog.find(fw, "show active users", "list", filtersJson: """{"status":"0","bad":"x"}""");
+
+        Assert.AreEqual(1, rows.Count);
+        var row = (FwDict)rows[0]!;
+        Assert.AreEqual("/Admin/Users?dofilter=1&f%5Bstatus%5D=0", row["url"]);
+        StringAssert.Contains(Utils.jsonEncode(row["warnings"] ?? new List<string>()), "Unsupported filter field: bad");
+    }
+
+    [TestMethod]
+    public void AssistantNavigationCatalog_IsValidJsonAndIncludesFrameworkScreens()
+    {
+        string json = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "prompts", "navigation_catalog.json"));
+
+        var catalog = AssistantNavigationCatalog.Parse(json);
+
+        Assert.IsTrue(catalog.controllers.Count > 5);
+        Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/Users"));
+        Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/KBArticles"));
+        Assert.IsTrue(catalog.controllers.All(static item => item.url.StartsWith("/", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void AssistantRunProcessor_LoadsAssistantPromptsFromPromptsFolder()
+    {
+        string processor = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantRunProcessor.cs"));
+
+        StringAssert.Contains(processor, "fw.parsePage(\"/assistant/prompts\", \"chat_system.md\"");
+        StringAssert.Contains(processor, "fw.parsePage(\"/assistant/prompts\", \"tool_policy.md\"");
+        StringAssert.Contains(processor, "fw.parsePage(\"/assistant/prompts\", \"navigation.md\"");
+        StringAssert.Contains(processor, "fw.parsePage(\"/assistant/prompts\", \"clarification_prompt.md\"");
+        StringAssert.Contains(processor, "fw.parsePage(\"/assistant/prompts\", \"memory_compaction.md\"");
+    }
+
+    [TestMethod]
+    public void AssistantAppService_BindsFinalLinksToNavigationEvents()
+    {
+        string service = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantAppService.cs"));
+        string runtime = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantAgentRuntime.cs"));
+
+        StringAssert.Contains(service, "public void BindLinksToRunNavigation");
+        StringAssert.Contains(service, "AssistantRunsEvents.TYPE_NAVIGATION");
+        StringAssert.Contains(service, "result.links = [];");
+        StringAssert.Contains(runtime, "RecordNavigationLinks(\"find_app_navigation\"");
     }
 
     [TestMethod]
@@ -619,6 +753,17 @@ public class AssistantFeatureTests
             title = "KB answer",
             information = "Answer with citation.",
             confidence = 0.75,
+            links =
+            [
+                new AssistantLink
+                {
+                    label = "Open KB",
+                    url = "/Admin/KBArticles",
+                    description = "Manage knowledge base articles.",
+                    action = "list",
+                    confidence = 0.9
+                }
+            ],
             sources =
             [
                 new AssistantSource
@@ -640,6 +785,8 @@ public class AssistantFeatureTests
 
         Assert.IsNotNull(roundTrip);
         Assert.AreEqual("KB answer", roundTrip.title);
+        Assert.AreEqual(1, roundTrip.links.Count);
+        Assert.AreEqual("/Admin/KBArticles", roundTrip.links[0].url);
         Assert.AreEqual(1, roundTrip.sources.Count);
         Assert.AreEqual("/Admin/KBArticles/12", roundTrip.sources[0].article_url);
         Assert.AreEqual(7, roundTrip.sources[0].source_id);

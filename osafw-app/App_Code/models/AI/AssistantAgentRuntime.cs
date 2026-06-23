@@ -96,6 +96,35 @@ public sealed class AssistantToolRuntime
         );
     }
 
+    public void RecordNavigationLinks(string toolName, string query, FwList results)
+    {
+        if (!HasPersistedRun || results.Count == 0)
+            return;
+
+        var links = results
+            .OfType<FwDict>()
+            .Select(static item => new
+            {
+                label = item["label"].toStr(),
+                url = item["url"].toStr(),
+                action = item["action"].toStr(),
+                description = item["description"].toStr(),
+                controller_url = item["controller_url"].toStr(),
+                score = item["score"].toDouble()
+            })
+            .Where(static item => !string.IsNullOrWhiteSpace(item.url))
+            .ToList();
+        if (links.Count == 0)
+            return;
+
+        fw.model<AssistantRunsEvents>().addEvent(
+            runId,
+            AssistantRunsEvents.TYPE_NAVIGATION,
+            "Navigation: " + toolName,
+            Utils.jsonEncode(new { tool = toolName, query = query ?? string.Empty, links })
+        );
+    }
+
     public void RequestClarification(AssistantClarificationDto clarification)
     {
         throw new AssistantClarificationRequestedException(clarification);
@@ -116,6 +145,7 @@ public sealed class AssistantToolCatalog
         var ragTool = new AssistantRagTool(runtime);
         var threadSearchTool = new AssistantThreadAttachmentSearchTool(runtime);
         var contactSearchTool = new AssistantContactSearchTool(runtime);
+        var navigationTool = new AssistantNavigationTool(runtime);
         var clarificationTool = new AssistantClarificationTool(runtime);
         var progressTool = new AssistantProgressTool(runtime);
 
@@ -124,6 +154,7 @@ public sealed class AssistantToolCatalog
             Register(ragTool.search, "search_knowledge_base", "rag"),
             Register(threadSearchTool.search, "search_thread_attachments", "thread_files"),
             Register(contactSearchTool.search, "search_contacts", "contacts"),
+            Register(navigationTool.find, "find_app_navigation", "navigation"),
             Register(clarificationTool.request, "request_clarification", "clarification"),
             Register(progressTool.report, "report_progress", "progress"),
         ];
@@ -314,6 +345,39 @@ public sealed class AssistantContactSearchTool
         }
 
         runtime.LogToolResult("search_contacts", "Returned " + output.Count + " matches.");
+        return output;
+    }
+}
+
+public sealed class AssistantNavigationTool
+{
+    private readonly AssistantToolRuntime runtime;
+
+    public AssistantNavigationTool(AssistantToolRuntime runtime) => this.runtime = runtime;
+
+    [Description("Find ACL-checked application navigation links from the configured navigation catalog. This returns links only; it never redirects or writes records.")]
+    public FwList find(
+        [Description("User navigation intent, such as add employee, manage KB articles, open reports, or find settings.")] string query,
+        [Description("Optional desired action: list, view, new, or edit. Leave blank when uncertain.")] string action = "",
+        [Description("Optional JSON object of list filters using catalog-declared filter names.")] string filters_json = "",
+        [Description("Optional JSON object of new-form prefill values using catalog-declared field names.")] string prefill_json = "",
+        [Description("Optional numeric record id for view or edit links.")] int id = 0,
+        [Description("Maximum number of navigation candidates to return.")] int k = 5)
+    {
+        runtime.LogToolCall("find_app_navigation", new { query, action, filters_json, prefill_json, id, k });
+        runtime.AddProgress("Finding application links.");
+
+        var output = AssistantNavigationCatalog.Load(runtime.Fw).find(
+            runtime.Fw,
+            query,
+            action,
+            filters_json,
+            prefill_json,
+            id,
+            Math.Clamp(k, 1, 10)
+        );
+        runtime.RecordNavigationLinks("find_app_navigation", query, output);
+        runtime.LogToolResult("find_app_navigation", "Returned " + output.Count + " links.");
         return output;
     }
 }

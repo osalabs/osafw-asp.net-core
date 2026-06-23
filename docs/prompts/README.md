@@ -12,6 +12,7 @@ Use these as starting points, then fill the placeholders and remove anything tha
 - `security_hardening.md` - review and harden a scoped feature, PR, or finding set using the repository security guardrails.
 - `docs_consistency.md` - synchronize docs, changelog, navigation, and agent instruction docs after a behavior or workflow change.
 - `test_stabilization.md` - reproduce and stabilize a failing build or test command without hiding real regressions.
+- `update_assistant_navigation_catalog.md` - refresh the AI Assistant navigation catalog from application controllers, templates, and dynamic configs.
 
 ## Selection Notes
 

@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "controllers": [
+    {
+      "url": "/Main",
+      "controller": "Main",
+      "label": "Dashboard",
+      "description": "Main dashboard for signed-in users.",
+      "keywords": ["dashboard", "home", "main", "start"],
+      "min_access_level": 1,
+      "actions": ["list"],
+      "list_filters": [],
+      "prefill_fields": []
+    },
+    {
+      "url": "/Assistant",
+      "controller": "Assistant",
+      "label": "AI Assistant",
+      "description": "Threaded AI assistant chat for knowledge, contacts, and navigation help.",
+      "keywords": ["assistant", "ai", "chat", "help", "knowledge"],
+      "min_access_level": 1,
+      "actions": ["list"],
+      "list_filters": [],
+      "prefill_fields": []
+    },
+    {
+      "url": "/My/Settings",
+      "controller": "MySettings",
+      "label": "My Settings",
+      "description": "Current user's profile, contact information, theme, date/time, and timezone preferences.",
+      "keywords": ["my settings", "profile", "preferences", "timezone", "theme", "contact info"],
+      "min_access_level": 1,
+      "actions": ["new"],
+      "list_filters": [],
+      "prefill_fields": [
+        { "name": "email", "label": "Email", "type": "email" },
+        { "name": "fname", "label": "First Name", "type": "text" },
+        { "name": "lname", "label": "Last Name", "type": "text" },
+        { "name": "phone", "label": "Phone", "type": "text" },
+        { "name": "city", "label": "City", "type": "text" },
+        { "name": "state", "label": "State", "type": "text" },
+        { "name": "zip", "label": "Zip", "type": "text" },
+        { "name": "timezone", "label": "Time Zone", "type": "text" },
+        { "name": "ui_theme", "label": "Theme", "type": "text" },
+        { "name": "ui_mode", "label": "Mode", "type": "text" },
+        { "name": "date_format", "label": "Date Format", "type": "text" },
+        { "name": "time_format", "label": "Time Format", "type": "text" }
+      ]
+    },
+    {
+      "url": "/My/Password",
+      "controller": "MyPassword",
+      "label": "My Password",
+      "description": "Current user's login email and password form.",
+      "keywords": ["password", "login", "email", "credentials", "account"],
+      "min_access_level": 1,
+      "actions": ["new"],
+      "list_filters": [],
+      "prefill_fields": [
+        { "name": "email", "label": "Email", "type": "email" }
+      ]
+    },
+    {
+      "url": "/My/MFA",
+      "controller": "MyMFA",
+      "label": "Multi-Factor Authentication",
+      "description": "Current user's MFA setup screen.",
+      "keywords": ["mfa", "multi factor", "two factor", "authenticator", "security"],
+      "min_access_level": 1,
+      "actions": ["new"],
+      "list_filters": [],
+      "prefill_fields": []
+    },
+    {
+      "url": "/Admin/Users",
+      "controller": "AdminUsers",
+      "label": "Users",
+      "description": "Manage user accounts, employees, contacts, access levels, and login status.",
+      "keywords": ["users", "user", "employee", "employees", "staff", "contact", "contacts", "login", "account"],
+      "min_access_level": 90,
+      "actions": ["list", "view", "new", "edit"],
+      "list_filters": [
+        { "name": "s", "label": "Search", "type": "text" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } },
+        { "name": "access_level", "label": "Access Level", "type": "select", "options": { "1": "User", "50": "Employee", "80": "Manager", "90": "Admin", "100": "Site Administrator" } }
+      ],
+      "prefill_fields": [
+        { "name": "email", "label": "Email", "type": "email" },
+        { "name": "fname", "label": "First Name", "type": "text" },
+        { "name": "lname", "label": "Last Name", "type": "text" },
+        { "name": "title", "label": "Title", "type": "text" },
+        { "name": "phone", "label": "Phone", "type": "text" },
+        { "name": "city", "label": "City", "type": "text" },
+        { "name": "state", "label": "State", "type": "text" },
+        { "name": "login", "label": "Login", "type": "text" },
+        { "name": "access_level", "label": "Access Level", "type": "select", "options": { "1": "User", "50": "Employee", "80": "Manager", "90": "Admin", "100": "Site Administrator" } },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ]
+    },
+    {
+      "url": "/Admin/KBArticles",
+      "controller": "AdminKBArticles",
+      "label": "Knowledge Base Articles",
+      "description": "Manage knowledge base articles, article content, files, access level, and indexing.",
+      "keywords": ["knowledge base", "kb", "articles", "documents", "policies", "sop", "files", "indexing"],
+      "min_access_level": 50,
+      "actions": ["list", "view", "new", "edit"],
+      "list_filters": [
+        { "name": "s", "label": "Search", "type": "text" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } },
+        { "name": "access_level", "label": "Access Level", "type": "select", "options": { "1": "Member", "80": "Manager", "90": "Administrator", "100": "Site Administrator" } },
+        { "name": "iname", "label": "Title", "type": "text" },
+        { "name": "icode", "label": "Code", "type": "text" }
+      ],
+      "prefill_fields": [
+        { "name": "iname", "label": "Title", "type": "text" },
+        { "name": "icode", "label": "Code", "type": "text" },
+        { "name": "idesc", "label": "Description", "type": "textarea" },
+        { "name": "content_markdown", "label": "Content", "type": "textarea" },
+        { "name": "access_level", "label": "Access Level", "type": "select", "options": { "1": "Member", "80": "Manager", "90": "Administrator", "100": "Site Administrator" } },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ]
+    },
+    {
+      "url": "/Admin/Spages",
+      "controller": "AdminSpages",
+      "label": "Static Pages",
+      "description": "Manage CMS and intranet pages, public pages, page content, templates, and publishing status.",
+      "keywords": ["pages", "spages", "cms", "intranet", "public pages", "content", "website"],
+      "min_access_level": 50,
+      "actions": ["list", "new", "edit"],
+      "list_filters": [
+        { "name": "s", "label": "Search", "type": "text" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ],
+      "prefill_fields": [
+        { "name": "iname", "label": "Title", "type": "text" },
+        { "name": "idesc", "label": "Main Content", "type": "textarea" },
+        { "name": "parent_id", "label": "Parent Page ID", "type": "number" },
+        { "name": "template", "label": "Template", "type": "text" },
+        { "name": "meta_keywords", "label": "Meta Keywords", "type": "text" },
+        { "name": "meta_description", "label": "Meta Description", "type": "text" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ]
+    },
+    {
+      "url": "/Admin/Reports",
+      "controller": "AdminReports",
+      "label": "Reports",
+      "description": "Browse and run reports available to the current user.",
+      "keywords": ["reports", "reporting", "analytics", "exports", "custom reports"],
+      "min_access_level": 1,
+      "actions": ["list"],
+      "list_filters": [],
+      "prefill_fields": []
+    },
+    {
+      "url": "/Admin/Settings",
+      "controller": "AdminSettings",
+      "label": "Site Settings",
+      "description": "Manage framework and application settings such as assistant configuration.",
+      "keywords": ["settings", "site settings", "configuration", "config", "openai", "assistant settings"],
+      "min_access_level": 90,
+      "actions": ["list", "edit"],
+      "list_filters": [
+        { "name": "s", "label": "Search", "type": "text" },
+        { "name": "icat", "label": "Category", "type": "text" }
+      ],
+      "prefill_fields": []
+    },
+    {
+      "url": "/Admin/Roles",
+      "controller": "AdminRoles",
+      "label": "Roles",
+      "description": "Manage roles, role members, resources, and permissions.",
+      "keywords": ["roles", "permissions", "rbac", "access", "members"],
+      "min_access_level": 90,
+      "actions": ["list", "view", "new", "edit"],
+      "list_filters": [
+        { "name": "s", "label": "Search", "type": "text" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ],
+      "prefill_fields": [
+        { "name": "iname", "label": "Name", "type": "text" },
+        { "name": "idesc", "label": "Description", "type": "textarea" },
+        { "name": "prio", "label": "Priority", "type": "number" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ]
+    },
+    {
+      "url": "/Admin/Lookups",
+      "controller": "AdminLookups",
+      "label": "Lookups",
+      "description": "Grouped lookup manager linking to framework lookup tables.",
+      "keywords": ["lookups", "lookup manager", "dropdowns", "reference data"],
+      "min_access_level": 50,
+      "actions": ["list"],
+      "list_filters": [],
+      "prefill_fields": []
+    },
+    {
+      "url": "/Admin/RagChunks",
+      "controller": "AdminRagChunks",
+      "label": "RAG Diagnostics",
+      "description": "Inspect assistant indexing, RAG sources, chunks, vector backend, failed sources, and retrieval evidence.",
+      "keywords": ["rag", "chunks", "sources", "vector", "indexing", "assistant diagnostics", "retrieval traces"],
+      "min_access_level": 100,
+      "actions": ["list", "view"],
+      "list_filters": [
+        { "name": "s", "label": "Vector Search", "type": "text" },
+        { "name": "entity", "label": "Entity", "type": "text" },
+        { "name": "backend", "label": "Vector Backend", "type": "text" }
+      ],
+      "prefill_fields": []
+    }
+  ]
+}

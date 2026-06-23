@@ -50,6 +50,8 @@ When an article has blank Content and supported attachments are indexed, the wor
 
 KB attachment summary prompts and fallback Markdown are ParsePage templates under `osafw-app/App_Data/template/assistant/prompts/`. Override `kb_summary_system.md`, `kb_summary_user.md`, and `kb_summary_fallback.md` to customize the generated Content wording without changing runtime code.
 
+Assistant chat prompts are also under `osafw-app/App_Data/template/assistant/prompts/`. Override `chat_system.md`, `tool_policy.md`, `clarification_prompt.md`, `navigation.md`, or `memory_compaction.md` there when an app needs different assistant behavior.
+
 Indexed source types:
 
 - KB article body.
@@ -100,10 +102,25 @@ The run processor uses Microsoft Agent Framework packages and read-only tools:
 - Knowledge base and Spages search.
 - Current-thread attachment search.
 - Simple users/contact search with `LIKE`.
+- Application navigation lookup.
 - Clarification requests.
 - Progress events.
 
 The assistant must not execute generated SQL, mutate application records, redirect users based on model output, or invent navigation/actions. Future mutating workflows must go through explicit controller/model contracts, POST, XSS tokens, validation, access checks, confirmation, and audit logging.
+
+## Navigation
+
+Navigation support is intentionally catalog-driven. The runtime prompt `osafw-app/App_Data/template/assistant/prompts/navigation.md` explains framework route and filter rules to the model. The machine-readable catalog `osafw-app/App_Data/template/assistant/prompts/navigation_catalog.json` lists approved screens, keywords, minimum access level, supported actions, simple list filters, and safe new-form prefill fields.
+
+The Assistant exposes `find_app_navigation`, a read-only tool that parses the catalog, filters entries by the current user's access level, validates requested `f[...]` filters and `item[...]` prefill fields, and returns candidate links. Final response links are saved only when the URL exactly matches a link returned by this tool during the run. Links are shown as clickable suggestions; the Assistant never redirects automatically and never writes records.
+
+Examples:
+
+- "Where do I manage KB articles?" can return `/Admin/KBArticles`.
+- "Add new employee John Smith" can return `/Admin/Users/new?item%5Bfname%5D=John&item%5Blname%5D=Smith` when the current user can access Admin Users.
+- "Show active users" can return `/Admin/Users?dofilter=1&f%5Bstatus%5D=0`.
+
+During app development, refresh the catalog with `docs/prompts/update_assistant_navigation_catalog.md`. The refresh should scan controllers, dynamic configs, and templates, but keep the catalog curated. Do not add login, dev/test, attachment plumbing, unsupported custom actions, password fields, tokens, secrets, or filters that are not supported by the screen's simple URL contract.
 
 ## Memory
 

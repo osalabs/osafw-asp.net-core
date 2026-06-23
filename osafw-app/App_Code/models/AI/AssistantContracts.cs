@@ -10,6 +10,7 @@ public sealed class AssistantResult
     public string explanation { get; set; } = string.Empty;
     public string information { get; set; } = string.Empty;
     public List<AssistantSource> sources { get; set; } = [];
+    public List<AssistantLink> links { get; set; } = [];
     public double confidence { get; set; }
 
     [JsonIgnore]
@@ -22,6 +23,21 @@ public sealed class AssistantResult
         "explanation": { "type": "string" },
         "information": { "type": "string" },
         "confidence": { "type": "number" },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" },
+              "description": { "type": "string" },
+              "action": { "type": "string" },
+              "confidence": { "type": ["number", "null"] }
+            },
+            "required": ["label", "url", "description", "action", "confidence"]
+          }
+        },
         "sources": {
           "type": "array",
           "items": {
@@ -47,7 +63,7 @@ public sealed class AssistantResult
           }
         }
       },
-      "required": ["title", "explanation", "information", "confidence", "sources"]
+      "required": ["title", "explanation", "information", "confidence", "sources", "links"]
     }
     """;
 }
@@ -68,6 +84,15 @@ public sealed class AssistantSource
     public int? chunk_id { get; set; }
     public string source_type { get; set; } = string.Empty;
     public double? score { get; set; }
+}
+
+public sealed class AssistantLink
+{
+    public string label { get; set; } = string.Empty;
+    public string url { get; set; } = string.Empty;
+    public string description { get; set; } = string.Empty;
+    public string action { get; set; } = string.Empty;
+    public double? confidence { get; set; }
 }
 
 public sealed class AssistantAttachmentDto
@@ -127,6 +152,7 @@ public sealed class AssistantMessageDto
     public string add_time { get; set; } = string.Empty;
     public double? confidence { get; set; }
     public List<AssistantSource> sources { get; set; } = [];
+    public List<AssistantLink> links { get; set; } = [];
     public AssistantClarificationDto? clarification { get; set; }
     public List<AssistantAttachmentDto> attachments { get; set; } = [];
 }

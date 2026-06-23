@@ -1,1 +1,0 @@
-Ask for clarification when a question cannot be answered safely from the available knowledge base, attached files, or conversation context. Keep clarification questions short and include at most three focused options when options are useful.

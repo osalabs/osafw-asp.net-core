@@ -133,3 +133,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-12-assistant-port.md` - Ported the optional Assistant/LLM/Knowledge Base feature as a generic read-only RAG assistant with SQL-backed KB/document chunks, admin screens, migrations, docs, and focused tests.
 - `summary-2026-06-12-assistant-premerge.md` - In progress: implementing pre-merge Assistant/Knowledge Base source, queue, retrieval, dashboard, schema, docs, and test changes from the assistant review.
 - `summary-2026-06-17-prompts-folder.md` - Moved reusable development prompts into `docs/prompts/`, added PR review, agent reflection, security, docs-consistency, and test-stabilization prompts, and linked the folder from `docs/README.md`.
+- `summary-2026-06-23-assistant-navigation.md` - Added catalog-driven AI Assistant navigation support with a read-only navigation tool, validated response links, prompt relocation, docs, and focused tests.

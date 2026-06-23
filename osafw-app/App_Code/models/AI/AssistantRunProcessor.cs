@@ -162,6 +162,7 @@ public sealed class AssistantRunProcessor
             persistSession(thread.id, resolveSession(response, session), fw);
             var appResult = extractResponseValue<AssistantResult>(response) ?? fallbackResult(response);
             appService.BindSourcesToRunEvidence(run.id, appResult);
+            appService.BindLinksToRunNavigation(run.id, appResult);
             appService.EnrichAssistantSources(appResult.sources);
 
             string payloadJson = Utils.jsonEncode(appResult);
@@ -243,9 +244,10 @@ public sealed class AssistantRunProcessor
         };
 
         return string.Join("\n\n",
-            fw.parsePage("/assistant", "chat_system.md", ps),
-            fw.parsePage("/assistant", "tool_policy.md", ps),
-            fw.parsePage("/assistant", "clarification_prompt.md", ps)
+            fw.parsePage("/assistant/prompts", "chat_system.md", ps),
+            fw.parsePage("/assistant/prompts", "tool_policy.md", ps),
+            fw.parsePage("/assistant/prompts", "navigation.md", ps),
+            fw.parsePage("/assistant/prompts", "clarification_prompt.md", ps)
         );
     }
 
@@ -389,7 +391,8 @@ public sealed class AssistantRunProcessor
             explanation = string.Empty,
             information = text,
             confidence = 0,
-            sources = []
+            sources = [],
+            links = []
         };
     }
 
@@ -407,7 +410,7 @@ public sealed class AssistantRunProcessor
             return;
 
         var existing = fw.model<AssistantMemories>().oneByUser(usersId);
-        string systemPrompt = fw.parsePage("/assistant", "memory_compaction.md", []);
+        string systemPrompt = fw.parsePage("/assistant/prompts", "memory_compaction.md", []);
         string userPrompt = "Existing memory:\n" + (existing?.summary ?? string.Empty)
             + "\n\nConversation excerpts:\n" + string.Join("\n", messages)
             + "\n\nReturn only durable preferences, terminology, and stable context worth remembering.";

@@ -326,6 +326,40 @@ public sealed class AssistantAppService
             downgradeUncitedConfidence(result);
     }
 
+    public void BindLinksToRunNavigation(int runId, AssistantResult result)
+    {
+        if (result == null)
+            return;
+
+        var navigation = listRunNavigationLinks(runId);
+        if (navigation.Count == 0)
+        {
+            result.links = [];
+            return;
+        }
+
+        List<AssistantLink> valid = [];
+        foreach (var link in result.links ?? new List<AssistantLink>())
+        {
+            if (!navigation.TryGetValue((link.url ?? string.Empty).Trim(), out var bound))
+                continue;
+
+            valid.Add(new AssistantLink
+            {
+                label = string.IsNullOrWhiteSpace(bound.label) ? link.label : bound.label,
+                url = bound.url,
+                description = string.IsNullOrWhiteSpace(bound.description) ? link.description : bound.description,
+                action = string.IsNullOrWhiteSpace(bound.action) ? link.action : bound.action,
+                confidence = bound.confidence ?? link.confidence
+            });
+        }
+
+        result.links = valid
+            .GroupBy(static link => link.url, StringComparer.Ordinal)
+            .Select(static group => group.First())
+            .ToList();
+    }
+
     private bool isTablesReady()
     {
         try
@@ -416,6 +450,48 @@ public sealed class AssistantAppService
             catch
             {
                 // Ignore malformed evidence events; they should not make citations valid.
+            }
+        }
+
+        return result;
+    }
+
+    private Dictionary<string, AssistantLink> listRunNavigationLinks(int runId)
+    {
+        if (runId <= 0)
+            return [];
+
+        Dictionary<string, AssistantLink> result = new(StringComparer.Ordinal);
+        foreach (var row in fw.model<AssistantRunsEvents>().listByRun(runId))
+        {
+            if (row.event_type != AssistantRunsEvents.TYPE_NAVIGATION || string.IsNullOrWhiteSpace(row.payload_json))
+                continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(row.payload_json);
+                if (!doc.RootElement.TryGetProperty("links", out var links) || links.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                foreach (var item in links.EnumerateArray())
+                {
+                    string url = jsonString(item, "url").Trim();
+                    if (!AssistantNavigationCatalog.IsAppLocalUrl(url))
+                        continue;
+
+                    result[url] = new AssistantLink
+                    {
+                        label = jsonString(item, "label"),
+                        url = url,
+                        description = jsonString(item, "description"),
+                        action = jsonString(item, "action"),
+                        confidence = jsonDouble(item, "score")
+                    };
+                }
+            }
+            catch
+            {
+                // Ignore malformed navigation events; they should not make model-invented links valid.
             }
         }
 
@@ -726,6 +802,7 @@ select a.*, al.item_id as assistant_messages_id
             add_time = formatDate(message.add_time),
             confidence = message.confidence,
             sources = decodeSources(message.sources_json),
+            links = decodeLinks(message.payload_json, message.message_type),
             clarification = decodeClarification(message.payload_json, message.message_type),
             attachments = attachments.TryGetValue(message.id, out var list) ? list : [],
         };
@@ -779,6 +856,21 @@ select a.*, al.item_id as assistant_messages_id
         try
         {
             return System.Text.Json.JsonSerializer.Deserialize<List<AssistantSource>>(json) ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static List<AssistantLink> decodeLinks(string json, string messageType)
+    {
+        if (messageType != AssistantMessages.TYPE_RESULT || string.IsNullOrWhiteSpace(json))
+            return [];
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<AssistantResult>(json)?.links ?? [];
         }
         catch
         {

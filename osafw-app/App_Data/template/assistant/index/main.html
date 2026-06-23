@@ -401,6 +401,7 @@
     wrap.className = 'assistant-message assistant-message-' + role + ' d-flex w-100';
     wrap.dataset.messageId = message.id;
     const sources = (message.sources || []).map(renderSource).join('');
+    const links = (message.links || []).map(renderAssistantLink).join('');
     const attachments = (message.attachments || []).map(file => {
       const indexStatus = file.index_status || (file.is_indexed ? 'indexed' : 'not indexed');
       const badgeClass = file.is_indexed ? 'text-bg-success' : 'text-bg-secondary';
@@ -420,11 +421,20 @@
     const time = role !== 'assistant' && message.add_time ? '<div class="small text-muted mt-2">' + escapeHtml(message.add_time) + '</div>' : '';
     wrap.innerHTML = '<div class="assistant-bubble border rounded bg-body shadow-sm p-3"><div class="assistant-message-body">' + escapeHtml(message.content_markdown || '') + '</div>'
       + (attachments ? '<div class="assistant-attachments d-flex flex-wrap gap-2 mt-3">' + attachments + '</div>' : '')
+      + (links ? '<div class="assistant-links d-flex flex-wrap gap-2 mt-3">' + links + '</div>' : '')
       + (sources ? '<div class="assistant-sources d-flex flex-wrap gap-2 mt-3">' + sources + '</div>' : '')
       + responseActions
       + time
       + '</div>';
     return wrap;
+  }
+
+  function renderAssistantLink(link, index) {
+    const label = link.label || 'Open link ' + (index + 1);
+    const href = link.url || '';
+    if (!href) return '';
+    const description = link.description ? '<span class="small text-muted d-block">' + escapeHtml(link.description) + '</span>' : '';
+    return '<a class="assistant-nav-link btn btn-outline-primary btn-sm text-start d-inline-flex align-items-start gap-2" href="' + escapeAttr(href) + '"><i class="bi bi-box-arrow-up-right mt-1"></i><span><span class="fw-semibold">' + escapeHtml(label) + '</span>' + description + '</span></a>';
   }
 
   function renderSource(source, index) {
