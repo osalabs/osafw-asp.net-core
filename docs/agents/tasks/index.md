@@ -138,3 +138,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-23-assistant-memory-hardening.md` - Simplified Assistant memory to one sanitized per-user summary, removed terminology/preferences JSON fields from unreleased schemas, and patched the local dev DB directly.
 - `summary-2026-06-23-assistant-prompt-templates.md` - Moved remaining Assistant memory/user-message prompt prose from C# into ParsePage prompt templates and updated focused tests/docs.
 - `summary-2026-06-23-assistant-composer-tab-order.md` - Reordered Assistant composer controls so Tab from the prompt focuses Send before Files while keeping file upload available.
+- `summary-2026-06-23-pr273-release-fixes.md` - Addressed PR #273 release fixes for Assistant contact output, Assistant message access, readonly Site Settings saves, duplicate timeout sweeps, and test stability.

@@ -68,6 +68,14 @@ public class AssistantThreads : FwModel<AssistantThreads.Row>
         return db.rowp<Row>(sql, @params);
     }
 
+    /// <summary>
+    /// Checks whether a thread belongs to the supplied authenticated or anonymous owner scope.
+    /// </summary>
+    public virtual bool isOwnerAccess(int id, int usersId, string ownerToken)
+    {
+        return oneTypedForOwner(id, usersId, ownerToken) != null;
+    }
+
     public int addThread(int usersId, string ownerToken, string iname)
     {
         return add(DB.h(

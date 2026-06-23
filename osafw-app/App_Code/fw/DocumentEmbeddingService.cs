@@ -12,12 +12,12 @@ namespace osafw;
 
 public class DocumentEmbeddingService
 {
-    public const long DefaultMaxIndexedFileBytes = 5 * 1024 * 1024;
+    public const long DEFAULT_MAX_INDEXED_FILE_BYTES = 5 * 1024 * 1024;
 
-    private const int DefaultMaxIndexChars = 200000;
-    private const int DefaultMaxIndexChunks = 80;
-    private const int MaxSummaryPromptChars = 24000;
-    private const int MaxSummaryOutputChars = 6000;
+    private const int DEFAULT_MAX_INDEX_CHARS = 200000;
+    private const int DEFAULT_MAX_INDEX_CHUNKS = 80;
+    private const int MAX_SUMMARY_PROMPT_CHARS = 24000;
+    private const int MAX_SUMMARY_OUTPUT_CHARS = 6000;
 
     private readonly FW fw;
     private readonly List<IDocumentParser> parsers;
@@ -55,7 +55,7 @@ public class DocumentEmbeddingService
     /// </summary>
     public long MaxIndexedFileBytes()
     {
-        maxIndexedFileBytes ??= Math.Max(1, fw.model<Settings>().readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DefaultMaxIndexedFileBytes));
+        maxIndexedFileBytes ??= Math.Max(1, fw.model<Settings>().readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DEFAULT_MAX_INDEXED_FILE_BYTES));
         return maxIndexedFileBytes.Value;
     }
 
@@ -359,7 +359,7 @@ public class DocumentEmbeddingService
     private static FwDict buildKBAttachmentSummaryPromptData(string articleTitle, List<ParsedAttachmentDocument> documents)
     {
         FwList rows = [];
-        int remaining = MaxSummaryPromptChars;
+        int remaining = MAX_SUMMARY_PROMPT_CHARS;
         foreach (var document in documents)
         {
             if (remaining <= 0)
@@ -419,7 +419,7 @@ public class DocumentEmbeddingService
                 lines.RemoveAt(lines.Count - 1);
             summary = string.Join(Environment.NewLine, lines).Trim();
         }
-        return truncate(summary, MaxSummaryOutputChars).Trim();
+        return truncate(summary, MAX_SUMMARY_OUTPUT_CHARS).Trim();
     }
 
     private async Task<List<RagChunks.ChunkEmbedding>> buildTextChunksAsync(RagSources.Row source, string text, string filename, string section, CancellationToken cancellationToken)
@@ -486,12 +486,12 @@ public class DocumentEmbeddingService
 
     private int maxIndexChars()
     {
-        return Math.Max(1000, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHARS", DefaultMaxIndexChars));
+        return Math.Max(1000, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHARS", DEFAULT_MAX_INDEX_CHARS));
     }
 
     private int maxIndexChunks()
     {
-        return Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHUNKS", DefaultMaxIndexChunks));
+        return Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHUNKS", DEFAULT_MAX_INDEX_CHUNKS));
     }
 
     private string resolveAttachmentPath(FwDict att)

@@ -39,6 +39,22 @@ public class AssistantMessages : FwModel<AssistantMessages.Row>
         is_log_changes = false;
     }
 
+    /// <summary>
+    /// Authorizes message-bound attachments through the owning assistant thread.
+    /// </summary>
+    public override bool isAccess(int id = 0, string action = "")
+    {
+        var message = one(id);
+        if (message.Count == 0 || message["status"].toInt() == STATUS_DELETED)
+            return false;
+
+        int threadId = message["assistant_threads_id"].toInt();
+        if (threadId <= 0)
+            return false;
+
+        return fw.model<AssistantThreads>().isOwnerAccess(threadId, fw.userId, fw.Session(AssistantAppService.ANONYMOUS_OWNER_SESSION_KEY));
+    }
+
     public int addMessage(int threadId, string role, string messageType, string contentMarkdown, string previewText = "", string payloadJson = "", string sourcesJson = "", double? confidence = null, int usersId = 0)
     {
         string normalizedMarkdown = contentMarkdown ?? string.Empty;

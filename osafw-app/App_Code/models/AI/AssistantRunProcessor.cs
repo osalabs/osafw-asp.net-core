@@ -36,13 +36,6 @@ public sealed class AssistantRunProcessor
         if (timedOutCount > 0)
             fw.logger(LogLevel.WARN, "Failed timed-out assistant runs: ", timedOutCount);
 
-        if (isStaleRunRecoveryDue)
-        {
-            int recoveredCount = fw.model<AssistantRuns>().failTimedOutActiveRuns(timeoutSeconds);
-            if (recoveredCount > 0)
-                fw.logger(LogLevel.WARN, "Failed stale assistant runs: ", recoveredCount);
-        }
-
         var run = fw.model<AssistantRuns>().claimNextQueued(workerId);
         if (run == null || run.id <= 0)
             return false;

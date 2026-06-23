@@ -295,9 +295,9 @@ public sealed class AssistantContactSearchTool
 
     public AssistantContactSearchTool(AssistantToolRuntime runtime) => this.runtime = runtime;
 
-    [Description("Search active users/contacts by name, email, login, title, or city using simple LIKE matching.")]
+    [Description("Search active users/contacts by name, email, or title using simple LIKE matching.")]
     public FwList search(
-        [Description("Contact name, email, login, title, or city phrase.")] string query,
+        [Description("Contact name, email, or title phrase.")] string query,
         [Description("Maximum number of contacts to return.")] int k = 5)
     {
         runtime.LogToolCall("search_contacts", new { query, k });
@@ -305,7 +305,7 @@ public sealed class AssistantContactSearchTool
         if (search.Length == 0)
             return [];
 
-        string sql = $@"select id, fname, lname, iname, email, login, title, city, state
+        string sql = $@"select fname, lname, iname, email, title
                           from {runtime.Fw.db.qid("users")}
                          where status=@status_active
                            and (
@@ -313,9 +313,7 @@ public sealed class AssistantContactSearchTool
                                 or lname like @search
                                 or iname like @search
                                 or email like @search
-                                or login like @search
                                 or title like @search
-                                or city like @search
                            )
                       order by fname, lname, email, id";
         var rows = runtime.Fw.db.arrayp(runtime.Fw.db.limit(sql, Math.Clamp(k, 1, 10)), DB.h(
@@ -324,23 +322,18 @@ public sealed class AssistantContactSearchTool
         ));
 
         var output = new FwList(rows.Count);
-        bool canLinkUsers = runtime.Fw.userAccessLevel >= Users.ACL_MANAGER;
         foreach (FwDict row in rows)
         {
             string name = (row["fname"].toStr() + " " + row["lname"].toStr()).Trim();
             if (string.IsNullOrWhiteSpace(name))
-                name = row["iname"].toStr(row["email"].toStr(row["login"].toStr()));
+                name = row["iname"].toStr(row["email"].toStr());
 
             output.Add(new FwDict
             {
                 ["source_type"] = "user_contact",
-                ["users_id"] = row["id"].toInt(),
                 ["name"] = name,
                 ["title"] = row["title"].toStr(),
-                ["email"] = row["email"].toStr(),
-                ["city"] = row["city"].toStr(),
-                ["state"] = row["state"].toStr(),
-                ["url"] = canLinkUsers ? "/Admin/Users/" + row["id"].toInt() : string.Empty
+                ["email"] = row["email"].toStr()
             });
         }
 

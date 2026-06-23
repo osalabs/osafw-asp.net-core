@@ -10,7 +10,7 @@ namespace osafw;
 public sealed class AssistantRunWorkerService : BackgroundService
 {
     private static readonly TimeSpan QueueRecoveryProbeInterval = TimeSpan.FromMinutes(5);
-    private const int MaxSourcesBeforeRunCheck = 3;
+    private const int MAX_SOURCES_BEFORE_RUN_CHECK = 3;
 
     private readonly IConfiguration configuration;
     private readonly ILoggerFactory loggerFactory;
@@ -40,7 +40,7 @@ public sealed class AssistantRunWorkerService : BackgroundService
                 {
                     var processor = new AssistantRunProcessor(configuration, loggerFactory);
                     isProcessed = false;
-                    if (processedSourcesSinceRunCheck >= MaxSourcesBeforeRunCheck)
+                    if (processedSourcesSinceRunCheck >= MAX_SOURCES_BEFORE_RUN_CHECK)
                     {
                         isProcessed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, isStaleQueueRecoveryDue).ConfigureAwait(false);
                         processedSourcesSinceRunCheck = 0;

@@ -18,6 +18,14 @@ public class SecurityGroup9ATests
         public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
     }
 
+    private sealed class DashboardSettings : Settings
+    {
+        public override DBRow oneByIcode(string icode)
+        {
+            return new DBRow(DB.h("id", 1, "icode", icode, "ivalue", "0"));
+        }
+    }
+
     private sealed record ValueCall(string Table, FwDict Where);
 
     private sealed record QueryCall(string Sql, FwDict Params);
@@ -164,6 +172,9 @@ public class SecurityGroup9ATests
         var users = new DashboardUsers();
         users.init(fw);
         TestHelpers.RegisterModel(fw, (Users)users);
+        var settings = new DashboardSettings();
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
         var controller = new MainController();
         controller.init(fw);
 

@@ -7,15 +7,15 @@ namespace osafw;
 
 public sealed class AssistantNavigationCatalog
 {
-    public const string TemplateBaseDir = "/assistant/prompts";
-    public const string CatalogTemplate = "navigation_catalog.json";
+    public const string TEMPLATE_BASE_DIR = "/assistant/prompts";
+    public const string CATALOG_TEMPLATE = "navigation_catalog.json";
 
     public int version { get; set; }
     public List<AssistantNavigationController> controllers { get; set; } = [];
 
     public static AssistantNavigationCatalog Load(FW fw)
     {
-        string json = fw.parsePage(TemplateBaseDir, CatalogTemplate, []);
+        string json = fw.parsePage(TEMPLATE_BASE_DIR, CATALOG_TEMPLATE, []);
         return Parse(json);
     }
 

@@ -168,7 +168,7 @@ namespace osafw.Tests
             var saved = UploadUtils.uploadFileSave(fwWithContext, "docs", 7, file);
 
             Assert.IsTrue(File.Exists(saved));
-            StringAssert.Contains(saved.Replace('\\', '/'), "/upload/docs/7/7.jpg");
+            StringAssert.EndsWith(saved.Replace('\\', '/'), "/docs/7/7.jpg");
         }
 
         [TestMethod]

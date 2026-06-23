@@ -46,6 +46,61 @@ public class AssistantFeatureTests
         }
     }
 
+    private sealed class ContactSearchDb : DB
+    {
+        public string LastSql { get; private set; } = string.Empty;
+        public FwDict LastParams { get; private set; } = [];
+
+        public ContactSearchDb() : base("", DB.DBTYPE_SQLSRV) { }
+
+        public override DBList arrayp(string sql, FwDict? @params = null)
+        {
+            LastSql = sql;
+            LastParams = @params == null ? [] : new FwDict(@params);
+            return new DBList
+            {
+                new DBRow(new FwDict
+                {
+                    ["id"] = "7",
+                    ["fname"] = "Jane",
+                    ["lname"] = "Doe",
+                    ["iname"] = "Jane Doe",
+                    ["email"] = "jane@example.test",
+                    ["login"] = "jdoe",
+                    ["title"] = "Director",
+                    ["city"] = "Austin",
+                    ["state"] = "TX"
+                })
+            };
+        }
+    }
+
+    private sealed class StaticAssistantMessages : AssistantMessages
+    {
+        public Dictionary<int, FwDict> Rows { get; } = [];
+
+        public override DBRow one(int id)
+        {
+            return Rows.TryGetValue(id, out var row) ? new DBRow(new FwDict(row)) : [];
+        }
+    }
+
+    private sealed class StaticAssistantThreads : AssistantThreads
+    {
+        public HashSet<int> AllowedThreadIds { get; } = [];
+        public int LastId { get; private set; }
+        public int LastUsersId { get; private set; }
+        public string LastOwnerToken { get; private set; } = string.Empty;
+
+        public override bool isOwnerAccess(int id, int usersId, string ownerToken)
+        {
+            LastId = id;
+            LastUsersId = usersId;
+            LastOwnerToken = ownerToken;
+            return AllowedThreadIds.Contains(id);
+        }
+    }
+
     [TestMethod]
     public void LLM_NormalizesFencedJsonWithoutCallingProvider()
     {
@@ -309,6 +364,58 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
+    public void AssistantContactSearch_ReturnsOnlyContactFields()
+    {
+        var fw = TestHelpers.CreateFw();
+        var db = new ContactSearchDb();
+        fw.db = db;
+        var runtime = new AssistantToolRuntime(fw, threadId: 1, runId: 0, userId: 1);
+
+        var rows = new AssistantContactSearchTool(runtime).search("Jane", 5);
+
+        Assert.AreEqual(1, rows.Count);
+        var row = (FwDict)rows[0]!;
+        Assert.AreEqual("user_contact", row["source_type"]);
+        Assert.AreEqual("Jane Doe", row["name"]);
+        Assert.AreEqual("Director", row["title"]);
+        Assert.AreEqual("jane@example.test", row["email"]);
+        Assert.IsFalse(row.ContainsKey("users_id"));
+        Assert.IsFalse(row.ContainsKey("login"));
+        Assert.IsFalse(row.ContainsKey("city"));
+        Assert.IsFalse(row.ContainsKey("state"));
+        Assert.IsFalse(row.ContainsKey("url"));
+        Assert.IsFalse(db.LastSql.Contains("login", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(db.LastSql.Contains("city", StringComparison.OrdinalIgnoreCase));
+        Assert.AreEqual("%Jane%", db.LastParams["@search"]);
+    }
+
+    [TestMethod]
+    public void AssistantMessages_IsAccessDelegatesToOwningThread()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("user_id", "42");
+        fw.Session("assistant_owner_token", "anon-token");
+        var messages = new StaticAssistantMessages();
+        messages.Rows[7] = DB.h("id", 7, "assistant_threads_id", 5, "status", FwModel.STATUS_ACTIVE);
+        messages.Rows[8] = DB.h("id", 8, "assistant_threads_id", 5, "status", FwModel.STATUS_DELETED);
+        messages.init(fw);
+        var threads = new StaticAssistantThreads();
+        threads.AllowedThreadIds.Add(5);
+        threads.init(fw);
+        TestHelpers.RegisterModel(fw, (AssistantThreads)threads);
+
+        Assert.IsTrue(messages.isAccess(7));
+        Assert.AreEqual(5, threads.LastId);
+        Assert.AreEqual(42, threads.LastUsersId);
+        Assert.AreEqual("anon-token", threads.LastOwnerToken);
+        Assert.IsFalse(messages.isAccess(8));
+        Assert.IsFalse(messages.isAccess(999));
+
+        threads.AllowedThreadIds.Clear();
+        Assert.IsFalse(messages.isAccess(7));
+    }
+
+    [TestMethod]
     public void AssistantNavigationCatalog_FiltersByAccessAndBuildsPrefillUrl()
     {
         var fw = TestHelpers.CreateFw();
@@ -474,6 +581,7 @@ public class AssistantFeatureTests
         StringAssert.Contains(source, "STATUS_QUEUED, STATUS_PROCESSING");
         StringAssert.Contains(source, "removeCacheAll();");
         StringAssert.Contains(processor, "failTimedOutActiveRuns(timeoutSeconds)");
+        Assert.AreEqual(1, processor.Split("failTimedOutActiveRuns(timeoutSeconds)").Length - 1);
         StringAssert.Contains(processor, "CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds))");
         StringAssert.Contains(processor, "markClaimedRunTimedOut(fw, run);");
     }
@@ -502,8 +610,8 @@ public class AssistantFeatureTests
         StringAssert.Contains(sources, "or upd_time < @cutoff");
         StringAssert.Contains(sources, "and index_status=@processing");
         StringAssert.Contains(processor, "fw.model<RagSources>().requeueStaleProcessingSources()");
-        StringAssert.Contains(worker, "MaxSourcesBeforeRunCheck = 3");
-        StringAssert.Contains(worker, "processedSourcesSinceRunCheck >= MaxSourcesBeforeRunCheck");
+        StringAssert.Contains(worker, "MAX_SOURCES_BEFORE_RUN_CHECK = 3");
+        StringAssert.Contains(worker, "processedSourcesSinceRunCheck >= MAX_SOURCES_BEFORE_RUN_CHECK");
         StringAssert.Contains(admin, "RequeueSourceAction");
         StringAssert.Contains(admin, "fw.model<RagSources>().requeueSource(id)");
     }

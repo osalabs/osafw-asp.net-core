@@ -10,8 +10,8 @@ namespace osafw;
 
 public sealed class AssistantAppService
 {
-    private const string AnonymousOwnerSessionKey = "assistant_owner_token";
-    private const int DefaultMaxFilesPerMessage = 5;
+    internal const string ANONYMOUS_OWNER_SESSION_KEY = "assistant_owner_token";
+    private const int DEFAULT_MAX_FILES_PER_MESSAGE = 5;
 
     private readonly FW fw;
 
@@ -586,11 +586,11 @@ public sealed class AssistantAppService
 
     private AssistantOwnerScope resolveOwnerScope(int usersId, bool createAnonymousToken)
     {
-        string ownerToken = fw.Session(AnonymousOwnerSessionKey);
+        string ownerToken = fw.Session(ANONYMOUS_OWNER_SESSION_KEY);
         if (usersId <= 0 && string.IsNullOrWhiteSpace(ownerToken) && createAnonymousToken)
         {
             ownerToken = Guid.NewGuid().ToString("N");
-            fw.Session(AnonymousOwnerSessionKey, ownerToken);
+            fw.Session(ANONYMOUS_OWNER_SESSION_KEY, ownerToken);
         }
 
         return new AssistantOwnerScope(usersId, ownerToken);
@@ -657,7 +657,7 @@ public sealed class AssistantAppService
 
     private void validateAssistantFiles(IList<IFormFile> files)
     {
-        int maxFiles = Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", DefaultMaxFilesPerMessage));
+        int maxFiles = Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", DEFAULT_MAX_FILES_PER_MESSAGE));
         int count = files.Count(file => file != null && file.Length > 0);
         if (count > maxFiles)
             throw new UserException("Upload up to " + maxFiles + " files per assistant message.");

@@ -35,7 +35,20 @@ public class AdminSettingsControllerTests
         }
     }
 
-    private static (FW fw, StubSettings model, AdminSettingsController controller) BuildController(FwDict setting, FwDict item, FwDict? extraForm = null)
+    private sealed class StubUsers : Users
+    {
+        public override bool isReadOnly(int id = -1) => false;
+    }
+
+    private sealed class TestAdminSettingsController : AdminSettingsController
+    {
+        public void MakeReadOnly()
+        {
+            is_readonly = true;
+        }
+    }
+
+    private static (FW fw, StubSettings model, TestAdminSettingsController controller) BuildController(FwDict setting, FwDict item, FwDict? extraForm = null)
     {
         var fw = TestHelpers.CreateFw();
         fw.request.Headers.Accept = "application/json";
@@ -43,8 +56,11 @@ public class AdminSettingsControllerTests
         var model = new StubSettings();
         model.Rows[1] = setting;
         TestHelpers.RegisterModel(fw, (Settings)model);
+        var users = new StubUsers();
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
 
-        var controller = new AdminSettingsController();
+        var controller = new TestAdminSettingsController();
         controller.init(fw);
 
         fw.FORM = new FwDict
@@ -102,6 +118,20 @@ public class AdminSettingsControllerTests
 
         Assert.AreEqual(0, model.UpdateCalls);
         Assert.AreEqual("ABCDEF-secret-XYZ123", model.Rows[1]["ivalue"]);
+    }
+
+    [TestMethod]
+    public void SaveAction_ReadOnlyAdminCannotUpdateSetting()
+    {
+        var (_, model, controller) = BuildController(
+            Setting(Settings.INPUT_TEXT, "old"),
+            new FwDict { ["ivalue"] = "new" });
+        controller.MakeReadOnly();
+
+        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction(1));
+
+        Assert.AreEqual(0, model.UpdateCalls);
+        Assert.AreEqual("old", model.Rows[1]["ivalue"]);
     }
 
     [TestMethod]

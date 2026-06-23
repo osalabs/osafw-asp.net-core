@@ -92,6 +92,8 @@ public class AdminSettingsController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
+        checkReadOnly();
+
         FwDict item = reqh("item");
         var success = true;
         var is_new = (id == 0);
