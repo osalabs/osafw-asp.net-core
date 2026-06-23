@@ -867,14 +867,14 @@ Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-
           "icon": "bi bi-plus",
           "label": "Add",
           "url": "/Admin/DemoDicts/new?",
-          "attrs": "data-fw-lookup=\"add\""
+          "attrs": "data-fw-lookup=\"add\" data-modal-focus=\"#iname\""
         },
         {
           "class": "on-fw-modal",
           "icon": "bi bi-pencil",
           "label": "Edit",
           "url": "/Admin/DemoDicts/{id}/edit?",
-          "attrs": "data-fw-lookup=\"edit\""
+          "attrs": "data-fw-lookup=\"edit\" data-modal-focus=\"#iname\""
         },
         {
           "is_divider": true
@@ -899,6 +899,8 @@ document.addEventListener('fw-lookup-saved', function (e) {
 ```
 
 Lookup add/edit modals namespace loaded content IDs by default to avoid duplicate DOM IDs when a modal form has fields with the same IDs as the parent page. Set `data-fw-modal-namespace-ids="0"` on the modal trigger only for legacy modal content that still depends on global `#id` selectors. New modal scripts should use scoped selectors such as `$(fw.scopeFromScript()).find('[name="item[iname]"]')`.
+
+Remote modals focus the first visible form control after content loads. Use `data-modal-focus="#iname"` in a button's `attrs` to focus a specific modal field; simple `#id` selectors still work in namespaced lookup modals because the modal also matches the original `data-fw-original-id`. Use `data-modal-focus="none"` to keep Bootstrap's default focus behavior.
 
 #### type: input
 - Template: `/common/form/showform/input.html`.

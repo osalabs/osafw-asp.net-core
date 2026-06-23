@@ -36,6 +36,112 @@
       }
     }
 
+    function isModalFocusDisabled(value) {
+      value = String(value || '').trim().toLowerCase();
+      return value === '0' || value === 'false' || value === 'none' || value === 'off';
+    }
+
+    function isFocusableElement(el) {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.matches('input[type="hidden"], [disabled], [hidden]')) return false;
+      if (el.getAttribute('aria-hidden') === 'true') return false;
+
+      var style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+      return el.getClientRects().length > 0;
+    }
+
+    function firstFocusableBySelector(root, selector) {
+      if (!root || !selector) return null;
+
+      try {
+        var candidates = root.querySelectorAll(selector);
+        for (var i = 0; i < candidates.length; i += 1) {
+          if (isFocusableElement(candidates[i])) return candidates[i];
+        }
+      } catch (err) {
+        return null;
+      }
+
+      return null;
+    }
+
+    function escapeAttributeValue(value) {
+      return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
+    function findOriginalIdFocusTarget(modal, selector) {
+      selector = String(selector || '').trim();
+      if (selector.charAt(0) !== '#' || selector.indexOf(' ') >= 0 || selector.indexOf(',') >= 0) return null;
+
+      var originalId = selector.slice(1);
+      if (!originalId) return null;
+
+      return firstFocusableBySelector(modal, '[data-fw-original-id="' + escapeAttributeValue(originalId) + '"]');
+    }
+
+    function findModalFocusTarget(modal) {
+      var focusSelector = modal.getAttribute('data-modal-focus') || '';
+      if (isModalFocusDisabled(focusSelector)) return null;
+
+      focusSelector = focusSelector.trim();
+      if (focusSelector) {
+        var configuredTarget = firstFocusableBySelector(modal, focusSelector)
+          || findOriginalIdFocusTarget(modal, focusSelector);
+        if (configuredTarget) return configuredTarget;
+      } else if (isModalFocusDisabled(modal.getAttribute('data-bs-focus'))) {
+        return null;
+      } else if (modal.contains(document.activeElement)
+        && document.activeElement !== modal
+        && isFocusableElement(document.activeElement)) {
+        return null;
+      }
+
+      var selectors = [
+        '[autofocus]',
+        '.modal-body input:not([type="hidden"]), .modal-body select, .modal-body textarea',
+        '.modal-body button:not(.btn-close), .modal-body [href], .modal-body [tabindex]:not([tabindex="-1"])',
+        'input:not([type="hidden"]), select, textarea',
+        'button:not(.btn-close), [href], [tabindex]:not([tabindex="-1"])'
+      ];
+
+      for (var i = 0; i < selectors.length; i += 1) {
+        var target = firstFocusableBySelector(modal, selectors[i]);
+        if (target) return target;
+      }
+
+      return null;
+    }
+
+    function focusModalContent(modal) {
+      if (!modal || !document.body.contains(modal) || !modal.classList.contains('show')) return;
+
+      var target = findModalFocusTarget(modal);
+      if (!target) return;
+
+      target.focus({ preventScroll: true });
+    }
+
+    function queueModalFocus(modal) {
+      if (!modal) return;
+
+      if (!modal.classList.contains('show')) {
+        modal._fwModalFocusPending = true;
+        return;
+      }
+
+      modal._fwModalFocusPending = false;
+      if (modal._fwModalFocusTimer) {
+        window.clearTimeout(modal._fwModalFocusTimer);
+      }
+
+      modal._fwModalFocusTimer = window.setTimeout(function () {
+        modal._fwModalFocusTimer = null;
+        focusModalContent(modal);
+      }, 0);
+    }
+
     // Shows server-side form errors inside the current modal content.
     function renderInlineError(container, message) {
       if (!container) return;
@@ -161,6 +267,7 @@
       var dialogClass = trigger.getAttribute('data-modal-dialog-class') || 'modal-dialog modal-lg modal-dialog-scrollable';
       var contentClass = trigger.getAttribute('data-modal-content-class') || 'modal-content bg-body';
       var modalClass = trigger.getAttribute('data-modal-class') || '';
+      var focusSelector = trigger.getAttribute('data-modal-focus') || '';
 
       var modal = document.createElement('div');
       modal.className = 'modal fade fw-modal';
@@ -172,6 +279,9 @@
       modal.setAttribute('aria-hidden', 'true');
       modal.id = modalId;
       modal.setAttribute('data-fw-modal-trigger-id', triggerId);
+      if (focusSelector) {
+        modal.setAttribute('data-modal-focus', focusSelector);
+      }
       copyBootstrapAttributes(trigger, modal);
 
       var dialog = document.createElement('div');
@@ -192,8 +302,18 @@
         if (instance && typeof instance.dispose === 'function') {
           instance.dispose();
         }
+        if (modal._fwModalFocusTimer) {
+          window.clearTimeout(modal._fwModalFocusTimer);
+          modal._fwModalFocusTimer = null;
+        }
         disposeModalContent(modal);
         modal.remove();
+      });
+
+      modal.addEventListener('shown.bs.modal', function () {
+        if (modal._fwModalFocusPending) {
+          queueModalFocus(modal);
+        }
       });
 
       return modal;
@@ -283,6 +403,7 @@
       content.innerHTML = html;
       namespaceModalContentIds(modal, content);
       executeModalScripts(content);
+      queueModalFocus(modal);
     }
 
     function escapeHtml(message) {
