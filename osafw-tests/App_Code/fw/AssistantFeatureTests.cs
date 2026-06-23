@@ -547,6 +547,27 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
+    public void AssistantComposer_TabOrderMovesFromPromptToSendBeforeFiles()
+    {
+        string template = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "index", "main.html"));
+        var forms = template.Split("data-assistant-form", StringSplitOptions.None).Skip(1).Take(2).ToList();
+        Assert.AreEqual(2, forms.Count);
+
+        foreach (string form in forms)
+        {
+            int promptIndex = form.IndexOf("data-assistant-prompt", StringComparison.Ordinal);
+            int sendIndex = form.IndexOf("type=\"submit\"", StringComparison.Ordinal);
+            int fileIndex = form.IndexOf("data-assistant-file-button", StringComparison.Ordinal);
+            Assert.IsTrue(promptIndex >= 0, "Expected Assistant composer textarea.");
+            Assert.IsTrue(sendIndex > promptIndex, "Expected Send after the prompt textarea.");
+            Assert.IsTrue(fileIndex > sendIndex, "Expected Files after Send so one Tab from prompt focuses Send.");
+        }
+
+        StringAssert.Contains(template, "assistant-composer-meta d-flex justify-content-between align-items-center gap-3");
+        StringAssert.Contains(template, "assistant-composer-left d-flex flex-wrap align-items-center gap-2 order-first");
+    }
+
+    [TestMethod]
     public void AdminRagChunks_DiagnosticsExposeSourcesRunsEvidenceAndRequeueAction()
     {
         string controller = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "AdminRagChunks.cs"));

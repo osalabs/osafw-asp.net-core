@@ -35,11 +35,11 @@
         <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
         <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask about company documents, contacts, or where to go`" data-assistant-prompt data-assistant-autofocus <~/common/attr/disabled unless="is_assistant_available">></textarea>
         <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
-          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2">
+          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
+          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2 order-first">
             <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
             <span class="assistant-file-count" data-assistant-file-count></span>
           </div>
-          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
         </div>
         <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
         <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
@@ -65,11 +65,11 @@
         <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
         <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask a follow-up`" data-assistant-prompt <~/common/attr/disabled unless="is_assistant_available">></textarea>
         <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
-          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2">
+          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
+          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2 order-first">
             <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
             <span class="assistant-file-count" data-assistant-file-count></span>
           </div>
-          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
         </div>
         <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
         <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
