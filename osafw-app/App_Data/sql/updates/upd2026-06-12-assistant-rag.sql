@@ -55,22 +55,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.rag_sources', N'index_attempt_no') IS NULL
-  ALTER TABLE dbo.rag_sources ADD index_attempt_no INT NOT NULL CONSTRAINT DF_rag_sources_index_attempt_no DEFAULT 0;
-GO
-
-IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.rag_sources', N'next_retry_at') IS NULL
-  ALTER TABLE dbo.rag_sources ADD next_retry_at DATETIME2 NULL;
-GO
-
-IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_rag_sources_queue' AND object_id=OBJECT_ID(N'dbo.rag_sources'))
-  DROP INDEX IX_rag_sources_queue ON dbo.rag_sources;
-GO
-
-IF OBJECT_ID(N'dbo.rag_sources', N'U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_rag_sources_queue' AND object_id=OBJECT_ID(N'dbo.rag_sources'))
-  CREATE INDEX IX_rag_sources_queue ON dbo.rag_sources(index_status, status, next_retry_at, queued_at, id);
-GO
-
 IF OBJECT_ID(N'dbo.rag_chunks', N'U') IS NULL
 BEGIN
   CREATE TABLE rag_chunks (

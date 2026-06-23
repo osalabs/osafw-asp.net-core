@@ -190,13 +190,13 @@ public class AdminRagChunksController : FwDynamicController
         if (!model.isTablesReady())
             throw new UserException("Assistant tables are not installed.");
 
-        bool requeued = fw.model<RagSources>().requeueSource(id);
-        fw.flash(requeued ? "success" : "error", requeued ? "RAG source queued for retry." : "RAG source could not be queued.");
+        bool isSourceRequeued = fw.model<RagSources>().requeueSource(id);
+        fw.flash(isSourceRequeued ? "success" : "error", isSourceRequeued ? "RAG source queued for retry." : "RAG source could not be queued.");
         fw.redirect(base_url);
         return null;
     }
 
-    private void setRagIndexMetadata(FwDict ps, bool includeDatabaseState)
+    private void setRagIndexMetadata(FwDict ps, bool isDatabaseStateIncluded)
     {
         ps["vector_mode"] = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", RagChunks.VECTOR_MODE_AUTO);
         ps["embedding_model"] = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
@@ -212,7 +212,7 @@ public class AdminRagChunksController : FwDynamicController
             DB.h("id", RagChunks.VECTOR_MODE_NATIVE, "iname", "Native")
         };
 
-        if (!includeDatabaseState)
+        if (!isDatabaseStateIncluded)
         {
             ps["entities"] = new FwList();
             ps["chunk_count"] = 0;

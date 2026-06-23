@@ -45,7 +45,7 @@ public class DocumentEmbeddingService
     /// <summary>
     /// Checks parser support and the configured maximum file size before queued indexing or parsing.
     /// </summary>
-    public bool CanIndexAttachment(string ext, long fileBytes)
+    public bool isAttachmentIndexable(string ext, long fileBytes)
     {
         return IsSupported(ext) && fileBytes <= MaxIndexedFileBytes();
     }
@@ -140,7 +140,7 @@ public class DocumentEmbeddingService
             await IndexSourceAsync(source["id"].toInt(), cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task IndexAttachmentToEntityAsync(int attId, string entityIcode, int itemId, bool clearExisting = true, CancellationToken cancellationToken = default)
+    public async Task IndexAttachmentToEntityAsync(int attId, string entityIcode, int itemId, bool isClearExistingRequested = true, CancellationToken cancellationToken = default)
     {
         if (attId <= 0 || itemId <= 0 || string.IsNullOrWhiteSpace(entityIcode))
             return;
@@ -153,7 +153,7 @@ public class DocumentEmbeddingService
         else
         {
             var att = fw.model<Att>().one(attId);
-            if (att.Count == 0 || !CanIndexAttachment(att["ext"].toStr(), att["fsize"].toLong()))
+            if (att.Count == 0 || !isAttachmentIndexable(att["ext"].toStr(), att["fsize"].toLong()))
                 return;
 
             int entityId = fw.model<FwEntities>().idByIcodeOrAdd(entityIcode);
@@ -180,7 +180,7 @@ public class DocumentEmbeddingService
             int sourceId = source["id"].toInt();
             await IndexSourceAsync(sourceId, cancellationToken).ConfigureAwait(false);
             var indexed = fw.model<RagSources>().oneTyped(sourceId);
-            if (clearExisting && indexed?.index_status == RagSources.INDEX_STATUS_SKIPPED)
+            if (isClearExistingRequested && indexed?.index_status == RagSources.INDEX_STATUS_SKIPPED)
                 fw.model<RagChunks>().deleteLegacyByEntity(fwentitiesId, itemId);
         }
     }
@@ -224,7 +224,7 @@ public class DocumentEmbeddingService
             return [];
 
         string ext = normalizeExtension(att["ext"].toStr());
-        if (!CanIndexAttachment(ext, att["fsize"].toLong()))
+        if (!isAttachmentIndexable(ext, att["fsize"].toLong()))
             return [];
 
         string filepath = resolveAttachmentPath(att);
@@ -291,7 +291,7 @@ public class DocumentEmbeddingService
 
             int attId = att["id"].toInt();
             string ext = normalizeExtension(att["ext"].toStr());
-            if (attId <= 0 || !CanIndexAttachment(ext, att["fsize"].toLong()))
+            if (attId <= 0 || !isAttachmentIndexable(ext, att["fsize"].toLong()))
                 continue;
 
             string filepath = resolveAttachmentPath(att);

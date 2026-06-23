@@ -128,7 +128,7 @@ public class KBArticles : FwModel<KBArticles.Row>
         return affected > 0;
     }
 
-    public bool reindexKBArticle(int id)
+    public bool queueReindex(int id)
     {
         try
         {

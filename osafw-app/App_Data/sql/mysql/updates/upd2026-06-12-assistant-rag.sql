@@ -49,50 +49,6 @@ CREATE TABLE IF NOT EXISTS rag_sources (
   KEY IX_rag_sources_entity (fwentities_id, item_id, att_id, status)
 ) DEFAULT CHARSET=utf8mb4;
 
-SET @column_exists := (
-  SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE TABLE_SCHEMA = DATABASE()
-     AND TABLE_NAME = 'rag_sources'
-     AND COLUMN_NAME = 'index_attempt_no'
-);
-SET @sql := IF(@column_exists = 0,
-    'ALTER TABLE rag_sources ADD COLUMN index_attempt_no INT NOT NULL DEFAULT 0',
-    'SELECT 1');
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @column_exists := (
-  SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-   WHERE TABLE_SCHEMA = DATABASE()
-     AND TABLE_NAME = 'rag_sources'
-     AND COLUMN_NAME = 'next_retry_at'
-);
-SET @sql := IF(@column_exists = 0,
-    'ALTER TABLE rag_sources ADD COLUMN next_retry_at TIMESTAMP NULL',
-    'SELECT 1');
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @index_exists := (
-  SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.STATISTICS
-   WHERE TABLE_SCHEMA = DATABASE()
-     AND TABLE_NAME = 'rag_sources'
-     AND INDEX_NAME = 'IX_rag_sources_queue'
-);
-SET @sql := IF(@index_exists > 0,
-    'ALTER TABLE rag_sources DROP INDEX IX_rag_sources_queue',
-    'SELECT 1');
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-ALTER TABLE rag_sources ADD INDEX IX_rag_sources_queue (index_status, status, next_retry_at, queued_at, id);
-
 CREATE TABLE IF NOT EXISTS rag_chunks (
   id                    INT NOT NULL auto_increment,
   rag_sources_id        INT NOT NULL DEFAULT 0,

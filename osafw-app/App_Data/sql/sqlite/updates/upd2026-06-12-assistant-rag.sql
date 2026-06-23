@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS rag_sources (
   source_version        TEXT NOT NULL DEFAULT '',
   acl_snapshot          TEXT,
   index_status          TEXT NOT NULL DEFAULT 'pending',
+  index_attempt_no      INTEGER NOT NULL DEFAULT 0,
   queued_at             DATETIME NULL,
+  next_retry_at         DATETIME NULL,
   last_indexed_at       DATETIME NULL,
   last_error            TEXT,
   metadata_json         TEXT,
@@ -40,9 +42,6 @@ CREATE TABLE IF NOT EXISTS rag_sources (
   upd_users_id          INTEGER DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS UX_rag_sources_source_key ON rag_sources (source_key);
-ALTER TABLE rag_sources ADD COLUMN index_attempt_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE rag_sources ADD COLUMN next_retry_at DATETIME NULL;
-DROP INDEX IF EXISTS IX_rag_sources_queue;
 CREATE INDEX IF NOT EXISTS IX_rag_sources_queue ON rag_sources (index_status, status, next_retry_at, queued_at, id);
 CREATE INDEX IF NOT EXISTS IX_rag_sources_entity ON rag_sources (fwentities_id, item_id, att_id, status);
 

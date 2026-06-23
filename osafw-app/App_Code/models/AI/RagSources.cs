@@ -65,7 +65,7 @@ public class RagSources : FwModel<RagSources.Row>
     /// </summary>
     public bool queueKBArticle(int kbId)
     {
-        if (!canQueueSources() || kbId <= 0)
+        if (!isSourceQueueReady() || kbId <= 0)
             return false;
 
         var article = fw.model<KBArticles>().one(kbId);
@@ -85,7 +85,7 @@ public class RagSources : FwModel<RagSources.Row>
 
     public bool queueKBArticleBody(int kbId)
     {
-        if (!canQueueSources() || kbId <= 0)
+        if (!isSourceQueueReady() || kbId <= 0)
             return false;
 
         var article = fw.model<KBArticles>().one(kbId);
@@ -123,7 +123,7 @@ public class RagSources : FwModel<RagSources.Row>
 
     public bool queueKBArticleAttachments(int kbId)
     {
-        if (!canQueueSources() || kbId <= 0)
+        if (!isSourceQueueReady() || kbId <= 0)
             return false;
 
         int kbEntityId = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_KB);
@@ -137,7 +137,7 @@ public class RagSources : FwModel<RagSources.Row>
                 continue;
 
             string ext = att["ext"].toStr();
-            if (!embeddingService.CanIndexAttachment(ext, att["fsize"].toLong()))
+            if (!embeddingService.isAttachmentIndexable(ext, att["fsize"].toLong()))
                 continue;
 
             currentSupportedAttIds.Add(attId);
@@ -160,7 +160,7 @@ public class RagSources : FwModel<RagSources.Row>
 
     public bool queueSpage(int spageId)
     {
-        if (!canQueueSources() || spageId <= 0)
+        if (!isSourceQueueReady() || spageId <= 0)
             return false;
 
         var page = fw.model<Spages>().one(spageId);
@@ -191,7 +191,7 @@ public class RagSources : FwModel<RagSources.Row>
 
     public bool queueAssistantUpload(int attId, string entityIcode, int itemId)
     {
-        if (!canQueueSources() || attId <= 0 || itemId <= 0 || string.IsNullOrWhiteSpace(entityIcode))
+        if (!isSourceQueueReady() || attId <= 0 || itemId <= 0 || string.IsNullOrWhiteSpace(entityIcode))
             return false;
 
         var att = fw.model<Att>().one(attId);
@@ -199,7 +199,7 @@ public class RagSources : FwModel<RagSources.Row>
             return false;
 
         var embeddingService = new DocumentEmbeddingService(fw);
-        if (!embeddingService.CanIndexAttachment(att["ext"].toStr(), att["fsize"].toLong()))
+        if (!embeddingService.isAttachmentIndexable(att["ext"].toStr(), att["fsize"].toLong()))
             return false;
 
         int entityId = fw.model<FwEntities>().idByIcodeOrAdd(entityIcode);
@@ -219,7 +219,7 @@ public class RagSources : FwModel<RagSources.Row>
 
     public int queueSource(string sourceType, int fwentitiesId, int itemId, int attId, string title, string url, string contentHash, string aclSnapshot = "", string metadataJson = "")
     {
-        if (!canQueueSources() || fwentitiesId <= 0 || itemId <= 0 || string.IsNullOrWhiteSpace(sourceType))
+        if (!isSourceQueueReady() || fwentitiesId <= 0 || itemId <= 0 || string.IsNullOrWhiteSpace(sourceType))
             return 0;
 
         string key = BuildSourceKey(sourceType, fwentitiesId, itemId, attId);
@@ -640,7 +640,7 @@ select rs.*, e.icode as entity_icode
         }).Trim();
     }
 
-    private bool canQueueSources()
+    private bool isSourceQueueReady()
     {
         return fw.model<Settings>().readBool("ASSISTANT_ENABLED")
             && fw.model<LLM>().isConfigured()

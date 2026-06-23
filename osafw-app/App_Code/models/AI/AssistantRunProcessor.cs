@@ -25,7 +25,7 @@ public sealed class AssistantRunProcessor
         this.loggerFactory = loggerFactory;
     }
 
-    public async Task<bool> ProcessNextQueuedRunAsync(string workerId, CancellationToken cancellationToken, bool recoverStaleRuns = false)
+    public async Task<bool> ProcessNextQueuedRunAsync(string workerId, CancellationToken cancellationToken, bool isStaleRunRecoveryDue = false)
     {
         using var fw = FW.initOffline(configuration);
         if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED"))
@@ -36,7 +36,7 @@ public sealed class AssistantRunProcessor
         if (timedOutCount > 0)
             fw.logger(LogLevel.WARN, "Failed timed-out assistant runs: ", timedOutCount);
 
-        if (recoverStaleRuns)
+        if (isStaleRunRecoveryDue)
         {
             int recoveredCount = fw.model<AssistantRuns>().failTimedOutActiveRuns(timeoutSeconds);
             if (recoveredCount > 0)
@@ -68,7 +68,7 @@ public sealed class AssistantRunProcessor
         return true;
     }
 
-    public async Task<bool> ProcessNextQueuedSourceAsync(string workerId, CancellationToken cancellationToken, bool recoverStaleSources = false)
+    public async Task<bool> ProcessNextQueuedSourceAsync(string workerId, CancellationToken cancellationToken, bool isStaleSourceRecoveryDue = false)
     {
         using var fw = FW.initOffline(configuration);
         if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED") || !fw.model<LLM>().isConfigured())
@@ -76,7 +76,7 @@ public sealed class AssistantRunProcessor
 
         try
         {
-            if (recoverStaleSources)
+            if (isStaleSourceRecoveryDue)
             {
                 int recoveredCount = fw.model<RagSources>().requeueStaleProcessingSources();
                 if (recoveredCount > 0)

@@ -24,45 +24,45 @@ public sealed class AssistantRunWorkerService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        bool shouldProbeQueue = true;
-        bool shouldRecoverStaleQueue = true;
+        bool isQueueProbeDue = true;
+        bool isStaleQueueRecoveryDue = true;
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (!shouldProbeQueue)
-                shouldRecoverStaleQueue = !await AssistantRuns.WaitForQueuedRunAsync(QueueRecoveryProbeInterval, stoppingToken).ConfigureAwait(false);
+            if (!isQueueProbeDue)
+                isStaleQueueRecoveryDue = !await AssistantRuns.WaitForQueuedRunAsync(QueueRecoveryProbeInterval, stoppingToken).ConfigureAwait(false);
 
             try
             {
-                bool processed;
+                bool isProcessed;
                 int processedSourcesSinceRunCheck = 0;
                 do
                 {
                     var processor = new AssistantRunProcessor(configuration, loggerFactory);
-                    processed = false;
+                    isProcessed = false;
                     if (processedSourcesSinceRunCheck >= MaxSourcesBeforeRunCheck)
                     {
-                        processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
+                        isProcessed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, isStaleQueueRecoveryDue).ConfigureAwait(false);
                         processedSourcesSinceRunCheck = 0;
                     }
 
-                    if (!processed)
+                    if (!isProcessed)
                     {
-                        processed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
-                        if (processed)
+                        isProcessed = await processor.ProcessNextQueuedSourceAsync(workerId, stoppingToken, isStaleQueueRecoveryDue).ConfigureAwait(false);
+                        if (isProcessed)
                             processedSourcesSinceRunCheck++;
                     }
 
-                    if (!processed)
+                    if (!isProcessed)
                     {
-                        processed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, shouldRecoverStaleQueue).ConfigureAwait(false);
+                        isProcessed = await processor.ProcessNextQueuedRunAsync(workerId, stoppingToken, isStaleQueueRecoveryDue).ConfigureAwait(false);
                         processedSourcesSinceRunCheck = 0;
                     }
-                    shouldRecoverStaleQueue = false;
+                    isStaleQueueRecoveryDue = false;
                 }
-                while (processed && !stoppingToken.IsCancellationRequested);
+                while (isProcessed && !stoppingToken.IsCancellationRequested);
 
-                shouldProbeQueue = false;
+                isQueueProbeDue = false;
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -70,8 +70,8 @@ public sealed class AssistantRunWorkerService : BackgroundService
             }
             catch
             {
-                shouldProbeQueue = true;
-                shouldRecoverStaleQueue = true;
+                isQueueProbeDue = true;
+                isStaleQueueRecoveryDue = true;
                 await Task.Delay(5000, stoppingToken).ConfigureAwait(false);
             }
         }

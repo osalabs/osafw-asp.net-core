@@ -121,18 +121,18 @@ public class AdminKBArticlesController : FwDynamicController
         id = modelAddOrUpdate(id, itemdb);
         syncKbFilesFromRequest(id);
 
-        bool queued = model.reindexKBArticle(id);
-        fw.flash(queued ? "success" : "info", queued ? "Knowledge base article queued for indexing." : "Knowledge base article saved. Indexing is pending assistant setup or provider availability.");
+        bool isQueued = model.queueReindex(id);
+        fw.flash(isQueued ? "success" : "info", isQueued ? "Knowledge base article queued for indexing." : "Knowledge base article saved. Indexing is pending assistant setup or provider availability.");
 
         return afterSave(true, id, isNew);
     }
 
     public override void Validate(int id, FwDict item)
     {
-        bool result = validateRequired(id, item, required_fields);
+        bool isValid = validateRequired(id, item, required_fields);
         item["icode"] = buildArticleCode(item["icode"].toStr(), id);
 
-        if (result && model.isExistsByField(item["icode"].toStr(), id, "icode"))
+        if (isValid && model.isExistsByField(item["icode"].toStr(), id, "icode"))
             fw.FormErrors["icode"] = "EXISTS";
 
         if (!fw.model<Users>().isSiteAdmin() && item["access_level"].toInt(Users.ACL_MEMBER) > fw.userAccessLevel)
@@ -148,8 +148,8 @@ public class AdminKBArticlesController : FwDynamicController
             throw new UserException("Knowledge base tables are not installed.");
 
         model.checkAccess(id);
-        bool queued = model.reindexKBArticle(id);
-        fw.flash(queued ? "success" : "error", queued ? "Knowledge base article queued for reindexing." : "Knowledge base article could not be queued. Check assistant setup and logs.");
+        bool isQueued = model.queueReindex(id);
+        fw.flash(isQueued ? "success" : "error", isQueued ? "Knowledge base article queued for reindexing." : "Knowledge base article could not be queued. Check assistant setup and logs.");
         fw.redirect(base_url + "/" + id);
         return null;
     }
@@ -183,7 +183,7 @@ public class AdminKBArticlesController : FwDynamicController
 
         var addedAtt = modelAtt.uploadMulti(itemdb);
         if (addedAtt.Count > 0)
-            model.reindexKBArticle(id);
+            model.queueReindex(id);
 
         var response = new FwDict();
         var json = new FwDict();

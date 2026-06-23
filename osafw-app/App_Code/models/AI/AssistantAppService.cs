@@ -24,27 +24,27 @@ public sealed class AssistantAppService
 
     public AssistantRuntimeStatus RuntimeStatus()
     {
-        bool enabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
-        bool tablesReady = isTablesReady();
-        bool openAiConfigured = fw.model<LLM>().isConfigured();
-        bool workerEnabled = fw.config("ASSISTANT_WORKER_ENABLED").toBool();
+        bool isAssistantEnabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
+        bool isAssistantTablesReady = isTablesReady();
+        bool isOpenAiConfigured = fw.model<LLM>().isConfigured();
+        bool isWorkerEnabled = fw.config("ASSISTANT_WORKER_ENABLED").toBool();
         string message = "";
 
-        if (!enabled)
+        if (!isAssistantEnabled)
             message = "Assistant is disabled.";
-        else if (!openAiConfigured)
+        else if (!isOpenAiConfigured)
             message = "Please contact administrator to configure AI Assistant.";
-        else if (!tablesReady)
+        else if (!isAssistantTablesReady)
             message = "Assistant tables are not installed.";
-        else if (!workerEnabled)
+        else if (!isWorkerEnabled)
             message = "Assistant worker is not enabled. Enable appSettings.ASSISTANT_WORKER_ENABLED on a host that should process assistant chat runs.";
 
         return new AssistantRuntimeStatus
         {
-            enabled = enabled,
-            tables_ready = tablesReady,
-            openai_configured = openAiConfigured,
-            worker_enabled = workerEnabled,
+            enabled = isAssistantEnabled,
+            tables_ready = isAssistantTablesReady,
+            openai_configured = isOpenAiConfigured,
+            worker_enabled = isWorkerEnabled,
             message = message
         };
     }
@@ -162,12 +162,12 @@ public sealed class AssistantAppService
         if (!status.enabled || !status.tables_ready || !status.openai_configured || !status.worker_enabled)
             throw new UserException(status.message);
 
-        bool hasText = !string.IsNullOrWhiteSpace(prompt);
-        bool hasClarification = clarificationAnswers != null && clarificationAnswers.Count > 0;
-        bool hasFiles = files != null && files.Count > 0;
-        if (!hasText && !hasClarification && !hasFiles)
+        bool isTextProvided = !string.IsNullOrWhiteSpace(prompt);
+        bool isClarificationProvided = clarificationAnswers != null && clarificationAnswers.Count > 0;
+        bool isFilesProvided = files != null && files.Count > 0;
+        if (!isTextProvided && !isClarificationProvided && !isFilesProvided)
             throw new UserException("Please enter a message.");
-        if (hasFiles)
+        if (isFilesProvided)
             validateAssistantFiles(files!);
 
         var owner = resolveOwnerScope(usersId, true);
@@ -178,7 +178,7 @@ public sealed class AssistantAppService
         int effectiveThreadId = existingThread?.id
             ?? fw.model<AssistantThreads>().addThread(usersId, owner.ownerToken, buildDefaultThreadName(prompt));
 
-        string userContent = buildUserMessageContent(prompt, clarificationAnswers, hasFiles);
+        string userContent = buildUserMessageContent(prompt, clarificationAnswers, isFilesProvided);
         int messageId = fw.model<AssistantMessages>().addMessage(
             effectiveThreadId,
             AssistantMessages.ROLE_USER,
@@ -187,7 +187,7 @@ public sealed class AssistantAppService
             usersId: usersId
         );
 
-        if (hasFiles)
+        if (isFilesProvided)
             await saveFilesToMessageAsync(messageId, files!).ConfigureAwait(false);
 
         int runId = fw.model<AssistantRuns>().queueRun(effectiveThreadId, messageId);
@@ -559,7 +559,7 @@ public sealed class AssistantAppService
 
         string ext = Path.GetExtension(file.FileName);
         var embeddingService = new DocumentEmbeddingService(fw);
-        if (embeddingService.CanIndexAttachment(ext, file.Length))
+        if (embeddingService.isAttachmentIndexable(ext, file.Length))
         {
             try
             {
@@ -822,14 +822,14 @@ select a.*, al.item_id as assistant_messages_id
         return string.IsNullOrWhiteSpace(value) ? "New chat" : value;
     }
 
-    private static string buildUserMessageContent(string prompt, FwDict? clarificationAnswers, bool hasFiles)
+    private static string buildUserMessageContent(string prompt, FwDict? clarificationAnswers, bool isFilesProvided)
     {
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(prompt))
             parts.Add(prompt.Trim());
         if (clarificationAnswers != null && clarificationAnswers.Count > 0)
             parts.Add("Clarification answers:\n```json\n" + Utils.jsonEncode(clarificationAnswers, true) + "\n```");
-        if (hasFiles)
+        if (isFilesProvided)
             parts.Add("Files were uploaded with this message.");
         return string.Join("\n\n", parts);
     }

@@ -141,15 +141,15 @@ public class AssistantFeatureTests
     }
 
     [TestMethod]
-    public void DocumentEmbeddingService_CanIndexAttachmentHonorsConfiguredByteLimit()
+    public void DocumentEmbeddingService_isAttachmentIndexableHonorsConfiguredByteLimit()
     {
         var fw = TestHelpers.CreateFw();
         registerSettings(fw, new Dictionary<string, string> { ["ASSISTANT_MAX_INDEXED_FILE_BYTES"] = "10" });
         var service = new DocumentEmbeddingService(fw);
 
-        Assert.IsTrue(service.CanIndexAttachment(".txt", 10));
-        Assert.IsFalse(service.CanIndexAttachment(".txt", 11));
-        Assert.IsFalse(service.CanIndexAttachment(".exe", 1));
+        Assert.IsTrue(service.isAttachmentIndexable(".txt", 10));
+        Assert.IsFalse(service.isAttachmentIndexable(".txt", 11));
+        Assert.IsFalse(service.isAttachmentIndexable(".exe", 1));
     }
 
     [TestMethod]
@@ -239,7 +239,7 @@ public class AssistantFeatureTests
 
         string source = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "AdminKBArticles.cs"));
         StringAssert.Contains(source, "idByIcodeOrAdd(FwEntities.ICODE_KB)");
-        StringAssert.Contains(source, "model.reindexKBArticle(id)");
+        StringAssert.Contains(source, "model.queueReindex(id)");
         StringAssert.Contains(source, "syncKbFilesFromRequest(id)");
     }
 
@@ -589,6 +589,12 @@ public class AssistantFeatureTests
             StringAssert.Contains(sql, "ASSISTANT_RUN_TIMEOUT_SECONDS");
             StringAssert.Contains(sql, "next_retry_at");
             StringAssert.Contains(sql, "queued_at");
+            if (file.Contains($"{Path.DirectorySeparatorChar}updates{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.IsFalse(sql.Contains("ALTER TABLE", StringComparison.OrdinalIgnoreCase));
+                Assert.IsFalse(sql.Contains("INFORMATION_SCHEMA", StringComparison.OrdinalIgnoreCase));
+                Assert.IsFalse(sql.Contains("DROP INDEX", StringComparison.OrdinalIgnoreCase));
+            }
         }
     }
 
@@ -598,11 +604,11 @@ public class AssistantFeatureTests
         string sources = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "RagSources.cs"));
         string embedding = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "fw", "DocumentEmbeddingService.cs"));
 
-        StringAssert.Contains(sources, "embeddingService.CanIndexAttachment(ext, att[\"fsize\"].toLong())");
-        StringAssert.Contains(sources, "embeddingService.CanIndexAttachment(att[\"ext\"].toStr(), att[\"fsize\"].toLong())");
-        StringAssert.Contains(embedding, "if (!CanIndexAttachment(ext, att[\"fsize\"].toLong()))");
-        StringAssert.Contains(embedding, "if (attId <= 0 || !CanIndexAttachment(ext, att[\"fsize\"].toLong()))");
-        StringAssert.Contains(embedding, "if (att.Count == 0 || !CanIndexAttachment(att[\"ext\"].toStr(), att[\"fsize\"].toLong()))");
+        StringAssert.Contains(sources, "embeddingService.isAttachmentIndexable(ext, att[\"fsize\"].toLong())");
+        StringAssert.Contains(sources, "embeddingService.isAttachmentIndexable(att[\"ext\"].toStr(), att[\"fsize\"].toLong())");
+        StringAssert.Contains(embedding, "if (!isAttachmentIndexable(ext, att[\"fsize\"].toLong()))");
+        StringAssert.Contains(embedding, "if (attId <= 0 || !isAttachmentIndexable(ext, att[\"fsize\"].toLong()))");
+        StringAssert.Contains(embedding, "if (att.Count == 0 || !isAttachmentIndexable(att[\"ext\"].toStr(), att[\"fsize\"].toLong()))");
     }
 
     [TestMethod]
