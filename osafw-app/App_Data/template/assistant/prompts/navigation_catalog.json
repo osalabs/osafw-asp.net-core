@@ -26,11 +26,11 @@
     {
       "url": "/My/Settings",
       "controller": "MySettings",
-      "label": "My Settings",
+      "label": "My Profile",
       "description": "Current user's profile, contact information, theme, date/time, and timezone preferences.",
-      "keywords": ["my settings", "profile", "preferences", "timezone", "theme", "contact info"],
+      "keywords": ["my settings", "my profile", "profile", "preferences", "timezone", "theme", "contact info"],
       "min_access_level": 1,
-      "actions": ["new"],
+      "actions": ["list", "new"],
       "list_filters": [],
       "prefill_fields": [
         { "name": "email", "label": "Email", "type": "email" },
@@ -50,11 +50,11 @@
     {
       "url": "/My/Password",
       "controller": "MyPassword",
-      "label": "My Password",
+      "label": "Change Password",
       "description": "Current user's login email and password form.",
-      "keywords": ["password", "login", "email", "credentials", "account"],
+      "keywords": ["change password", "change my password", "my password", "own password", "password", "login", "email", "credentials", "account"],
       "min_access_level": 1,
-      "actions": ["new"],
+      "actions": ["list", "new"],
       "list_filters": [],
       "prefill_fields": [
         { "name": "email", "label": "Email", "type": "email" }
@@ -67,7 +67,7 @@
       "description": "Current user's MFA setup screen.",
       "keywords": ["mfa", "multi factor", "two factor", "authenticator", "security"],
       "min_access_level": 1,
-      "actions": ["new"],
+      "actions": ["list", "new"],
       "list_filters": [],
       "prefill_fields": []
     },

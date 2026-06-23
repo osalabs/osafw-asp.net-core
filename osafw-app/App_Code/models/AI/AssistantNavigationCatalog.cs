@@ -89,10 +89,17 @@ public sealed class AssistantNavigationCatalog
         string effectiveAction = requestedAction;
         if (string.IsNullOrWhiteSpace(effectiveAction))
             effectiveAction = inferAction(normalizedQuery, controller);
-        if (!controller.allowsAction(effectiveAction))
-            return null;
-
         var warnings = new List<string>();
+        if (!controller.allowsAction(effectiveAction))
+        {
+            string fallbackAction = fallbackUnsupportedAction(effectiveAction, controller);
+            if (string.IsNullOrWhiteSpace(fallbackAction))
+                return null;
+
+            warnings.Add("Requested action " + effectiveAction + " is not declared for this screen; opened " + fallbackAction + " instead.");
+            effectiveAction = fallbackAction;
+        }
+
         string candidateAction = effectiveAction;
         string url;
         if (effectiveAction == "new")
@@ -199,6 +206,17 @@ public sealed class AssistantNavigationCatalog
         if (controller.allowsAction("new"))
             return "new";
         return controller.actions.FirstOrDefault() ?? string.Empty;
+    }
+
+    private static string fallbackUnsupportedAction(string action, AssistantNavigationController controller)
+    {
+        if ((action == "edit" || action == "view") && controller.allowsAction("list"))
+            return "list";
+        if ((action == "edit" || action == "view" || action == "list") && controller.allowsAction("new"))
+            return "new";
+        if (action == "new" && controller.allowsAction("list"))
+            return "list";
+        return string.Empty;
     }
 
     private static string normalizeAction(string action)

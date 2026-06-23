@@ -42,6 +42,7 @@
 
 .assistant-message {
   align-items: flex-start;
+  scroll-margin-bottom: 8rem;
 }
 
 .assistant-bubble {
@@ -82,6 +83,15 @@
 
 .assistant-progress {
   min-height: 1.5rem;
+  display: flex;
+  align-items: center;
+  scroll-margin-bottom: 8rem;
+}
+
+.assistant-progress .spinner-border {
+  width: .875rem;
+  height: .875rem;
+  border-width: .12em;
 }
 
 .assistant-footer {

@@ -407,14 +407,22 @@ public class AssistantFeatureTests
     [TestMethod]
     public void AssistantNavigationCatalog_IsValidJsonAndIncludesFrameworkScreens()
     {
+        var fw = TestHelpers.CreateFw();
+        fw.Session("access_level", Users.ACL_ADMIN.ToString());
         string json = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "prompts", "navigation_catalog.json"));
 
         var catalog = AssistantNavigationCatalog.Parse(json);
+        var passwordRows = catalog.find(fw, "I want to change my password", "edit");
 
         Assert.IsTrue(catalog.controllers.Count > 5);
         Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/Users"));
         Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/KBArticles"));
         Assert.IsTrue(catalog.controllers.All(static item => item.url.StartsWith("/", StringComparison.Ordinal)));
+        Assert.IsTrue(passwordRows.Count > 0);
+        var passwordRow = (FwDict)passwordRows[0]!;
+        Assert.AreEqual("Change Password", passwordRow["label"]);
+        Assert.AreEqual("/My/Password", passwordRow["url"]);
+        Assert.AreEqual("list", passwordRow["action"]);
     }
 
     [TestMethod]
@@ -506,6 +514,7 @@ public class AssistantFeatureTests
         string service = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "models", "AI", "AssistantAppService.cs"));
         string controller = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Code", "controllers", "Assistant.cs"));
         string template = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "index", "main.html"));
+        string css = File.ReadAllText(Path.Combine(repoRoot(), "osafw-app", "App_Data", "template", "assistant", "index", "head.css"));
         int start = service.IndexOf("public (AssistantThreadDto thread, AssistantRunDto run) RetryLastResponse", StringComparison.Ordinal);
         int end = service.IndexOf("public void SubmitFeedback", StringComparison.Ordinal);
         Assert.IsTrue(start > 0 && end > start);
@@ -523,6 +532,18 @@ public class AssistantFeatureTests
         StringAssert.Contains(template, "'/(Retry)/' + encodeURIComponent(thread.id)");
         StringAssert.Contains(template, "isLatestCompletedResponse(message)");
         StringAssert.Contains(template, "isReadonly()");
+        StringAssert.Contains(template, "thread = mergeThreadState(thread, data.thread, data.message ? [data.message] : [])");
+        StringAssert.Contains(template, "thread = mergeThreadState(thread, data.thread)");
+        StringAssert.Contains(template, "function mergeThreadState(current, incoming, extraMessages, extraEvents)");
+        StringAssert.Contains(template, "spinner.className = 'spinner-border spinner-border-sm me-2'");
+        StringAssert.Contains(template, "function isAssistantWorking()");
+        StringAssert.Contains(template, "if (!isBusy && !isAssistantWorking() && els.progress && els.progress.textContent) showProgress(els.progress.textContent);");
+        StringAssert.Contains(template, "function scrollThreadToEnd()");
+        StringAssert.Contains(template, "target.scrollIntoView({ block: 'center', inline: 'nearest' })");
+        StringAssert.Contains(template, "function keepTargetAboveComposer(target)");
+        StringAssert.Contains(template, "function activeProgressText()");
+        StringAssert.Contains(template, "showProgress(eventText || (isAssistantWorking() ? activeProgressText() : ''))");
+        StringAssert.Contains(css, "scroll-margin-bottom: 8rem;");
     }
 
     [TestMethod]

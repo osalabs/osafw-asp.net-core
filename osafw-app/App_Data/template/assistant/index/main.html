@@ -270,8 +270,7 @@
     try {
       const data = await postForm(baseUrl, body);
       if (data.thread) {
-        thread = data.thread;
-        if (data.message) thread.messages = mergeById(thread.messages || [], [data.message]);
+        thread = mergeThreadState(thread, data.thread, data.message ? [data.message] : []);
         thread.active_run = data.run || thread.active_run;
         lastMessageId = maxId(thread.messages);
         lastEventId = maxId(thread.events);
@@ -298,7 +297,7 @@
     try {
       const data = await postForm(baseUrl + '/(Retry)/' + encodeURIComponent(thread.id), body);
       if (data.thread) {
-        thread = data.thread;
+        thread = mergeThreadState(thread, data.thread);
         thread.active_run = data.run || thread.active_run;
         lastMessageId = maxId(thread.messages);
         lastEventId = maxId(thread.events);
@@ -390,7 +389,7 @@
       messages.forEach(message => els.messages.appendChild(renderMessage(message)));
     }
     renderEvents(thread && thread.events ? thread.events : []);
-    if (els.messages) els.messages.scrollTop = els.messages.scrollHeight;
+    scrollThreadToEnd();
     updateComposerState();
     focusLandingComposer(hasThread);
   }
@@ -461,7 +460,8 @@
   }
 
   function renderEvents(events) {
-    showProgress(events.slice(-3).map(event => event.content || event.event_type || '').join(' | '));
+    const eventText = events.slice(-3).map(event => event.content || event.event_type || '').join(' | ');
+    showProgress(eventText || (isAssistantWorking() ? activeProgressText() : ''));
   }
 
   async function refreshHistory() {
@@ -541,8 +541,12 @@
   function setBusy(isBusy) {
     root.classList.toggle('assistant-busy', isBusy);
     composers.forEach(state => state.form.dataset.busy = isBusy ? '1' : '');
-    if (isBusy) showProgress('Queued...');
+    if (isBusy) {
+      showProgress('Queued...');
+      scrollThreadToEnd();
+    }
     updateComposerState();
+    if (!isBusy && !isAssistantWorking() && els.progress && els.progress.textContent) showProgress(els.progress.textContent);
   }
 
   function updateComposerState() {
@@ -620,7 +624,66 @@
   }
 
   function showProgress(text) {
-    els.progress.textContent = text || '';
+    if (!els.progress) return;
+    els.progress.innerHTML = '';
+
+    const isWorking = isAssistantWorking();
+    const value = text || (isWorking ? activeProgressText() : '');
+    if (!value && !isWorking) return;
+
+    if (isWorking) {
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner-border spinner-border-sm me-2';
+      spinner.setAttribute('role', 'status');
+      spinner.setAttribute('aria-hidden', 'true');
+      els.progress.appendChild(spinner);
+    }
+
+    const label = document.createElement('span');
+    label.textContent = value;
+    els.progress.appendChild(label);
+  }
+
+  function scrollThreadToEnd() {
+    const scroll = () => {
+      if (els.messages) els.messages.scrollTop = els.messages.scrollHeight;
+
+      const target = threadScrollTarget();
+      if (!target) return;
+
+      target.scrollIntoView({ block: 'center', inline: 'nearest' });
+      requestAnimationFrame(() => keepTargetAboveComposer(target));
+    };
+
+    scroll();
+    requestAnimationFrame(scroll);
+    setTimeout(scroll, 80);
+  }
+
+  function threadScrollTarget() {
+    const progressVisible = !!(els.progress && (els.progress.textContent.trim() || els.progress.children.length));
+    return progressVisible ? els.progress : (els.messages && els.messages.lastElementChild);
+  }
+
+  function keepTargetAboveComposer(target) {
+    const footer = root.querySelector('.assistant-footer');
+    const footerRect = footer ? footer.getBoundingClientRect() : null;
+    const targetRect = target.getBoundingClientRect();
+    const visibleBottom = Math.min(window.innerHeight, footerRect ? footerRect.top : window.innerHeight) - 16;
+    if (targetRect.bottom > visibleBottom) window.scrollBy({ top: targetRect.bottom - visibleBottom });
+  }
+
+  function isAssistantWorking() {
+    const run = thread && thread.active_run ? thread.active_run : null;
+    const activeRun = !!(run && ['queued', 'processing'].includes((run.status || '').toLowerCase()));
+    return root.classList.contains('assistant-busy') || activeRun;
+  }
+
+  function activeProgressText() {
+    const run = thread && thread.active_run ? thread.active_run : null;
+    const status = (run && run.status ? run.status : '').toLowerCase();
+    if (status === 'processing') return 'Processing...';
+    return 'Queued...';
   }
 
   function isAvailable() {
@@ -643,6 +706,14 @@
     const map = new Map((existing || []).map(item => [item.id, item]));
     (incoming || []).forEach(item => map.set(item.id, item));
     return Array.from(map.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }
+
+  function mergeThreadState(current, incoming, extraMessages, extraEvents) {
+    if (!incoming) return current;
+    const merged = Object.assign({}, current || {}, incoming);
+    merged.messages = mergeById((current && current.messages) || [], (incoming.messages || []).concat(extraMessages || []));
+    merged.events = mergeById((current && current.events) || [], (incoming.events || []).concat(extraEvents || []));
+    return merged;
   }
 
   function isRedundantHistoryPreview(title, preview) {
