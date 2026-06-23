@@ -47,8 +47,8 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 - **lookup_model / lookup_tpl / lookup_table / lookup_field / lookup_key / lookup_params**: sources for lookup values (model-based,
   template-based or direct table lookup).
 - **class / attrs / class_label / class_contents**: wrapper and label sizing/styling.
-- **class_control / attrs_control**: styling and behaviour on the control itself (for example `on-refresh` to resubmit the form
-  on change).
+- **class_control / attrs_control**: styling and behaviour on the control itself. On classic form posts, use `on-refresh`
+  to resubmit the form without saving on change, or `on-refresh-save` to validate/save first and reload ShowForm.
 - **help_text**: muted helper text under the control.
 
 ### Input-only helpers
@@ -818,6 +818,8 @@ Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-
   "class_control": "on-refresh"
 }
 ```
+- On classic form posts, use `"class_control": "on-refresh-save"` instead when the changed value and the rest of the
+  form must be saved before dependent fields are refreshed.
 - Full sample with filtering and live search:
 ```json
 {

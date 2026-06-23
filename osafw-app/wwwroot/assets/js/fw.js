@@ -719,11 +719,39 @@ window.fw={
     fw.setup_file_drop_area();
     fw.setup_att_files_upload();
 
-    $(document).on('change', '.on-refresh', function (e) {
-      var $this = $(this);
-      var $f = $this.closest('form');
-      $f.find('input[name=refresh]').val($this.attr('id') || $this.attr('name') || 1);
+    function submit_refresh_form($control, is_save) {
+      var $f = $control.closest('form');
+      if (!$f.length) return;
+      if ($f.data('is-ajaxsubmit') === true) {
+        // Wait for in-flight autosave so refresh flags do not leak into the ajax save.
+        setTimeout(function () {
+          submit_refresh_form($control, is_save);
+        }, 500);
+        return;
+      }
+      var $refresh = $f.find('input[name=refresh]');
+      var $refreshSave = $f.find('input[name=refresh_save]');
+      if (!$refresh.length) {
+        $refresh = $('<input type="hidden" name="refresh">').appendTo($f);
+      }
+      $refresh.val($control.attr('id') || $control.attr('name') || 1);
+      if (is_save) {
+        if (!$refreshSave.length) {
+          $refreshSave = $('<input type="hidden" name="refresh_save">').appendTo($f);
+        }
+        $refreshSave.val(1);
+      } else {
+        $refreshSave.val('');
+      }
       $f.submit();
+    }
+
+    $(document).on('change', '.on-refresh', function (e) {
+      submit_refresh_form($(this), false);
+    });
+
+    $(document).on('change', '.on-refresh-save', function (e) {
+      submit_refresh_form($(this), true);
     });
 
     $(document).on('keyup', '.on-multi-search', function (e) {
