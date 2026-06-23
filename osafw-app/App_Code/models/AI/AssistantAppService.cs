@@ -178,6 +178,9 @@ public sealed class AssistantAppService
         int effectiveThreadId = existingThread?.id
             ?? fw.model<AssistantThreads>().addThread(usersId, owner.ownerToken, buildDefaultThreadName(prompt));
 
+        if (fw.model<AssistantRuns>().queuedOrProcessingByThread(effectiveThreadId) != null)
+            throw new UserException("Assistant response is already queued.");
+
         string userContent = buildUserMessageContent(prompt, clarificationAnswers, isFilesProvided);
         int messageId = fw.model<AssistantMessages>().addMessage(
             effectiveThreadId,

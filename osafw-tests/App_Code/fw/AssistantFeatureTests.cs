@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace osafw.Tests;
 
@@ -654,6 +655,61 @@ public class AssistantFeatureTests
         StringAssert.Contains(css, "scroll-margin-bottom: 8rem;");
     }
 
+#if isSQLite
+    [TestMethod]
+    public async Task AssistantSend_RejectsQueuedOrProcessingThreadWithoutAddingMessageOrRun()
+    {
+        string dbPath = Path.Combine(Path.GetTempPath(), "osafw-assistant-test-" + Guid.NewGuid().ToString("N") + ".sqlite");
+        var db = new DB("Data Source=" + dbPath + ";Pooling=False", DB.DBTYPE_SQLITE);
+        try
+        {
+            createAssistantRuntimeSchema(db);
+            db.exec("insert into assistant_threads (id, users_id, iname, status, add_time) values (1, 7, 'Existing', 0, CURRENT_TIMESTAMP)");
+            db.exec("insert into assistant_messages (id, assistant_threads_id, role, message_type, preview_text, content_markdown, status, add_time) values (10, 1, 'user', 'message', 'Existing prompt', 'Existing prompt', 0, CURRENT_TIMESTAMP)");
+            db.exec("insert into assistant_runs (id, assistant_threads_id, assistant_messages_id, status, add_time) values (20, 1, 10, 0, CURRENT_TIMESTAMP)");
+
+            var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+            {
+                ["appSettings:ASSISTANT_WORKER_ENABLED"] = "true"
+            });
+            fw.db = db;
+            registerSettings(fw, new Dictionary<string, string>
+            {
+                ["ASSISTANT_ENABLED"] = "1",
+                ["OPENAI_API_KEY"] = "sk-test"
+            });
+
+            var service = new AssistantAppService(fw);
+            string error = string.Empty;
+            try
+            {
+                await service.CreateOrContinueTurnAsync(7, 1, "Second prompt", null, null);
+            }
+            catch (UserException ex)
+            {
+                error = ex.Message;
+            }
+
+            Assert.AreEqual("Assistant response is already queued.", error);
+            Assert.AreEqual(1, db.valuep("select count(*) from assistant_messages").toInt());
+            Assert.AreEqual(1, db.valuep("select count(*) from assistant_runs").toInt());
+        }
+        finally
+        {
+            db.Dispose();
+            try
+            {
+                if (File.Exists(dbPath))
+                    File.Delete(dbPath);
+            }
+            catch (IOException)
+            {
+                // SQLite can hold the temp file briefly after connection disposal on Windows.
+            }
+        }
+    }
+#endif
+
     [TestMethod]
     public void AssistantComposer_TabOrderMovesFromPromptToSendBeforeFiles()
     {
@@ -1106,4 +1162,71 @@ public class AssistantFeatureTests
         settings.init(fw);
         TestHelpers.RegisterModel(fw, (Settings)settings);
     }
+
+#if isSQLite
+    private static void createAssistantRuntimeSchema(DB db)
+    {
+        db.exec("""
+        create table assistant_threads (
+            id integer primary key,
+            icode text not null default '',
+            users_id integer null,
+            owner_token text not null default '',
+            iname text not null default '',
+            provider_thread_id text not null default '',
+            last_run_status integer null,
+            last_message_at text null,
+            status integer not null default 0,
+            add_time text not null default CURRENT_TIMESTAMP,
+            add_users_id integer null,
+            upd_time text null,
+            upd_users_id integer null
+        )
+        """);
+        db.exec("""
+        create table assistant_messages (
+            id integer primary key,
+            assistant_threads_id integer not null,
+            role text not null default '',
+            message_type text not null default '',
+            preview_text text not null default '',
+            content_markdown text not null default '',
+            payload_json text not null default '',
+            sources_json text not null default '',
+            confidence real null,
+            status integer not null default 0,
+            add_time text not null default CURRENT_TIMESTAMP,
+            add_users_id integer null,
+            upd_time text null,
+            upd_users_id integer null
+        )
+        """);
+        db.exec("""
+        create table assistant_runs (
+            id integer primary key,
+            assistant_threads_id integer not null,
+            assistant_messages_id integer not null,
+            result_messages_id integer null,
+            activity_logs_id integer null,
+            worker_id text not null default '',
+            error_message text not null default '',
+            clarification_json text not null default '',
+            attempt_no integer not null default 0,
+            claimed_at text null,
+            started_at text null,
+            completed_at text null,
+            status integer not null default 0,
+            add_time text not null default CURRENT_TIMESTAMP,
+            add_users_id integer null,
+            upd_time text null,
+            upd_users_id integer null
+        )
+        """);
+        db.exec("create table assistant_runs_events (id integer primary key, assistant_runs_id integer not null, event_type text not null default '', content text not null default '', payload_json text not null default '', status integer not null default 0, add_time text not null default CURRENT_TIMESTAMP)");
+        db.exec("create table assistant_feedback (id integer primary key, assistant_threads_id integer null, assistant_runs_id integer null, assistant_messages_id integer null, feedback_type text not null default '', comment text not null default '', status integer not null default 0, add_time text not null default CURRENT_TIMESTAMP)");
+        db.exec("create table kb_articles (id integer primary key)");
+        db.exec("create table rag_sources (id integer primary key)");
+        db.exec("create table rag_chunks (id integer primary key)");
+    }
+#endif
 }

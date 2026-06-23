@@ -139,3 +139,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-23-assistant-prompt-templates.md` - Moved remaining Assistant memory/user-message prompt prose from C# into ParsePage prompt templates and updated focused tests/docs.
 - `summary-2026-06-23-assistant-composer-tab-order.md` - Reordered Assistant composer controls so Tab from the prompt focuses Send before Files while keeping file upload available.
 - `summary-2026-06-23-pr273-release-fixes.md` - Addressed PR #273 release fixes for Assistant contact output, Assistant message access, readonly Site Settings saves, duplicate timeout sweeps, and test stability.
+- `summary-2026-06-23-pr273-merge-readiness.md` - Review/fix loops for PR #273 merge readiness; added Assistant duplicate-run guarding and worker-loop logging, then passed full tests and final PR review.

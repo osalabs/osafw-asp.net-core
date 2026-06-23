@@ -68,8 +68,14 @@ public sealed class AssistantRunWorkerService : BackgroundService
             {
                 break;
             }
-            catch
+            catch (Exception ex)
             {
+                loggerFactory.CreateLogger<AssistantRunWorkerService>().LogWarning(
+                    ex,
+                    "Assistant worker {WorkerId} loop failed: {ExceptionType}: {Message}",
+                    workerId,
+                    ex.GetType().Name,
+                    ex.Message);
                 isQueueProbeDue = true;
                 isStaleQueueRecoveryDue = true;
                 await Task.Delay(5000, stoppingToken).ConfigureAwait(false);
