@@ -143,4 +143,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-23-pr273-merge-readiness.md` - Review/fix loops for PR #273 merge readiness; added Assistant duplicate-run guarding and worker-loop logging, then passed full tests and final PR review.
 - `summary-2026-06-24-port-best-practices.md` - In progress: porting selected reusable workflow and Dynamic/Vue JSON display improvements from downstream-app review.
 - `summary-2026-06-24-code-reviewer-simplicity.md` - Tightened code reviewer simplicity checks to cover solution-level structure and local code simplification without encouraging broad rewrites.
-- `summary-2026-06-24-uat-fixes.md` - Fixed selected UAT findings for Vue delete confirmation, Assistant uploads navigation, feedback modal defaults, icon-only titles, stale backup templates, and minor UI copy/title issues.
+- `summary-2026-06-24-uat-fixes.md` - Fixed selected UAT findings for Vue delete confirmation, Assistant uploads navigation, feedback modal defaults, icon-only titles/shared title-aria partials, stale backup templates, and minor UI copy/title issues.

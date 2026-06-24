@@ -42,13 +42,13 @@
         <~input_date ifeq="type" value="date" inline>
           <div class="input-group date">
             <input id="f<~name>" name="f[<~name>]" maxlength="10" value="<~value date>" type="text" class="form-control" <~/common/attr/required if="required">>
-            <button class="btn btn-outline-secondary" type="button" title="`Choose date`" aria-label="`Choose date`"><~/common/icons/calendar3></button>
+            <button class="btn btn-outline-secondary" type="button" <~/common/attr/choose_date>><~/common/icons/calendar3></button>
           </div>
         </~input_date>
         <~input_datetime ifeq="type" value="datetime" inline>
           <div class="input-group date datetime" data-default-time="now">
             <input id="f<~name>" name="f[<~name>]" maxlength="25" value="<~value date="short">" type="text" class="form-control" placeholder="<~/common/sel/date_format_js.sel selvalue="GLOBAL[date_format]"> <~/common/sel/time_format_human.sel selvalue="GLOBAL[time_format]">" <~/common/attr/required if="required">>
-            <button class="btn btn-outline-secondary border border-left-0" type="button" title="`Choose date and time`" aria-label="`Choose date and time`"><~/common/icons/calendar3></button>
+            <button class="btn btn-outline-secondary border border-left-0" type="button" <~/common/attr/choose_datetime>><~/common/icons/calendar3></button>
           </div>
         </~input_datetime>
         <~input_int ifeq="type" value="int" inline>

@@ -3,6 +3,7 @@
 - Added `/Admin/Att` / Manage Uploads to the Assistant navigation catalog and focused catalog test coverage.
 - Prevented the shared feedback modal from inheriting the current edit record title.
 - Added title/accessible-name hints to shared icon-only list, Vue, attachment, date-picker, report date-filter, demo date, and shell/sidebar controls.
+- Follow-up: moved repeated generic `Choose date`, `Choose date and time`, and `Remove` title/aria attributes into shared `common/attr` partials.
 - Removed stale `/Sys/Backup` templates.
 - Fixed `/Dev/Manage` "DB Initalizer" copy and gave `/Dev/SelfTest` a browser title through a minimal raw HTML wrapper.
 
@@ -15,6 +16,7 @@
 - FwVueController/FwDynamicController delete actions
 - Assistant navigation catalog and tests
 - Shared feedback, list, Vue, report, date, layout, and developer templates
+- Follow-up shared accessibility attribute fragments under `common/attr` and affected date/attachment/assistant templates
 
 ## Commands used / verification
 - `ConvertFrom-Json (Get-Content osafw-app\App_Data\template\assistant\prompts\navigation_catalog.json -Raw) | Format-List` - catalog parses.
@@ -22,6 +24,7 @@
 - `docs/agents/tools/Normalize-TextFiles.ps1 -Check ...` - all touched files are UTF-8 without BOM and CRLF.
 - `dotnet build osafw-app\osafw-app.csproj -p:OutDir=$PWD\artifacts\assistant_build\` - passed, 0 warnings/errors.
 - `dotnet test osafw-tests\osafw-tests.csproj --filter AssistantNavigationCatalog_IsValidJsonAndIncludesFrameworkScreens` - passed, 1 test.
+- `dotnet test osafw-tests\osafw-tests.csproj --filter parse_page_attr_partials_render_accessible_labels -p:OutDir=$PWD\artifacts\assistant_test\` - passed, 1 test.
 - Chrome retest against `https://localhost:44315/` after starting the app with `dotnet run --project osafw-app --launch-profile osafw_asp_net_core --urls https://localhost:44315`.
 - Chrome verified `/Admin/DemosVue/1128/delete` renders `Delete Record` with standard confirmation and no server error.
 - Chrome verified Assistant response to "Where do I manage uploads?" returns Manage Uploads `/Admin/Att`.
@@ -32,6 +35,7 @@
 - Reused `FwDynamicController.ShowDeleteAction()` for Vue delete confirmation to match the existing standard screen and preserve read-only/return-context behavior.
 - Added the Uploads catalog entry with manager access (`80`) to match `AdminAttController.access_level` and the sidebar visibility.
 - Kept feedback modal fields empty at render time because feedback is a new support item, not part of the current record edit form.
+- Used small `common/attr` partials instead of whole-button partials because the repeated contract is the accessible text; button classes, wrappers, and click handlers vary across templates. Kept the Assistant JavaScript-built pending-file remove button literal because translated backtick strings inside a single-quoted JavaScript HTML string can be unsafe if a translation contains an apostrophe.
 - Removed only orphaned backup templates because no active backup controller/functionality exists in the framework.
 - No `docs/CHANGELOG.md` entry: changes are fixes/removal of dead template residue, not a new breaking public contract or schema/config change.
 - No stable domain/glossary/heuristic additions; findings were task-specific.
@@ -40,6 +44,7 @@
 - PowerShell execution policy blocked direct helper execution; reran repo helper with `powershell.exe -ExecutionPolicy Bypass -File`.
 - Chrome initially hit `ERR_CONNECTION_REFUSED`; started the local app explicitly on the prior UAT URL.
 - Chrome was finalized before a late shell-title tweak; did not reopen Chrome after finalization. The shell tweak is static template markup covered by static review/line-ending checks.
+- A later accessibility follow-up initially tried the remove partial inside JavaScript-built HTML; local review backed it out to avoid quote-sensitive translated strings in a script literal.
 - A reviewer sub-agent was spawned but did not complete within the wait window; main agent performed the checklist review fallback.
 
 ## Risks / follow-ups
@@ -53,7 +58,8 @@
 ## Testing instructions
 - Build: `dotnet build osafw-app\osafw-app.csproj`.
 - Focused test: `dotnet test osafw-tests\osafw-tests.csproj --filter AssistantNavigationCatalog_IsValidJsonAndIncludesFrameworkScreens`.
+- Follow-up focused test: `dotnet test osafw-tests\osafw-tests.csproj --filter parse_page_attr_partials_render_accessible_labels -p:OutDir=$PWD\artifacts\assistant_test\`.
 - Browser smoke: start app on `https://localhost:44315`, sign in locally, then verify `/Admin/DemosVue/{id}/delete`, `/Assistant`, `/Admin/Demos/{id}/edit`, `/Admin/DemosDynamic`, `/Admin/Reports/sample`, `/Dev/Manage`, `/Dev/SelfTest`, and `/Sys/Backup`.
 
 ## Reflection
-The slowest part was Chrome retesting because the expected IIS Express URL was not running and had to be started manually under Kestrel. Future UAT fix passes should check app availability before beginning browser setup, and should avoid finalizing Chrome until after all template-only follow-up tweaks are complete. The sub-agent review did not finish in time; for similarly small, already browser-verified diffs, a local checklist review is likely more efficient unless the change has security or schema impact.
+The slowest part was Chrome retesting because the expected IIS Express URL was not running and had to be started manually under Kestrel. Future UAT fix passes should check app availability before beginning browser setup, and should avoid finalizing Chrome until after all template-only follow-up tweaks are complete. The sub-agent review did not finish in time; for similarly small, already browser-verified diffs, a local checklist review is likely more efficient unless the change has security or schema impact. Follow-up template refactors should prefer existing `common/attr` fragments for repeated attributes, but avoid translated partials inside JavaScript string literals unless the translated value is JavaScript-escaped.

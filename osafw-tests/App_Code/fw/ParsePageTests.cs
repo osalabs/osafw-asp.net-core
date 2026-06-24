@@ -135,6 +135,35 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void parse_page_attr_partials_render_accessible_labels()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"parsepage-attr-partials-{Guid.NewGuid():N}");
+            string attrDir = Path.Combine(tempDir, "common", "attr");
+            Directory.CreateDirectory(attrDir);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(attrDir, "choose_date.html"), "title=\"`Choose date`\" aria-label=\"`Choose date`\"");
+                File.WriteAllText(Path.Combine(attrDir, "remove.html"), "title=\"`Remove`\" aria-label=\"`Remove`\"");
+                File.WriteAllText(
+                    Path.Combine(tempDir, "main.html"),
+                    "<button <~/common/attr/choose_date>></button><button <~/common/attr/remove>></button>");
+
+                var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = tempDir });
+                string output = parser.parse_page("", "main.html", []);
+
+                StringAssert.Contains(output, "<button title=\"Choose date\" aria-label=\"Choose date\"></button>");
+                StringAssert.Contains(output, "<button title=\"Remove\" aria-label=\"Remove\"></button>");
+                Assert.IsFalse(output.Contains("`Remove`"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod()]
         public void parse_page_recursive_template_renders_until_depth_limit_and_logs_warning()
         {
             string tempDir = Path.Combine(Path.GetTempPath(), $"parsepage-recursion-tests-{Guid.NewGuid():N}");
