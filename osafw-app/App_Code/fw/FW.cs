@@ -1708,6 +1708,24 @@ public class FW : IDisposable
         throw new InvalidOperationException($"Model cache entry for {tt.Name} is not of expected type {typeof(T).FullName}.");
     }
 
+    // return model object by explicit type, as we can't use fw.model<type> because generics require a compile-time type
+    public FwModel model(Type type)
+    {
+        if (!models.TryGetValue(type.Name, out object? value))
+        {
+            var instance = Activator.CreateInstance(type) ?? throw new InvalidOperationException($"Could not create model instance for {type.Name}");
+            FwModel m = (FwModel)instance;
+            // initialize
+            m.init(this);
+            value = m;
+            models[type.Name] = value;
+        }
+        if (value is FwModel result)
+            return result;
+
+        throw new InvalidOperationException($"Model cache entry for {type.Name} is not a FwModel.");
+    }
+
     // return model object by model class name
     public FwModel model(string model_name)
     {
