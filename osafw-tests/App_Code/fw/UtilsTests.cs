@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -327,7 +328,7 @@ namespace osafw.Tests
         [TestMethod()]
         public void ImportSpreadsheetNotSupportedWithoutPackage()
         {
-#if ExcelDataReader
+#if isExcelDataReader
             Assert.Inconclusive("ExcelDataReader should not be available in this test environment");
 #else
             var thrown = false;
@@ -536,6 +537,39 @@ namespace osafw.Tests
             var inner = h1["EEE"] as FwDict;
             Assert.IsNotNull(inner);
             Assert.AreEqual("sub", inner["AAA"]);
+        }
+
+        [TestMethod()]
+        public void jsonDecodeMalformed_ReturnsNull()
+        {
+            Assert.IsNull(Utils.jsonDecode("{not-json"));
+        }
+
+        [TestMethod()]
+        public void jsonDecodeDictAndList_ReturnExpectedShapes()
+        {
+            var dict = Utils.jsonDecodeDict("{\"AAA\":1}");
+            Assert.IsNotNull(dict);
+            Assert.AreEqual(1L, dict!["AAA"]);
+            Assert.IsNull(Utils.jsonDecodeDict("[1,2]"));
+
+            var list = Utils.jsonDecodeList("[1,{\"AAA\":2}]");
+            Assert.IsNotNull(list);
+            Assert.AreEqual(2, list!.Count);
+            Assert.IsNull(Utils.jsonDecodeList("{\"AAA\":1}"));
+        }
+
+        [TestMethod()]
+        public void jsonDecodeOrThrowMalformed_Throws()
+        {
+            try
+            {
+                Utils.jsonDecodeOrThrow("{not-json");
+                Assert.Fail("Expected malformed JSON to throw.");
+            }
+            catch (JsonException)
+            {
+            }
         }
 
         [TestMethod()]
@@ -913,6 +947,21 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void urlescapePreservesCaseSensitiveUrlCharacters()
+        {
+            string mixedCaseUrl = "/Admin/Users/AbC123?token=XyZ9&returnUrl=/Reports/Q2";
+
+            string result = Utils.urlescape(mixedCaseUrl);
+
+            Assert.AreEqual(mixedCaseUrl, Utils.urlunescape(result), "URL escaping should not lowercase case-sensitive URL data");
+            StringAssert.Contains(result, "Admin");
+            StringAssert.Contains(result, "AbC123");
+            StringAssert.Contains(result, "XyZ9");
+            StringAssert.Contains(result, "returnUrl");
+            StringAssert.Contains(result, "Reports");
+        }
+
+        [TestMethod()]
         public void generateUniqueTmpDirPerPrefix()
         {
             string prefixA = "prefixA";
@@ -1232,12 +1281,12 @@ namespace osafw.Tests
 
             Utils.prepareRowsHeaders(rows, headers);
 
-            var headerNames = headers.Cast<FwDict>().Select(h => h["field_name"].toStr()).ToList();
+            var headerNames = headers.Select(h => h["field_name"].toStr()).ToList();
             CollectionAssert.AreEquivalent(new List<string> { "id", "name" }, headerNames);
             var firstRow = rows[0] as FwDict ?? throw new AssertFailedException("Expected row dictionary");
             Assert.IsTrue(firstRow.ContainsKey("cols"));
             var cols = firstRow["cols"] as FwList ?? throw new AssertFailedException("Expected cols list");
-            var nameCol = cols.Cast<FwDict>().First(c => c["field_name"].toStr() == "name");
+            var nameCol = cols.First(c => c["field_name"].toStr() == "name");
             Assert.AreEqual("Alpha", nameCol["data"]);
         }
 

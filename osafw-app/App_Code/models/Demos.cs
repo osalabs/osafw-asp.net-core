@@ -19,6 +19,7 @@ public class Demos : FwModel<Demos.Row>
         public string email { get; set; } = string.Empty;
         public int fint { get; set; }
         public double ffloat { get; set; }
+        public int frange { get; set; }
         public int dict_link_auto_id { get; set; }
         public string dict_link_multi { get; set; } = string.Empty;
         public int fcombo { get; set; }
@@ -30,9 +31,13 @@ public class Demos : FwModel<Demos.Row>
             set { _fyesno = value ? 1 : 0; }
         }
         public int is_checkbox { get; set; }
+        public int is_switch { get; set; }
         public DateTime? fdate_combo { get; set; }
         public DateTime? fdate_pop { get; set; }
         public DateTime? fdatetime { get; set; }
+        public DateTime? fdatetime_utc { get; set; }
+        public DateTimeOffset? fdatetime_offset { get; set; }
+        public DateTime? fdatetime_local { get; set; }
         public int ftime { get; set; }
         public int? att_id { get; set; }
         public int status { get; set; }
@@ -53,42 +58,61 @@ public class Demos : FwModel<Demos.Row>
         return isExistsByField(uniq_key, not_id, "email");
     }
 
-    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null)
+    /// <summary>
+    /// Returns parent demo options while using the framework's active-plus-selected inactive lookup rule.
+    /// </summary>
+    /// <param name="def">Dynamic field definition or lookup parameters.</param>
+    /// <param name="where">Additional predicates to apply to the parent lookup.</param>
+    /// <param name="selected_id">Explicit selected parent id or ids to preserve on edit forms.</param>
+    /// <param name="valueFromIname">When true, use names as option values.</param>
+    /// <param name="inameSql">Optional label SQL expression to pass through to the framework lookup implementation.</param>
+    /// <returns>Parent demo option rows.</returns>
+    public virtual FwList listSelectOptionsParent(FwDict? def = null, FwDict? where = null, object? selected_id = null, bool valueFromIname = false, string? inameSql = null)
     {
-        where ??= [];
+        var baseWhere = where != null ? new FwDict(where) : [];
+        baseWhere["parent_id"] = 0;
 
-        where["parent_id"] = 0;
-        where["status"] = db.opNOT(STATUS_DELETED);
-
-        // Support filter_by/filter_field from config
-        if (def != null && def.TryGetValue("filter_by", out object? fby) && def.TryGetValue("filter_field", out object? ff))
-        {
-            var item = def["i"] as FwDict ?? [];
-            var filter_by = fby.toStr();
-            var filter_field = ff.toStr();
-            if (item.TryGetValue(filter_by, out object? value))
-                where[filter_field] = value;
-        }
-
-        return db.array(table_name, where, "iname", Utils.qw("id iname"));
+        return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
 
-    // override to process custom lookup_params
-    public override FwList listSelectOptions(FwDict? def = null)
+    /// <summary>
+    /// Processes demo-specific lookup parameters before returning framework-standard select options.
+    /// </summary>
+    /// <param name="def">Dynamic field definition or lookup parameters.</param>
+    /// <param name="selected_id">Explicit selected id or ids to preserve on edit forms.</param>
+    /// <param name="valueFromIname">When true, use names as option values.</param>
+    /// <param name="baseWhere">Optional base predicates to pass through to the framework lookup implementation.</param>
+    /// <param name="inameSql">Optional label SQL expression to pass through to the framework lookup implementation.</param>
+    /// <returns>Demo option rows.</returns>
+    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
     {
         var lookup_params = (def?["lookup_params"] ?? string.Empty).toStr();
         var hparams = Utils.qh(lookup_params); // ex: parent
 
         if (hparams.ContainsKey("parent"))
-            return listSelectOptionsParent(def);
+            return listSelectOptionsParent(def, baseWhere, selected_id, valueFromIname, inameSql);
 
-        return base.listSelectOptions(def);
+        return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
 
-    // demo for DB generics
+    /// <summary>
+    /// Parent lookup lists top-level demos by default while keeping a saved selected parent visible on edit.
+    /// </summary>
+    protected override bool isSelectedLookupFilterBypassAllowed(FwDict? def, FwDict filters)
+    {
+        var hparams = Utils.qh((def?["lookup_params"] ?? string.Empty).toStr());
+        return hparams.ContainsKey("parent") && filters.ContainsKey("parent_id") && filters["parent_id"].toInt() == 0;
+    }
+
+    /// <summary>
+    /// Demonstrates typed DB row materialization by calculating a total from numeric demo fields.
+    /// </summary>
+    /// <param name="id">Primary key of the demo record whose numeric fields should be multiplied.</param>
+    /// <returns>The demo row's floating-point value multiplied by its integer value.</returns>
+    /// <exception cref="NotFoundException">Thrown when the requested demo record does not exist.</exception>
     public decimal calcTotal(int id)
     {
-        var item = db.row<Row>(table_name, DB.h("id", id));
+        var item = db.row<Row>(table_name, DB.h("id", id)) ?? throw new NotFoundException();
         return (decimal)item.ffloat * item.fint;
     }
 }

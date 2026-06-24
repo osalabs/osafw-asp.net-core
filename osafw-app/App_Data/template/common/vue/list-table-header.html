@@ -12,8 +12,7 @@
                     <div>
                         <span>{{header.field_name_visible}}</span>
                         <span class="ms-1" v-if="header.is_sortable && fwStore.f.sortby==header.field_name">
-                            <i v-if="fwStore.f.sortdir=='desc'" class="bi bi-arrow-up"></i>
-                            <i v-else class="bi bi-arrow-down"></i>
+                            <span v-if="fwStore.f.sortdir=='desc'"><~/common/icons/arrow-up></span><span v-else><~/common/icons/arrow-down></span>
                         </span>
                     </div>
                 </th>
@@ -25,7 +24,8 @@
             <th></th>
             <th v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"></th>
             <th v-for="header in fwStore.list_headers" :key="header.field_name">
-                <input type="text" class="form-control form-control-sm"
+                <list-column-filter v-if="hasColumnFilter(header)" :header="header"></list-column-filter>
+                <input v-else type="text" class="form-control form-control-sm"
                        v-model="header.search_value"
                        :disabled="isCalculatedField(header.field_name)"
                        @change="fwStore.loadIndexDebounced"
@@ -97,6 +97,10 @@
             },
             isCalculatedField(fieldName) {
                 return this.listCalculatedFields.includes(fieldName);
+            },
+            hasColumnFilter(header) {
+                const type = header.filter && header.filter.type;
+                return !!type && (type === 'none' || !this.isCalculatedField(header.field_name));
             }
         }
     });

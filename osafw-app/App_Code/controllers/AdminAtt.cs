@@ -1,4 +1,4 @@
-﻿// Admin Att controller
+// Admin Att controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -37,7 +37,7 @@ public class AdminAttController : FwAdminController
 
     public override void setListSearch()
     {
-        list_where = " fwentities_id IS NULL "; //only show uploads directly from user (not linked to specific entity)
+        list_where = " (fwentities_id IS NULL or fwentities_id=0) "; //only show uploads directly from user (not linked to specific entity)
 
         base.setListSearch();
 
@@ -193,22 +193,29 @@ public class AdminAttController : FwAdminController
         string category_icode = reqs("category");
         int att_categories_id = reqi("att_categories_id");
 
-        FwDict where = [];
-        where["status"] = 0;
+        FwDict @params = [];
+        @params["@status"] = FwModel.STATUS_ACTIVE;
+        var where = $@" where a.status=@status
+                          and (a.fwentities_id is null or a.fwentities_id=0)";
         if (category_icode.Length > 0)
         {
             var att_cat = fw.model<AttCategories>().oneByIcode(category_icode);
             if (att_cat.Count > 0)
             {
                 att_categories_id = att_cat["id"].toInt();
-                where["att_categories_id"] = att_categories_id;
             }
         }
         if (att_categories_id > 0)
-            where["att_categories_id"] = att_categories_id;
+        {
+            where += " and a.att_categories_id=@att_categories_id";
+            @params["@att_categories_id"] = att_categories_id;
+        }
 
         var is_json = fw.isJsonExpected();
-        FwList rows = db.array(model.table_name, where, "add_time desc");
+        FwList rows = db.arrayp($@"select a.*
+                                     from {db.qid(model.table_name)} a
+                                     {where}
+                                    order by a.add_time desc", @params);
         foreach (FwDict row in rows)
         {
             row["url"] = model.getUrl(row);

@@ -1,11 +1,14 @@
 /*
   misc client utils for the osafw framework
   www.osalabs.com/osafw
-  (c) 2009-2024 Oleg Savchuk www.osalabs.com
+  (c) 2009-2026 Oleg Savchuk www.osalabs.com
 */
 
 window.fw={
-  HTML_LOADING: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...',
+  HTML_LOADING: '<div class="d-flex flex-column justify-content-center align-items-center text-center py-5 px-4" style="min-height: 14rem;">'
+    + '<div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>'
+    + '<div class="fw-semibold">Loading...</div>'
+    + '</div>',
   HTML_SPINNER_CT: '<span class="fw-spinner-container"> <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span></span',
   HTML_SPINNER_SM: '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>',
   ICON_SORT_ASC: '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>',
@@ -146,6 +149,111 @@ window.fw={
       });
   },
 
+  initAutocompleteInputs: function (scope) {
+    var root = scope || document;
+    if (!root.querySelector('input[data-autocomplete]')) return Promise.resolve();
+
+    var fwScript = document.querySelector('script[src*="/js/fw.js"]');
+    var assetsUrl = fwScript ? fwScript.getAttribute('src').split('/js/fw.js')[0] : '/assets';
+    return fw.initComponent('autocomplete', {
+      scope: root,
+      assetsUrls: [
+        assetsUrl + '/lib/bootstrap-simple-autocomplete/bootstrap-simple-autocomplete.js'
+      ],
+      init: function (initScope) {
+        if (typeof BootstrapSimpleAutocomplete !== 'function') return;
+
+        $(initScope).find('input[data-autocomplete]').addBack('input[data-autocomplete]').each(function () {
+          if (this.dataset.autocompleteInitialized) return;
+          var isInitialized = this.parentElement
+            && this.parentElement.classList.contains('position-relative')
+            && this.nextElementSibling
+            && this.nextElementSibling.classList.contains('dropdown-menu');
+          if (isInitialized) {
+            this.dataset.autocompleteInitialized = '1';
+            return;
+          }
+          new BootstrapSimpleAutocomplete(this);
+          this.dataset.autocompleteInitialized = '1';
+        });
+      }
+    });
+  },
+
+  // Dispose scoped component instances and plugin DOM before replacing/removing a scope.
+  disposeComponents: function (scope) {
+    var root = scope || document;
+    if (!root) return;
+
+    function safely(fn) {
+      try {
+        fn();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (typeof root.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+      root.dispatchEvent(new CustomEvent('fw-dispose', {
+        bubbles: true,
+        detail: {
+          scope: root
+        }
+      }));
+    }
+
+    Object.keys(fw._componentRegistry || {}).forEach(function (name) {
+      var component = fw._componentRegistry[name];
+      if (!component || typeof component.dispose !== 'function') return;
+
+      safely(function () {
+        component.dispose(root);
+      });
+    });
+
+    if (!window.jQuery) return;
+
+    var $all = $(root).find('*').addBack();
+
+    $all.each(function () {
+      var $el = $(this);
+      var datepicker = $el.data('datepicker');
+      if (!datepicker) return;
+
+      safely(function () {
+        if (typeof datepicker.hide === 'function') datepicker.hide();
+        if (datepicker.hide_mousedown) {
+          $(document).off('mousedown', datepicker.hide_mousedown);
+        }
+        if (datepicker.place) {
+          $(window).off('resize', datepicker.place);
+        }
+        if (datepicker.picker && typeof datepicker.picker.remove === 'function') {
+          datepicker.picker.off();
+          datepicker.picker.remove();
+        }
+      });
+
+      $el.removeData('datepicker fw-calendar-inited');
+    });
+
+    [
+      ['select', 'select2', function ($el) { return $el.data('select2'); }],
+      ['select.selectpicker', 'selectpicker', function ($el) { return $el.data('selectpicker') || $el.parent('.bootstrap-select').length; }],
+      ['.ui-sortable', 'sortable', function ($el) { return $el.data('ui-sortable') || $el.data('sortable'); }]
+    ].forEach(function (item) {
+      if (!$.fn[item[1]]) return;
+
+      $all.filter(item[0]).each(function () {
+        var $el = $(this);
+        if (!item[2]($el)) return;
+        safely(function () {
+          $el[item[1]]('destroy');
+        });
+      });
+    });
+  },
+
   // Unified helper: updates saved/unsaved status and optional progress spinner
   // is_changed: true/false updates internal changed flag, pass undefined to keep previous value
   // is_progress: true - show spinner, false - hide spinner, undefined - keep previous spinner state
@@ -262,6 +370,7 @@ window.fw={
   setup_handlers: function (){
     //list screen init
     fw.make_table_list(".list");
+    fw.initAutocompleteInputs(document);
 
     //list screen init
     var $ffilter = $('form[data-list-filter]:first');
@@ -276,13 +385,15 @@ window.fw={
       } else {
           $el.show();
           $fis.val('1');
-          //show search tooltip
-          ToastInfo("WORD to search for contains word<br>"+
-            "!WORD to search for NOT contains word<br>"+
-            "=WORD to search for equals word<br>"+
-            "!=WORD to search for NOT equals word<br>"+
-            "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
-            {header: 'Search hints', html: true, autohide: false});
+          if (!$('table.list:first .fw-column-filter').length) {
+            //show search tooltip
+            ToastInfo("WORD to search for contains word<br>"+
+              "!WORD to search for NOT contains word<br>"+
+              "=WORD to search for equals word<br>"+
+              "!=WORD to search for NOT equals word<br>"+
+              "&lt;=N, &lt;N, &gt;=N, &gt;N - compare numbers",
+              {header: 'Search hints', html: true, autohide: false});
+          }
       }
     };
     $(document).on('click', '.on-toggle-search', on_toggle_search);
@@ -351,13 +462,144 @@ window.fw={
       $(this).trigger('click');
     });
 
+    var format_filter_date = function (d) {
+      var month = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return d.getFullYear() + '-' + month + '-' + day;
+    };
+
+    var split_filter_values = function (value) {
+      if (!value) return [];
+      return value.split(',').map(function (v) { return v.trim(); }).filter(function (v) { return v.length > 0; });
+    };
+
+    var read_column_filter_payload = function ($filter) {
+      var type = $filter.data('column-filter-type');
+      var blankOp = $filter.find('[data-column-filter-blank]').val() || '';
+      var payload = null;
+      if (blankOp === 'blank' || blankOp === 'not_blank') {
+        payload = { type: blankOp };
+      } else if (type === 'text') {
+        var op = $filter.find('[data-column-filter-op]').val() || 'contains';
+        var value = $filter.find('[data-column-filter-value]').val() || '';
+        if (op === 'blank' || op === 'not_blank') payload = { type: op };
+        else if (value.length) payload = { type: 'text', op: op, value: value };
+      } else if (type === 'date_range') {
+        var from = $filter.find('[data-column-filter-from]').val() || '';
+        var to = $filter.find('[data-column-filter-to]').val() || '';
+        if (from || to) payload = { type: 'date_range', from: from, to: to };
+      } else if (type === 'multi_select' || type === 'autocomplete') {
+        var values = $filter.find('[data-column-filter-values]').val() || split_filter_values($filter.find('[data-column-filter-values-text]').val() || '');
+        if (values.length) payload = { type: type, values: values };
+      } else if (type === 'number_conditions') {
+        payload = { type: 'number_conditions' };
+        ['equal', 'gte', 'lte'].forEach(function (key) {
+          var value = $filter.find('[data-column-filter-' + key + ']').val() || '';
+          if (value.length) payload[key] = value;
+        });
+        var notEqual = $filter.find('[data-column-filter-not-equal]').val() || '';
+        if (notEqual.length) payload.not_equal = notEqual;
+        var from = $filter.find('[data-column-filter-from]').val() || '';
+        var to = $filter.find('[data-column-filter-to]').val() || '';
+        if (from.length && to.length) {
+          payload.from = from;
+          payload.to = to;
+        }
+        var nbFrom = $filter.find('[data-column-filter-not-between-from]').val() || '';
+        var nbTo = $filter.find('[data-column-filter-not-between-to]').val() || '';
+        if (nbFrom.length && nbTo.length) {
+          payload.not_between_from = nbFrom;
+          payload.not_between_to = nbTo;
+        }
+        if (Object.keys(payload).length === 1) payload = null;
+      } else if (type === 'boolean') {
+        var boolValue = $filter.find('[data-column-filter-value]').val() || '';
+        if (boolValue === 'blank' || boolValue === 'not_blank') payload = { type: boolValue };
+        else if (boolValue.length) payload = { type: 'boolean', value: boolValue };
+      }
+
+      return payload;
+    };
+
+    var update_column_filter_value = function ($filter) {
+      var $target = $filter.find('[data-column-filter-json]');
+      if (!$target.length) return;
+
+      var payload = read_column_filter_payload($filter);
+      $target.val(payload ? JSON.stringify(payload) : '');
+    };
+
+    $(document).on('change input', '.fw-column-filter :input', function () {
+      var $filter = $(this).closest('.fw-column-filter');
+      if ($filter.data('column-filter-type') === 'text') {
+        update_column_filter_value($filter);
+      }
+    });
+
+    $(document).on('change', '.fw-column-filter-op', function () {
+      $(this).closest('.fw-column-filter').find('[data-column-filter-value]').trigger('focus');
+    });
+
+    $(document).on('click', '[data-column-filter-quick]', function () {
+      var $filter = $(this).closest('.fw-column-filter');
+      var quick = $(this).data('column-filter-quick');
+      var to = new Date();
+      var from = new Date(to.getTime());
+      if (quick === 'week') from.setDate(to.getDate() - 6);
+      else if (quick === 30 || quick === '30') from.setDate(to.getDate() - 29);
+      $filter.find('[data-column-filter-blank]').val('');
+      $filter.find('[data-column-filter-from]').val(format_filter_date(from));
+      $filter.find('[data-column-filter-to]').val(format_filter_date(to));
+    });
+
+    $(document).on('click', '[data-column-filter-apply]', function (e) {
+      e.preventDefault();
+      var $filter = $(this).closest('.fw-column-filter');
+      update_column_filter_value($filter);
+      $ffilter.find('input[name="f[is_search]"]').val('1');
+      $ffilter.trigger('submit');
+    });
+
+    $(document).on('click', '[data-column-filter-clear]', function (e) {
+      e.preventDefault();
+      var $filter = $(this).closest('.fw-column-filter');
+      $filter.find('[data-column-filter-json]').val('');
+      $filter.find('[data-column-filter-op]').val('');
+      $filter.find('[data-column-filter-blank]').val('');
+      $filter.find('[data-column-filter-value]').val('');
+      $filter.find('[data-column-filter-from]').val('');
+      $filter.find('[data-column-filter-to]').val('');
+      $filter.find('[data-column-filter-values]').val([]);
+      $filter.find('[data-column-filter-values-text]').val('');
+      $filter.find('[data-column-filter-equal]').val('');
+      $filter.find('[data-column-filter-not-equal]').val('');
+      $filter.find('[data-column-filter-gte]').val('');
+      $filter.find('[data-column-filter-lte]').val('');
+      $filter.find('[data-column-filter-not-between-from]').val('');
+      $filter.find('[data-column-filter-not-between-to]').val('');
+      $ffilter.find('input[name="f[is_search]"]').val('1');
+      $ffilter.trigger('submit');
+    });
+
     $('table.list').on('keypress','.search :input', function(e) {
       if (e.which == 13) {// on Enter press
           e.preventDefault();
+          var $filter = $(this).closest('.fw-column-filter');
+          if ($filter.length && $filter.data('column-filter-type') !== 'text') {
+              return false;
+          }
           //on explicit search - could reset pagenum to 0
           //$ffilter.find('input[name="f[pagenum]"]').val(0);
           $ffilter.trigger('submit');
           return false;
+      }
+    });
+
+    $(document).on('keydown', 'form[data-list-filter] input[name="f[s]"]', function (e) {
+      if (e.which == 13) {
+        e.preventDefault();
+        $(this.form).trigger('submit');
+        return false;
       }
     });
 
@@ -368,9 +610,12 @@ window.fw={
         if ($fis.val()=='1'){
             //if search ON - add search fields to the form
             $f.find('.osafw-list-search').remove();
+            $('table.list:first .fw-column-filter[data-column-filter-type="text"]').each(function () {
+              update_column_filter_value($(this));
+            });
             var html=[];
             $('table.list:first .search :input').each(function (i, el) {
-              if (el.value>''){
+              if (el.name && el.value>''){
                 html.push('<input class="osafw-list-search" type="hidden" name="'+el.name.replace(/"/g,'&quot;')+'" value="'+el.value.replace(/"/g,'&quot;')+'">');
               }
             });
@@ -490,11 +735,39 @@ window.fw={
     fw.setup_file_drop_area();
     fw.setup_att_files_upload();
 
-    $(document).on('change', '.on-refresh', function (e) {
-      var $this = $(this);
-      var $f = $this.closest('form');
-      $f.find('input[name=refresh]').val($this.attr('id') || $this.attr('name') || 1);
+    function submit_refresh_form($control, is_save) {
+      var $f = $control.closest('form');
+      if (!$f.length) return;
+      if ($f.data('is-ajaxsubmit') === true) {
+        // Wait for in-flight autosave so refresh flags do not leak into the ajax save.
+        setTimeout(function () {
+          submit_refresh_form($control, is_save);
+        }, 500);
+        return;
+      }
+      var $refresh = $f.find('input[name=refresh]');
+      var $refreshSave = $f.find('input[name=refresh_save]');
+      if (!$refresh.length) {
+        $refresh = $('<input type="hidden" name="refresh">').appendTo($f);
+      }
+      $refresh.val($control.attr('id') || $control.attr('name') || 1);
+      if (is_save) {
+        if (!$refreshSave.length) {
+          $refreshSave = $('<input type="hidden" name="refresh_save">').appendTo($f);
+        }
+        $refreshSave.val(1);
+      } else {
+        $refreshSave.val('');
+      }
       $f.submit();
+    }
+
+    $(document).on('change', '.on-refresh', function (e) {
+      submit_refresh_form($(this), false);
+    });
+
+    $(document).on('change', '.on-refresh-save', function (e) {
+      submit_refresh_form($(this), true);
     });
 
     $(document).on('keyup', '.on-multi-search', function (e) {
@@ -624,15 +897,26 @@ window.fw={
         $input.val(bvalue);
       }
 
+      var submit_form = function() {
+        var form = $form[0];
+        if (!form) return;
+        if (typeof form.reportValidity === 'function') {
+          if (!form.reportValidity()) return;
+        } else if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+          return;
+        }
+        $form.submit();
+      };
+
       //if button has data-delay - submit with delay (in milliseconds)
       var delay = $this.data('delay');
       if (delay) {
          setTimeout(function () {
-             $form.submit();
+             submit_form();
          }, delay);
         }
       else {
-        $form.submit();
+        submit_form();
       }
     });
 
@@ -882,6 +1166,8 @@ window.fw={
   setup_file_drop_area: function (){
     document.querySelectorAll('.fw-file-drop-area').forEach(dropArea => {
         const fileInput = dropArea.querySelector('input[type="file"]');
+        if (fileInput === null) return;
+
         const fakeBtn = dropArea.querySelector('.fake-btn');
 
         fakeBtn.onclick = () => fileInput.click();

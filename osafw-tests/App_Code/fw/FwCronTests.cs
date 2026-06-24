@@ -23,8 +23,8 @@ namespace osafw.Tests
         [TestMethod]
         public void CalculateNextRun_HonorsEndDate()
         {
-            var start = DateTime.UtcNow;
-            var endDate = start.AddSeconds(-10);
+            var start = new DateTime(2026, 1, 1, 0, 0, 10, DateTimeKind.Utc);
+            var endDate = start.AddSeconds(10);
 
             var result = (DateTime?)CalculateNextRun.Invoke(null, new object[] { "* * * * *", start, endDate });
 

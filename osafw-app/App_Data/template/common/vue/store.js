@@ -107,8 +107,10 @@ let state = {
 
     related_id: 0, // related model id
     return_url: '', // return url if controller called from other place expecting user's return
+    return_title: '', // label for return_url breadcrumb
     field_id: 'id', // model's id field name
     view_list_custom: [], // used for cellFormatter
+    view_list_custom_trusted: [], // custom list fields allowed to render cellFormatter HTML
     list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
@@ -116,7 +118,7 @@ let state = {
     pager: [], // array of { pagenum:N, pagenum_show:N, is_cur_page:0|1, is_show_first:0|1, is_show_prev:0|1, is_show_next:0|1, pagenum_next:N}
 
     // edit form fields configuration
-    list_editable_def_types: ['input', 'email', 'number', 'textarea', 'date_combo', 'date_popup', 'datetime_popup', 'time', 'autocomplete', 'select', 'cb', 'radio', 'yesno'],
+    list_editable_def_types: ['input', 'email', 'number', 'range', 'textarea', 'date_combo', 'date_popup', 'datetime_popup', 'datetime_local', 'time', 'autocomplete', 'select', 'cb', 'switch', 'radio', 'yesno'],
     form_tabs: [],
     show_fields: [],
     show_fields_tabs: {},
@@ -161,10 +163,24 @@ let state = {
 // merge in fwStoreState if defined
 state = mergeStoreDefaults(state, fwStoreState);
 
+function hasListSearchValue(value) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
+}
+
+function serializeListSearchValue(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    return JSON.stringify(value);
+}
+
 let getters = {
     doubleCount: (state) => state.count * 2, //sample getter
     //return true if state.list_headers contains at least one non-empty search_value
-    isListSearch: (state) => state.list_headers.some(h => h.search_value?.length),
+    isListSearch: (state) => state.list_headers.some(h => hasListSearchValue(h.search_value)),
     //count of hchecked_rows but only true values
     countCheckedRows: (state) => Object.values(state.hchecked_rows).filter(v => v).length,
     // get checked rows for request as [id] => 1
@@ -186,7 +202,7 @@ let getters = {
             // initial load - don't set filters, we'll get them from backend
         } else {
             req.dofilter = 1;
-            req.scope = 'list_rows'; // after initial load we only need list_rows
+            req.scope = state.is_list_edit ? 'list_rows,lookups' : 'list_rows';
             Object.keys(state.f).forEach(key => {
                 req['f[' + key + ']'] = state.f[key] ?? ''; //null to empty string
             });
@@ -194,10 +210,10 @@ let getters = {
         // add related_id to request
         if (state.related_id) req.related_id = state.related_id;
 
-        //add search values from headers if search is open
-        if (state.is_list_search_open) {
+        //add active search values from headers on explicit filter requests
+        if (!state.is_initial_load) {
             state.list_headers.forEach(h => {
-                if (h.search_value?.length) req['search[' + h.field_name + ']'] = h.search_value;
+                if (hasListSearchValue(h.search_value)) req['search[' + h.field_name + ']'] = serializeListSearchValue(h.search_value);
             });
         }
         return req;
@@ -371,8 +387,19 @@ let actions = {
         } else if (screen == 'edit') {
             suffix = '/' + (id ? id + '/edit' : 'new');
         }
+        const params = new URLSearchParams();
         if (tab && (screen === 'view' || screen === 'edit')) {
-            suffix += '?tab=' + encodeURIComponent(tab);
+            params.set('tab', tab);
+        }
+        if (this.return_url) {
+            params.set('return_url', this.return_url);
+            if (this.return_title) {
+                params.set('return_title', this.return_title);
+            }
+        }
+        const query = params.toString();
+        if (query) {
+            suffix += '?' + query;
         }
         return this.base_url + suffix;
     },
@@ -387,12 +414,12 @@ let actions = {
         this.updateTabUrl(tab);
     },
     // screen navigation
-    async setCurrentScreen(screen, id) {
+    async setCurrentScreen(screen, id, options = {}) {
         // console.log("setCurrentScreen:", screen, id);
         const previous_screen = this.current_screen;
         const is_same_mode = (previous_screen === screen) && (screen === 'view' || screen === 'edit');
         this.current_screen = screen;
-        this.current_id = id;
+        this.current_id = id ?? 0;
         let suffix = '';
         if (screen == 'view') {
             suffix = '/' + id;
@@ -409,7 +436,15 @@ let actions = {
         }
         const nextTab = this.form_tabs?.length ? (this.current_form_tab || this.form_tabs[0]?.tab) : '';
         const nextUrl = this.buildScreenUrl(screen, id, nextTab);
-        window.history.pushState({ screen: screen, id: id }, '', nextUrl);
+        const historyState = { screen: screen, id: this.current_id };
+        if (!options.skipHistory) {
+            if (options.replace) {
+                window.history.replaceState(historyState, '', nextUrl);
+            } else {
+                window.history.pushState(historyState, '', nextUrl);
+            }
+        }
+        window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
         this.is_list_edit_pane = false;
         if (id && (screen == 'view' || screen == 'edit')) {
             this.startItemLoading();
@@ -565,6 +600,7 @@ let actions = {
             const data = await this.api.get(id, options);
             //console.log('loadItem data', data);
             this.edit_data = data;
+            window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
 
         } catch (error) {
             this.handleError(error, 'loadItem');
@@ -631,6 +667,9 @@ let actions = {
             return '<span class="badge ' + status.bgcolor + '" >'+AppUtils.htmlescape(status.iname)+'</span>';
         }
         return row[header.field_name] ?? '';
+    },
+    isTrustedListRenderer(header) {
+        return header.field_name == "status" || this.view_list_custom_trusted.hasOwnProperty(header.field_name);
     },
     async saveCell(row, col) {
         let id = row[this.field_id];

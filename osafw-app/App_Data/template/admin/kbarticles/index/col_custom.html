@@ -1,0 +1,3 @@
+<~title_col ifeq="field_name" value="iname" inline><a href="<~../url>/<~row[id]>"><~data></a><div class="small text-muted"><~row[idesc]></div></~title_col>
+<~access_col ifeq="field_name" value="access_level" inline><span class="badge text-bg-light border"><~/admin/kbarticles/access_level.sel selvalue="row[access_level]"></span></~access_col>
+<~status_col ifeq="field_name" value="status" inline><span class="badge <~/common/sel/status_bgcolor.sel selvalue="row[status]">"><~/common/sel/status.sel selvalue="row[status]"></span></~status_col>

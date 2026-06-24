@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Linq;
 
@@ -18,11 +18,8 @@ public class FwCache
     }
 
     /// <summary>
-    /// set value to cache with default expire time 3600 seconds
+    /// Stores a cache value, defaulting expiration to 3600 seconds.
     /// </summary>
-    /// <param name="key"></param>
-    /// <param name="value"></param>
-    /// <param name="expire_seconds"></param>
     public static void setValue(string key, object? value, int expire_seconds = 3600)
     {
         MemoryCache.Set(key, value, TimeSpan.FromSeconds(expire_seconds));
@@ -86,9 +83,8 @@ public class FwCache
     // ******** request-level cache ***********
 
     /// <summary>
-    /// get value from request cache
+    /// Reads a value from the per-request cache.
     /// </summary>
-    /// <param name="key"></param>
     /// <returns>FwRow, FwList, other value or null - since objects in cache serialized using json when stored</returns>
     public object? getRequestValue(string key)
     {
@@ -113,7 +109,7 @@ public class FwCache
     public void requestRemoveWithPrefix(string prefix)
     {
         var plen = prefix.Length;
-        var keys = new StrList(request_cache.Keys.Cast<string>());
+        var keys = new StrList(request_cache.Keys);
         foreach (string key in keys)
         {
             if (key.Length > plen && key[..plen] == prefix)

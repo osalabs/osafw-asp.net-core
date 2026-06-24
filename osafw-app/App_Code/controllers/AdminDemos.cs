@@ -1,4 +1,4 @@
-﻿// Demo Admin controller
+// Demo Admin controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
@@ -22,12 +22,13 @@ public class AdminDemosController : FwAdminController
 
         base_url = "/Admin/Demos";
         required_fields = "iname";
-        save_fields = "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime att_id status";
-        save_fields_checkboxes = "is_checkbox|0";
+        save_fields = "parent_id demo_dicts_id iname idesc email fint ffloat frange fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local att_id status";
+        save_fields_checkboxes = "is_checkbox|0 is_switch|0";
+        form_new_defaults = new FwDict { { "frange", 50 } };
 
         search_fields = "iname idesc";
         list_sortdef = "iname asc";
-        list_sortmap = Utils.qh("id|id iname|iname add_time|add_time demo_dicts_id|demo_dicts_id email|email status|status");
+        list_sortmap = Utils.qh("id|id iname|iname add_time|add_time demo_dicts_id|demo_dicts_id email|email fdatetime_utc|fdatetime_utc fdatetime_offset|fdatetime_offset fdatetime_local|fdatetime_local status|status");
 
         related_field_name = "demo_dicts_id";
         model_related = fw.model<DemoDicts>();
@@ -135,7 +136,7 @@ public class AdminDemosController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             logger("refresh element:", reqs("refresh")); // id or name of the element refreshed OR "1" if no element id/name
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
@@ -169,6 +170,9 @@ public class AdminDemosController : FwAdminController
             { "att_post_prefix", "att_files1" },
             { "att_category", AttCategories.CAT_GENERAL }
         });
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new);
     }

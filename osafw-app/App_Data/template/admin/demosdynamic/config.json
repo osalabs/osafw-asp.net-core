@@ -1,8 +1,8 @@
 {
     "model": "Demos",
     "required_fields": "",
-    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat fcombo fradio fyesno fdate_pop fdatetime ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
-    "###save_fields_checkboxes": "is_checkbox|0",
+    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat frange fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
+    "###save_fields_checkboxes": "is_checkbox|0 is_switch|0",
 
     "save_fields": [
         "parent_id",
@@ -12,11 +12,15 @@
         "email",
         "fint",
         "ffloat",
+        "frange",
         "fcombo",
         "fradio",
         "fyesno",
         "fdate_pop",
         "fdatetime",
+        "fdatetime_utc",
+        "fdatetime_offset",
+        "fdatetime_local",
         "ftime",
         "att_id",
         "status",
@@ -25,11 +29,13 @@
         "fdate_combo"
     ],
     "save_fields_checkboxes": {
-        "is_checkbox": "0"
+        "is_checkbox": "0",
+        "is_switch": "0"
     },
 
     "form_new_defaults": {
-        "iname": ""
+        "iname": "",
+        "frange": 50
     },
 
     "search_fields": "!id iname idesc",
@@ -39,22 +45,109 @@
     "related_field_name": "demo_dicts_id",
 
     "is_dynamic_index": true,
-    "list_view": "(select d.*, dd.iname as demo_dicts_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id) t",
-    "view_list_defaults": "demo_dicts_iname iname email add_time status",
+    "list_view": "(select d.*, dp.iname as parent_iname, dd.iname as demo_dicts_iname, da.iname as dict_link_auto_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demos dp ON dp.id=d.parent_id LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id LEFT OUTER JOIN demo_dicts da ON da.id=d.dict_link_auto_id) t",
+    "view_list_defaults": "demo_dicts_iname dict_link_auto_iname iname email fdate_pop_str fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat status",
     "###view_list_map": "demo_dicts_iname|DemoDicts iname|Title email|Email add_time|Added&nbsp;on status|Status id|id",
     "view_list_map": {
+        "id": "id",
+        "parent_iname": "Parent",
         "demo_dicts_iname": "DemoDicts",
         "iname": "Title",
+        "idesc": "Description",
         "email": "Email",
-        "add_time": "Added on",
-        "upd_time": "Updated on",
-        "status": "Status",
-        "fdate_pop_str": "Date popup Formatted",
-        "fdate_pop": "Date popup",
+        "fint": "Integer",
+        "ffloat": "Float",
+        "frange": "Range",
+        "dict_link_auto_iname": "DemoDicts AC",
+        "dict_link_multi": "DemoDicts Multi",
+        "fcombo": "Combo",
+        "fradio": "Radio",
+        "fyesno": "Y/N",
+        "is_checkbox": "CB",
+        "is_switch": "Switch",
+        "fdate_combo": "Date Combo",
+        "fdate_pop_str": "Date Popup",
         "fdatetime": "Date and time",
-        "id": "id"
+        "fdatetime_utc": "UTC datetime",
+        "fdatetime_offset": "Offset datetime",
+        "fdatetime_local": "Browser local",
+        "ftime": "Time",
+        "att_id": "Att",
+        "status": "Status",
+        "add_time": "Added on",
+        "add_users_id": "Added by",
+        "upd_time": "Updated on",
+        "upd_users_id": "Updated by"
     },
     "view_list_custom": "iname status demo_dicts_iname",
+    "list_column_filters": {
+        "enabled": true,
+        "fields": {
+            "demo_dicts_iname": {
+                "type": "text"
+            },
+            "demo_dicts_id": {
+                "type": "multi_select",
+                "lookup_model": "DemoDicts"
+            },
+            "dict_link_auto_iname": {
+                "type": "autocomplete",
+                "filter_field": "dict_link_auto_id",
+                "field_storage_type": "int",
+                "autocomplete_url": "/Admin/DemosDynamic/(Autocomplete)?model=DemoDicts&q="
+            },
+            "dict_link_auto_id": {
+                "type": "autocomplete",
+                "field_storage_type": "int",
+                "autocomplete_url": "/Admin/DemosDynamic/(Autocomplete)?model=DemoDicts&q="
+            },
+            "iname": {
+                "type": "text"
+            },
+            "email": {
+                "type": "text"
+            },
+            "fdate_pop_str": {
+                "type": "date_range",
+                "filter_field": "fdate_pop",
+                "is_date_only": true,
+                "field_storage_type": "date"
+            },
+            "fdate_pop": {
+                "type": "date_range",
+                "is_date_only": true,
+                "field_storage_type": "date"
+            },
+            "fdatetime_utc": {
+                "type": "date_range",
+                "field_storage_type": "datetime"
+            },
+            "fdatetime_local": {
+                "type": "date_range",
+                "field_storage_type": "datetime"
+            },
+            "is_checkbox": {
+                "type": "boolean"
+            },
+            "fyesno": {
+                "type": "boolean"
+            },
+            "fradio": {
+                "type": "multi_select",
+                "lookup_tpl": "/common/sel/fcombo.sel"
+            },
+            "fint": {
+                "type": "number_conditions"
+            },
+            "ffloat": {
+                "type": "number_conditions"
+            },
+            "status": {
+                "type": "multi_select",
+                "lookup_tpl": "/common/sel/status.sel"
+            }
+        }
+    },
 
     "is_dynamic_show": true,
     "form_tabs": [
@@ -189,6 +282,15 @@
             "type": "row_end"
         },
         {
+            "field": "frange",
+            "label": "Range",
+            "type": "range",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "readonly": true
+        },
+        {
             "field": "fcombo",
             "label": "Combo",
             "type": "plaintext",
@@ -212,6 +314,12 @@
             "type": "checkbox"
         },
         {
+            "field": "is_switch",
+            "label": "Switch",
+            "type": "switch",
+            "readonly": true
+        },
+        {
             "type": "fieldset",
             "label": "Dates",
             "class": "mb-3"
@@ -229,6 +337,21 @@
         {
             "field": "fdatetime",
             "label": "Date and Time",
+            "type": "date_long"
+        },
+        {
+            "field": "fdatetime_utc",
+            "label": "UTC datetime",
+            "type": "date_long"
+        },
+        {
+            "field": "fdatetime_offset",
+            "label": "Offset datetime",
+            "type": "date_long"
+        },
+        {
+            "field": "fdatetime_local",
+            "label": "Browser datetime-local",
             "type": "date_long"
         },
         {
@@ -390,7 +513,7 @@
                             "label": "Add",
                             "hint": "Add DemoDicts",
                             "url": "/Admin/DemoDicts/new?",
-                            "attrs": "data-fw-lookup=\"add\""
+                            "attrs": "data-fw-lookup=\"add\" data-modal-focus=\"#iname\""
                         },
                         {
                             "class": "on-fw-modal",
@@ -398,7 +521,7 @@
                             "label": "Edit",
                             "hint": "Edit selected DemoDicts",
                             "url": "/Admin/DemoDicts/{id}/edit?",
-                            "attrs": "data-fw-lookup=\"edit\""
+                            "attrs": "data-fw-lookup=\"edit\" data-modal-focus=\"#iname\""
                         },
                         {
                             "is_divider": true
@@ -518,6 +641,16 @@
             "type": "row_end"
         },
         {
+            "field": "frange",
+            "label": "Range",
+            "type": "range",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "class_contents": "col",
+            "help_text": "Use for approximate bounded values such as scores or thresholds."
+        },
+        {
             "field": "fcombo",
             "label": "Combo",
             "type": "select",
@@ -546,6 +679,13 @@
             "class_contents": "col d-flex align-items-center"
         },
         {
+            "field": "is_switch",
+            "label": "Switch",
+            "type": "switch",
+            "class_contents": "col",
+            "help_text": "Use for reversible binary settings."
+        },
+        {
             "type": "fieldset",
             "label": "Dates",
             "class": "mb-3"
@@ -566,6 +706,26 @@
             "label": "Date and Time",
             "type": "datetime_popup",
             "default_time": "now",
+            "class_contents": "col-md-5"
+        },
+        {
+            "field": "fdatetime_utc",
+            "label": "UTC datetime",
+            "type": "datetime_popup",
+            "default_time": "now",
+            "class_contents": "col-md-5"
+        },
+        {
+            "field": "fdatetime_offset",
+            "label": "Offset datetime",
+            "type": "datetime_popup",
+            "default_time": "now",
+            "class_contents": "col-md-5"
+        },
+        {
+            "field": "fdatetime_local",
+            "label": "Browser datetime-local",
+            "type": "datetime_local",
             "class_contents": "col-md-5"
         },
         {

@@ -1,4 +1,4 @@
-﻿// Base Admin screens controller
+// Base Admin screens controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -38,7 +38,9 @@ public class FwAdminController : FwController
         // Next
 
         // set standard output parse strings
+#pragma warning disable CS0618 // Preserve dispatch to existing project overrides of setPS().
         var ps = this.setPS();
+#pragma warning restore CS0618
 
         // userlists support if necessary
         if (this.is_userlists)
@@ -66,7 +68,7 @@ public class FwAdminController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["return_url"] = return_url;
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
@@ -77,14 +79,9 @@ public class FwAdminController : FwController
     }
 
     /// <summary>
-    /// Shows editable Form for adding or editing one entity row
+    /// Builds ParsePage data for adding or editing one entity row.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns>in FwRow:
-    /// id - id of the entity
-    /// i - hashtable of entity fields
-    /// </returns>
-    /// <remarks></remarks>
+    /// <returns>Template data containing <c>id</c> and <c>i</c> row fields.</returns>
     public virtual FwDict? ShowFormAction(int id = 0)
     {
         FwDict ps = [];
@@ -119,7 +116,7 @@ public class FwAdminController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["return_url"] = return_url;
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["is_showform"] = true; // flag for template that we are in show form
@@ -136,8 +133,8 @@ public class FwAdminController : FwController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
-        fw.model<Users>().checkReadOnly();
-        if (reqb("refresh"))
+        checkReadOnly();
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
@@ -155,6 +152,9 @@ public class FwAdminController : FwController
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         id = this.modelAddOrUpdate(id, itemdb);
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new);
     }
@@ -182,22 +182,22 @@ public class FwAdminController : FwController
 
     public virtual void ShowDeleteAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         var ps = new FwDict()
         {
             {"i", modelOneOrFail(id)},
             {"related_id", this.related_id},
-            {"return_url", this.return_url},
             {"base_url", this.base_url},
         };
+        setPSReturnContext(ps);
 
         fw.parser("/common/form/showdelete", ps);
     }
 
     public virtual FwDict? DeleteAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         model0.deleteWithPermanentCheck(id);
         fw.flash("onedelete", 1);
@@ -206,7 +206,7 @@ public class FwAdminController : FwController
 
     public virtual FwDict? RestoreDeletedAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         model0.update(id, new FwDict() { { model0.field_status, FwModel.STATUS_ACTIVE } });
 
@@ -221,7 +221,7 @@ public class FwAdminController : FwController
         FwDict cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         if (is_delete)
-            fw.model<Users>().checkReadOnly();
+            checkReadOnly();
 
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");
@@ -276,19 +276,17 @@ public class FwAdminController : FwController
             if (item.Count > 0)
             {
                 var url = base_url + "/" + id + (is_edit ? "/edit" : "");
-                if (related_id.Length > 0 || return_url.Length > 0)
-                    url += "/?";
                 if (related_id.Length > 0)
-                    url += "related_id=" + Utils.urlescape(related_id);
-                if (return_url.Length > 0)
-                    url += "&return_url=" + Utils.urlescape(return_url);
+                    url = Utils.addUrlQueryParam(url, "related_id", related_id);
+                url = Utils.addReturnUrlQuery(url, return_url, return_title);
                 return new FwDict { { "_redirect", url }, { "id", id } };
             }
         }
 
         var list_url = base_url + "/?dofilter=1&f[s]=" + Utils.urlescape(s);
         if (related_id.Length > 0)
-            list_url += "&related_id=" + Utils.urlescape(related_id);
+            list_url = Utils.addUrlQueryParam(list_url, "related_id", related_id);
+        list_url = Utils.addReturnUrlQuery(list_url, return_url, return_title);
         return new FwDict { { "_redirect", list_url } };
     }
 

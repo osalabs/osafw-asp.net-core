@@ -409,7 +409,8 @@ class DevEntityBuilder
 
         // Scan all tokens for FK(TableName.FieldName) syntax (not just at index)
         string fkToken = tokens.FirstOrDefault(t => t.StartsWith("FK(", StringComparison.OrdinalIgnoreCase) && t.EndsWith(")")) ?? string.Empty;
-        if (!string.IsNullOrEmpty(fkToken))
+        var hasForeignKey = !string.IsNullOrEmpty(fkToken);
+        if (hasForeignKey)
         {
             var fkParts = fkToken[3..^1].Split('.');
             if (fkParts.Length == 2)
@@ -453,6 +454,8 @@ class DevEntityBuilder
         string fieldType = (tokens.Length > index) ? tokens[index++] : "";
         if (IsDataType(fieldType))
             ParseDataType(fieldType, field, is_notnull);
+        else if (hasForeignKey)
+            ParseDataType("int", field, is_notnull);
         else
             //default type is varchar
             ParseDataType("varchar", field, is_notnull);
@@ -476,7 +479,7 @@ class DevEntityBuilder
         if (token.Contains('('))
             token = token[..token.IndexOf('(')];
 
-        return Utils.qh("varchar int smallint tinyint decimal date datetime datetime2 bit text currency").ContainsKey(token.ToLower());
+        return Utils.qh("varchar int smallint tinyint decimal date datetime datetime2 datetimeoffset bit text currency").ContainsKey(token.ToLower());
     }
 
     // parse data type and length:
@@ -569,6 +572,7 @@ class DevEntityBuilder
                 break;
             case "datetime":
             case "datetime2":
+            case "datetimeoffset":
                 field["fw_type"] = "datetime";
                 field["fw_subtype"] = token.ToLower();
                 // Dates are nullable by default if not specified
@@ -693,7 +697,7 @@ class DevEntityBuilder
         if (decoded is FwDict dict)
         {
             var res = new FwDict();
-            foreach (var key in dict.Keys.Cast<string>())
+            foreach (var key in dict.Keys)
                 res[key] = normalizeDecodedJson(dict[key]);
             return res;
         }

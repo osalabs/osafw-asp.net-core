@@ -152,6 +152,14 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void DispositionForAttachment_AllowsOnlyTrustedNonImageInline()
+        {
+            Assert.AreEqual("attachment", UploadUtils.dispositionForAttachment("doc.pdf", "inline"));
+            Assert.AreEqual("inline", UploadUtils.dispositionForAttachment("doc.pdf", "inline", trustedInlineExts: ".pdf"));
+            Assert.AreEqual("attachment", UploadUtils.dispositionForAttachment("payload.svg", "inline", trustedInlineExts: ".svg"));
+        }
+
+        [TestMethod]
         public void UploadFileSave_WritesUnderModuleFolder()
         {
             var fwWithContext = CreateFwWithContext();
@@ -160,7 +168,7 @@ namespace osafw.Tests
             var saved = UploadUtils.uploadFileSave(fwWithContext, "docs", 7, file);
 
             Assert.IsTrue(File.Exists(saved));
-            StringAssert.Contains(saved.Replace('\\', '/'), "/upload/docs/7/7.jpg");
+            StringAssert.EndsWith(saved.Replace('\\', '/'), "/docs/7/7.jpg");
         }
 
         [TestMethod]

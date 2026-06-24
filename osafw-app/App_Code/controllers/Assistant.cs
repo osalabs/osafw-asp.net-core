@@ -1,45 +1,10 @@
-﻿using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.AspNetCore.Http;
 using System;
-using System.ComponentModel;
-using System.Text.Json;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace osafw;
-
-// Define response format types
-public sealed class AssistantResult
-{
-    public string title { get; set; } = string.Empty;
-    public string explanation { get; set; } = string.Empty;
-    public string sql { get; set; } = string.Empty;
-    public string redirect_url { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Allows the LLM to look‑up values in any FW model at run‑time.
-/// </summary>
-public sealed class LookupPlugin
-{
-    private readonly FW fw;
-
-    public LookupPlugin(FW fw) => this.fw = fw;
-
-    /// <summary>
-    /// Search a lookup model and return the matching ID / iname pairs.
-    /// </summary>
-    /// <param name="model">Model name, e.g. "IncidentsLocations"</param>
-    /// <param name="query">Free‑text search, e.g. "bathroom"</param>
-    /// <returns>JSON array of objects { id: int, iname: string }</returns>
-    [KernelFunction, Description("Search a lookup model and return id & iname pairs")]
-    public FwList lookup(
-        [Description("Model name, e.g. IncidentsLocations")] string model,
-        [Description("Search phrase, e.g. bathroom")] string query)
-    {
-        //fw.logger("############# Assistant lookup model:", model, ", query:", query);
-        return fw.model(model).listSelectOptionsAutocomplete(query);
-    }
-}
 
 public class AssistantController : FwController
 {
@@ -49,205 +14,197 @@ public class AssistantController : FwController
     public override void init(FW fw)
     {
         base.init(fw);
-
-        is_readonly = fw.model<Users>().isReadOnly();
-
         base_url = "/Assistant";
-
-        return_url = reqs("return_url");
-        related_id = reqs("related_id");
-        export_format = reqs("export");
     }
+
+    /// <summary>
+    /// Allows all authenticated members to use the assistant without requiring a per-app RBAC resource.
+    /// </summary>
     public override void checkAccess()
     {
-        //true - allow access to all members
+        if (fw.userAccessLevel < access_level)
+            throw new AuthException("Bad access - Not authorized");
     }
 
+    /// <summary>
+    /// Renders the threaded read-only assistant shell and bootstraps current history/thread data.
+    /// </summary>
     public FwDict IndexAction()
     {
-        //todo show list of history
-        FwDict ps = [];
-        FwDict item = reqh("item");
+        var service = new AssistantAppService(fw);
+        var status = service.RuntimeStatus();
+        var history = service.ListHistory(fw.userId);
+        AssistantThreadDto? thread = null;
 
-        var userPrompt = fw.G["user_prompt"].toStr();
+        string share = reqs("share").Trim();
+        int threadId = reqi("thread_id");
+        if (string.IsNullOrWhiteSpace(share))
+            threadId = threadId > 0 ? threadId : reqi("id");
 
-        if (!Utils.isEmpty(userPrompt))
+        if (status.tables_ready)
         {
-            ps["is_run"] = true;
-            ps["user_prompt"] = userPrompt;
-
-            var llm_sql = fw.G["llm_sql"].toStr();
-            ps["llm_title"] = fw.G["llm_title"];
-            ps["llm_explanation"] = fw.G["llm_explanation"];
-            ps["llm_sql"] = llm_sql;
-            ps["llm_form"] = fw.G["llm_form"];
-
-            if (!string.IsNullOrEmpty(llm_sql))
+            try
             {
-                ps["is_sql_result"] = true;
-
-                // 6) Optionally run the SQL on your DB (be sure to sanitize or check carefully!)
-                FwList rows = [];
-                db.exec("BEGIN TRANSACTION");
-                try
-                {
-                    rows = db.arrayp(llm_sql);
-                    db.exec("ROLLBACK");//just always rollback
-                }
-                catch (Exception ex)
-                {
-                    logger(LogLevel.ERROR, "Assistant SQL error: " + ex.Message);
-                    db.exec("ROLLBACK");
-                    fw.flash("error", "Assistant produced insane SQL. Try again later or change your request");
-                    fw.redirect(this.base_url);
-                }
-
-                var headers = new FwList();
-                Utils.prepareRowsHeaders(rows, headers);
-
-                ps["rows"] = rows;
-                ps["headers"] = headers;
+                if (!string.IsNullOrWhiteSpace(share))
+                    thread = service.GetSharedThread(share, fw.userId);
+                else if (threadId > 0)
+                    thread = service.GetThread(threadId, fw.userId);
             }
-
-        }
-
-        ps["i"] = item;
-        ps["user"] = fw.model<Users>().one(fw.userId);
-        return ps;
-    }
-
-    public void ShowAction(string id = "")
-    {
-        var page_name = id.ToLower();
-
-        string tpl_name = fw.G["PAGE_LAYOUT"].toStr();
-        //override layout for specific pages - TODO control via Spages
-        //if (page_name == "about")
-        //    tpl_name = fw.config("PAGE_LAYOUT_PUBLIC").toStr();
-
-        FwDict ps = new();
-        ps["hide_sidebar"] = true; // TODO control via Spages
-        ps["page_name"] = page_name;
-
-        fw.parser("/home/" + Utils.routeFixChars(page_name), tpl_name, ps);
-    }
-
-    public void SaveAction()
-    {
-        FwDict ps = [];
-
-        FwDict item = reqh("item");
-        string userPrompt = item["prompt"].toStr();
-        if (string.IsNullOrWhiteSpace(userPrompt))
-        {
-            fw.flash("error", "No user input provided.");
-            fw.redirect(this.base_url);
-            return;
-        }
-
-        string apiKey = fw.config("OPENAI_API_KEY").toStr();
-        //string modelId = "gpt-4.1";
-        string modelId = "gpt-4.1-mini";
-        var metaps = new FwDict
-        {
-            { "current_time", DateTime.Now },
-            { "users_id", fw.userId },
-        };
-        string systemMsg = fw.parsePage("/assistant", "system_msg.md", metaps);
-        //logger("SYSTEM MESSAGE:", systemMsg);
-
-        var builder = Kernel.CreateBuilder();
-        //builder.Services.AddLogging(services => services.AddSystemdConsole().SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace));
-        builder.AddOpenAIChatCompletion(
-            modelId,
-            apiKey
-        );
-        Kernel kernel = builder.Build();
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-
-        //add plugins if any
-        //kernel.Plugins.AddFromType<LightsPlugin>("Lights");
-        //or kernel.ImportPluginFromType<LightsPlugin>();
-        var lookupPlugin = kernel.ImportPluginFromObject(new LookupPlugin(fw), "lookup");
-        //fw.logger("Tools in request:", lookupPlugin.Name, "=>", lookupPlugin.FunctionCount);
-
-        // Enable planning
-        var executionSettings = new OpenAIPromptExecutionSettings
-        {
-            ResponseFormat = typeof(AssistantResult),
-            //MaxTokens = 3000,
-            // Temperature = 1.0,
-            // TopP = 1.0,
-            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(options: new FunctionChoiceBehaviorOptions
+            catch (Exception ex) when (ex is AuthException || ex is UserException || ex is NotFoundException)
             {
-                AllowParallelCalls = false,
-                AllowConcurrentInvocation = false
-            }),
+                fw.flash("error", ex.Message);
+            }
+        }
+
+        return new FwDict
+        {
+            ["assistant_status_json"] = Utils.jsonEncode(status),
+            ["assistant_history_json"] = Utils.jsonEncode(history),
+            ["assistant_thread_json"] = thread == null ? "null" : Utils.jsonEncode(thread),
+            ["assistant_status_message"] = status.message,
+            ["is_assistant_available"] = status.enabled && status.tables_ready && status.openai_configured && status.worker_enabled,
+            ["is_assistant_enabled"] = status.enabled,
+            ["is_tables_ready"] = status.tables_ready,
+            ["is_openai_configured"] = status.openai_configured,
+            ["thread_id"] = thread?.id ?? 0,
+            ["share"] = share,
         };
+    }
 
-        // Create a history store the conversation
-        var history = new ChatHistory();
-        history.AddSystemMessage(systemMsg);
-        history.AddUserMessage(userPrompt);
-        //history.AddAssistantMessage("response text");
+    /// <summary>
+    /// Queues a user turn with optional files and returns the updated thread state for polling.
+    /// </summary>
+    public FwDict? SaveAction(int id = 0)
+    {
+        enforcePost();
 
-        AssistantResult? parsedResult = null;
+        int threadId = id > 0 ? id : reqi("thread_id");
+        string prompt = reqs("prompt").Trim();
+        var item = reqh("item");
+        if (string.IsNullOrWhiteSpace(prompt))
+            prompt = item["prompt"].toStr().Trim();
+
+        FwDict clarification = reqh("clarification");
+        var files = getPostedFiles();
+
         try
         {
-            // non-streaming completion
-            var resultTask = chatCompletionService.GetChatMessageContentsAsync(history, executionSettings, kernel);
-            resultTask.Wait();
+            var service = new AssistantAppService(fw);
+            var result = service.CreateOrContinueTurnAsync(
+                fw.userId,
+                threadId,
+                prompt,
+                clarification.Count > 0 ? clarification : null,
+                files
+            ).GetAwaiter().GetResult();
 
-            var result = resultTask.Result[^1];
-            var content = result.Content ?? string.Empty;
-            OpenAI.Chat.ChatTokenUsage? usage = null;
-            if (result.Metadata?.TryGetValue("Usage", out var usageObj) == true)
-                usage = usageObj as OpenAI.Chat.ChatTokenUsage;
-
-            if (usage != null)
-                logger("LLM usage:", usage.InputTokenCount, " + ", usage.OutputTokenCount, " = ", usage.TotalTokenCount);
-            logger("LLM response:", content);
-
-            //sometimes content can contain multiple json strings, split by "}\n{" and take the last one 
-            var json_strings = content.Split(["}\n{"], StringSplitOptions.RemoveEmptyEntries);
-            if (json_strings.Length > 1)
+            if (fw.isJsonExpected())
             {
-                content = json_strings[^1];
-                content = "{" + content;
+                return jsonResponse(new FwDict
+                {
+                    ["thread"] = result.thread,
+                    ["message"] = result.message,
+                    ["run"] = result.run,
+                });
             }
 
-            parsedResult = JsonSerializer.Deserialize<AssistantResult>(content);
-            logger("AssistantResult:", parsedResult);
-
-            fw.model<FwActivityLogs>().addSimple(FwLogTypes.ICODE_ADDED, FwEntities.ICODE_ASSISTANT, 0, userPrompt, (FwDict?)Utils.jsonDecode(content));
+            fw.redirect(base_url + "?thread_id=" + result.thread.id);
+            return null;
         }
-        catch (Exception ex)
+        catch (UserException ex) when (!fw.isJsonExpected())
         {
-            fw.logger(LogLevel.ERROR, "Exception in chatCompletion:", ex.Message);
-            fw.flash("error", "Assistant having a hard day. Try again later.");
-            fw.redirect(this.base_url);
+            fw.flash("error", ex.Message);
+            fw.redirect(base_url + (threadId > 0 ? "?thread_id=" + threadId : string.Empty));
+            return null;
         }
-
-        // If it looks good, store it
-        if (parsedResult != null)
-        {
-
-            // If redirect, read "redirect_url" from JSON, do your fw.redirect. If done, just break.
-            if (!string.IsNullOrEmpty(parsedResult.redirect_url))
-            {
-                fw.redirect(parsedResult.redirect_url);
-                return;
-            }
-
-            fw.G["llm_sql"] = parsedResult.sql;
-            fw.G["llm_title"] = parsedResult.title;
-            fw.G["llm_explanation"] = parsedResult.explanation;
-            //fw.G["llm_form"] = parsedResult.html_form;
-        }
-
-        //fw.flash("info", "Assistant completed conversation. Last JSON=" + lastJSON);
-        fw.G["user_prompt"] = userPrompt; // pass user prompt to the view
-        fw.routeRedirect(FW.ACTION_INDEX);
     }
 
+    /// <summary>
+    /// Returns one owned assistant thread as JSON.
+    /// </summary>
+    public FwDict ThreadAction(int id)
+    {
+        var thread = new AssistantAppService(fw).GetThread(id, fw.userId);
+        return jsonResponse(new FwDict { ["thread"] = thread });
+    }
+
+    /// <summary>
+    /// Returns messages and run events newer than the caller's known cursors.
+    /// </summary>
+    public FwDict PollAction(int id)
+    {
+        var service = new AssistantAppService(fw);
+        var response = service.PollThread(
+            id,
+            fw.userId,
+            reqs("share"),
+            reqi("last_message_id"),
+            reqi("last_event_id")
+        );
+        return jsonResponse(new FwDict { ["poll"] = response });
+    }
+
+    /// <summary>
+    /// Returns current user's assistant thread history.
+    /// </summary>
+    public FwDict HistoryAction()
+    {
+        var items = new AssistantAppService(fw).ListHistory(fw.userId, reqs("q"));
+        return jsonResponse(new FwDict { ["items"] = items });
+    }
+
+    /// <summary>
+    /// Creates or returns the share URL for an owned thread.
+    /// </summary>
+    public FwDict ShareAction(int id)
+    {
+        enforcePost();
+        var share = new AssistantAppService(fw).EnsureSharedThread(fw.userId, id);
+        return jsonResponse(new FwDict { ["share"] = share });
+    }
+
+    /// <summary>
+    /// Queues a fresh run for the latest user message without duplicating that message.
+    /// </summary>
+    public FwDict RetryAction(int id)
+    {
+        enforcePost();
+        var result = new AssistantAppService(fw).RetryLastResponse(fw.userId, id);
+        return jsonResponse(new FwDict
+        {
+            ["thread"] = result.thread,
+            ["run"] = result.run,
+        });
+    }
+
+    /// <summary>
+    /// Stores review feedback for a run/message without mutating knowledge base content.
+    /// </summary>
+    public FwDict FeedbackAction()
+    {
+        enforcePost();
+        new AssistantAppService(fw).SubmitFeedback(
+            fw.userId,
+            reqi("thread_id"),
+            reqi("run_id"),
+            reqi("message_id"),
+            reqs("feedback_type"),
+            reqs("comment")
+        );
+        return jsonResponse(new FwDict { ["success"] = true });
+    }
+
+    private List<IFormFile> getPostedFiles()
+    {
+        var requestFiles = fw.request?.Form?.Files;
+        if (requestFiles == null || requestFiles.Count == 0)
+            return [];
+
+        return requestFiles.Where(static file => file.Length > 0).ToList();
+    }
+
+    private static FwDict jsonResponse(FwDict payload)
+    {
+        return new FwDict { ["_json"] = payload };
+    }
 }

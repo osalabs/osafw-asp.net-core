@@ -1,4 +1,162 @@
-.form-block {
+.assistant-shell {
+  min-height: calc(100vh - 12rem);
+}
+
+.assistant-topbar,
+.assistant-landing,
+.assistant-thread-layout {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+.assistant-landing {
+  min-height: 54vh;
+  display: grid;
+  place-items: center;
+}
+
+.assistant-landing-stack {
+  max-width: 760px;
+}
+
+.assistant-message-list {
+  min-height: 20rem;
+  align-content: start;
+  align-items: start;
+}
+
+.assistant-empty {
+  min-height: 16rem;
+  display: grid;
+  place-items: center;
+  border-style: dashed !important;
+}
+
+.assistant-message-user {
+  justify-content: flex-end;
+}
+
+.assistant-message-assistant {
+  justify-content: flex-start;
+}
+
+.assistant-message {
+  align-items: flex-start;
+  scroll-margin-bottom: 8rem;
+}
+
+.assistant-bubble {
+  max-width: min(780px, 100%);
+}
+
+.assistant-message-user .assistant-bubble {
+  background: var(--bs-primary-bg-subtle) !important;
+  border-color: rgba(var(--bs-primary-rgb), .25) !important;
+}
+
+.assistant-message-assistant .assistant-bubble {
   width: 100%;
-  max-width: 685px;
+  max-width: 100%;
+}
+
+.assistant-message-body {
+  white-space: pre-wrap;
+}
+
+.assistant-citation {
+  min-width: min(100%, 16rem);
+}
+
+.assistant-citation:hover {
+  border-color: var(--bs-primary) !important;
+}
+
+.assistant-nav-link {
+  max-width: min(100%, 22rem);
+  white-space: normal;
+}
+
+.assistant-icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.assistant-progress {
+  min-height: 1.5rem;
+  display: flex;
+  align-items: center;
+  scroll-margin-bottom: 8rem;
+}
+
+.assistant-progress .spinner-border {
+  width: .875rem;
+  height: .875rem;
+  border-width: .12em;
+}
+
+.assistant-footer {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 2;
+}
+
+.assistant-composer-card.is-dragover {
+  border-color: var(--bs-primary) !important;
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .12) !important;
+}
+
+.assistant-composer {
+  width: 100%;
+  min-height: 3rem;
+  max-height: 12rem;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: var(--fw-text);
+  line-height: 1.45;
+}
+
+.assistant-composer::placeholder,
+.assistant-file-count {
+  color: var(--fw-text-muted);
+}
+
+.assistant-file-count {
+  font-size: .875rem;
+}
+
+.assistant-composer-meta {
+  flex-wrap: wrap;
+}
+
+.assistant-sample-prompts .btn {
+  white-space: normal;
+}
+
+.assistant-pending-files .badge {
+  max-width: min(100%, 20rem);
+  font-weight: 500;
+}
+
+.assistant-pending-files .btn-close {
+  width: .65rem;
+  height: .65rem;
+  padding: .25rem;
+}
+
+.assistant-history-row:hover {
+  color: var(--bs-primary) !important;
+}
+
+@media (max-width: 768px) {
+  .assistant-landing {
+    min-height: 42vh;
+  }
+
+  .assistant-message-user .assistant-bubble,
+  .assistant-message-assistant .assistant-bubble {
+    width: 100%;
+  }
 }

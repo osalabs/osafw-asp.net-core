@@ -97,7 +97,7 @@ public class FwSelfTest
             var parser = new ParsePage(new ParsePageOptions
             {
                 TemplatesRoot = templatePath,
-                Logger = (level, messages) => fw.logger(level, messages.Cast<object?>().ToArray()),
+                Logger = (level, messages) => fw.logger(level, messages),
             });
             var parsedTemplate = parser.parse_string("Hello <~name>", Utils.qh("name", "World"));
             is_true("template parser", parsedTemplate.Contains("Hello World"), parsedTemplate);
@@ -407,6 +407,7 @@ public class FwSelfTest
     /// </summary>
     public virtual void echo_start()
     {
+        fw.responseWrite("<!doctype html><html><head><title>Site Self Test</title></head><body>" + Environment.NewLine);
         echo("<h1>Site Self Test</h1>");
         // If Not is_logged Then echo("<a href='" & fw.config("ROOT_URL") & "/Login'>Login</a> as an administrator to see error details and perform additional tests")
         echo("<a href='#summary'>Test Summary</a>");
@@ -429,6 +430,7 @@ public class FwSelfTest
             echo("Test count error", "total != ok+warn+err", Result.ERR);
 
         echo("<br><br><br><br><br>"); // add some footer spacing for easier review
+        fw.responseWrite("</body></html>" + Environment.NewLine);
     }
 
 
@@ -437,9 +439,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is false and ouput OK. If true output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
-    /// <param name="err_str"></param>
     public Result is_false(string label, bool value, string err_str = "ERROR")
     {
         Result res = Result.ERR;
@@ -459,9 +458,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is true and ouput OK. If false output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
-    /// <param name="err_str"></param>
     public Result is_true(string label, bool value, string err_str = "ERROR")
     {
         Result res = Result.ERR;
@@ -481,8 +477,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is not nothing and not empty string and ouput OK. If value is empty output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
     public Result is_notempty(string label, object value, string err_str = "EMPTY")
     {
         Result res = Result.ERR;
@@ -502,8 +496,6 @@ public class FwSelfTest
     /// <summary>
     /// test of value is nothing or empty string and ouput OK. If false output ERROR or custom string
     /// </summary>
-    /// <param name="label"></param>
-    /// <param name="value"></param>
     public Result is_empty(string label, object value, string err_str = "EMPTY")
     {
         Result res = Result.ERR;

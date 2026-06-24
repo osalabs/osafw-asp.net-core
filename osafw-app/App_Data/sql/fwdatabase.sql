@@ -155,7 +155,7 @@ CREATE TABLE att (
   fwentities_id         INT NULL CONSTRAINT FK_att_fwentities FOREIGN KEY REFERENCES fwentities(id), -- related to entity (optional)
   item_id               INT NULL,
 
-  is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - see config: $S3Bucket/$S3Root/att/att_id */
+  is_s3                 TINYINT DEFAULT 0, /* 1 if file is in S3 - default key att/{icode}, S3.IS_ATT_KEY_BY_ID uses att/{id} */
   is_inline             TINYINT DEFAULT 0, /* if uploaded with wysiwyg */
   is_image              TINYINT DEFAULT 0, /* 1 if this is supported image */
 
@@ -234,7 +234,7 @@ CREATE TABLE users (
 
   date_format           TINYINT NOT NULL DEFAULT 0, -- 0-MM/DD/YYYY, 10-DD/MM/YYYY
   time_format           TINYINT NOT NULL DEFAULT 0, -- 0-12h, 10-24h
-  timezone              NVARCHAR(64) NOT NULL DEFAULT 'UTC', -- see /common/sel/timezone.sel
+  timezone              NVARCHAR(64) NOT NULL DEFAULT '', -- empty means auto; see /common/sel/timezone.sel
 
   idesc                 NVARCHAR(MAX),
   att_id                INT NULL FOREIGN KEY REFERENCES att(id),                -- avatar
@@ -280,8 +280,8 @@ CREATE TABLE settings (
 
   iname                 NVARCHAR(64) NOT NULL DEFAULT '', /*settings visible name*/
   idesc                 NVARCHAR(MAX),                    /*settings visible description*/
-  input                 TINYINT NOT NULL default 0,       /*form input type: 0-input, 10-textarea, 20-select, 21-select multi, 30-checkbox, 40-radio, 50-date*/
-  allowed_values        NVARCHAR(MAX),                    /*space-separated values, use &nbsp; for space, used for: select, select multi, checkbox, radio*/
+  input                 TINYINT NOT NULL default 0,       /*form input type: 0-input, 10-textarea, 20-select, 21-select multi, 30-checkbox, 40-radio, 50-date, 60-number, 70-switch, 80-range, 90-credential*/
+  allowed_values        NVARCHAR(MAX),                    /*space-separated value|label options or key|value metadata, use &nbsp; for spaces*/
 
   is_user_edit          TINYINT DEFAULT 0,  /* if 1 - use can edit this value*/
 
@@ -293,8 +293,18 @@ CREATE TABLE settings (
   INDEX UX_settings_icode UNIQUE (icode),
   INDEX IX_settings_icat (icat)
 );
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc) VALUES
-(1, 10, '', 'test', 'novalue', 'test settings', 'description');
+INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, allowed_values) VALUES
+(1, 10, '', 'test', 'novalue', 'test settings', 'description', ''),
+(1, 90, 'AI', 'OPENAI_API_KEY', '', 'OpenAI API Key', 'API key used by Assistant and LLM features.', ''),
+(1, 70, 'AI', 'ASSISTANT_ENABLED', '0', 'Assistant Enabled', 'Set to 1 to enable the assistant UI and queued runs.', ''),
+(1, 20, 'AI', 'ASSISTANT_VECTOR_MODE', 'auto', 'Assistant Vector Mode', 'Use auto, json, or native. Auto uses SQL Server native vectors when available.', 'auto|Auto json|JSON native|Native'),
+(1, 0, 'AI', 'ASSISTANT_MODEL', 'gpt-5-mini', 'Assistant Model', 'Chat model used for assistant responses.', ''),
+(1, 70, 'AI', 'ASSISTANT_MEMORY_ENABLED', '0', 'Assistant Memory Enabled', 'Set to 1 to save optional per-user assistant memory summaries.', ''),
+(1, 60, 'AI', 'ASSISTANT_RUN_TIMEOUT_SECONDS', '120', 'Assistant Run Timeout Seconds', 'Maximum queued or processing time for UI-facing assistant responses before they fail and can be retried.', 'min|30 step|1'),
+(1, 60, 'AI', 'ASSISTANT_MAX_FILES_PER_MESSAGE', '5', 'Assistant Max Files Per Message', 'Maximum number of files accepted with one assistant message.', 'min|1 step|1'),
+(1, 60, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for queued indexing. Larger files remain attached but are not indexed.', 'min|1 step|1'),
+(1, 60, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.', 'min|1 step|1'),
+(1, 60, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.', 'min|1 step|1');
 
 /*Static pages*/
 DROP TABLE IF EXISTS spages;
@@ -464,6 +474,238 @@ CREATE TABLE menu_items (
   upd_users_id          INT DEFAULT 0
 );
 -- INSERT INTO menu_items (iname, url, icon, controller) VALUES ('Test Menu Item', '/Admin/Demos', 'list-ul', 'AdminDemos');
+
+/*Site Admin-managed custom reports*/
+DROP TABLE IF EXISTS fwreports;
+CREATE TABLE fwreports (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(50) NOT NULL,              -- report route code
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',  -- report title
+  idesc                 NVARCHAR(MAX),
+  icon                  NVARCHAR(64) NOT NULL DEFAULT '',
+  access_level          TINYINT NOT NULL DEFAULT 80,        -- min run access level
+  sql_template          NVARCHAR(MAX) NOT NULL DEFAULT '',  -- SELECT/CTE query with @params
+  params_json           NVARCHAR(MAX),                      -- parameter metadata JSON
+  render_options_json   NVARCHAR(MAX),                      -- row limits, timeout, export options
+
+  status                TINYINT NOT NULL DEFAULT 0,         /*0-active, 10-inactive, 127-deleted*/
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_fwreports_icode UNIQUE (icode)
+);
+
+/* Knowledge base and assistant RAG */
+DROP TABLE IF EXISTS kb_articles;
+CREATE TABLE kb_articles (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(80) NOT NULL DEFAULT '',
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',
+  idesc                 NVARCHAR(MAX),
+  content_markdown      NVARCHAR(MAX) NOT NULL DEFAULT '',
+  access_level          TINYINT NOT NULL DEFAULT 1,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_kb_articles_icode UNIQUE (icode),
+  INDEX IX_kb_articles_access (access_level, status)
+);
+
+DROP TABLE IF EXISTS rag_sources;
+CREATE TABLE rag_sources (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  source_type           NVARCHAR(64) NOT NULL DEFAULT '',
+  source_key            NVARCHAR(255) NOT NULL DEFAULT '',
+  fwentities_id         INT NOT NULL DEFAULT 0,
+  item_id               INT NOT NULL DEFAULT 0,
+  att_id                INT NOT NULL DEFAULT 0,
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',
+  url                   NVARCHAR(1024) NOT NULL DEFAULT '',
+  content_hash          NVARCHAR(64) NOT NULL DEFAULT '',
+  source_version        NVARCHAR(64) NOT NULL DEFAULT '',
+  acl_snapshot          NVARCHAR(MAX),
+  index_status          NVARCHAR(32) NOT NULL DEFAULT 'pending',
+  index_attempt_no      INT NOT NULL DEFAULT 0,
+  queued_at             DATETIME2 NULL,
+  next_retry_at         DATETIME2 NULL,
+  last_indexed_at       DATETIME2 NULL,
+  last_error            NVARCHAR(MAX),
+  metadata_json         NVARCHAR(MAX),
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_rag_sources_source_key UNIQUE (source_key),
+  INDEX IX_rag_sources_queue (index_status, status, next_retry_at, queued_at, id),
+  INDEX IX_rag_sources_entity (fwentities_id, item_id, att_id, status)
+);
+
+DROP TABLE IF EXISTS rag_chunks;
+CREATE TABLE rag_chunks (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  rag_sources_id        INT NOT NULL DEFAULT 0,
+  fwentities_id         INT NOT NULL DEFAULT 0,
+  item_id               INT NOT NULL DEFAULT 0,
+  att_id                INT NOT NULL DEFAULT 0,
+  source_type           NVARCHAR(64) NOT NULL DEFAULT '',
+  source_title          NVARCHAR(255) NOT NULL DEFAULT '',
+  source_url            NVARCHAR(1024) NOT NULL DEFAULT '',
+  chunk_index           INT NOT NULL DEFAULT 0,
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',
+  idesc                 NVARCHAR(MAX) NOT NULL DEFAULT '',
+  page                  INT NOT NULL DEFAULT 0,
+  section               NVARCHAR(255) NOT NULL DEFAULT '',
+  embedding_json        NVARCHAR(MAX) NOT NULL,
+  embedding_norm        FLOAT NOT NULL DEFAULT 0,
+  embedding_dim         INT NOT NULL DEFAULT 0,
+  embedding_model       NVARCHAR(128) NOT NULL DEFAULT '',
+  vector_backend        NVARCHAR(32) NOT NULL DEFAULT '',
+  metadata_json         NVARCHAR(MAX),
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_rag_chunks_source (rag_sources_id, chunk_index, status),
+  INDEX IX_rag_chunks_entity (fwentities_id, item_id, att_id, status),
+  INDEX IX_rag_chunks_embedding (embedding_model, embedding_dim, status),
+  INDEX IX_rag_chunks_backend (vector_backend, status)
+);
+
+-- Optional SQL Server 2025 native vector support. Apply manually only when TYPE_ID(N'vector') is available:
+-- ALTER TABLE dbo.rag_chunks ADD embedding_vector VECTOR(1536) NULL;
+-- CREATE VECTOR INDEX IX_rag_chunks_embedding_vector ON dbo.rag_chunks(embedding_vector);
+
+DROP TABLE IF EXISTS assistant_threads;
+CREATE TABLE assistant_threads (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  icode                 NVARCHAR(64) NOT NULL DEFAULT '',
+  users_id              INT NULL,
+  owner_token           NVARCHAR(64) NOT NULL DEFAULT '',
+  iname                 NVARCHAR(255) NOT NULL DEFAULT '',
+  provider_thread_id    NVARCHAR(255) NOT NULL DEFAULT '',
+  last_run_status       TINYINT NULL,
+  last_message_at       DATETIME2 NULL,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_assistant_threads_owner (users_id, owner_token, status, last_message_at)
+);
+CREATE UNIQUE INDEX UX_assistant_threads_icode ON assistant_threads(icode) WHERE icode <> '';
+
+DROP TABLE IF EXISTS assistant_messages;
+CREATE TABLE assistant_messages (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  assistant_threads_id  INT NOT NULL,
+  role                  NVARCHAR(32) NOT NULL DEFAULT '',
+  message_type          NVARCHAR(32) NOT NULL DEFAULT '',
+  preview_text          NVARCHAR(700) NOT NULL DEFAULT '',
+  content_markdown      NVARCHAR(MAX) NOT NULL DEFAULT '',
+  payload_json          NVARCHAR(MAX),
+  sources_json          NVARCHAR(MAX),
+  confidence            FLOAT NULL,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_assistant_messages_thread (assistant_threads_id, id, status),
+  INDEX IX_assistant_messages_role (assistant_threads_id, role, status)
+);
+
+DROP TABLE IF EXISTS assistant_runs;
+CREATE TABLE assistant_runs (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  assistant_threads_id  INT NOT NULL,
+  assistant_messages_id INT NOT NULL,
+  result_messages_id    INT NULL,
+  activity_logs_id      INT NULL,
+  worker_id             NVARCHAR(128) NOT NULL DEFAULT '',
+  error_message         NVARCHAR(MAX),
+  clarification_json    NVARCHAR(MAX),
+  attempt_no            INT NOT NULL DEFAULT 0,
+  claimed_at            DATETIME2 NULL,
+  started_at            DATETIME2 NULL,
+  completed_at          DATETIME2 NULL,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_assistant_runs_queue (status, id),
+  INDEX IX_assistant_runs_thread (assistant_threads_id, id)
+);
+
+DROP TABLE IF EXISTS assistant_runs_events;
+CREATE TABLE assistant_runs_events (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  assistant_runs_id     INT NOT NULL,
+  event_type            NVARCHAR(32) NOT NULL DEFAULT '',
+  content               NVARCHAR(MAX),
+  payload_json          NVARCHAR(MAX),
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_assistant_runs_events_run (assistant_runs_id, id, status)
+);
+
+DROP TABLE IF EXISTS assistant_memories;
+CREATE TABLE assistant_memories (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  users_id              INT NOT NULL,
+  summary               NVARCHAR(MAX),
+  last_compacted_at     DATETIME2 NULL,
+  source_threads_id     INT NULL,
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX UX_assistant_memories_user UNIQUE (users_id)
+);
+
+DROP TABLE IF EXISTS assistant_feedback;
+CREATE TABLE assistant_feedback (
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  assistant_threads_id  INT NULL,
+  assistant_runs_id     INT NULL,
+  assistant_messages_id INT NULL,
+  feedback_type         NVARCHAR(32) NOT NULL DEFAULT '',
+  comment               NVARCHAR(MAX),
+
+  status                TINYINT NOT NULL DEFAULT 0,
+  add_time              DATETIME2 NOT NULL DEFAULT getdate(),
+  add_users_id          INT DEFAULT 0,
+  upd_time              DATETIME2,
+  upd_users_id          INT DEFAULT 0,
+
+  INDEX IX_assistant_feedback_thread (assistant_threads_id, assistant_runs_id, assistant_messages_id)
+);
 DROP TABLE IF EXISTS user_filters;
 CREATE TABLE user_filters (
   id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
@@ -481,7 +723,7 @@ CREATE TABLE user_filters (
   upd_users_id          INT DEFAULT 0
 );
 
--- run roles.sql if roles support required and also uncomment #define isRoles in Users model
+-- run roles.sql if roles support is enabled with isRoles in osafw-app.csproj
 
 -- after this file - run lookups.sql
 

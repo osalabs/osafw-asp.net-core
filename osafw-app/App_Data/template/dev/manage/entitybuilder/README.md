@@ -47,10 +47,12 @@ This format allows you to define database entities and fields in a concise and i
 
   ```plaintext
   FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:options]
+  FieldName FK(TableName.FieldName) [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:options]
   ```
 
 - **Defaults**:
   - **Type**: If not specified, defaults to `nvarchar(255) NOT NULL DEFAULT('')`.
+  - **FK Type**: If `FK(...)` is specified without an explicit type, defaults to `INT`.
   - **UI**: Defaults to an input of type `text`.
 
 - **Field Attributes**:

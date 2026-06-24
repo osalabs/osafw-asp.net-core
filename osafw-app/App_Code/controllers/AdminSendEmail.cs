@@ -1,4 +1,4 @@
-﻿// Send Email Admin controller
+// Send Email Admin controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
@@ -45,7 +45,7 @@ public class AdminSendEmailController : FwAdminController
     public override FwDict ShowFormAction(int id = 0)
     {
         var ps = base.ShowFormAction(id)!;
-        ps["test_email"] = fw.Session("login"); // in test mode send to current user
+        ps["test_email"] = fw.resolveTestEmailRecipient();
         return ps;
     }
 
@@ -56,7 +56,7 @@ public class AdminSendEmailController : FwAdminController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;

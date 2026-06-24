@@ -1,9 +1,6 @@
 <div class="mb-2 d-flex flex-wrap">
     <h1 class="me-auto"><~title></h1>
     <div class="ms-auto d-flex">
-        <div>
-            <~/assistant/index/form_inline if="GLOBAL[OPENAI_API_KEY]">
-        </div>
         <div class="pt-1 ps-3 dropdown">
             <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">`Theme`</button>
             <ul class="dropdown-menu dropdown-menu-right">
@@ -15,14 +12,14 @@
         </div>
         <div class="pt-1 ps-3 dropdown">
             <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="`Color Mode`">
-                <~btn_cm_auto ifeq="GLOBAL[ui_mode]" value="0" inline><i class="bi bi-circle-half"></i></~btn_cm_auto>
-                <~btn_cm_light ifeq="GLOBAL[ui_mode]" value="10" inline><i class="bi bi-sun-fill"></i></~btn_cm_light>
-                <~btn_cm_dark ifeq="GLOBAL[ui_mode]" value="20" inline><i class="bi bi-moon-stars-fill"></i></~btn_cm_dark>
+                <~btn_cm_auto ifeq="GLOBAL[ui_mode]" value="0" inline><~/common/icons/circle-half></~btn_cm_auto>
+                <~btn_cm_light ifeq="GLOBAL[ui_mode]" value="10" inline><~/common/icons/sun-fill></~btn_cm_light>
+                <~btn_cm_dark ifeq="GLOBAL[ui_mode]" value="20" inline><~/common/icons/moon-stars-fill></~btn_cm_dark>
             </button>
             <ul class="dropdown-menu dropdown-menu-right">
-                <li><a href="<~../url>/(UIMode)/0" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[ui_mode]" value="0">"><i class="bi bi-circle-half"></i> `Auto`</a></li>
-                <li><a href="<~../url>/(UIMode)/10" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[ui_mode]" value="10">"><i class="bi bi-sun-fill"></i> `Light`</a></li>
-                <li><a href="<~../url>/(UIMode)/20" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[ui_mode]" value="20">"><i class="bi bi-moon-stars-fill"></i> `Dark`</a></li>
+                <li><a href="<~../url>/(UIMode)/0" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[ui_mode]" value="0">"><~/common/icons/circle-half>`Auto`</a></li>
+                <li><a href="<~../url>/(UIMode)/10" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[ui_mode]" value="10">"><~/common/icons/sun-fill>`Light`</a></li>
+                <li><a href="<~../url>/(UIMode)/20" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[ui_mode]" value="20">"><~/common/icons/moon-stars-fill>`Dark`</a></li>
             </ul>
         </div>
     </div>
@@ -57,11 +54,14 @@
 <div class="row">
     <div class="col col-sm-5">
         <~std_pane sub="panes[tabledata]">
+        <~std_pane sub="panes[progress]">
         <~#std_pane sub="panes[htmldata]">
     </div>
     <div class="col col-sm-7">
         <~std_pane sub="panes[linechart]">
-        <~std_pane sub="panes[progress]">
+        <~assistant_dashboard if="is_assistant_enabled" inline>
+        <~std_pane sub="panes[assistant]">
+        </~assistant_dashboard>
     </div>
 </div>
 

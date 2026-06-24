@@ -71,6 +71,16 @@
     <input id="ffloat" name="item[ffloat]" maxlength="13" value="<~i[ffloat]>" type="number" class="form-control" step="0.1">
   </div>
 </div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="frange">Range</label>
+  <div class="col">
+    <div class="d-flex align-items-center gap-3">
+      <input id="frange" name="item[frange]" value="<~i[frange]>" type="range" class="form-range flex-grow-1" min="0" max="100" step="5" oninput="this.parentElement.querySelector('output').value=this.value">
+      <output class="badge text-bg-secondary" for="frange"><~i[frange]></output>
+    </div>
+    <small class="form-text">Use for approximate bounded values such as scores or thresholds.</small>
+  </div>
+</div>
 
 <div class="row form-row">
   <label class="col-form-label col-md-3" for="dict_link_auto_id">DemoDicts Autocomplete</label>
@@ -141,6 +151,15 @@
     </div>
   </div>
 </div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3" for="is_switch">Switch</label>
+  <div class="col d-flex align-items-center">
+    <div class="form-check form-switch fw-switch-control">
+      <input class="form-check-input" type="checkbox" role="switch" id="is_switch" name="item[is_switch]" value="1" <~/common/attr/checked if="i[is_switch]">>
+      <label class="form-check-label" for="is_switch">On</label>
+    </div>
+  </div>
+</div>
 
 <div class="fw-fieldset mb-3">
   <div class="fw-fieldset-legend">Dates</div>
@@ -167,7 +186,7 @@
     <div class="col-md-3">
       <div class="input-group date">
         <input id="fdate_pop" name="item[fdate_pop]" maxlength="10" value="<~i[fdate_pop] date>" type="text" class="form-control">
-        <button class="btn btn-outline-secondary" type="button"><i class="bi bi-calendar3"></i></button>
+        <button class="btn btn-outline-secondary" type="button" title="`Choose date`" aria-label="`Choose date`"><~/common/icons/calendar3></button>
       </div>
     </div>
   </div>
@@ -177,8 +196,35 @@
     <div class="col-md-5">
       <div class="input-group date datetime" data-default-time="now">
         <input id="<~field>" name="item[fdatetime]" maxlength="25" value="<~i[fdatetime] date="short">" type="text" class="form-control" placeholder="M/D/YYYY HH:MM [AM|PM]">
-        <button class="btn btn-outline-secondary border border-left-0" type="button"><i class="bi bi-calendar3"></i></button>
+        <button class="btn btn-outline-secondary border border-left-0" type="button" title="`Choose date and time`" aria-label="`Choose date and time`"><~/common/icons/calendar3></button>
       </div>
+    </div>
+  </div>
+
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="fdatetime_utc">UTC datetime</label>
+    <div class="col-md-5">
+      <div class="input-group date datetime" data-default-time="now">
+        <input id="fdatetime_utc" name="item[fdatetime_utc]" maxlength="25" value="<~i[fdatetime_utc] date="short">" type="text" class="form-control" placeholder="M/D/YYYY HH:MM [AM|PM]">
+        <button class="btn btn-outline-secondary border border-left-0" type="button" title="`Choose date and time`" aria-label="`Choose date and time`"><~/common/icons/calendar3></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="fdatetime_offset">Offset datetime</label>
+    <div class="col-md-5">
+      <div class="input-group date datetime" data-default-time="now">
+        <input id="fdatetime_offset" name="item[fdatetime_offset]" maxlength="25" value="<~i[fdatetime_offset] date="short">" type="text" class="form-control" placeholder="M/D/YYYY HH:MM [AM|PM]">
+        <button class="btn btn-outline-secondary border border-left-0" type="button" title="`Choose date and time`" aria-label="`Choose date and time`"><~/common/icons/calendar3></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row form-row">
+    <label class="col-form-label col-md-3" for="fdatetime_local">Browser datetime-local</label>
+    <div class="col-md-5">
+      <input id="fdatetime_local" name="item[fdatetime_local]" maxlength="16" value="<~i[fdatetime_local] date="datetime-local">" type="datetime-local" class="form-control">
     </div>
   </div>
 

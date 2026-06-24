@@ -17,6 +17,11 @@ class DevCodeGen
     public const string DB_JSON_PATH = "/dev/db.json";
     public const string ENTITIES_PATH = "/dev/entities.txt";
     public const string SYS_FIELDS = "id status add_time add_users_id upd_time upd_users_id"; // system fields
+    private const int FORM_COL_PRIMARY = 0;
+    private const int FORM_COL_SECONDARY = 1;
+    private const int FORM_COL_META = FORM_COL_SECONDARY;
+    private const int FORM_COL_COUNT = 2;
+    private const int FORM_BALANCE_FIELD_COUNT = 8;
 
     private readonly FW fw;
     private readonly DB db;
@@ -61,11 +66,24 @@ class DevCodeGen
             replaceInFiles(foldername, strings);
     }
 
-    private static string entityFieldToSQLType(FwDict entity)
+    private string entityFieldToSQLType(FwDict entity)
     {
         string result;
 
         var fw_subtype = entity["fw_subtype"].toStr();
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+        {
+            return entity["fw_type"].toStr() switch
+            {
+                "int" => "INTEGER",
+                "float" => fw_subtype == "decimal" || fw_subtype == "currency" ? "NUMERIC" : "REAL",
+                "date" => "DATE",
+                "datetime" => fw_subtype == "datetimeoffset" ? "DATETIMEOFFSET" : "DATETIME",
+                "datetimeoffset" => "DATETIMEOFFSET",
+                _ => "TEXT",
+            };
+        }
+
         switch (entity["fw_type"])
         {
             case "int":
@@ -100,7 +118,12 @@ class DevCodeGen
 
             case "datetime":
                 {
-                    result = "DATETIME2";
+                    result = fw_subtype == "datetimeoffset" ? "DATETIMEOFFSET" : "DATETIME2";
+                    break;
+                }
+            case "datetimeoffset":
+                {
+                    result = "DATETIMEOFFSET";
                     break;
                 }
 
@@ -135,8 +158,8 @@ class DevCodeGen
             // only digits
             result += def;
         else if (def.ToLower().StartsWith("getdate") || Regex.IsMatch(def, @"^\=?now\(?\)?$", RegexOptions.IgnoreCase))
-            // access now() => getdate()
-            result += "GETDATE()";
+            // access now() => provider current timestamp
+            result += db.dbtype == DB.DBTYPE_SQLITE ? "CURRENT_TIMESTAMP" : "GETDATE()";
         else
         {
             // any other text - quote
@@ -169,7 +192,10 @@ class DevCodeGen
                 //build FK name as FK_TABLE_FIELDWITHOUTID
                 var fk_name = fk["column"].toStr();
                 fk_name = Regex.Replace(fk_name, "_id$", "", RegexOptions.IgnoreCase);
-                result = " CONSTRAINT FK_" + entity["fw_name"].toStr() + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
+                if (db.dbtype == DB.DBTYPE_SQLITE)
+                    result = " REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
+                else
+                    result = " CONSTRAINT FK_" + entity["fw_name"].toStr() + "_" + Utils.name2fw(fk_name) + " FOREIGN KEY REFERENCES " + db.qid(fk["pk_table"].toStr(), false) + "(" + db.qid(fk["pk_column"].toStr(), false) + ")";
                 break;
             }
         }
@@ -182,11 +208,13 @@ class DevCodeGen
     private string entity2SQL(FwDict entity)
     {
         var table_name = entity["table"].toStr();
+        var is_sqlite = db.dbtype == DB.DBTYPE_SQLITE;
         var result = "CREATE TABLE " + db.qid(table_name, false) + " (" + Environment.NewLine;
 
         var indexes = entity["indexes"] as FwDict;
         var i = 1;
         var fields = entity["fields"] as FwList ?? [];
+        var has_sqlite_inline_pk = is_sqlite && fields.Any(field => (field as FwDict)?["is_identity"].toBool() == true);
         foreach (FwDict field in fields)
         {
             var fsql = "";
@@ -197,14 +225,24 @@ class DevCodeGen
             fsql += "  " + db.qid(field_name, false).PadRight(21, ' ') + " " + entityFieldToSQLType(field);
             if (field["is_identity"].toBool())
             {
-                fsql += " IDENTITY(1, 1)";
-                if (indexes == null || !indexes.ContainsKey("PK"))
-                    fsql += " PRIMARY KEY CLUSTERED";
+                if (is_sqlite)
+                {
+                    fsql += " PRIMARY KEY AUTOINCREMENT";
+                }
+                else
+                {
+                    fsql += " IDENTITY(1, 1)";
+                    if (indexes == null || !indexes.ContainsKey("PK"))
+                        fsql += " PRIMARY KEY CLUSTERED";
+                }
             }
 
-            fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
-            fsql += entityFieldToSQLDefault(field);
-            fsql += entityFieldToSQLForeignKey(field, entity);
+            if (!field["is_identity"].toBool() || !is_sqlite)
+            {
+                fsql += field["is_nullable"].toBool() ? "" : " NOT NULL";
+                fsql += entityFieldToSQLDefault(field);
+                fsql += entityFieldToSQLForeignKey(field, entity);
+            }
             fsql += (i < fields.Count ? "," : "");
             if (field.TryGetValue("comments", out object? value))
                 fsql = fsql.PadRight(64, ' ') + "-- " + value.toStr();
@@ -213,10 +251,11 @@ class DevCodeGen
             i += 1;
         }
 
+        StrList sqlite_indexes = [];
         if (indexes != null)
         {
             //sort indexes keys this way: PK (always first), then by number in suffix - UX1, IX2, UX3, IX4, IX5, IX6, ...
-            var keys = new StrList(indexes.Keys.Cast<string>());
+            var keys = new StrList(indexes.Keys);
             keys.Sort((a, b) =>
             {
                 var a2 = a.Substring(2);
@@ -234,11 +273,21 @@ class DevCodeGen
                 var prefix2 = index_prefix.Substring(0, 2);
                 if (prefix2 == "PK")
                 {
+                    if (has_sqlite_inline_pk)
+                        continue;
+
                     //PRIMARY KEY CLUSTERED (field, field,...)
-                    isql += "PRIMARY KEY CLUSTERED ";
+                    isql += is_sqlite ? "PRIMARY KEY " : "PRIMARY KEY CLUSTERED ";
                 }
                 else
                 {
+                    if (is_sqlite)
+                    {
+                        var unique = prefix2 == "UX" ? "UNIQUE " : "";
+                        sqlite_indexes.Add("CREATE " + unique + "INDEX " + db.qid(index_prefix + "_" + table_name, false) + " ON " + db.qid(table_name, false) + " (" + indexes[index_prefix] + ")");
+                        continue;
+                    }
+
                     //INDEX [UI]X123_tablename [UNIQUE] (field, field,...)
                     isql += "INDEX " + index_prefix + "_" + table_name;
                     isql += (prefix2 == "UX" ? " UNIQUE " : " ");
@@ -250,6 +299,8 @@ class DevCodeGen
         }
 
         result += ")";
+        if (sqlite_indexes.Count > 0)
+            result += ";" + Environment.NewLine + string.Join(";" + Environment.NewLine, sqlite_indexes);
 
         return result;
     }
@@ -259,13 +310,18 @@ class DevCodeGen
         var config_file = fw.config("template") + DB_JSON_PATH;
         var entities = DevEntityBuilder.loadJson<FwList>(config_file);
 
-        // drop all FKs we created before, so we'll be able to drop tables later
-        DBList fks = db.arrayp(@"SELECT fk.name, o.name as table_name 
-                        FROM sys.foreign_keys fk, sys.objects o 
-                        where fk.is_system_named=0 
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+            db.exec("PRAGMA foreign_keys=OFF");
+        else
+        {
+            // drop all FKs we created before, so we'll be able to drop tables later
+            DBList fks = db.arrayp(@"SELECT fk.name, o.name as table_name
+                        FROM sys.foreign_keys fk, sys.objects o
+                        where fk.is_system_named=0
                           and o.object_id=fk.parent_object_id", DB.h());
-        foreach (var fk in fks)
-            db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
+            foreach (var fk in fks)
+                db.exec("ALTER TABLE " + db.qid(fk["table_name"], false) + " DROP CONSTRAINT " + db.qid(fk["name"], false));
+        }
 
         foreach (FwDict entity in entities)
         {
@@ -281,8 +337,11 @@ class DevCodeGen
                 fw.logger(ex.Message);
             }
 
-            db.exec(sql);
+            db.execMultipleSQL(sql);
         }
+
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+            db.exec("PRAGMA foreign_keys=ON");
     }
 
     public void createDBSQLFromDBJson()
@@ -306,10 +365,13 @@ class DevCodeGen
             }
 
             database_sql += "DROP TABLE IF EXISTS " + db.qid(entity["table"].toStr(), false) + ";" + Environment.NewLine;
-            database_sql += sql + ";" + Environment.NewLine + Environment.NewLine;
+            database_sql += sql.TrimEnd(';') + ";" + Environment.NewLine + Environment.NewLine;
         }
 
-        var sql_file = fw.config("site_root") + DevCodeGen.DB_SQL_PATH;
+        var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
+        Directory.CreateDirectory(sql_root);
+
+        var sql_file = Path.Combine(sql_root, "database.sql");
         Utils.setFileContent(sql_file, ref database_sql);
     }
 
@@ -440,6 +502,8 @@ class DevCodeGen
                     codegen += "        field_iname = \"" + fld_iname["name"] + "\";" + Environment.NewLine;
 
                 // also reset fw fields if such not exists
+                if (!fields.ContainsKey("icode"))
+                    codegen += "        field_icode = \"\";" + Environment.NewLine;
                 if (!fields.ContainsKey("status"))
                     codegen += "        field_status = \"\";" + Environment.NewLine;
                 if (!fields.ContainsKey("add_users_id"))
@@ -484,19 +548,21 @@ class DevCodeGen
             { "is_lookup", 1 }
         };
 
-        //make/append to sql update file  in App_Date/sql/updates/updYYYY-MM-DD.sql with insert
-        var upd_file = fw.config("site_root") + "/App_Data/sql/updates/upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql";
+        //make/append to provider update file in App_Data/sql[/provider]/updates/updYYYY-MM-DD.sql with insert
+        var updates_root = fw.model<FwUpdates>().sqlUpdatesRoot();
+        Directory.CreateDirectory(updates_root);
+        var upd_file = Path.Combine(updates_root, "upd" + DateTime.Now.ToString("yyyy-MM-dd") + ".sql");
         var upd_sql = "";
 
         var lookup = fw.model<FwControllers>().oneByIcode(icode);
         if (lookup.Count > 0)
         {
             fw.model<FwControllers>().update(lookup["id"].toInt(), item);
-            upd_sql = Environment.NewLine + $@"UPDATE fwcontrollers SET 
-                            igroup={db.q(item["igroup"])}, 
-                            url={db.q(item["url"])}, 
-                            iname={db.q(item["iname"])}, 
-                            model={db.q(item["model"])}, 
+            upd_sql = Environment.NewLine + $@"UPDATE fwcontrollers SET
+                            igroup={db.q(item["igroup"])},
+                            url={db.q(item["url"])},
+                            iname={db.q(item["iname"])},
+                            model={db.q(item["model"])},
                             access_level={db.qi(item["access_level"])},
                             is_lookup=1
                         WHERE icode={db.q(item["icode"])}" + Environment.NewLine;
@@ -504,17 +570,30 @@ class DevCodeGen
         else
         {
             fw.model<FwControllers>().add(item);
-            upd_sql = Environment.NewLine + $@"INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level, is_lookup) VALUES (
-                            {db.q(item["igroup"])},
-                            {db.q(item["icode"])},
-                            {db.q(item["url"])},
-                            {db.q(item["iname"])},
-                            {db.q(item["model"])},
-                            {db.qi(item["access_level"])},
-                            1
-                        )" + Environment.NewLine;
+            upd_sql = buildLookupInsertSql(item);
         }
         Utils.setFileContent(upd_file, ref upd_sql, true);
+    }
+
+    /// <summary>
+    /// Build an idempotent lookup-controller insert for update scripts so repeat application does not fail on duplicate rows.
+    /// </summary>
+    /// <param name="item">Lookup controller values keyed by `fwcontrollers` column name.</param>
+    /// <returns>SQL Server script block that inserts the lookup row only when its `icode` is absent.</returns>
+    private string buildLookupInsertSql(FwDict item)
+    {
+        return Environment.NewLine + $@"IF NOT EXISTS (SELECT 1 FROM fwcontrollers WHERE icode={db.q(item["icode"])})
+BEGIN
+    INSERT INTO fwcontrollers (igroup, icode, url, iname, model, access_level, is_lookup) VALUES (
+        {db.q(item["igroup"])},
+        {db.q(item["icode"])},
+        {db.q(item["url"])},
+        {db.q(item["iname"])},
+        {db.q(item["model"])},
+        {db.qi(item["access_level"])},
+        1
+    )
+END" + Environment.NewLine;
     }
 
     public bool createController(FwDict entity, FwList entities)
@@ -631,6 +710,12 @@ class DevCodeGen
         DevEntityBuilder.saveJsonController(config, config_file);
     }
 
+    /// <summary>
+    /// Rebuild controller config from entity metadata after a demo controller template is copied.
+    /// </summary>
+    /// <param name="entity">Entity definition with model, table, controller options, fields, and foreign key metadata.</param>
+    /// <param name="config">Mutable controller config loaded from the copied template and rewritten for the target controller.</param>
+    /// <param name="entities">Optional full entity list used to detect related junction tables when generating form controls.</param>
     public void updateControllerConfig(FwDict entity, FwDict config, FwList? entities = null)
     {
         string model_name = entity["model_name"].toStr();
@@ -802,10 +887,11 @@ class DevCodeGen
             {
                 if (maxlen <= 0 || fld_name == "idesc")
                 {
-                    sf["type"] = "markdown";
+                    var isJsonField = fld_name.EndsWith("_json", StringComparison.OrdinalIgnoreCase);
+                    sf["type"] = isJsonField ? "plaintext_json" : "markdown";
                     sff["type"] = "textarea";
-                    sff["rows"] = 5;
-                    sff["class_control"] = "markdown autoresize"; // or fw-html-editor or fw-html-editor-short
+                    sff["rows"] = isJsonField ? 8 : 5;
+                    sff["class_control"] = isJsonField ? "font-monospace autoresize" : "markdown autoresize"; // or fw-html-editor or fw-html-editor-short
                 }
                 else
                 {
@@ -903,7 +989,7 @@ class DevCodeGen
                 sff["type"] = "date_popup";
                 sff["class_contents"] = "col-md-5";
             }
-            else if (fld["fw_type"].toStr() == "datetime")
+            else if (fld["fw_type"].toStr() == "datetime" || fld["fw_type"].toStr() == "datetimeoffset")
             {
                 sf["type"] = "datetime";
                 sff["type"] = "datetime_popup";
@@ -1041,8 +1127,8 @@ class DevCodeGen
                 fk_joins.Add(sql_join);
                 fk_inames.Add($"{alias}.iname as " + db.qid(tcolumn + "_iname", false)); //TODO detect non-iname for non-fw tables?
             }
-            var inames = string.Join(", ", fk_inames.Cast<string>().ToArray());
-            var joins = string.Join(" ", fk_joins.Cast<string>().ToArray());
+            var inames = string.Join(", ", fk_inames);
+            var joins = string.Join(" ", fk_joins);
             config["list_view"] = $"(SELECT t.*, {inames} FROM {db.qid(table_name, false)} t {joins}) tt";
         }
         else
@@ -1070,6 +1156,7 @@ class DevCodeGen
             config["edit_list_map"] = hFieldsMapEdit;
         }
 
+        removeCopiedTabFieldConfig(config);
         config["form_tabs"] = formTabs;
 
         //view form
@@ -1091,23 +1178,45 @@ class DevCodeGen
         config["add_new_title"] = $"Add New {controller_title} Record";
 
         // remove all commented items - name start with "#"
-        foreach (var key in config.Keys.Cast<string>().ToArray())
+        foreach (var key in config.Keys.ToArray())
         {
             if (key.StartsWith('#'))
                 config.Remove(key);
         }
     }
 
+    /// <summary>
+    /// Adds a generated field definition to one of the standard form layout buckets for a tab.
+    /// </summary>
+    /// <param name="showFieldsTabs">Tab-to-column map that receives the generated field definition.</param>
+    /// <param name="tab">Tab code; an empty string represents the default tab.</param>
+    /// <param name="col">Zero-based generated column index; values beyond primary are treated as secondary/right-side.</param>
+    /// <param name="sf">Field definition to append to the selected column.</param>
     public static void addToTabColumn(Dictionary<string, List<List<FwDict>>> showFieldsTabs, string tab, int col, FwDict sf)
     {
         if (!showFieldsTabs.ContainsKey(tab))
-            showFieldsTabs[tab] = [
-                [], //left col
-                [], //mid col
-                []  //right col
-            ];
+        {
+            showFieldsTabs[tab] = [];
+            for (var i = 0; i < FORM_COL_COUNT; i++)
+                showFieldsTabs[tab].Add([]);
+        }
         var showFieldsCols = showFieldsTabs[tab];
-        showFieldsCols[col].Add(sf);
+        var targetCol = col == FORM_COL_PRIMARY ? FORM_COL_PRIMARY : FORM_COL_SECONDARY;
+        showFieldsCols[targetCol].Add(sf);
+    }
+
+    /// <summary>
+    /// Remove tab-specific field layouts copied from demo config before generated layouts are written.
+    /// </summary>
+    /// <param name="config">Controller config loaded from the copied demo template; stale tab-specific field keys are removed in place.</param>
+    private static void removeCopiedTabFieldConfig(FwDict config)
+    {
+        foreach (var key in config.Keys.ToArray())
+        {
+            if (key.StartsWith("show_fields_", StringComparison.Ordinal)
+                || key.StartsWith("showform_fields_", StringComparison.Ordinal))
+                config.Remove(key);
+        }
     }
 
     //add tabs to config[key] and config[key_tab] based on showFieldsTabs and update config["form_tabs"]
@@ -1139,63 +1248,293 @@ class DevCodeGen
         }
     }
 
+    /// <summary>
+    /// Converts generated field buckets into dynamic-controller row/column structure.
+    /// </summary>
+    /// <param name="fieldsCols">Generated field buckets in primary and secondary order; legacy extra buckets are merged into secondary.</param>
+    /// <returns>Field definitions wrapped with row/column structure for `config.json`.</returns>
     public static FwList makeLayoutForFields(List<List<FwDict>> fieldsCols)
     {
-        //remove/filter empty columns from showFieldsCols
-        var fieldsColsFinal = fieldsCols.Where(x => x.Count > 0).ToList();
-        //here we have 2 or 3 collumns
-        var class_col = "col-lg-" + (fieldsColsFinal.Count == 2 ? 6 : 4);
+        var normalizedCols = new List<List<FwDict>>();
+        for (var i = 0; i < FORM_COL_COUNT; i++)
+            normalizedCols.Add([]);
+
+        for (var i = 0; i < fieldsCols.Count; i++)
+        {
+            var targetCol = i == FORM_COL_PRIMARY ? FORM_COL_PRIMARY : FORM_COL_SECONDARY;
+            normalizedCols[targetCol].AddRange(fieldsCols[i]);
+        }
+
+        var fieldsColsFinal = normalizedCols
+            .Select((fields, index) => new FwDict
+            {
+                ["index"] = index,
+                ["fields"] = fields
+            })
+            .Where(x => (x["fields"] as List<FwDict>)?.Count > 0)
+            .ToList();
 
         var configFields = new FwList
         {
             Utils.qh("type|row"),
         };
-        for (var i = 0; i < fieldsColsFinal.Count; i++)
+        foreach (var col in fieldsColsFinal)
         {
-            configFields.Add(Utils.qh($"type|col class|{class_col}"));
-            configFields.AddRange(fieldsColsFinal[i]);
+            var colIndex = col["index"].toInt();
+            var colFields = orderGeneratedColumnFields(colIndex, col["fields"] as List<FwDict> ?? []);
+            configFields.Add(new FwDict
+            {
+                ["type"] = "col",
+                ["class"] = getGeneratedColumnClass(fieldsColsFinal, colIndex),
+            });
+            configFields.AddRange(colFields);
             configFields.Add(Utils.qh("type|col_end"));
         }
         configFields.Add(Utils.qh("type|row_end"));
         return configFields;
     }
 
+    /// <summary>
+    /// Chooses Bootstrap column classes for generated layouts while keeping primary content wider than metadata.
+    /// </summary>
+    /// <param name="fieldsColsFinal">Non-empty generated columns with original column indexes and field lists.</param>
+    /// <param name="colIndex">Original generated column index being rendered.</param>
+    /// <returns>Bootstrap column class string for the rendered generated column.</returns>
+    private static string getGeneratedColumnClass(List<FwDict> fieldsColsFinal, int colIndex)
+    {
+        var colCount = fieldsColsFinal.Count;
+        if (colCount <= 1)
+            return "col-12";
+
+        var primaryFields = fieldsColsFinal
+            .Where(x => x["index"].toInt() == FORM_COL_PRIMARY)
+            .SelectMany(x => x["fields"] as List<FwDict> ?? [])
+            .ToList();
+        var secondaryFields = fieldsColsFinal
+            .Where(x => x["index"].toInt() == FORM_COL_SECONDARY)
+            .SelectMany(x => x["fields"] as List<FwDict> ?? [])
+            .ToList();
+
+        if (primaryFields.Any(isGeneratedWideDefinition) || secondaryFields.Any(isGeneratedSideDefinition))
+            return colIndex == FORM_COL_PRIMARY ? "col-12 col-lg-8" : "col-12 col-lg-4";
+
+        return "col-12 col-lg-6";
+    }
+
+    /// <summary>
+    /// Orders generated fields inside a column so right-side support fields do not sink below metadata.
+    /// </summary>
+    /// <param name="colIndex">Generated column index being rendered.</param>
+    /// <param name="fields">Generated field definitions in discovery order.</param>
+    /// <returns>Generated field definitions in render order for the selected column.</returns>
+    private static List<FwDict> orderGeneratedColumnFields(int colIndex, List<FwDict> fields)
+    {
+        if (colIndex != FORM_COL_SECONDARY)
+            return fields;
+
+        var idFields = fields.Where(isGeneratedIdDefinition).ToList();
+        var bottomFields = fields
+            .Where(x => !isGeneratedIdDefinition(x) && isGeneratedBottomSideDefinition(x))
+            .ToList();
+        var supportFields = fields
+            .Where(x => !isGeneratedIdDefinition(x) && !isGeneratedBottomSideDefinition(x))
+            .ToList();
+
+        return idFields
+            .Concat(supportFields)
+            .Concat(bottomFields)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition needs primary-column space because it usually contains long content.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for large text, raw HTML, markdown, and subtable-like controls; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedWideDefinition(FwDict def)
+    {
+        var type = def["type"].toStr();
+        return type == "textarea"
+            || type == "markdown"
+            || type == "noescape"
+            || type == "subtable"
+            || type == "subtable_edit";
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition is the record identifier display.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for the standard ID field; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedIdDefinition(FwDict def)
+    {
+        return def["field"].toStr() == "id"
+            || def["type"].toStr() == "id";
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition is the primary identifying field for lookup-style rows.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for standard name/code fields that should remain in the primary content column; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedMajorDefinition(FwDict def)
+    {
+        var field = def["field"].toStr();
+        return field == "iname"
+            || field == "icode";
+    }
+
+    /// <summary>
+    /// Returns whether a generated right-side field should stay at the bottom of its column.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for status, priority, and lifecycle metadata; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedBottomSideDefinition(FwDict def)
+    {
+        var field = def["field"].toStr();
+        var type = def["type"].toStr();
+        return field == "status"
+            || field == "prio"
+            || field == "add_time"
+            || field == "upd_time"
+            || field == "applied_time"
+            || type == "added"
+            || type == "updated";
+    }
+
+    /// <summary>
+    /// Returns whether a generated field definition belongs in the right-side metadata/support column.
+    /// </summary>
+    /// <param name="def">Generated field definition from `show_fields` or `showform_fields`.</param>
+    /// <returns><c>true</c> for framework metadata, ordering, and attachment-heavy controls; otherwise <c>false</c>.</returns>
+    private static bool isGeneratedSideDefinition(FwDict def)
+    {
+        var field = def["field"].toStr();
+        var type = def["type"].toStr();
+        return isGeneratedIdDefinition(def)
+            || isGeneratedBottomSideDefinition(def)
+            || type == "att"
+            || type == "att_edit"
+            || type == "att_links"
+            || type == "att_links_edit"
+            || type == "att_files"
+            || type == "att_files_edit";
+    }
+
+    /// <summary>
+    /// Estimates how much vertical space a generated field uses so compact fields can be balanced across content columns.
+    /// </summary>
+    /// <param name="def">Generated field definition from `showform_fields`.</param>
+    /// <returns>Relative weight used only for generated layout balancing.</returns>
+    private static int getGeneratedFieldWeight(FwDict def)
+    {
+        var type = def["type"].toStr();
+        if (isGeneratedWideDefinition(def))
+            return 4;
+        if (type == "att" || type == "att_edit" || type == "att_links" || type == "att_links_edit" || type == "att_files" || type == "att_files_edit")
+            return 3;
+        if (type == "id" || type == "added" || type == "updated" || type == "checkbox" || type == "cb" || type == "yesno")
+            return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Totals generated field weights for a tab column before adding the next field.
+    /// </summary>
+    /// <param name="showFormFieldsTabs">Generated showform fields grouped by tab and column.</param>
+    /// <param name="tab">Tab code whose column weight is being calculated.</param>
+    /// <param name="col">Generated column index to inspect.</param>
+    /// <returns>Relative total field weight for the selected tab column.</returns>
+    private static int getGeneratedColumnWeight(Dictionary<string, List<List<FwDict>>> showFormFieldsTabs, string tab, int col)
+    {
+        if (!showFormFieldsTabs.TryGetValue(tab, out var cols) || cols.Count <= col)
+            return 0;
+
+        return cols[col].Sum(getGeneratedFieldWeight);
+    }
+
+    /// <summary>
+    /// Chooses a content column for compact generated fields while keeping the right column visually lighter.
+    /// </summary>
+    /// <param name="showFormFieldsTabs">Generated showform fields grouped by tab and column.</param>
+    /// <param name="tab">Tab code being generated.</param>
+    /// <param name="candidate">Generated field definition being placed.</param>
+    /// <returns>Primary or secondary generated content column index.</returns>
+    private static int chooseGeneratedContentColumn(Dictionary<string, List<List<FwDict>>> showFormFieldsTabs, string tab, FwDict candidate)
+    {
+        var primaryWeight = getGeneratedColumnWeight(showFormFieldsTabs, tab, FORM_COL_PRIMARY);
+        var secondaryWeight = getGeneratedColumnWeight(showFormFieldsTabs, tab, FORM_COL_SECONDARY);
+        var candidateWeight = getGeneratedFieldWeight(candidate);
+        return secondaryWeight + candidateWeight < primaryWeight ? FORM_COL_SECONDARY : FORM_COL_PRIMARY;
+    }
+
+    /// <summary>
+    /// Places generated show/showform field definitions into primary or secondary/right-side columns.
+    /// </summary>
+    /// <param name="fld">Database/entity field metadata used to classify generated layout.</param>
+    /// <param name="sf">Read-only view field definition generated for `show_fields`.</param>
+    /// <param name="sff">Edit/view form field definition generated for `showform_fields`.</param>
+    /// <param name="showFieldsTabs">Generated view field columns grouped by tab.</param>
+    /// <param name="showFormFieldsTabs">Generated edit field columns grouped by tab.</param>
+    /// <param name="sys_fields">Lookup of framework system field names that belong in the metadata column.</param>
+    /// <param name="fields">All entity fields for the controller being generated.</param>
+    /// <returns>The generated column index selected for the field.</returns>
     public static int addToFormColumns(FwDict fld, FwDict sf, FwDict sff,
         Dictionary<string, List<List<FwDict>>> showFieldsTabs,
         Dictionary<string, List<List<FwDict>>> showFormFieldsTabs,
         FwDict sys_fields, FwList fields)
     {
         var ui = fld["ui"] as FwDict ?? []; // ui options for the field
-        var col = 0; //default to left
+        var formtab = ui["formtab"].toStr();
+        var col = FORM_COL_PRIMARY;
 
         if (fld["is_identity"].toBool() || sys_fields.ContainsKey(fld["name"].toStr()))
         {
             // add to system fields - to the right
-            col = 2;
+            col = FORM_COL_META;
         }
         else
         {
             //non-system fields
             if (sf["type"].toStr() == "att"
                 || sf["type"].toStr() == "att_links"
-                || sff["type"].toStr() == "textarea" && fields.Count >= 10)
+                || sf["type"].toStr() == "att_files"
+                || sff["type"].toStr() == "att_edit"
+                || sff["type"].toStr() == "att_links_edit"
+                || sff["type"].toStr() == "att_files_edit")
             {
-                //add to the right: attachments, textareas (only if many fields)
-                col = 2;
+                // add attachment-heavy controls to the metadata/side column
+                col = FORM_COL_META;
+            }
+            else if (isGeneratedSideDefinition(sff) || isGeneratedSideDefinition(sf))
+            {
+                // lifecycle/status/priority fields read better in the right-side metadata column
+                col = FORM_COL_META;
+            }
+            else if (isGeneratedMajorDefinition(sff) || isGeneratedMajorDefinition(sf))
+            {
+                // standard lookup name/code fields anchor the primary content column
+                col = FORM_COL_PRIMARY;
+            }
+            else if (isGeneratedWideDefinition(sff) || isGeneratedWideDefinition(sf))
+            {
+                // large content needs the primary column, not the narrow metadata column
+                col = FORM_COL_PRIMARY;
+            }
+            else if (fields.Count >= FORM_BALANCE_FIELD_COUNT)
+            {
+                col = chooseGeneratedContentColumn(showFormFieldsTabs, formtab, sff);
             }
         }
 
         //check if specific column required
         var formcol = ui["formcol"].toStr();
         if (formcol == "left")
-            col = 0;
+            col = FORM_COL_PRIMARY;
         else if (formcol == "mid")
-            col = 1;
+            col = FORM_COL_SECONDARY;
         else if (formcol == "right")
-            col = 2;
-
-        //select/add proper tab
-        var formtab = ui["formtab"].toStr();
+            col = FORM_COL_META;
 
         addToTabColumn(showFieldsTabs, formtab, col, sf);
         addToTabColumn(showFormFieldsTabs, formtab, col, sff);
@@ -1215,7 +1554,7 @@ class DevCodeGen
         string edit_list_defaults = "";
 
         int defaults_ctr = 0;
-        var rfields = fields.Cast<FwDict>()
+        var rfields = fields
             .Where(fld =>
             {
                 var fname = fld["name"].toStr();
@@ -1444,6 +1783,10 @@ class DevCodeGen
         }
     }
 
+    /// <summary>
+    /// Converts dynamic field definitions to ParsePage tags for extracted static templates.
+    /// </summary>
+    /// <param name="fields">Field definitions prepared from dynamic config; each item is updated with generated value tags and related display attributes.</param>
     public static void makeValueTags(FwList fields)
     {
         foreach (FwDict def in fields)
@@ -1471,13 +1814,21 @@ class DevCodeGen
 
                 case "markdown":
                     {
-                        def["value"] = tag + " markdown>";
+                        string markdownAttr = def["trusted"].toBool() ? " markdown=\"trusted\"" : " markdown";
+                        def["value"] = tag + markdownAttr + ">";
                         break;
                     }
 
                 case "noescape":
                     {
                         def["value"] = tag + " noescape>";
+                        break;
+                    }
+
+                case "switch":
+                    {
+                        def["value"] = tag + ">";
+                        def["checked_attr"] = "<~/common/attr/checked if=\"i[" + def["field"].toStr() + "]\">";
                         break;
                     }
 
@@ -1492,11 +1843,11 @@ class DevCodeGen
 
     public void createReport(string repcode)
     {
-        repcode = FwReports.cleanupRepcode(repcode);
+        repcode = FwReportsBase.cleanupRepcode(repcode);
         if (string.IsNullOrEmpty(repcode))
             throw new UserException("No report code");
 
-        var report_class = FwReports.repcodeToClass(repcode);
+        var report_class = FwReportsBase.repcodeToClass(repcode);
         var reports_path = fw.config("site_root") + @"\App_Code\models\Reports";
         var src_file = reports_path + @"\Sample.cs";
         var dest_file = reports_path + @"\" + report_class.Replace("Report", "") + ".cs";
@@ -1625,7 +1976,8 @@ class DevCodeGen
             "int" => fwSubtype == "bit" || fwSubtype == "boolean" ? "bool" : "int",
             "float" => fwSubtype == "decimal" || fwSubtype == "currency" || fwSubtype == "numeric" ? "decimal" : "double",
             "date" => "DateTime",
-            "datetime" => "DateTime",
+            "datetime" => fwSubtype == "datetimeoffset" ? "DateTimeOffset" : "DateTime",
+            "datetimeoffset" => "DateTimeOffset",
             _ => "string",
         };
 

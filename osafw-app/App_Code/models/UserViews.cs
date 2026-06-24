@@ -40,13 +40,43 @@ public class UserViews : FwModel<UserViews.Row>
         is_log_changes = false; //no need to log changes for user views
     }
 
+    /// <summary>
+    /// Returns one saved view owned by the logged-in user so direct id paths cannot load another user's private view.
+    /// </summary>
+    /// <param name="id">The `user_views.id` value to load.</param>
+    /// <returns>The matching saved view row, or an empty row when the id is missing or owned by another user.</returns>
+    public virtual DBRow oneMine(int id)
+    {
+        return oneByOwner(id, "mine", false);
+    }
+
+    /// <summary>
+    /// Returns one saved view available to the logged-in user, including system views that can be loaded but not always edited.
+    /// </summary>
+    /// <param name="id">The `user_views.id` value to load.</param>
+    /// <returns>The matching owner or system saved view row, or an empty row when unavailable.</returns>
+    public virtual DBRow oneAvail(int id)
+    {
+        return oneByOwner(id, "avail", true);
+    }
+
+    /// <summary>
+    /// Loads saved views through the owner-or-system predicate used by generic CRUD id paths.
+    /// </summary>
+    /// <param name="id">The `user_views.id` value to load.</param>
+    /// <returns>The matching available row, or an empty row when unavailable.</returns>
+    public override DBRow one(int id)
+    {
+        return oneAvail(id);
+    }
+
     // return default screen record for logged user
     public override DBRow oneByIcode(string icode)
     {
         // prefer request cache first
         var reqCacheKey = cache_prefix_byicode + icode;
-        if (fw.cache.getRequestValue(reqCacheKey) is DBRow requestCached)
-            return requestCached;
+        if (fw.cache.getRequestValue(reqCacheKey) is FwDict requestCached)
+            return (DBRow)requestCached;
 
         // then try shared cache to bypass reloading same view across requests
         var appCacheKey = cacheKeyDefault(icode);
@@ -57,8 +87,13 @@ public class UserViews : FwModel<UserViews.Row>
             return cloned;
         }
 
-        // fall back to default implementation (includes request cache + normalization)
-        var item = base.oneByIcode(icode);
+        var sql = $@"select *
+  from {qTable()}
+ where icode=@icode
+   and iname=''
+   and add_users_id=@users_id";
+        var item = db.rowp(sql, DB.h("@icode", icode, "@users_id", fw.userId));
+        normalizeNames(item);
 
         var sharedCopy = cloneRow(item);
         FwCache.setValue(appCacheKey, sharedCopy, CacheSeconds);
@@ -70,17 +105,10 @@ public class UserViews : FwModel<UserViews.Row>
     // return screen record for logged user by id
     public DBRow oneByIcodeId(string icode, int id)
     {
-        var p = new FwDict()
-        {
-            { field_icode, icode },
-            { field_id, id },
-            { "meId", fw.userId},
-        };
-
-        return db.rowp(@"select * from " + db.qid(table_name) +
-             @" where icode=@icode
-                      and id=@id
-                      and (is_system=1 OR add_users_id=@meId)", p);
+        var item = oneAvail(id);
+        if (item.Count == 0 || item[field_icode] != icode)
+            return [];
+        return item;
     }
 
     // by icode/iname/loggeduser
@@ -125,12 +153,45 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     /// <summary>
-    /// update default screen fields for logged user
+    /// Adds a saved view only when the submitted system flag is allowed for the current user.
     /// </summary>
-    /// <param name="icode">screen url</param>
-    /// <param name="fields">comma-separated fields</param>
-    /// <param name="iname">view title (for save new view)</param>
-    /// <returns>user_views.id</returns>
+    /// <param name="item">Filtered `user_views` field values to insert.</param>
+    /// <returns>The new `user_views.id` value.</returns>
+    public override int add(FwDict item)
+    {
+        checkSystemInput(item);
+        return base.add(item);
+    }
+
+    /// <summary>
+    /// Updates a saved view only when the current user owns it or can manage system views.
+    /// </summary>
+    /// <param name="id">The `user_views.id` value to update.</param>
+    /// <param name="item">Filtered field values to persist.</param>
+    /// <returns>True when the update was issued.</returns>
+    public override bool update(int id, FwDict item)
+    {
+        checkEdit(oneAvail(id));
+        checkSystemInput(item);
+        return base.update(id, item);
+    }
+
+    /// <summary>
+    /// Deletes a saved view only when the current user owns it or can manage system views.
+    /// </summary>
+    /// <param name="id">The `user_views.id` value to delete.</param>
+    /// <param name="is_perm">True to permanently delete the row instead of using status soft-delete.</param>
+    public override void delete(int id, bool is_perm = false)
+    {
+        checkEdit(oneAvail(id));
+        base.delete(id, is_perm);
+    }
+
+    /// <summary>
+    /// Adds or updates the logged-in user's default view row for a screen.
+    /// </summary>
+    /// <param name="itemdb">Fields to persist on the default view row.</param>
+    /// <returns>The saved <c>user_views.id</c>.</returns>
     public int updateByIcode(string icode, FwDict itemdb)
     {
         var item = oneByIcode(icode);
@@ -154,23 +215,18 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     /// <summary>
-    /// update default screen fields for logged user
+    /// Replaces the logged-in user's default field list for a screen.
     /// </summary>
-    /// <param name="icode">screen url</param>
-    /// <param name="fields">comma-separated fields</param>
-    /// <param name="iname">view title (for save new view)</param>
-    /// <returns>user_views.id</returns>
+    /// <param name="fields">Comma-separated field list to store.</param>
+    /// <returns>The saved <c>user_views.id</c>.</returns>
     public int updateByIcodeFields(string icode, string fields)
     {
         return updateByIcode(icode, DB.h("fields", fields));
     }
 
     /// <summary>
-    /// list for select by icode(basically controller's base_url) and only for logged user OR active system views
-    /// iname>'' - because empty name is for default view, it's not visible in the list (use "Reset to Defaults" instead)
+    /// Lists named owner/system views for a screen; unnamed default views stay hidden from the selector.
     /// </summary>
-    /// <param name="icode"></param>
-    /// <returns></returns>
     public FwList listSelectByIcode(string icode)
     {
         var cacheKey = cacheKeySelect(icode);
@@ -190,9 +246,8 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     /// <summary>
-    /// list all icodes available for the user
+    /// Lists screen codes that have named owner or system views available to the user.
     /// </summary>
-    /// <returns></returns>
     public FwList listSelectIcodes()
     {
         return db.arrayp("select distinct icode as id, icode as iname from " + db.qid(table_name) +
@@ -205,8 +260,6 @@ public class UserViews : FwModel<UserViews.Row>
     /// <summary>
     /// replace current default view for icode using view in id
     /// </summary>
-    /// <param name="icode"></param>
-    /// <param name="id"></param>
     public void setViewForIcode(string icode, int id)
     {
         var item = oneByIcodeId(icode, id);
@@ -223,6 +276,50 @@ public class UserViews : FwModel<UserViews.Row>
     private string cacheKeySelect(string icode)
     {
         return $"fw:userviews:select:{fw.userId}:{icode}";
+    }
+
+    private DBRow oneByOwner(int id, string scope, bool is_include_system)
+    {
+        if (id <= 0)
+            return [];
+
+        var cacheKey = $"{cache_prefix}{scope}:{fw.userId}:{id}";
+        if (fw.cache.getRequestValue(cacheKey) is FwDict cached)
+            return (DBRow)cached;
+
+        var sql = $@"select *
+  from {qTable()}
+ where id=@id
+   and add_users_id=@users_id";
+        if (is_include_system)
+            sql = $@"select *
+  from {qTable()}
+ where id=@id
+   and (is_system=1 OR add_users_id=@users_id)";
+
+        var item = db.rowp(sql, DB.h("@id", id, "@users_id", fw.userId));
+        normalizeNames(item);
+        fw.cache.setRequestValue(cacheKey, item);
+        return item;
+    }
+
+    private bool isSystemManager()
+    {
+        return fw.model<Users>().isAccessLevel(Users.ACL_ADMIN);
+    }
+
+    private void checkEdit(DBRow item)
+    {
+        if (item.Count == 0)
+            throw new NotFoundException();
+        if (item["is_system"].toBool() && !isSystemManager())
+            throw new AuthException();
+    }
+
+    private void checkSystemInput(FwDict item)
+    {
+        if (item["is_system"].toBool() && !isSystemManager())
+            throw new AuthException();
     }
 
     public override void removeCache(int id)

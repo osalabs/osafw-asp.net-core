@@ -1,4 +1,4 @@
-﻿namespace osafw;
+namespace osafw;
 
 public class HomeController : FwController
 {

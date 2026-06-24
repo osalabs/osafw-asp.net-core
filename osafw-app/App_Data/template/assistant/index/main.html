@@ -1,11 +1,740 @@
-<div class="form-block m-auto">
-  <h1 class="fw-bold text-body-emphasis mb-3 text-center"><~title></h1>
+<div class="container-fluid assistant-shell py-3 py-md-4" id="assistantApp" data-assistant-root
+     data-xss="<~SESSION[XSS]>"
+     data-base-url="<~/assistant/url>"
+     data-share="<~share>">
+  <header class="assistant-topbar d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+    <div class="assistant-title-block">
+      <h1 class="assistant-title h2 d-inline-flex align-items-center gap-2 mb-0"><span class="text-primary"><~/common/icons/stars></span><~title></h1>
+    </div>
+    <div class="assistant-topbar-actions d-flex flex-wrap align-items-center gap-2">
+      <a href="<~/assistant/url>" class="btn btn-default"><~/common/icons/plus>`New Chat`</a>
+      <button type="button" class="btn btn-default" data-assistant-share <~/common/attr/disabled unless="thread_id">><~/common/icons/box-arrow-up-right>`Share`</button>
+      <button type="button" class="btn btn-default" data-assistant-history-open><i class="bi bi-clock-history me-1"></i>`History`</button>
+    </div>
+  </header>
 
-  <~form>
+  <~/common/form/msg>
 
+  <div class="alert alert-warning <~hidden if="is_assistant_available" inline>d-none</~hidden>" role="alert" data-assistant-unavailable>
+    <strong>`Assistant unavailable.`</strong>
+    <span><~assistant_status_message default="Assistant setup is incomplete."></span>
+  </div>
+
+  <section class="assistant-landing" data-assistant-landing>
+    <div class="assistant-landing-stack w-100">
+      <div class="assistant-landing-copy text-center">
+        <h2 class="h3 mb-2">`What can I help with?`</h2>
+      </div>
+      <div class="assistant-sample-prompts d-flex flex-wrap justify-content-center gap-2 mb-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-assistant-sample-prompt="Find documents about PTO policy" <~/common/attr/disabled unless="is_assistant_available">>`Find documents about PTO policy`</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-assistant-sample-prompt="Who can help with onboarding?" <~/common/attr/disabled unless="is_assistant_available">>`Who can help with onboarding?`</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-assistant-sample-prompt="Where do I manage KB articles?" <~/common/attr/disabled unless="is_assistant_available">>`Where do I manage KB articles?`</button>
+      </div>
+      <form class="assistant-composer-card border rounded bg-body shadow-sm p-3" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
+        <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+        <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
+        <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask about company documents, contacts, or where to go`" data-assistant-prompt data-assistant-autofocus <~/common/attr/disabled unless="is_assistant_available">></textarea>
+        <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
+          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
+          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2 order-first">
+            <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
+            <span class="assistant-file-count" data-assistant-file-count></span>
+          </div>
+        </div>
+        <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
+        <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
+      </form>
+    </div>
+  </section>
+
+  <section class="assistant-thread-layout d-none d-grid gap-3" data-assistant-thread-panel>
+    <div class="assistant-thread-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h2 class="h4 mb-0" data-assistant-thread-title>`New chat`</h2>
+      <span class="badge text-bg-secondary" data-assistant-status>`Idle`</span>
+    </div>
+
+    <div class="alert alert-info d-none" role="alert" data-assistant-readonly>`This shared thread is read-only.`</div>
+
+    <div class="assistant-run-status d-none" data-assistant-run-status></div>
+    <div class="assistant-message-list d-grid gap-3 py-1" data-assistant-messages></div>
+    <div class="assistant-progress small text-muted" data-assistant-progress></div>
+
+    <footer class="assistant-footer">
+      <form class="assistant-composer-card border rounded bg-body shadow-sm p-3" method="post" action="<~/assistant/url>" enctype="multipart/form-data" data-assistant-form>
+        <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+        <input type="hidden" name="thread_id" value="<~thread_id>" data-assistant-thread-input>
+        <textarea name="prompt" rows="1" class="assistant-composer" maxlength="4000" placeholder="`Ask a follow-up`" data-assistant-prompt <~/common/attr/disabled unless="is_assistant_available">></textarea>
+        <div class="assistant-composer-meta d-flex justify-content-between align-items-center gap-3 mt-3">
+          <button type="submit" class="btn btn-primary" <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/send>`Send`</button>
+          <div class="assistant-composer-left d-flex flex-wrap align-items-center gap-2 order-first">
+            <button type="button" class="btn btn-default btn-sm" data-assistant-file-button <~/common/attr/disabled unless="is_assistant_available">><~/common/icons/cloud-upload>`Files`</button>
+            <span class="assistant-file-count" data-assistant-file-count></span>
+          </div>
+        </div>
+        <div class="assistant-pending-files d-flex flex-wrap gap-2 mt-3" data-assistant-pending-files></div>
+        <input type="file" class="d-none" name="files" multiple data-assistant-files <~/common/attr/disabled unless="is_assistant_available">>
+      </form>
+    </footer>
+  </section>
 </div>
 
-<~/common/form/msg>
+<script type="application/json" id="assistantStatusJson"><~assistant_status_json noescape></script>
+<script type="application/json" id="assistantHistoryJson"><~assistant_history_json noescape></script>
+<script type="application/json" id="assistantThreadJson"><~assistant_thread_json noescape></script>
 
-<~output if="is_run">
+<div class="modal fade" id="assistantHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">`Assistant History`</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <span class="input-group-text"><~/common/icons/search></span>
+          <input type="search" class="form-control" data-assistant-history-search placeholder="`Search previous chats`">
+        </div>
+        <div class="assistant-history" data-assistant-history></div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<div class="modal fade" id="assistantShareModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">`Share Chat`</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" for="assistantShareUrl">`Share URL`</label>
+        <input id="assistantShareUrl" type="text" class="form-control" readonly data-assistant-share-url>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const root = document.getElementById('assistantApp');
+  if (!root) return;
+
+  const baseUrl = root.dataset.baseUrl || '/Assistant';
+  const xss = root.dataset.xss || '';
+  const share = root.dataset.share || '';
+  const status = parseJson(document.getElementById('assistantStatusJson')?.textContent, {});
+  let history = parseJson(document.getElementById('assistantHistoryJson')?.textContent, []);
+  let thread = parseJson(document.getElementById('assistantThreadJson')?.textContent, null);
+  let pollTimer = null;
+  let historySearchTimer = null;
+  let lastMessageId = maxId(thread && thread.messages);
+  let lastEventId = maxId(thread && thread.events);
+
+  const els = {
+    landing: root.querySelector('[data-assistant-landing]'),
+    threadPanel: root.querySelector('[data-assistant-thread-panel]'),
+    messages: root.querySelector('[data-assistant-messages]'),
+    progress: root.querySelector('[data-assistant-progress]'),
+    history: document.querySelector('[data-assistant-history]'),
+    historySearch: document.querySelector('[data-assistant-history-search]'),
+    historyOpen: root.querySelector('[data-assistant-history-open]'),
+    title: root.querySelector('[data-assistant-thread-title]'),
+    status: root.querySelector('[data-assistant-status]'),
+    share: root.querySelector('[data-assistant-share]'),
+    readonly: root.querySelector('[data-assistant-readonly]'),
+    runStatus: root.querySelector('[data-assistant-run-status]'),
+  };
+
+  const composers = Array.from(root.querySelectorAll('[data-assistant-form]')).map((form, index) => {
+    const state = {
+      id: index,
+      form,
+      prompt: form.querySelector('[data-assistant-prompt]'),
+      files: form.querySelector('[data-assistant-files]'),
+      fileButton: form.querySelector('[data-assistant-file-button]'),
+      fileCount: form.querySelector('[data-assistant-file-count]'),
+      pendingFilesEl: form.querySelector('[data-assistant-pending-files]'),
+      threadInput: form.querySelector('[data-assistant-thread-input]'),
+      pendingFiles: [],
+      nextFileId: 1
+    };
+
+    form.addEventListener('submit', event => submitComposer(event, state));
+    form.addEventListener('dragenter', event => onDragEnter(event, state));
+    form.addEventListener('dragover', event => onDragEnter(event, state));
+    form.addEventListener('dragleave', event => onDragLeave(event, state));
+    form.addEventListener('drop', event => onDrop(event, state));
+    state.prompt && state.prompt.addEventListener('input', () => {
+      autosizeComposer(state.prompt);
+      updateComposerState();
+    });
+    state.prompt && state.prompt.addEventListener('paste', event => onPaste(event, state));
+    state.fileButton && state.fileButton.addEventListener('click', () => state.files && state.files.click());
+    state.files && state.files.addEventListener('change', event => {
+      addPendingFiles(state, event.target.files || []);
+      event.target.value = '';
+    });
+    state.pendingFilesEl && state.pendingFilesEl.addEventListener('click', event => {
+      const button = event.target.closest('[data-assistant-file-remove]');
+      if (!button) return;
+      removePendingFile(state, button.dataset.assistantFileRemove);
+    });
+
+    return state;
+  });
+
+  root.querySelectorAll('[data-assistant-sample-prompt]').forEach(button => {
+    button.addEventListener('click', function () {
+      const state = composers[0];
+      if (!state || !state.prompt || state.prompt.disabled) return;
+      state.prompt.value = this.dataset.assistantSamplePrompt || this.textContent.trim();
+      autosizeComposer(state.prompt);
+      updateComposerState();
+      state.prompt.focus();
+    });
+  });
+
+  renderHistory();
+  renderThread();
+  updateComposerState();
+  schedulePollIfNeeded();
+
+  els.historyOpen && els.historyOpen.addEventListener('click', async function () {
+    try {
+      await refreshHistory();
+    } catch (err) {
+      showProgress(err.message || 'History failed.');
+    }
+    const modalEl = document.getElementById('assistantHistoryModal');
+    if (window.bootstrap && bootstrap.Modal && modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  });
+
+  els.historySearch && els.historySearch.addEventListener('input', function () {
+    clearTimeout(historySearchTimer);
+    historySearchTimer = setTimeout(refreshHistory, 250);
+  });
+
+  els.share && els.share.addEventListener('click', async function () {
+    if (!thread || !thread.id || thread.is_readonly) return;
+    const body = new FormData();
+    body.set('XSS', xss);
+    const data = await postForm(baseUrl + '/(Share)/' + encodeURIComponent(thread.id), body);
+    if (data.share && data.share.share_url) {
+      const input = document.querySelector('[data-assistant-share-url]');
+      if (input) input.value = data.share.share_url;
+      if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(document.getElementById('assistantShareModal')).show();
+    }
+  });
+
+  root.addEventListener('click', async function (event) {
+    const copyButton = event.target.closest('[data-assistant-copy-message]');
+    if (copyButton && thread) {
+      const message = findThreadMessage(copyButton.dataset.messageId);
+      await copyMessageMarkdown(copyButton, message);
+      return;
+    }
+
+    const retryButton = event.target.closest('[data-assistant-retry]');
+    if (retryButton && thread) {
+      await retryLastResponse(retryButton);
+      return;
+    }
+
+    const button = event.target.closest('[data-assistant-feedback]');
+    if (!button || !thread) return;
+    const body = new FormData();
+    body.set('XSS', xss);
+    body.set('thread_id', thread.id);
+    body.set('message_id', button.dataset.messageId || '');
+    body.set('run_id', button.dataset.runId || '');
+    body.set('feedback_type', button.dataset.assistantFeedback);
+    await postForm(baseUrl + '/(Feedback)', body);
+    button.disabled = true;
+  });
+
+  async function submitComposer(event, state) {
+    event.preventDefault();
+    if (!isAvailable() || isReadonly()) return;
+
+    const prompt = state.prompt.value.trim();
+    if (!prompt && state.pendingFiles.length === 0) return;
+
+    const body = new FormData();
+    body.set('XSS', xss);
+    body.set('thread_id', thread && thread.id ? thread.id : '');
+    body.set('prompt', prompt);
+    state.pendingFiles.forEach(item => body.append('files', item.file, item.file.name));
+
+    setBusy(true);
+    try {
+      const data = await postForm(baseUrl, body);
+      if (data.thread) {
+        thread = mergeThreadState(thread, data.thread, data.message ? [data.message] : []);
+        thread.active_run = data.run || thread.active_run;
+        lastMessageId = maxId(thread.messages);
+        lastEventId = maxId(thread.events);
+        clearComposers();
+        setThreadInputs(thread.id);
+        renderThread();
+        await refreshHistory();
+        schedulePollIfNeeded();
+      }
+    } catch (err) {
+      showProgress(err.message || 'Assistant request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retryLastResponse(button) {
+    if (!thread || !thread.id || isReadonly() || !isAvailable()) return;
+
+    const body = new FormData();
+    body.set('XSS', xss);
+    setBusy(true);
+    if (button) button.disabled = true;
+    try {
+      const data = await postForm(baseUrl + '/(Retry)/' + encodeURIComponent(thread.id), body);
+      if (data.thread) {
+        thread = mergeThreadState(thread, data.thread);
+        thread.active_run = data.run || thread.active_run;
+        lastMessageId = maxId(thread.messages);
+        lastEventId = maxId(thread.events);
+        renderThread();
+        await refreshHistory();
+        schedulePollIfNeeded();
+      }
+    } catch (err) {
+      showProgress(err.message || 'Retry failed.');
+      if (button) button.disabled = false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function poll() {
+    if (!thread || !thread.id) return;
+    try {
+      let url = baseUrl + '/(Poll)/' + encodeURIComponent(thread.id) + '?last_message_id=' + encodeURIComponent(lastMessageId) + '&last_event_id=' + encodeURIComponent(lastEventId);
+      if (share) url += '&share=' + encodeURIComponent(share);
+      const data = await getJson(url);
+      const poll = data.poll || {};
+      if (poll.thread) {
+        thread.last_run_status = poll.thread.last_run_status;
+        thread.last_run_status_id = poll.thread.last_run_status_id;
+        thread.active_run = poll.run || thread.active_run;
+      }
+      if (poll.messages && poll.messages.length) {
+        thread.messages = mergeById(thread.messages || [], poll.messages);
+        lastMessageId = poll.last_message_id || maxId(thread.messages);
+      }
+      if (poll.events && poll.events.length) {
+        thread.events = mergeById(thread.events || [], poll.events);
+        lastEventId = poll.last_event_id || maxId(thread.events);
+      }
+      renderThread();
+      schedulePollIfNeeded();
+    } catch (err) {
+      showProgress(err.message || 'Polling failed.');
+    }
+  }
+
+  function schedulePollIfNeeded() {
+    clearTimeout(pollTimer);
+    if (!thread || !thread.active_run) return;
+    const active = ['queued', 'processing'].includes((thread.active_run.status || '').toLowerCase());
+    if (active) pollTimer = setTimeout(poll, 2500);
+  }
+
+  function renderHistory() {
+    if (!els.history) return;
+    els.history.innerHTML = '';
+    if (!history.length) {
+      els.history.innerHTML = '<div class="text-muted text-center py-4">No chats yet.</div>';
+      return;
+    }
+    history.forEach(item => {
+      const link = document.createElement('a');
+      const title = item.iname || 'New chat';
+      const preview = item.preview && !isRedundantHistoryPreview(title, item.preview)
+        ? '<div class="small text-muted">' + escapeHtml(item.preview) + '</div>'
+        : '';
+      link.className = 'assistant-history-row d-block py-3 text-reset text-decoration-none border-bottom';
+      link.href = baseUrl + '?thread_id=' + encodeURIComponent(item.id);
+      link.innerHTML = '<div class="fw-semibold">' + escapeHtml(title) + '</div>'
+        + preview
+        + (item.last_run_status ? '<span class="badge text-bg-secondary mt-2">' + escapeHtml(item.last_run_status) + '</span>' : '');
+      els.history.appendChild(link);
+    });
+  }
+
+  function renderThread() {
+    const hasThread = !!(thread && thread.id);
+    root.classList.toggle('assistant-has-thread', hasThread);
+    els.landing && els.landing.classList.toggle('d-none', hasThread);
+    els.threadPanel && els.threadPanel.classList.toggle('d-none', !hasThread);
+    els.title.textContent = thread && thread.iname ? thread.iname : 'New chat';
+    els.status.textContent = thread && thread.last_run_status ? thread.last_run_status : 'Idle';
+    els.share.disabled = !(thread && thread.id && thread.is_owner);
+    els.readonly && els.readonly.classList.toggle('d-none', !isReadonly());
+    setThreadInputs(thread && thread.id ? thread.id : '');
+    renderRunStatus();
+
+    const messages = thread && thread.messages ? thread.messages : [];
+    els.messages.innerHTML = '';
+    if (hasThread && messages.length === 0) {
+      els.messages.innerHTML = '<div class="assistant-empty text-muted bg-body-tertiary border rounded">No messages in this thread.</div>';
+    } else {
+      messages.forEach(message => els.messages.appendChild(renderMessage(message)));
+    }
+    renderEvents(thread && thread.events ? thread.events : []);
+    scrollThreadToEnd();
+    updateComposerState();
+    focusLandingComposer(hasThread);
+  }
+
+  function renderMessage(message) {
+    const role = message.role === 'user' ? 'user' : 'assistant';
+    const wrap = document.createElement('article');
+    wrap.className = 'assistant-message assistant-message-' + role + ' d-flex w-100';
+    wrap.dataset.messageId = message.id;
+    const sources = (message.sources || []).map(renderSource).join('');
+    const links = (message.links || []).map(renderAssistantLink).join('');
+    const attachments = (message.attachments || []).map(file => {
+      const indexStatus = file.index_status || (file.is_indexed ? 'indexed' : 'not indexed');
+      const badgeClass = file.is_indexed ? 'text-bg-success' : 'text-bg-secondary';
+      return '<span class="badge ' + badgeClass + ' me-1" title="' + escapeAttr(indexStatus) + '">' + escapeHtml(file.iname || file.icode || 'file') + '</span>';
+    }).join('');
+    const canFeedback = role === 'assistant' && !isReadonly() && !!message.assistant_runs_id;
+    const canRetry = role === 'assistant' && !isReadonly() && isAvailable() && isLatestCompletedResponse(message);
+    const responseActions = role === 'assistant'
+      ? '<div class="assistant-response-actions d-flex flex-wrap align-items-center gap-2 mt-3">'
+        + '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-copy-message data-message-id="' + escapeAttr(message.id) + '" title="Copy response" aria-label="Copy response"><i class="bi bi-copy"></i></button>'
+        + (canFeedback ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="helpful" data-message-id="' + escapeAttr(message.id) + '" data-run-id="' + escapeAttr(message.assistant_runs_id) + '" title="Helpful"><i class="bi bi-hand-thumbs-up"></i><span class="visually-hidden">Helpful</span></button>' : '')
+        + (canFeedback ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-feedback="not_helpful" data-message-id="' + escapeAttr(message.id) + '" data-run-id="' + escapeAttr(message.assistant_runs_id) + '" title="Not helpful"><i class="bi bi-hand-thumbs-down"></i><span class="visually-hidden">Not helpful</span></button>' : '')
+        + (canRetry ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-retry title="Try again" aria-label="Try again"><i class="bi bi-arrow-repeat"></i></button>' : '')
+        + (message.add_time ? '<span class="small text-muted ms-1 me-1">' + escapeHtml(message.add_time) + '</span>' : '')
+        + '</div>'
+      : '';
+    const time = role !== 'assistant' && message.add_time ? '<div class="small text-muted mt-2">' + escapeHtml(message.add_time) + '</div>' : '';
+    wrap.innerHTML = '<div class="assistant-bubble border rounded bg-body shadow-sm p-3"><div class="assistant-message-body">' + escapeHtml(message.content_markdown || '') + '</div>'
+      + (attachments ? '<div class="assistant-attachments d-flex flex-wrap gap-2 mt-3">' + attachments + '</div>' : '')
+      + (links ? '<div class="assistant-links d-flex flex-wrap gap-2 mt-3">' + links + '</div>' : '')
+      + (sources ? '<div class="assistant-sources d-flex flex-wrap gap-2 mt-3">' + sources + '</div>' : '')
+      + responseActions
+      + time
+      + '</div>';
+    return wrap;
+  }
+
+  function renderAssistantLink(link, index) {
+    const label = link.label || 'Open link ' + (index + 1);
+    const href = link.url || '';
+    if (!href) return '';
+    const description = link.description ? '<span class="small text-muted d-block">' + escapeHtml(link.description) + '</span>' : '';
+    return '<a class="assistant-nav-link btn btn-outline-primary btn-sm text-start d-inline-flex align-items-start gap-2" href="' + escapeAttr(href) + '"><i class="bi bi-box-arrow-up-right mt-1"></i><span><span class="fw-semibold">' + escapeHtml(label) + '</span>' + description + '</span></a>';
+  }
+
+  function renderSource(source, index) {
+    const label = source.name || source.article_name || source.filename || 'Source ' + (index + 1);
+    const meta = [source.section, source.page ? 'p. ' + source.page : '', source.source_id ? 'source ' + source.source_id : '', source.chunk_id ? 'chunk ' + source.chunk_id : ''].filter(Boolean).join(' | ');
+    const href = source.url || source.article_url || source.file_url || '';
+    const content = '<span class="fw-semibold">' + escapeHtml(label) + '</span>' + (meta ? '<span class="small text-muted d-block">' + escapeHtml(meta) + '</span>' : '');
+    return href ? '<a class="assistant-citation d-block border rounded bg-body-tertiary text-reset text-decoration-none px-3 py-2" href="' + escapeAttr(href) + '" target="_blank" rel="noopener noreferrer">' + content + '</a>' : '<div class="assistant-citation d-block border rounded bg-body-tertiary px-3 py-2">' + content + '</div>';
+  }
+
+  function renderRunStatus() {
+    if (!els.runStatus) return;
+    const run = thread && thread.active_run ? thread.active_run : null;
+    if (!run || (run.status || '').toLowerCase() !== 'failed') {
+      els.runStatus.classList.add('d-none');
+      els.runStatus.innerHTML = '';
+      return;
+    }
+
+    const canRetry = !isReadonly() && isAvailable();
+    els.runStatus.className = 'assistant-run-status border rounded bg-body-tertiary px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2';
+    els.runStatus.innerHTML = '<div class="small"><span class="fw-semibold text-danger">' + escapeHtml(run.error_message || 'Assistant response failed.') + '</span></div>'
+      + (canRetry ? '<button type="button" class="btn btn-sm btn-outline-secondary rounded-circle assistant-icon-btn d-inline-flex align-items-center justify-content-center" data-assistant-retry title="Try again" aria-label="Try again"><i class="bi bi-arrow-repeat"></i></button>' : '');
+  }
+
+  function renderEvents(events) {
+    const eventText = events.slice(-3).map(event => event.content || event.event_type || '').join(' | ');
+    showProgress(eventText || (isAssistantWorking() ? activeProgressText() : ''));
+  }
+
+  async function refreshHistory() {
+    const q = els.historySearch ? els.historySearch.value : '';
+    const data = await getJson(baseUrl + '/(History)?q=' + encodeURIComponent(q));
+    history = data.items || [];
+    renderHistory();
+  }
+
+  function addPendingFiles(state, fileList) {
+    Array.from(fileList || []).forEach(file => {
+      state.pendingFiles.push({ id: state.id + '-' + state.nextFileId++, file });
+    });
+    renderPendingFiles(state);
+    updateComposerState();
+  }
+
+  function removePendingFile(state, id) {
+    state.pendingFiles = state.pendingFiles.filter(item => item.id !== id);
+    renderPendingFiles(state);
+    updateComposerState();
+  }
+
+  function renderPendingFiles(state) {
+    if (!state.pendingFilesEl) return;
+    state.pendingFilesEl.innerHTML = state.pendingFiles.map(item => '<span class="badge text-bg-light border text-dark d-inline-flex align-items-center gap-1 py-2"><span class="text-truncate">' + escapeHtml(item.file.name) + '</span><button type="button" class="btn-close assistant-file-remove" data-assistant-file-remove="' + escapeAttr(item.id) + '" aria-label="Remove"></button></span>').join('');
+    if (state.fileCount) state.fileCount.textContent = state.pendingFiles.length ? state.pendingFiles.length + ' file' + (state.pendingFiles.length === 1 ? '' : 's') : '';
+  }
+
+  function onPaste(event, state) {
+    const files = [];
+    Array.from(event.clipboardData?.items || []).forEach(item => {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    });
+    if (files.length) {
+      event.preventDefault();
+      addPendingFiles(state, files);
+    }
+  }
+
+  function onDragEnter(event, state) {
+    if (isReadonly() || !isAvailable()) return;
+    event.preventDefault();
+    state.form.classList.add('is-dragover');
+  }
+
+  function onDragLeave(event, state) {
+    if (!state.form.contains(event.relatedTarget)) state.form.classList.remove('is-dragover');
+  }
+
+  function onDrop(event, state) {
+    if (isReadonly() || !isAvailable()) return;
+    event.preventDefault();
+    state.form.classList.remove('is-dragover');
+    addPendingFiles(state, event.dataTransfer?.files || []);
+  }
+
+  async function postForm(url, body) {
+    const res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' }, body });
+    return readJsonResponse(res);
+  }
+
+  async function getJson(url) {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    return readJsonResponse(res);
+  }
+
+  async function readJsonResponse(res) {
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error && data.error.message ? data.error.message : res.statusText);
+    return data;
+  }
+
+  function setBusy(isBusy) {
+    root.classList.toggle('assistant-busy', isBusy);
+    composers.forEach(state => state.form.dataset.busy = isBusy ? '1' : '');
+    if (isBusy) {
+      showProgress('Queued...');
+      scrollThreadToEnd();
+    }
+    updateComposerState();
+    if (!isBusy && !isAssistantWorking() && els.progress && els.progress.textContent) showProgress(els.progress.textContent);
+  }
+
+  function updateComposerState() {
+    const disabled = !isAvailable() || isReadonly();
+    composers.forEach(state => {
+      const hasContent = (state.prompt.value || '').trim().length > 0 || state.pendingFiles.length > 0;
+      const busy = state.form.dataset.busy === '1';
+      state.form.querySelectorAll('textarea, input, button').forEach(el => {
+        const isSubmit = el.matches('button[type="submit"]');
+        el.disabled = disabled || busy || (isSubmit && !hasContent);
+      });
+      if (state.threadInput) state.threadInput.disabled = false;
+      autosizeComposer(state.prompt);
+    });
+  }
+
+  function clearComposers() {
+    composers.forEach(state => {
+      state.prompt.value = '';
+      state.pendingFiles = [];
+      renderPendingFiles(state);
+      autosizeComposer(state.prompt);
+    });
+  }
+
+  function setThreadInputs(value) {
+    composers.forEach(state => {
+      if (state.threadInput) state.threadInput.value = value || '';
+    });
+  }
+
+  function findThreadMessage(messageId) {
+    const id = Number(messageId || 0);
+    return (thread && thread.messages ? thread.messages : []).find(message => Number(message.id || 0) === id);
+  }
+
+  function isLatestCompletedResponse(message) {
+    const run = thread && thread.active_run ? thread.active_run : null;
+    if (!message || !run) return false;
+    return Number(message.assistant_runs_id || 0) === Number(run.id || 0)
+      && (run.status || '').toLowerCase() === 'completed';
+  }
+
+  async function copyMessageMarkdown(button, message) {
+    if (!message || !message.content_markdown) return;
+    try {
+      await navigator.clipboard.writeText(message.content_markdown);
+      const original = button.innerHTML;
+      const originalTitle = button.getAttribute('title') || 'Copy response';
+      button.innerHTML = '<i class="bi bi-check2"></i>';
+      button.setAttribute('title', 'Copied');
+      button.setAttribute('aria-label', 'Copied');
+      button.disabled = true;
+      setTimeout(() => {
+        button.innerHTML = original;
+        button.setAttribute('title', originalTitle);
+        button.setAttribute('aria-label', originalTitle);
+        button.disabled = false;
+      }, 1200);
+    } catch (err) {
+      showProgress('Copy failed.');
+    }
+  }
+
+  function focusLandingComposer(hasThread) {
+    if (hasThread) return;
+    const target = root.querySelector('[data-assistant-autofocus]');
+    if (target && document.activeElement === document.body) requestAnimationFrame(() => target.focus());
+  }
+
+  function autosizeComposer(el) {
+    if (!el) return;
+    el.style.height = '0px';
+    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+  }
+
+  function showProgress(text) {
+    if (!els.progress) return;
+    els.progress.innerHTML = '';
+
+    const isWorking = isAssistantWorking();
+    const value = text || (isWorking ? activeProgressText() : '');
+    if (!value && !isWorking) return;
+
+    if (isWorking) {
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner-border spinner-border-sm me-2';
+      spinner.setAttribute('role', 'status');
+      spinner.setAttribute('aria-hidden', 'true');
+      els.progress.appendChild(spinner);
+    }
+
+    const label = document.createElement('span');
+    label.textContent = value;
+    els.progress.appendChild(label);
+  }
+
+  function scrollThreadToEnd() {
+    const scroll = () => {
+      if (els.messages) els.messages.scrollTop = els.messages.scrollHeight;
+
+      const target = threadScrollTarget();
+      if (!target) return;
+
+      target.scrollIntoView({ block: 'center', inline: 'nearest' });
+      requestAnimationFrame(() => keepTargetAboveComposer(target));
+    };
+
+    scroll();
+    requestAnimationFrame(scroll);
+    setTimeout(scroll, 80);
+  }
+
+  function threadScrollTarget() {
+    const progressVisible = !!(els.progress && (els.progress.textContent.trim() || els.progress.children.length));
+    return progressVisible ? els.progress : (els.messages && els.messages.lastElementChild);
+  }
+
+  function keepTargetAboveComposer(target) {
+    const footer = root.querySelector('.assistant-footer');
+    const footerRect = footer ? footer.getBoundingClientRect() : null;
+    const targetRect = target.getBoundingClientRect();
+    const visibleBottom = Math.min(window.innerHeight, footerRect ? footerRect.top : window.innerHeight) - 16;
+    if (targetRect.bottom > visibleBottom) window.scrollBy({ top: targetRect.bottom - visibleBottom });
+  }
+
+  function isAssistantWorking() {
+    const run = thread && thread.active_run ? thread.active_run : null;
+    const activeRun = !!(run && ['queued', 'processing'].includes((run.status || '').toLowerCase()));
+    return root.classList.contains('assistant-busy') || activeRun;
+  }
+
+  function activeProgressText() {
+    const run = thread && thread.active_run ? thread.active_run : null;
+    const status = (run && run.status ? run.status : '').toLowerCase();
+    if (status === 'processing') return 'Processing...';
+    return 'Queued...';
+  }
+
+  function isAvailable() {
+    return !!(status.enabled && status.tables_ready && status.openai_configured && status.worker_enabled);
+  }
+
+  function isReadonly() {
+    return !!(thread && thread.is_readonly);
+  }
+
+  function parseJson(value, fallback) {
+    try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
+  }
+
+  function maxId(items) {
+    return (items || []).reduce((max, item) => Math.max(max, Number(item.id || 0)), 0);
+  }
+
+  function mergeById(existing, incoming) {
+    const map = new Map((existing || []).map(item => [item.id, item]));
+    (incoming || []).forEach(item => map.set(item.id, item));
+    return Array.from(map.values()).sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+  }
+
+  function mergeThreadState(current, incoming, extraMessages, extraEvents) {
+    if (!incoming) return current;
+    const merged = Object.assign({}, current || {}, incoming);
+    merged.messages = mergeById((current && current.messages) || [], (incoming.messages || []).concat(extraMessages || []));
+    merged.events = mergeById((current && current.events) || [], (incoming.events || []).concat(extraEvents || []));
+    return merged;
+  }
+
+  function isRedundantHistoryPreview(title, preview) {
+    const normalizedTitle = compactHistoryText(title);
+    const normalizedPreview = compactHistoryText(preview);
+    if (!normalizedTitle || !normalizedPreview) return false;
+    return normalizedTitle === normalizedPreview
+      || normalizedPreview.startsWith(normalizedTitle)
+      || normalizedTitle.startsWith(normalizedPreview);
+  }
+
+  function compactHistoryText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(new RegExp(String.fromCharCode(96), 'g'), '&#96;');
+  }
+})();
+</script>

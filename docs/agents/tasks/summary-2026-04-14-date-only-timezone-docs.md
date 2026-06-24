@@ -1,19 +1,19 @@
 ## What changed
 - Reviewed the uncommitted framework changes under `osafw-app/App_Code/fw` related to date-only rendering and per-user timezone conversion.
-- Updated `osafw-app/docs/datetime.md` to document the date-only rule across DB read/write, `FW.formatUserDateTime`, ParsePage, and dynamic form saves.
-- Updated `osafw-app/docs/parsepage.md` and `osafw-app/docs/dynamic.md` so template and field-type docs distinguish calendar dates from real datetimes.
+- Updated `docs/datetime.md` to document the date-only rule across DB read/write, `FW.formatUserDateTime`, ParsePage, and dynamic form saves.
+- Updated `docs/parsepage.md` and `docs/dynamic.md` so template and field-type docs distinguish calendar dates from real datetimes.
 - Updated the datetime ADR and top-level changelog to reflect the new documented behavior.
 
 ## Commands that worked (build/test/run)
 - `git -c safe.directory=C:/DOCS_PROJ/github/osafw-asp.net-core status --short`
 - `git -c safe.directory=C:/DOCS_PROJ/github/osafw-asp.net-core diff -- osafw-app/App_Code/fw`
-- `rg -n "date-only|timezone|date_popup|datetime_popup|formatUserDateTime" osafw-app/docs osafw-app/App_Code/fw osafw-tests`
+- `rg -n "date-only|timezone|date_popup|datetime_popup|formatUserDateTime" docs osafw-app/App_Code/fw osafw-tests`
 - `$env:DOTNET_CLI_HOME='C:\\DOCS_PROJ\\github\\osafw-asp.net-core\\.dotnet'; $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'; $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'; dotnet vstest osafw-tests\\bin\\Debug\\net10.0\\osafw-tests.dll --TestCaseFilter:"ClassName=osafw.Tests.ParsePageTests|ClassName=osafw.Tests.FwTests|ClassName=osafw.Tests.DateUtilsTests"`
 - `$env:DOTNET_CLI_HOME='C:\\DOCS_PROJ\\github\\osafw-asp.net-core\\.dotnet'; $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'; $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'; dotnet build osafw-app\\osafw-app.csproj --no-restore -p:LibraryRestore=False -p:OutDir=bin\\Debug\\net10.0\\_assistant_build\\`
 
 ## Pitfalls - fixes
 - Repo inspection needed `git -c safe.directory=...` because the worktree owner differs from the current Windows user.
-- The requested `docs/datetime.md` lives under `osafw-app/docs/datetime.md`, so related framework docs were updated there instead of the top-level `docs/` folder.
+- The requested `docs/datetime.md` lives under `docs/datetime.md`, so related framework docs were updated there instead of the top-level `docs/` folder.
 - `dotnet vstest` needed `DOTNET_CLI_HOME` redirected into the workspace plus first-run disable flags because the sandboxed default home was not writable.
 - The regular app build was blocked first by a locked `osafw-app.dll` from IIS Express, then by offline LibMan restores; building with `-p:LibraryRestore=False` fixed the latter.
 - Visual Studio MCP was still not visible in this session after restart (`list_mcp_resources` and `list_mcp_resource_templates` both returned empty), so build/test/restart had to use local commands.

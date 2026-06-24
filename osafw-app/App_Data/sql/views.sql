@@ -1,5 +1,5 @@
 -- put your custom database views here
--- delimit sql statements with "GO" or ";"+newline
+-- use "GO" between SQL Server view statements; simple statements can also use ";"+newline
 
 -- example:
 -- DROP VIEW IF EXISTS AdminControllerList;

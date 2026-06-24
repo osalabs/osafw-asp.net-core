@@ -1,0 +1,10 @@
+<~/common/list/page_header>
+
+<~setup_needed unless="tables_ready" inline>
+  <div class="alert alert-warning" role="alert">`Knowledge base tables are not installed. Run the assistant SQL update before managing articles.`</div>
+</~setup_needed>
+
+<~ready if="tables_ready" inline>
+  <~/common/list/filter_std>
+  <~list_table>
+</~ready>

@@ -1,4 +1,4 @@
-﻿// Fw Controller base class
+// Fw Controller base class
 
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public abstract class FwController
+public abstract partial class FwController
 {
     public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. 0 (public access), 1(min logged level), 100(max admin level)
 
@@ -64,6 +64,7 @@ public abstract class FwController
     protected string view_list_defaults = "";    // qw list of default columns
     protected FwDict view_list_map = [];           // list of all available columns fieldname|visiblename
     protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
+    protected string view_list_custom_trusted = ""; // qw list of custom fields allowed to render trusted raw HTML
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
@@ -77,6 +78,7 @@ public abstract class FwController
 
     protected string route_return = FW.ACTION_SHOW_FORM; // FW.ACTION_SHOW or _INDEX to return (usually after SaveAction, default ACTION_SHOW_FORM)
     protected string return_url = string.Empty;          // url to return after SaveAction successfully completed, passed via request
+    protected string return_title = string.Empty;        // title for the return_url origin, passed via request
     protected string related_id = string.Empty;          // related id, passed via request. Controller should limit view to items related to this id
     protected string related_field_name = string.Empty;  // if set (in Controller) and $related_id passed - list will be filtered on this field
 
@@ -100,7 +102,9 @@ public abstract class FwController
 
         is_readonly = fw.model<Users>().isReadOnly();
 
-        return_url = reqs("return_url");
+        var requested_return_url = reqs("return_url");
+        return_url = Utils.isAppUrl(requested_return_url, fw.config("ROOT_DOMAIN").toStr()) ? requested_return_url : string.Empty;
+        return_title = return_url.Length > 0 ? reqs("return_title") : string.Empty;
         related_id = reqs("related_id");
         form_tab = reqs("tab");
         export_format = reqs("export");
@@ -124,7 +128,7 @@ public abstract class FwController
         }
 
         // CACHE MISS - load from file
-        var parsedObj = Utils.jsonDecode(Utils.getFileContent(full_path));
+        var parsedObj = Utils.jsonDecodeOrThrow(Utils.getFileContent(full_path));
         if (parsedObj is not FwDict parsed)
             throw new ApplicationException("Controller Config is invalid, check json in templates: " + full_path);
 
@@ -165,6 +169,9 @@ public abstract class FwController
         this.config = config;
         // logger("loaded config:")
         // logger(config)
+
+        if (config["is_readonly"].toBool())
+            is_readonly = true;
 
         var model_name = config["model"].toStr();
         if (!string.IsNullOrEmpty(model_name))
@@ -217,6 +224,7 @@ public abstract class FwController
                 view_list_map = Utils.qh(raw_view_list_map.toStr());
 
             view_list_custom = config["view_list_custom"].toStr();
+            view_list_custom_trusted = config["view_list_custom_trusted"].toStr();
         }
 
         is_dynamic_index_edit = config["is_dynamic_index_edit"].toBool();
@@ -268,18 +276,20 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// return true if current request is GET request
+    /// Block mutating controller actions when the current controller instance is read-only.
     /// </summary>
-    /// <returns></returns>
+    /// <exception cref="AuthException">Thrown when the user or controller config marks the controller read-only.</exception>
+    public virtual void checkReadOnly()
+    {
+        if (is_readonly)
+            throw new AuthException();
+    }
+
     public bool isGet()
     {
         return (fw.route.method == "GET");
     }
 
-    /// <summary>
-    /// return true if current request is PATCH request
-    /// </summary>
-    /// <returns></returns>
     public bool isPatch()
     {
         return (fw.route.method == "PATCH");
@@ -288,21 +298,16 @@ public abstract class FwController
     // set of helper functions to return string, integer, date values from request (fw.FORM)
 
     /// <summary>
-    /// return value from request (fw.FORM) by name
+    /// Reads a raw request form value, returning the supplied default when missing.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value to return if request value is not set</param>
-    /// <returns></returns>
     public object? req(string iname, object? def = null)
     {
         return fw.FORM[iname] ?? def;
     }
 
     /// <summary>
-    /// return FwRow value from request (fw.FORM)
+    /// Reads a request form value as <see cref="FwDict"/>, returning an empty dictionary when absent or wrong-shaped.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <returns></returns>
     public FwDict reqh(string iname)
     {
         if (fw.FORM[iname] is FwDict hf)
@@ -312,44 +317,32 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// return string value from request (fw.FORM)
+    /// Reads a request form value as a string with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value</param>
-    /// <returns></returns>
     public string reqs(string iname, string def = "")
     {
         return fw.FORM[iname].toStr(def);
     }
 
     /// <summary>
-    /// return int value from request (fw.FORM)
+    /// Reads a request form value as an integer with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value</param>
-    /// <returns></returns>
     public int reqi(string iname, int def = 0)
     {
         return fw.FORM[iname].toInt(def);
     }
 
     /// <summary>
-    /// return date value from request (fw.FORM)
+    /// Reads a request form value as a nullable date with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def">optional default value</param>
-    /// <returns></returns>
     public DateTime? reqd(string iname, DateTime? def = null)
     {
         return fw.FORM[iname].toDateOrNull() ?? def;
     }
 
     /// <summary>
-    /// return bool value from request (fw.FORM)
+    /// Reads a request form value as a boolean with default fallback.
     /// </summary>
-    /// <param name="iname"></param>
-    /// <param name="def"></param>
-    /// <returns></returns>
     public bool reqb(string iname, bool def = false)
     {
         return fw.FORM.TryGetValue(iname, out object? value) ? value.toBool() : def;
@@ -376,6 +369,21 @@ public abstract class FwController
             throw new AuthException("XSS Error. Reload the page or try to re-login");
     }
 
+    /// <summary>
+    /// Enforces the POST method and validates the current XSS token for custom mutating actions.
+    /// </summary>
+    /// <remarks>
+    /// Custom action routes can otherwise be reached with GET, so callers should use this before performing side effects.
+    /// </remarks>
+    /// <exception cref="AuthException">Thrown when the request method is not POST or the XSS token is invalid.</exception>
+    public virtual void enforcePost()
+    {
+        if (!string.Equals(fw.route.method, "POST", StringComparison.OrdinalIgnoreCase))
+            throw new AuthException("POST required");
+
+        checkXSS();
+    }
+
     // return hashtable of filter values
     // NOTE: automatically set to defaults - pagenum=0 and pagesize=MAX_PAGE_ITEMS
     // NOTE: if request param 'dofilter' passed - session filters cleaned
@@ -387,6 +395,12 @@ public abstract class FwController
         session_key ??= "_filter_" + fw.G["controller.action"];
 
         FwDict sfilter = fw.SessionDict(session_key) ?? [];
+        FwDict? saved_filter_search = null;
+        void clearUserFilter()
+        {
+            f.Remove("userfilters_id");
+            f.Remove("userfilter");
+        }
 
         // if not forced filter - merge form filters to session filters
         bool is_dofilter = fw.FORM.ContainsKey("dofilter");
@@ -394,6 +408,15 @@ public abstract class FwController
         {
             Utils.mergeHash(sfilter, f);
             f = sfilter;
+            if (f["userfilter"] is FwDict uf)
+            {
+                if (uf["is_system"].toBool() || uf["add_users_id"].toInt() != fw.userId)
+                    clearUserFilter();
+            }
+            else if (f["userfilters_id"].toInt() > 0)
+            {
+                clearUserFilter();
+            }
         }
         else
         {
@@ -401,13 +424,34 @@ public abstract class FwController
             var userfilters_id = reqi("userfilters_id");
             if (userfilters_id > 0)
             {
-                var uf = fw.model<UserFilters>().one(userfilters_id);
-                if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
-                    f = f1;
-                if (!uf["is_system"].toBool())
+                var uf = fw.model<UserFilters>().oneAvail(userfilters_id);
+                if (uf.Count > 0)
                 {
-                    f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
-                    f["userfilter"] = uf;
+                    if (Utils.jsonDecode(uf["idesc"]) is FwDict f1)
+                    {
+                        if (f1["f"] is FwDict fSplit && f1["search"] is FwDict searchSplit)
+                        {
+                            f = fSplit;
+                            saved_filter_search = searchSplit;
+                        }
+                        else
+                        {
+                            f = f1;
+                        }
+                    }
+                    if (!uf["is_system"].toBool())
+                    {
+                        f["userfilters_id"] = userfilters_id; // set filter id (for edit/delete) only if not system
+                        f["userfilter"] = uf;
+                    }
+                    else
+                    {
+                        clearUserFilter();
+                    }
+                }
+                else
+                {
+                    clearUserFilter();
                 }
             }
             else
@@ -417,8 +461,11 @@ public abstract class FwController
                 if (userfilters_id > 0)
                 {
                     // just ned info on this filter
-                    var uf = fw.model<UserFilters>().one(userfilters_id);
-                    f["userfilter"] = uf;
+                    var uf = fw.model<UserFilters>().oneAvail(userfilters_id);
+                    if (uf.Count > 0)
+                        f["userfilter"] = uf;
+                    else
+                        clearUserFilter();
                 }
             }
         }
@@ -435,7 +482,12 @@ public abstract class FwController
         // advanced search
         string session_key_search = "_filtersearch_" + fw.G["controller.action"];
         list_filter_search = reqh("search");
-        if (list_filter_search.Count == 0 && !is_dofilter)
+        if (saved_filter_search != null)
+        {
+            list_filter_search = saved_filter_search;
+            fw.SessionDict(session_key_search, list_filter_search);
+        }
+        else if (list_filter_search.Count == 0 && !is_dofilter)
         {
             //read from session
             list_filter_search = fw.SessionDict(session_key_search) ?? [];
@@ -452,13 +504,14 @@ public abstract class FwController
     /// <summary>
     /// clears list_filter and related session key
     /// </summary>
-    /// <param name="session_key"></param>
     public virtual void clearFilter(string? session_key = null)
     {
         FwDict f = [];
         session_key ??= "_filter_" + fw.G["controller.action"];
         fw.SessionDict(session_key, f);
+        fw.SessionDict("_filtersearch_" + fw.G["controller.action"], []);
         this.list_filter = f;
+        this.list_filter_search = [];
     }
 
     /// <summary>
@@ -514,12 +567,10 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Check validation result (validate_required)
+    /// Converts collected form errors into framework validation flags and throws on failure.
     /// </summary>
-    /// <param name="result">to use from external validation check</param>
-    /// <remarks>throw ValidationException exception if global FormErrors non-empty.
-    /// Also set global FormErrors[INVALID] if FormErrors non-empty, but FormErrors[REQUIRED] not true
-    /// </remarks>
+    /// <param name="result">External validation result to combine with collected form errors.</param>
+    /// <remarks>Sets <c>INVALID</c> when non-required form errors exist without an existing <c>REQUIRED</c> marker.</remarks>
     public virtual void validateCheckResult(bool result = true)
     {
         var hasRequired = fw.FormErrors.ContainsKey("REQUIRED") && fw.FormErrors["REQUIRED"] is true;
@@ -541,9 +592,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Set list sorting fields - Me.list_orderby according to Me.list_filter filter and Me.list_sortmap and Me.list_sortdef
+    /// Resolves list sort field/direction from request filters, sort map, and default sort.
     /// </summary>
-    /// <remarks></remarks>
     public virtual void setListSorting()
     {
         if (this.list_sortdef.Length == 0)
@@ -575,9 +625,9 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Add to Me.list_where search conditions from Me.list_filter["s") ]nd based on fields in Me.search_fields
+    /// Adds keyword search predicates to <c>list_where</c> using the configured OR/AND search-field groups.
     /// </summary>
-    /// <remarks>Sample: Me.search_fields="field1 field2,!field3 field4" => field1 LIKE '%$s%' or (field2 LIKE '%$s%' and field3='$s') or field4 LIKE '%$s%'</remarks>
+    /// <remarks>Example: <c>field1 field2,!field3 field4</c> means field1 contains the term, or field2 contains it while field3 equals it, or field4 contains it.</remarks>
     public virtual void setListSearch()
     {
         string s = this.list_filter["s"].toStr().Trim();
@@ -660,12 +710,7 @@ public abstract class FwController
 
 
     /// <summary>
-    /// set list_where based on search[] filter
-    ///      - exact: "=term" or just "=" - mean empty
-    ///      - Not equals "!=term" or just "!" - means not empty
-    ///      - Not contains: "!term"
-    ///      - more/less: <=, <, >=, >"
-    ///      - and support search by date if search value looks like date in format MM/DD/YYYY
+    /// Adds advanced per-column search predicates, including exact/empty, inequality, contains, numeric, and date comparisons.
     /// </summary>
     public virtual void setListSearchAdvanced()
     {
@@ -677,59 +722,66 @@ public abstract class FwController
             if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
-
-            var qfieldname = db.qid(fieldname);
-            var fieldname_sql = $"ISNULL(CAST({qfieldname} as NVARCHAR(255)), '')"; //255 need as SQL Server by default makes only 30
-            var fieldname_sql_num = $"TRY_CONVERT(DECIMAL(18,1),CAST({qfieldname} as NVARCHAR))"; // SQL Server 2012+ only
-            var fieldname_sql_date = $"TRY_CONVERT(DATE, {qfieldname})"; //for date search
-
-            string op = value[..1];
-            string op2 = value.Length >= 2 ? value[..2] : string.Empty;
-
-            string v = value[1..];
-            if (op2 == "!=" || op2 == "<=" || op2 == ">=")
-                v = value[2..];
-
-            var qv = db.q(v); // quoted value
-            if (DateUtils.isDateStr(v))
-            {
-                //if input looks like a date - compare as date
-                fieldname_sql = fieldname_sql_date;
-                qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
-            }
-            else
-            {
-                if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
-                {
-                    //numerical comparison
-                    fieldname_sql = fieldname_sql_num;
-                    qv = db.qdec(v).toStr();
-                }
-            }
-
-            string op_value = op2 switch
-            {
-                // first - check for 2-char operators
-                "!=" => $" <> {qv}",
-                "<=" => $" <= {qv}",
-                ">=" => $" >= {qv}",
-                _ => op switch
-                {
-                    "=" => $" = {qv}",
-                    "<" => $" < {qv}",
-                    ">" => $" > {qv}",
-                    "!" => $" NOT LIKE {db.q($"%{v}%")}",
-                    _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
-                },// then check for 1-char operators
-            };
-            list_where += $" AND {fieldname_sql} {op_value}";
+            appendListSearchAdvancedField(fieldname, value);
         }
     }
 
     /// <summary>
-    /// set list_where filter based on status filter:
-    /// - if status not set - filter our deleted (i.e. show all)
-    /// - if status set - filter by status, but if status=127 (deleted) only allow to see deleted by admins
+    /// Appends the legacy string-syntax predicate for one submitted list search field.
+    /// </summary>
+    protected virtual void appendListSearchAdvancedField(string fieldname, string value)
+    {
+        var qfieldname = db.qid(fieldname);
+        var fieldname_sql = db.sqlTextExpr(qfieldname);
+        var fieldname_sql_num = db.sqlNumberExpr(qfieldname);
+        var fieldname_sql_date = db.sqlDateExpr(qfieldname); //for date search
+
+        string op = value[..1];
+        string op2 = value.Length >= 2 ? value[..2] : string.Empty;
+
+        string v = value[1..];
+        if (op2 == "!=" || op2 == "<=" || op2 == ">=")
+            v = value[2..];
+
+        var qv = db.q(v); // quoted value
+        if (DateUtils.isDateStr(v))
+        {
+            //if input looks like a date - compare as date
+            fieldname_sql = fieldname_sql_date;
+            qv = db.q(DateUtils.Str2SQL(v, fw.userDateFormat));
+        }
+        else
+        {
+            if (op2 == "<=" || op == "<" || op2 == ">=" || op == ">")
+            {
+                //numerical comparison
+                fieldname_sql = fieldname_sql_num;
+                qv = db.qdec(v).toStr();
+            }
+        }
+
+        string op_value = op2 switch
+        {
+            // first - check for 2-char operators
+            "!=" => $" <> {qv}",
+            "<=" => $" <= {qv}",
+            ">=" => $" >= {qv}",
+            _ => op switch
+            {
+                "=" => $" = {qv}",
+                "<" => $" < {qv}",
+                ">" => $" > {qv}",
+                "!" => $" NOT LIKE {db.q($"%{v}%")}",
+                "^" => $" LIKE {db.q($"{v}%")}",
+                "$" => $" LIKE {db.q($"%{v}")}",
+                _ => $" LIKE {db.q($"%{value}%")}",//default is just LIKE/contains
+            },// then check for 1-char operators
+        };
+        list_where += $" AND {fieldname_sql} {op_value}";
+    }
+
+    /// <summary>
+    /// Applies status filtering, hiding deleted rows by default and limiting trash views to site admins.
     /// </summary>
     public virtual void setListSearchStatus()
     {
@@ -789,14 +841,10 @@ public abstract class FwController
         var url = base_url + "/" + id;
         if (is_edit)
             url += "/edit";
-        if (related_id.Length > 0 || return_url.Length > 0)
-            url += "/?";
         if (related_id.Length > 0)
-            url += "related_id=" + Utils.urlescape(related_id);
-        if (return_url.Length > 0)
-            url += "&return_url=" + Utils.urlescape(return_url);
+            url = Utils.addUrlQueryParam(url, "related_id", related_id);
 
-        return url;
+        return Utils.addReturnUrlQuery(url, return_url, return_title);
     }
 
     protected virtual FwDict buildPrevNextRedirect(string form_id)
@@ -825,8 +873,7 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// set list fields for db select, based on user-selected headers from config
-    /// so we fetch from db only fields that are visible in the list + id field
+    /// Sets the DB select list from user-visible list headers plus the record id field.
     /// </summary>
     protected virtual void setListFields()
     {
@@ -834,13 +881,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Perform 2 queries to get list of rows.
-    /// Set variables:
-    /// Me.list_count - count of rows obtained from db
-    /// Me.list_rows list of rows
-    /// Me.list_pager pager from FormUtils.get_pager
+    /// Loads list count, rows, and pager state for the current filters, with export-specific page sizing.
     /// </summary>
-    /// <remarks></remarks>
     public virtual void getListRows()
     {
         var is_export = false;
@@ -888,12 +930,10 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Add or update records in db (Me.model0)
+    /// Adds or updates the controller model and sets the standard flash message.
     /// </summary>
-    /// <param name="id">id of the record, 0 if add</param>
-    /// <param name="fields">hash of field/values</param>
-    /// <returns>new autoincrement id (if added) or old id (if update)</returns>
-    /// <remarks>Also set fw.FLASH</remarks>
+    /// <param name="fields">Submitted field values to persist.</param>
+    /// <returns>New id for inserts, or the existing id for updates.</returns>
     public virtual int modelAddOrUpdate(int id, FwDict fields)
     {
         // make conversions
@@ -944,11 +984,8 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// Return one item from controller's model. For simpler overriding in child controllers.
+    /// Loads one controller model row or throws so child controllers can override the lookup contract.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    /// <exception cref="NotFoundException"></exception>
     public virtual FwDict modelOneOrFail(int id)
     {
         var item = modelOne(id);
@@ -975,6 +1012,35 @@ public abstract class FwController
     }
 
     /// <summary>
+    /// Indicates a refresh-only form post that should reload ShowForm without persisting submitted values.
+    /// </summary>
+    protected bool isRefreshOnlyRequest()
+    {
+        return reqb("refresh") && !reqb("refresh_save");
+    }
+
+    /// <summary>
+    /// Indicates a refresh-save form post that should persist normally and then reload ShowForm.
+    /// </summary>
+    protected bool isRefreshSaveRequest()
+    {
+        return reqb("refresh") && reqb("refresh_save");
+    }
+
+    /// <summary>
+    /// Routes successful refresh-save submissions back to ShowForm instead of the normal save return target.
+    /// </summary>
+    /// <returns>true when the request was handled and the caller should return null.</returns>
+    protected bool routeRefreshSaveToShowForm(int id)
+    {
+        if (!isRefreshSaveRequest())
+            return false;
+
+        fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
+        return true;
+    }
+
+    /// <summary>
     /// return url for afterSave based on:
     /// if return_url set (and no add new form requested) - go to return_url
     /// id:
@@ -985,8 +1051,6 @@ public abstract class FwController
     ///   - related_id
     ///   - copy_id
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
     public virtual string afterSaveLocation(string id = "")
     {
         string url;
@@ -1018,8 +1082,7 @@ public abstract class FwController
             url = this.base_url;
 
         //preserve return url if present
-        if (!string.IsNullOrEmpty(return_url))
-            url_q += "&return_url=" + Utils.urlescape(return_url);
+        url_q += Utils.buildReturnUrlQuery(return_url, return_title);
 
         //add base_url_suffix if any
         if (!string.IsNullOrEmpty(base_url_suffix))
@@ -1030,10 +1093,8 @@ public abstract class FwController
             url_q += "&tab=" + form_tab;
 
         //add query
-        var is_url_q = false;
         if (!string.IsNullOrEmpty(url_q))
         {
-            is_url_q = true;
             url_q = Regex.Replace(url_q, @"^\&", ""); // make url clean
             url_q = "?" + url_q;
         }
@@ -1049,7 +1110,7 @@ public abstract class FwController
             //if has return url - go to it
             if (fw.isJsonExpected())
                 // if json - it's usually autosave - don't redirect back to return url yet
-                result = url + url_q + (is_url_q ? "&" : "?") + "return_url=" + Utils.urlescape(return_url);
+                result = Utils.addReturnUrlQuery(url + url_q, return_url, return_title);
             else
                 result = return_url;
         }
@@ -1068,7 +1129,6 @@ public abstract class FwController
     /// <param name="action">route redirect to this method if error</param>
     /// <param name="location">redirect to this location if success</param>
     /// <param name="more_json">added to json response</param>
-    /// <returns></returns>
     public virtual FwDict? afterSave(bool success, object? id = null, bool is_new = false, string action = "ShowForm", string location = "", FwDict? more_json = null)
     {
         if (string.IsNullOrEmpty(location))
@@ -1168,13 +1228,26 @@ public abstract class FwController
         return ps;
     }
 
+    /// <summary>
+    /// Compatibility wrapper for controllers that still override the old list page-state hook.
+    /// </summary>
+    [Obsolete("Use setListPS() instead.")]
     public virtual FwDict setPS(FwDict? ps = null)
+    {
+        return setListPS(ps);
+    }
+
+    /// <summary>
+    /// Builds standard ParsePage state for list screens.
+    /// </summary>
+    public virtual FwDict setListPS(FwDict? ps = null)
     {
         ps ??= [];
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
         ps["list_rows"] = this.list_rows;
+        ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
         ps["count"] = this.list_count;
         ps["pager"] = this.list_pager;
         ps["f"] = this.list_filter;
@@ -1188,6 +1261,8 @@ public abstract class FwController
         //for RBAC
         ps["rbac"] = rbac;
 
+        ps["list_filter_search_placeholder_fields"] = buildListFilterSearchPlaceholderFields();
+
         //implement "Showing FROM to TO of TOTAL records"
         if (this.list_rows != null && this.list_rows.Count > 0)
         {
@@ -1197,9 +1272,53 @@ public abstract class FwController
             ps["count_to"] = pagenum * pagesize + this.list_rows.Count;
         }
 
+        setPSReturnContext(ps);
+
+        return ps;
+    }
+
+    /// <summary>
+    /// Builds default list search placeholder field labels from configured searchable fields.
+    /// </summary>
+    protected virtual string buildListFilterSearchPlaceholderFields()
+    {
+        if (string.IsNullOrWhiteSpace(this.search_fields))
+            return string.Empty;
+
+        StrList fieldNames = [];
+        FwDict fieldsSeen = [];
+
+        foreach (var search_group in Utils.qw(this.search_fields))
+        {
+            foreach (var search_field in search_group.Split(','))
+            {
+                var field = search_field.Trim().TrimStart('!');
+                if (field.Length == 0 || fieldsSeen.ContainsKey(field))
+                    continue;
+
+                fieldsSeen[field] = true;
+                var fieldName = view_list_map[field].toStr();
+                fieldNames.Add(fieldName.Length > 0 ? fieldName : $"[{field}]");
+            }
+        }
+
+        if (fieldNames.Count == 0)
+            return string.Empty;
+
+        return string.Join(", ", fieldNames);
+    }
+
+    /// <summary>
+    /// Adds optional origin navigation metadata to page state so shared templates can show a return breadcrumb only when the caller supplied one.
+    /// </summary>
+    /// <param name="ps">Parse-string dictionary populated for the current controller action.</param>
+    /// <returns>The same parse-string dictionary after adding `return_url` and optional `return_title`.</returns>
+    protected virtual FwDict setPSReturnContext(FwDict ps)
+    {
         if (!string.IsNullOrEmpty(this.return_url))
             ps["return_url"] = this.return_url; // if not passed - don't override return_url.html
-
+        if (!string.IsNullOrEmpty(this.return_title))
+            ps["return_title"] = this.return_title;
         return ps;
     }
 
@@ -1273,8 +1392,8 @@ public abstract class FwController
         {
             // rest/all fields
             // sorted by values (visible field name)
-            var keys = view_list_map.Keys.Cast<string>().ToArray();
-            var values = view_list_map.Values.Cast<string>().ToArray();
+            var keys = view_list_map.Keys.ToArray();
+            var values = view_list_map.Values.Select(value => value.toStr()).ToArray();
             Array.Sort(values, keys);
 
             foreach (string k in keys)
@@ -1316,8 +1435,6 @@ public abstract class FwController
     /// Currently supports only "date" conversion - i.e. date only fields will be formatted as date only (without time)
     /// Override to add more custom conversions
     /// </summary>
-    /// <param name="afields"></param>
-    /// <returns></returns>
     public virtual FwDict getViewListConversions(string[] afields)
     {
         // load schema info to perform specific conversions
@@ -1341,7 +1458,7 @@ public abstract class FwController
                 //if field is exactly DATE - show only date part without time and format per user settings
                 result[fieldname] = "date";
             }
-            else if (fw_type == "datetime")
+            else if (fw_type == "datetime" || fw_type == "datetimeoffset")
             {
                 // if fields is date and time - we'll format it as date and time per user settings
                 result[fieldname] = "datetime";
@@ -1368,7 +1485,6 @@ public abstract class FwController
     /// <param name="fieldname">field name to apply conversion to</param>
     /// <param name="row">data row from db</param>
     /// <param name="hconversions">standard conversion rules from getViewListConversions</param>
-    /// <returns></returns>
     public virtual string applyViewListConversions(string fieldname, FwDict row, FwDict hconversions)
     {
         var data = row[fieldname].toStr();
@@ -1385,11 +1501,11 @@ public abstract class FwController
     }
 
     /// <summary>
-    /// set list_headers (and add search_value from list_filter_search)
-    /// and
+    /// Builds list headers from the active user view and submitted column search values.
     /// </summary>
-    /// <param name="is_cols">if true - update list_rows with cols, use false for json responses</param>
-    public virtual void setViewList(bool is_cols = true)
+    /// <param name="is_cols">When true, also inject rendered column metadata into <c>list_rows</c>; use false for JSON responses.</param>
+    /// <param name="is_column_filters">When false, skip typed column filter UI metadata while still building field headers for data queries.</param>
+    public virtual void setViewList(bool is_cols = true, bool is_column_filters = true)
     {
         list_user_view = getListUserView();
 
@@ -1402,10 +1518,10 @@ public abstract class FwController
             var fieldName = header["field_name"].toStr();
             header["search_value"] = list_filter_search?[fieldName];
         }
-
         if (is_cols)
         {
             var hcustom = Utils.qh(view_list_custom);
+            var hcustomTrusted = Utils.qh(view_list_custom_trusted);
 
             // dynamic cols
             var afields = Utils.qw(fields);
@@ -1424,7 +1540,8 @@ public abstract class FwController
                         {"row",row},
                         {"field_name",fieldname},
                         {"data",data},
-                        {"is_custom",hcustom.ContainsKey(fieldname)}
+                        {"is_custom",hcustom.ContainsKey(fieldname)},
+                        {"is_custom_trusted",hcustomTrusted.ContainsKey(fieldname)}
                     });
                 }
                 row["cols"] = cols;

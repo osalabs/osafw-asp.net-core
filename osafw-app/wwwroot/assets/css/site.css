@@ -128,7 +128,6 @@
   --fw-sidebar-link-font-weight: 400;
   --fw-sidebar-link-active-font-weight: var(--fw-sidebar-link-font-weight);
 
-  --fw-sidebar-icon-gap: 0.5rem;
   --fw-sidebar-icon-weight: inherit;
 
   --fw-sidebar-header-bg: var(--bs-secondary-bg-subtle);
@@ -142,6 +141,7 @@
   --fw-sidebar-dropdown-color: var(--fw-sidebar-color);
 
   /* bootstrap .card hooks (themes override these tokens) */
+  --fw-bs-card-bg: var(--fw-pane-bg);
   --fw-bs-card-shadow: none;
   --fw-bs-card-border: var(--bs-card-border-width, 1px) solid var(--bs-card-border-color, var(--bs-border-color));
   --fw-bs-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
@@ -240,7 +240,7 @@ body {
   --bs-card-spacer-x: var(--fw-bs-card-spacer-x);
   --bs-card-spacer-y: var(--fw-bs-card-spacer-y);
   --bs-card-border-radius: var(--fw-bs-card-radius);
-  --bs-card-bg: var(--fw-pane-bg);
+  --bs-card-bg: var(--fw-bs-card-bg);
 
   border: var(--fw-bs-card-border);
   border-radius: var(--fw-bs-card-radius);
@@ -676,10 +676,6 @@ h1 .badge {
   color: inherit;
 }
 
-.sidebar .nav-link > .bi:first-child {
-  margin-right: var(--fw-sidebar-icon-gap);
-}
-
 .sidebar .bi::before {
   font-weight: var(--fw-sidebar-icon-weight);
 }
@@ -907,6 +903,57 @@ table.list .search {
   display: none;
 }
 
+table.list .search > th {
+  vertical-align: middle;
+}
+
+.fw-column-filter {
+  min-width: 7rem;
+}
+
+.fw-column-filter-inline .input-group {
+  flex-wrap: nowrap;
+}
+
+.fw-column-filter-op {
+  flex: 0 0 3rem;
+  width: 3rem;
+  max-width: 3rem;
+}
+
+.fw-column-filter-inline .input-group-sm > .fw-column-filter-op {
+  padding-left: 2px;
+  padding-right: 2rem;
+}
+
+.fw-column-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 12rem;
+  overflow: hidden;
+}
+
+.fw-column-filter-summary.is-active {
+  color: var(--bs-emphasis-color);
+  border-color: var(--bs-border-color);
+  background-color: var(--bs-tertiary-bg);
+}
+
+.fw-column-filter-summary .text-truncate {
+  min-width: 0;
+}
+
+.fw-column-filter-menu {
+  min-width: 16rem;
+  max-width: 22rem;
+}
+
+.fw-column-filter-multi {
+  min-height: 9rem;
+}
+
 table.list tbody td {
   font-size: var(--fw-table-row-font-size);
 }
@@ -932,6 +979,17 @@ table.list.table-dense :is(.form-control, .form-select) {
 
 table.list.table-dense :is(.form-select) {
   padding-right: 0.5rem !important;
+}
+
+table.list.table-dense .fw-column-filter-op {
+  flex-basis: 2.6rem;
+  width: 2.6rem;
+  max-width: 2.6rem;
+}
+
+table.list.table-dense .fw-column-filter-inline .input-group-sm > .fw-column-filter-op {
+  padding-left: 2px !important;
+  padding-right: 2rem !important;
 }
 
 table.list.table-dense .btn {
@@ -1024,10 +1082,29 @@ table.list-edit.table-dense tbody td > div.ro {
 }
 
 .cell-success-fade,
-.cell-success-fade input,
+.cell-success-fade input:not([role="switch"]),
 .cell-success-fade select,
 .cell-success-fade textarea {
   animation: fadeOutBackground 2s forwards;
+}
+
+.fw-switch-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: calc(1.5em + 0.75rem + 2px);
+  padding-left: 0;
+}
+
+.fw-switch-control .form-check-input {
+  flex: 0 0 auto;
+  float: none;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+.fw-switch-control .form-check-label {
+  line-height: 1.5;
 }
 
 @keyframes fadeOutBackground {

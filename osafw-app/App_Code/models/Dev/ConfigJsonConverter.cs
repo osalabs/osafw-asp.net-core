@@ -88,12 +88,12 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "show_fields",
         "is_dynamic_showform",
         "showform_fields",
+        "is_readonly",
         //within show_fields/showform_fields single field
         "is_custom",
         "field",
         "type",
         "label",
-        "model",
         "lookup_model",
         "lookup_table",
         "lookup_field",
@@ -167,6 +167,9 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         //write specific keys first
         foreach (var key in ordered_keys)
         {
+            if (hwritten.ContainsKey(key))
+                continue;
+
             if (value.Contains(key))
             {
                 writer.WritePropertyName(key);

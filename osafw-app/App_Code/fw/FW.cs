@@ -1,4 +1,4 @@
-﻿// FW Core
+// FW Core
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
@@ -45,12 +45,34 @@ public class FW : IDisposable
 
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
+    internal const string GENERIC_SERVER_ERROR_MESSAGE = "Server Error. Please, contact site administrator!";
 
     private readonly FwDict models = []; // model's singletons cache
-    private readonly FwDict controllers = []; // controller's singletons cache
+    private readonly FwDict controllers = new(StringComparer.OrdinalIgnoreCase); // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
     private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, FwDict> VirtualControllerCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, string> CanonicalActions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [ACTION_INDEX] = ACTION_INDEX,
+        [ACTION_SHOW] = ACTION_SHOW,
+        [ACTION_SHOW_FORM] = ACTION_SHOW_FORM,
+        [ACTION_SAVE] = ACTION_SAVE,
+        [ACTION_SAVE_MULTI] = ACTION_SAVE_MULTI,
+        [ACTION_SHOW_DELETE] = ACTION_SHOW_DELETE,
+        [ACTION_DELETE] = ACTION_DELETE,
+        [ACTION_DELETE_RESTORE] = ACTION_DELETE_RESTORE,
+        [ACTION_NEXT] = ACTION_NEXT,
+        [ACTION_AUTOCOMPLETE] = ACTION_AUTOCOMPLETE,
+        [ACTION_USER_VIEWS] = ACTION_USER_VIEWS,
+        [ACTION_SAVE_USER_VIEWS] = ACTION_SAVE_USER_VIEWS,
+        [ACTION_SAVE_SORT] = ACTION_SAVE_SORT,
+    };
+    private static readonly Dictionary<string, string> CanonicalActionMore = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [ACTION_MORE_NEW] = ACTION_MORE_NEW,
+        [ACTION_MORE_EDIT] = ACTION_MORE_EDIT,
+        [ACTION_MORE_DELETE] = ACTION_MORE_DELETE,
+    };
     private ParsePage? pp_instance; // for parsePage()
 
     public FwDict FORM = [];
@@ -67,6 +89,7 @@ public class FW : IDisposable
     public HttpResponse response = null!;
     private readonly ISession? session;
     private readonly bool isOffline;
+    private readonly Dictionary<string, string> offlineSession = new(StringComparer.Ordinal);
 
     public string request_url = ""; // current request url (relative to application url)
     public FwRoute route = new();
@@ -118,6 +141,7 @@ public class FW : IDisposable
         DateTime? dt = value switch
         {
             DateTime d => d,
+            DateTimeOffset dto => dto.UtcDateTime,
             _ => DateUtils.SQL2Date(value.toStr()),
         };
 
@@ -172,6 +196,7 @@ public class FW : IDisposable
         FwDict conf = dbconfig[config_name] as FwDict ?? [];
 
         var db = new DB(conf, config_name);
+        db.is_log_pii = config("log_pii").toBool();
         // Wrap the logger to match DB.LoggerDelegate (object?[])
         db.setLogger((level, args) => this.logger(level, args!));
         if (!isOffline)
@@ -212,7 +237,7 @@ public class FW : IDisposable
         var env = config("config_override").toStr();
         var logLevel = (LogLevel)config("log_level").toInt((int)LogLevel.ERROR);
         flogger = new FwLogger(logLevel, config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
-        flogger.setScope(env, Session("login"));
+        flogger.setScope(env, config("log_pii").toBool() ? Session("login") : "");
 
         db = getDB();
         DB.SQL_QUERY_CTR = 0; // reset query counter
@@ -221,7 +246,7 @@ public class FW : IDisposable
 
         // per request settings
         G["request_url"] = request?.GetDisplayUrl() ?? "";
-        G["current_time"] = DateTime.Now;
+        G["current_time"] = DateTime.UtcNow;
 
         // override default lang with user's lang
         if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
@@ -236,10 +261,13 @@ public class FW : IDisposable
 
         parseForm();
 
-        // save flash to current var and update session as flash is used only for nearest request
+        // Flash is single-use; avoid writing to session on every request so parallel requests cannot overwrite login state.
         FwDict? _flash = SessionDict("_flash");
-        if (_flash != null) G["_flash"] = _flash;
-        SessionDict("_flash", []);
+        if (_flash != null)
+        {
+            G["_flash"] = _flash;
+            SessionRemove("_flash");
+        }
     }
 
     public void initRequest()
@@ -281,25 +309,52 @@ public class FW : IDisposable
     //by default Session is for strings
     public string Session(string name)
     {
-        return session?.GetString(name) ?? "";
+        if (session != null)
+            return session.GetString(name) ?? "";
+
+        return offlineSession.TryGetValue(name, out string? value) ? value : "";
     }
     public void Session(string name, string value)
     {
-        session?.SetString(name, value);
+        if (session != null)
+            session.SetString(name, value);
+        else
+            offlineSession[name] = value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Remove a single session key without rewriting unrelated session data.
+    /// </summary>
+    /// <param name="name">Session key to remove.</param>
+    public void SessionRemove(string name)
+    {
+        if (session != null)
+            session.Remove(name);
+        else
+            offlineSession.Remove(name);
     }
 
     public int? SessionInt(string name)
     {
-        return session?.GetInt32(name);
+        if (session != null)
+            return session.GetInt32(name);
+
+        return int.TryParse(Session(name), out int value) ? value : null;
     }
     public void SessionInt(string name, int value)
     {
-        session?.SetInt32(name, value);
+        if (session != null)
+            session.SetInt32(name, value);
+        else
+            offlineSession[name] = value.ToString();
     }
 
     public bool SessionBool(string name)
     {
-        var data = session?.Get(name);
+        if (session == null)
+            return bool.TryParse(Session(name), out bool value) && value;
+
+        var data = session.Get(name);
         if (data == null)
         {
             return false;
@@ -308,17 +363,22 @@ public class FW : IDisposable
     }
     public void SessionBool(string name, bool value)
     {
-        session?.Set(name, BitConverter.GetBytes(value));
+        if (session != null)
+            session.Set(name, BitConverter.GetBytes(value));
+        else
+            offlineSession[name] = value.ToString();
     }
 
     public FwDict? SessionDict(string name)
     {
-        string? data = session?.GetString(name);
+        string? data = session != null ? session.GetString(name) : Session(name);
+        if (string.IsNullOrEmpty(data))
+            return null;
         return data == null ? null : (FwDict)Utils.deserialize(data);
     }
     public void SessionDict(string name, FwDict value)
     {
-        session?.SetString(name, Utils.serialize(value));
+        Session(name, Utils.serialize(value));
     }
 
 
@@ -363,7 +423,7 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// returns format expected by client browser
+    /// Resolves the expected response format from request headers and route state.
     /// </summary>
     /// <returns>"pjax", "json" or empty (usual html page)</returns>
     public string getResponseExpectedFormat()
@@ -377,9 +437,8 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// return true if browser requests json response
+    /// Returns whether the current request expects a JSON response.
     /// </summary>
-    /// <returns></returns>
     public bool isJsonExpected()
     {
         return getResponseExpectedFormat() == "json";
@@ -390,10 +449,6 @@ public class FW : IDisposable
     /// if url is empty - use current request url and also set request_url property
     ///
     /// </summary>
-    /// <param name="url"></param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
-    /// <exception cref="UserException"></exception>
     public FwRoute getRoute(string url = "")
     {
         var is_url_param = !string.IsNullOrEmpty(url);
@@ -423,7 +478,7 @@ public class FW : IDisposable
             id = "",
             action_more = "",
             format = "html",
-            method = request.Method,
+            method = request.Method.ToUpperInvariant(),
             @params = []
         };
 
@@ -432,7 +487,7 @@ public class FW : IDisposable
             // check if method override exits
             if (FORM.TryGetValue("_method", out object? value))
             {
-                var form_method = value.toStr();
+                var form_method = value.toStr().ToUpperInvariant();
                 if (METHOD_ALLOWED.ContainsKey(form_method))
                     route.method = form_method;
             }
@@ -446,7 +501,7 @@ public class FW : IDisposable
         bool is_routes_found = false;
         foreach (string route_key in routes.Keys)
         {
-            if (url != route_key)
+            if (!string.Equals(url, route_key, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             string rdest = routes[route_key].toStr();
@@ -462,7 +517,7 @@ public class FW : IDisposable
             int spaceIndex = destination.IndexOf(' ');
             if (spaceIndex > 0)
             {
-                string candidate = destination[..spaceIndex];
+                string candidate = destination[..spaceIndex].ToUpperInvariant();
                 if (METHOD_ALLOWED.ContainsKey(candidate))
                 {
                     overrideMethod = candidate;
@@ -494,7 +549,7 @@ public class FW : IDisposable
             // TODO move prefix cut to separate func
             string prefix_rx = FwConfig.getRoutePrefixesRX();
             route.controller_path = "";
-            Match m_prefix = Regex.Match(url, prefix_rx);
+            Match m_prefix = Regex.Match(url, prefix_rx, RegexOptions.IgnoreCase);
             if (m_prefix.Success)
             {
                 // prefix detected - fix all prefix parts
@@ -522,7 +577,7 @@ public class FW : IDisposable
             // DELETE /controller/{id}           Delete
             //
             // /controller/(Action)              Action    call for arbitrary action from the controller
-            Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$");
+            Match m = Regex.Match(url, @"^/([^/]+)(?:/(new|\.\w+)|/([\d\w_-]+)(?:\.(\w+))?(?:/(edit|delete))?)?/?$", RegexOptions.IgnoreCase);
             if (m.Success)
             {
                 route.controller = Utils.routeFixChars(m.Groups[1].Value);
@@ -534,9 +589,11 @@ public class FW : IDisposable
                 route.id = m.Groups[3].Value;
                 route.format = m.Groups[4].Value;
                 route.action_more = m.Groups[5].Value;
+                if (CanonicalActionMore.TryGetValue(route.action_more, out var restActionMore))
+                    route.action_more = restActionMore;
                 if (!string.IsNullOrEmpty(m.Groups[2].Value))
                 {
-                    if (m.Groups[2].Value == ACTION_MORE_NEW)
+                    if (string.Equals(m.Groups[2].Value, ACTION_MORE_NEW, StringComparison.OrdinalIgnoreCase))
                         route.action_more = ACTION_MORE_NEW;
                     else
                         route.format = m.Groups[2].Value[1..];
@@ -606,7 +663,12 @@ public class FW : IDisposable
         // add controller prefix if any
         route.prefix = controller_prefix;
         route.controller = controller_prefix + route.controller;
+        route.action_more = Utils.routeFixChars(route.action_more);
+        if (CanonicalActionMore.TryGetValue(route.action_more, out var canonicalActionMore))
+            route.action_more = canonicalActionMore;
         route.action = Utils.routeFixChars(route.action_raw);
+        if (CanonicalActions.TryGetValue(route.action, out var canonicalAction))
+            route.action = canonicalAction;
         if (string.IsNullOrEmpty(route.action))
             route.action = ACTION_INDEX;
 
@@ -659,8 +721,9 @@ public class FW : IDisposable
             else
             {
                 // it's ApplicationException, so just warning
-                logger(LogLevel.NOTICE, "REQUEST FORM:", FORM);
-                logger(LogLevel.NOTICE, "SESSION:", context.Session);
+                var logPii = config("log_pii").toBool();
+                logger(LogLevel.NOTICE, "REQUEST FORM:", logPii ? (object)FORM : new StrList(FORM.Keys));
+                logger(LogLevel.NOTICE, "SESSION:", logPii ? (object)context.Session : new StrList(context.Session.Keys));
                 logger(LogLevel.WARN, Ex.Message, Ex.ToString());
 
                 // send_email_admin("App Exception: " & Ex.ToString() & vbCrLf & vbCrLf & _
@@ -674,8 +737,9 @@ public class FW : IDisposable
         catch (Exception Ex)
         {
             // it's general Exception, so something more severe occur, log as error and notify admin
-            logger(LogLevel.NOTICE, "REQUEST FORM:", FORM);
-            logger(LogLevel.NOTICE, "SESSION:", context.Session);
+            var logPii = config("log_pii").toBool();
+            logger(LogLevel.NOTICE, "REQUEST FORM:", logPii ? (object)FORM : new StrList(FORM.Keys));
+            logger(LogLevel.NOTICE, "SESSION:", logPii ? (object)context.Session : new StrList(context.Session.Keys));
             logger(LogLevel.ERROR, Ex.Message, Ex.ToString());
 
             //send_email_admin("Exception: " + Ex.ToString() + System.Environment.NewLine + System.Environment.NewLine
@@ -683,10 +747,10 @@ public class FW : IDisposable
             //    + "Form: " + dumper(FORM) + System.Environment.NewLine + System.Environment.NewLine
             //    + "Session:" + dumper(context.Session));
 
-            if (this.config("log_level").toInt() >= (int)LogLevel.DEBUG)
+            if (this.config("IS_DEV").toBool() && this.config("log_level").toInt() >= (int)LogLevel.DEBUG)
                 throw;
             else
-                errMsg("Server Error. Please, contact site administrator!", Ex);
+                errMsg(GENERIC_SERVER_ERROR_MESSAGE, Ex);
         }
     }
 
@@ -699,6 +763,11 @@ public class FW : IDisposable
     public int _auth(FwRoute route, bool is_die = true)
     {
         int result = 0;
+        route.method = route.method.toStr().ToUpperInvariant();
+        if (CanonicalActions.TryGetValue(route.action, out var canonicalRouteAction))
+            route.action = canonicalRouteAction;
+        if (CanonicalActionMore.TryGetValue(route.action_more, out var canonicalRouteActionMore))
+            route.action_more = canonicalRouteActionMore;
 
         // integrated XSS check - only for POST/PUT/PATCH/DELETE requests
         // OR for standard actions: Save, Delete, SaveMulti
@@ -708,20 +777,20 @@ public class FW : IDisposable
             || route.method == "PUT"
             || route.method == "PATCH"
             || route.method == "DELETE"
-            || route.action == ACTION_SAVE
-            || route.action == ACTION_SAVE_MULTI
-            || route.action == ACTION_DELETE
-            || route.action == ACTION_DELETE_RESTORE)
+            || string.Equals(route.action, ACTION_SAVE, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(route.action, ACTION_SAVE_MULTI, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(route.action, ACTION_DELETE, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(route.action, ACTION_DELETE_RESTORE, StringComparison.OrdinalIgnoreCase))
             && !string.IsNullOrEmpty(Session("XSS")) && Session("XSS") != FORM["XSS"].toStr())
         {
             // XSS validation failed
             // first, check if we are under xss-excluded prefix
-            FwDict no_xss_prefixes = this.config("no_xss_prefixes_prefixes") as FwDict ?? [];
-            if (!no_xss_prefixes.ContainsKey(route.prefix))
+            FwDict no_xss_prefixes = this.config("no_xss_prefixes") as FwDict ?? [];
+            if (!Utils.tryGetValueIgnoreCase(no_xss_prefixes, route.prefix, out _))
             {
                 // second, check if we are under xss-excluded controller
                 FwDict no_xss = this.config("no_xss") as FwDict ?? [];
-                if (!no_xss.ContainsKey(route.controller))
+                if (!Utils.tryGetValueIgnoreCase(no_xss, route.controller, out _))
                 {
                     if (is_die)
                         throw new AuthException("XSS Error. Reload the page or try to re-login");
@@ -737,14 +806,14 @@ public class FW : IDisposable
         int current_level = userAccessLevel;
 
         FwDict rules = (FwDict?)config("access_levels") ?? [];
-        if (rules.ContainsKey(path))
+        if (Utils.tryGetValueIgnoreCase(rules, path, out var pathRule))
         {
-            if (current_level >= rules[path].toInt())
+            if (current_level >= pathRule.toInt())
                 result = 2;
         }
-        else if (rules.ContainsKey(path2))
+        else if (Utils.tryGetValueIgnoreCase(rules, path2, out var controllerRule))
         {
-            if (current_level >= rules[path2].toInt())
+            if (current_level >= controllerRule.toInt())
                 result = 2;
         }
         else
@@ -816,7 +885,7 @@ public class FW : IDisposable
             f[entry.Key] = entry.Value;
 
         // also parse json in request body if any
-        if (request.ContentType?[.."application/json".Length] == "application/json")
+        if (request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true)
         {
             postedJson = Utils.getPostedJson(this);
             // merge json into FORM, but all values should be stingified in FORM
@@ -1068,10 +1137,8 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// set route.controller and optionally route.action, updates G too
+    /// Updates the active route controller/action and the matching global route values.
     /// </summary>
-    /// <param name="controller"></param>
-    /// <param name="action"></param>
     public void setController(string controller, string action = "")
     {
         route.controller = controller;
@@ -1108,6 +1175,8 @@ public class FW : IDisposable
             //we should always have HomeController
         }
         Type controllerClass = co.GetType();
+        if (co is not FwVirtualController && controllerClass.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
+            route.controller = controllerClass.Name[..^"Controller".Length];
 
         logger(LogLevel.TRACE, "TRY controller.action=", route.controller, ".", route.action);
 
@@ -1145,6 +1214,8 @@ public class FW : IDisposable
                 }
             }
         }
+        if (actionMethod != null && actionMethod.Name.EndsWith(ACTION_SUFFIX, StringComparison.Ordinal))
+            route.action = actionMethod.Name[..^ACTION_SUFFIX.Length];
 
         // save to globals so it can be used in templates
         setController(route.controller, route.action);
@@ -1330,10 +1401,8 @@ public class FW : IDisposable
     /// <summary>
     /// output file to response with given content type and disposition
     /// </summary>
-    /// <param name="filepath"></param>
     /// <param name="attname">attachment name, all speсial chars replaced with underscore</param>
     /// <param name="ContentType">detected based on file extension or application/octet-stream</param>
-    /// <param name="ContentDisposition"></param>
     public void fileResponse(string filepath, string attname, string ContentType = "", string ContentDisposition = "attachment")
     {
         if (string.IsNullOrEmpty(ContentType))
@@ -1379,9 +1448,7 @@ public class FW : IDisposable
             bool is_test = this.config("is_test").toBool();
             if (is_test)
             {
-                string test_email = this.Session("login") ?? ""; //in test mode - try logged user email (if logged)
-                if (test_email.Length == 0)
-                    test_email = this.config("test_email").toStr(); //try test_email from config
+                string test_email = resolveTestEmailRecipient();
 
                 mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
@@ -1389,7 +1456,7 @@ public class FW : IDisposable
             }
 
             logger(LogLevel.INFO, "Sending email. From=[", mail_from, "], ReplyTo=[", reply_to, "], To=[", mail_to, "], Subj=[", mail_subject, "]");
-            logger(LogLevel.DEBUG, mail_body);
+            logger(LogLevel.DEBUG, "Email body:", config("log_pii").toBool() ? mail_body : "length=" + mail_body.Length);
 
             if (!string.IsNullOrEmpty(mail_to))
             {
@@ -1511,6 +1578,19 @@ public class FW : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Resolves the test-mode recipient, preferring explicit configuration over the current session login.
+    /// </summary>
+    /// <returns>Configured test recipient, current session login fallback, or an empty string.</returns>
+    public string resolveTestEmailRecipient()
+    {
+        string test_email = config("test_email").toStr().Trim();
+        if (test_email.Length > 0)
+            return test_email;
+
+        return Session("login").Trim();
+    }
+
     // shortcut for send_email from template from the /emails template dir
     public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
@@ -1528,10 +1608,24 @@ public class FW : IDisposable
         this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
     }
 
+    private bool isDetailedErrorVisible()
+    {
+        return this.config("IS_DEV").toBool();
+    }
+
+    private static bool isUserFacingException(Exception ex)
+    {
+        return ex is UserException or AuthException;
+    }
+
     public void errMsg(string msg, Exception? Ex = null)
     {
         FwDict ps = [];
         var tpl_dir = "/error";
+        bool isDetailedError = isDetailedErrorVisible();
+        string publicMsg = !isDetailedError && Ex != null && !isUserFacingException(Ex)
+            ? GENERIC_SERVER_ERROR_MESSAGE
+            : msg;
 
         int code;
         if (Ex is NotFoundException)
@@ -1560,11 +1654,11 @@ public class FW : IDisposable
             this.response.StatusCode = code;
 
         ps["_json"] = true;
-        ps["title"] = msg;
+        ps["title"] = publicMsg;
         ps["error"] = new FwDict
         {
             ["code"] = code,
-            ["message"] = msg,
+            ["message"] = publicMsg,
             ["time"] = DateTime.Now,
             //optional:
             //["category"] = Ex?.GetType().Name,
@@ -1573,12 +1667,12 @@ public class FW : IDisposable
 
         //legacy response: TODO DEPRECATE
         ps["code"] = code;
-        ps["err_msg"] = msg;
+        ps["err_msg"] = publicMsg;
         ps["success"] = false;
-        ps["message"] = msg;
+        ps["message"] = publicMsg;
         ps["err_time"] = DateTime.Now;
 
-        if (this.config("IS_DEV").toBool())
+        if (isDetailedError)
         {
             ps["is_dump"] = true;
             if (Ex != null)
@@ -1634,11 +1728,9 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// Return controller instance by controller class name
+    /// Creates a controller instance by class name and optionally enforces controller access.
     /// </summary>
     /// <param name="controller_name">controller </param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
     public FwController? controller(string controller_name, bool is_auth_check = true)
     {
         ////validate - name should end with "Controller"
@@ -1660,9 +1752,14 @@ public class FW : IDisposable
 
             var controller_icode = controller_name;
 
-            var fwcon = VirtualControllerCache.GetOrAdd(controller_icode, _ => model<FwControllers>().oneByIcode(controller_icode));
+            var fwcon = model<FwControllers>().oneByIcode(controller_icode);
             if (fwcon.Count == 0)
                 return null; // controller class not found even in virtual controllers TODO NoControllerException?
+
+            var canonicalControllerName = fwcon["icode"].toStr(controller_icode);
+            if (string.Equals(route.controller, controller_name, StringComparison.OrdinalIgnoreCase))
+                route.controller = canonicalControllerName;
+            controller_name = canonicalControllerName;
 
             // check defined access level
             if (is_auth_check && userAccessLevel < fwcon["access_level"].toInt())
@@ -1673,6 +1770,13 @@ public class FW : IDisposable
         }
         else
         {
+            var canonicalControllerName = ct.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase)
+                ? ct.Name[..^"Controller".Length]
+                : controller_name;
+            if (string.Equals(route.controller, controller_name, StringComparison.OrdinalIgnoreCase))
+                route.controller = canonicalControllerName;
+            controller_name = canonicalControllerName;
+
             var instance = Activator.CreateInstance(ct) ?? throw new InvalidOperationException($"Could not create controller instance for {ct.FullName}");
             c = (FwController)instance;
             if (is_auth_check)

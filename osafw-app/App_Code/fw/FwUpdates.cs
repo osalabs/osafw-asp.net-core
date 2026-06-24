@@ -31,16 +31,81 @@ public class FwUpdates : FwModel
     }
 
     /// <summary>
+    /// Resolves the provider-specific SQL script root used by database initialization, update loading, and view refreshes.
+    /// </summary>
+    /// <returns>
+    /// Absolute path to the active provider SQL folder, such as <c>App_Data/sql</c>, <c>App_Data/sql/mysql</c>,
+    /// or <c>App_Data/sql/sqlite</c>.
+    /// </returns>
+    public virtual string sqlScriptRoot()
+    {
+        var result = sqlBaseRoot();
+        var provider_subdir = db.dbtype switch
+        {
+            DB.DBTYPE_SQLITE => "sqlite",
+            DB.DBTYPE_MYSQL => "mysql",
+            _ => "",
+        };
+
+        return string.IsNullOrEmpty(provider_subdir) ? result : System.IO.Path.Combine(result, provider_subdir);
+    }
+
+    private string sqlBaseRoot()
+    {
+        return System.IO.Path.Combine(fw.config("site_root").toStr(), "App_Data", "sql");
+    }
+
+    /// <summary>
+    /// Resolves the provider-specific update folder where generated update scripts should be written.
+    /// </summary>
+    /// <returns>Absolute path to the active provider update folder.</returns>
+    public virtual string sqlUpdatesRoot()
+    {
+        return System.IO.Path.Combine(sqlScriptRoot(), "updates");
+    }
+
+    /// <summary>
+    /// Returns update folders to scan, preserving legacy MySQL root updates while allowing provider overrides.
+    /// </summary>
+    /// <returns>Ordered update folders; later folders override files with the same name from earlier folders.</returns>
+    public virtual string[] sqlUpdateRoots()
+    {
+        var root = System.IO.Path.Combine(sqlBaseRoot(), "updates");
+        return db.dbtype switch
+        {
+            DB.DBTYPE_SQLITE => [sqlUpdatesRoot()],
+            DB.DBTYPE_MYSQL => [root, sqlUpdatesRoot()],
+            _ => [root],
+        };
+    }
+
+    /// <summary>
     /// Load new updates from the updates directory and add them to the database.
     /// </summary>
-    public void loadUpdates()
+    public virtual void loadUpdates()
     {
-        string updates_root = fw.config("site_root") + @"\App_Data\sql\updates";
-        logger("checking " + updates_root);
-        if (!System.IO.Directory.Exists(updates_root))
+        var update_roots = sqlUpdateRoots();
+        foreach (var updates_root in update_roots)
+            logger("checking " + updates_root);
+
+        Dictionary<string, string> filesByName = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var updates_root in update_roots)
+        {
+            if (!System.IO.Directory.Exists(updates_root))
+                continue;
+
+            foreach (string file in System.IO.Directory.GetFiles(updates_root))
+            {
+                var filename = System.IO.Path.GetFileName(file);
+                if (!string.IsNullOrEmpty(filename))
+                    filesByName[filename] = file;
+            }
+        }
+
+        if (filesByName.Count == 0)
             return;
 
-        string[] files = System.IO.Directory.GetFiles(updates_root);
+        string[] files = new List<string>(filesByName.Values).ToArray();
 
         //sort files by name, so it will appear for example as:
         // update2025-02-20.sql
@@ -70,12 +135,12 @@ public class FwUpdates : FwModel
         }
     }
 
-    public DBList listPending()
+    public virtual DBList listPending()
     {
         return db.array(table_name, new FwDict() { { "status", STATUS_ACTIVE } }, "id");
     }
 
-    public void applyPending(bool is_echo = false)
+    public virtual void applyPending(bool is_echo = false)
     {
         DBList rows = listPending();
         foreach (FwDict row in rows)
@@ -132,7 +197,11 @@ public class FwUpdates : FwModel
         db.clearSchemaCache();
     }
 
-    public long getCountPending()
+    /// <summary>
+    /// Counts framework update records that are still pending.
+    /// </summary>
+    /// <returns>Number of active update rows waiting to be applied.</returns>
+    public virtual long getCountPending()
     {
         return getCount(new int[] { STATUS_ACTIVE });
     }
@@ -149,7 +218,7 @@ public class FwUpdates : FwModel
         fw.Session("FW_UPDATES_CTR", "0");
     }
 
-    public void applyList(IntList ids, bool is_echo = false)
+    public virtual void applyList(IntList ids, bool is_echo = false)
     {
         foreach (var id in ids)
         {
@@ -159,7 +228,7 @@ public class FwUpdates : FwModel
 
     public void refreshViews(bool is_echo = false)
     {
-        var views_file = fw.config("site_root") + @"\App_Data\sql\views.sql";
+        var views_file = System.IO.Path.Combine(sqlScriptRoot(), "views.sql");
         if (is_echo)
             fw.rw("Applying views file: " + views_file);
 
@@ -170,16 +239,37 @@ public class FwUpdates : FwModel
         db.clearSchemaCache();
     }
 
+    /// <summary>
+    /// Determines whether a developer Home page request should trigger the automatic FwUpdates redirect.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> when the app is running with <c>IS_DEV</c> and <c>is_fwupdates_auto_apply</c> enabled; otherwise <c>false</c>.
+    /// </returns>
+    public bool isAutoApplyEnabledForDev()
+    {
+        return fw.config("IS_DEV").toBool() && fw.config("is_fwupdates_auto_apply").toBool();
+    }
+
+    /// <summary>
+    /// Checks for pending framework SQL updates during developer Home page visits and redirects to the pending notice.
+    /// </summary>
+    /// <remarks>
+    /// The <c>is_fwupdates_auto_apply</c> setting lets local developers keep pending updates visible in `/Admin/FwUpdates`
+    /// without automatically entering the apply flow when they visit Home.
+    /// </remarks>
     public void checkApplyIfDev()
     {
         if (!fw.config("IS_DEV").toBool())
-            return; // only auto-apply in dev
+            return; // only check update files in dev
         try
         {
             loadUpdates();
 
+            if (!isAutoApplyEnabledForDev())
+                return; // keep pending updates visible without entering the apply flow
+
             if (getCountPending() > 0)
-                fw.redirect("/Dev/Configure/(ApplyUpdates)");
+                fw.redirect("/Dev/Configure/(PendingUpdates)");
         }
         catch (Exception e)
         {

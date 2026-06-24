@@ -39,6 +39,7 @@ CREATE TABLE demos (
 
   fint                  INT NOT NULL DEFAULT 0,           /*accept only INT*/
   ffloat                FLOAT NOT NULL DEFAULT 0,         /*accept float digital values*/
+  frange                INT NOT NULL DEFAULT 50,          /*range slider value 0-100*/
 
   dict_link_auto_id     INT NOT NULL DEFAULT 0,  /*index of autocomplete field - linked to demo_dicts*/
   dict_link_multi       VARCHAR(255) NOT NULL DEFAULT '', /*multiple select values, link to demo_dicts*/
@@ -47,10 +48,14 @@ CREATE TABLE demos (
   fradio                INT NOT NULL DEFAULT 0,  /*index of radio selection*/
   fyesno                TINYINT NOT NULL DEFAULT 0, /*yes/no field 0 - NO, 1 - YES*/
   is_checkbox           TINYINT NOT NULL DEFAULT 0, /*checkbox field 0 - not set, 1 - set*/
+  is_switch             TINYINT NOT NULL DEFAULT 0, /*switch field 0 - off, 1 - on*/
 
   fdate_combo           DATE,                             /*date field with 3 combos editing*/
   fdate_pop             DATE,                             /*date field with popup editing*/
   fdatetime             DATETIME,                         /*date+time field*/
+  fdatetime_utc         DATETIME,                         /*UTC instant marked by _utc suffix*/
+  fdatetime_offset      DATETIME,                         /*SQL Server datetimeoffset compatibility field*/
+  fdatetime_local       DATETIME,                         /*browser datetime-local input demo*/
   ftime                 INT NOT NULL DEFAULT 0,  /*time field - we always store time as seconds from start of the day [0-86400]*/
 
   att_id                INT NULL,                /*optional attached image*/

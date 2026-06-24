@@ -1,4 +1,4 @@
-﻿// User Lists Admin  controller
+// User Lists Admin  controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -33,9 +33,9 @@ public class MyListsController : FwAdminController
         is_readonly = false;//allow update my stuff
     }
 
-    public override FwDict setPS(FwDict? ps = null)
+    public override FwDict setListPS(FwDict? ps = null)
     {
-        ps = base.setPS(ps);
+        ps = base.setListPS(ps);
         ps["select_entities"] = model.listSelectOptionsEntities();
         return ps;
     }
@@ -130,8 +130,15 @@ public class MyListsController : FwAdminController
         return this.afterSave(success, id, is_new);
     }
 
+    /// <summary>
+    /// Toggles one item in a user-owned list from the classic record form dropdown.
+    /// </summary>
+    /// <param name="id">User list ID that should be updated.</param>
+    /// <returns>JSON-style response data describing whether the item was added or removed.</returns>
     public FwDict? ToggleListAction(int id)
     {
+        enforcePost();
+
         var item_id = reqi("item_id");
         var ps = new FwDict();
 
@@ -146,9 +153,15 @@ public class MyListsController : FwAdminController
         return afterSave(true, ps);
     }
 
-    // request item_id - could be one id, or comma-separated ids
+    /// <summary>
+    /// Adds one or more checked items to a user-owned list from list screens.
+    /// </summary>
+    /// <param name="id">User list ID that should receive the submitted item IDs.</param>
+    /// <returns>Standard save response for the current request format.</returns>
     public FwDict? AddToListAction(int id)
     {
+        enforcePost();
+
         FwDict items = Utils.commastr2hash(reqs("item_id"));
 
         var user_lists = fw.model<UserLists>().one(id);
@@ -165,9 +178,15 @@ public class MyListsController : FwAdminController
         return afterSave(true);
     }
 
-    // request item_id - could be one id, or comma-separated ids
+    /// <summary>
+    /// Removes one or more checked items from a user-owned list from list screens.
+    /// </summary>
+    /// <param name="id">User list ID that should lose the submitted item IDs.</param>
+    /// <returns>Standard save response for the current request format.</returns>
     public FwDict? RemoveFromListAction(int id)
     {
+        enforcePost();
+
         FwDict items = Utils.commastr2hash(reqs("item_id"));
 
         var user_lists = fw.model<UserLists>().one(id);

@@ -29,15 +29,13 @@ public class FwActivityLogs : FwModel
     }
 
     /// <summary>
-    /// add new log record by icodes
+    /// Adds an activity log row using log type and entity icodes.
     /// </summary>
     /// <param name="log_types_icode">required, must be predefined constant from FwLogTypes</param>
     /// <param name="entity_icode">required, fwentity, basically table name - if not exists - autocreated</param>
     /// <param name="item_id">related item id, if 0 - NULL will be stored in db</param>
     /// <param name="idesc">optional title/description</param>
     /// <param name="payload">optional payload (will be serialized as json)</param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
     public int addSimple(string log_types_icode, string entity_icode, int item_id = 0, string idesc = "", FwDict? payload = null)
     {
         var lt = fw.model<FwLogTypes>().oneByIcode(log_types_icode);
@@ -69,14 +67,13 @@ public class FwActivityLogs : FwModel
     }
 
     /// <summary>
-    /// return activity for given entity
+    /// Lists activity rows for a specific entity record.
     /// </summary>
     /// <param name="entity_icode">entity table name</param>
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
-    /// <param name="offset">page number</param>
-    /// <param name="limit">pagesize</param>
-    /// <returns></returns>
+    /// <param name="offset">number of ordered rows to skip before returning activity rows</param>
+    /// <param name="limit">maximum rows to return, or -1 for all rows</param>
     public virtual DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null, int offset = 0, int limit = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
@@ -105,17 +102,16 @@ public class FwActivityLogs : FwModel
     }
 
     /// <summary>
-    /// return activity for given entity for UI
+    /// Lists activity rows shaped for the UI activity tab.
     /// </summary>
     /// <remarks>
-    /// system fields are not merged when the pagination is used
+    /// System fields are not merged when pagination is used because prior pages may contain related field changes.
     /// </remarks>
     /// <param name="entity_icode"></param>
     /// <param name="id"></param>
     /// <param name="tab">"all", "comments" or "history"</param>
-    /// <param name="offset">offset for pagination</param>
-    /// <param name="limit">limit for pagination (no pagination by default)</param>
-    /// <returns></returns>
+    /// <param name="offset">number of ordered rows to skip before returning activity rows</param>
+    /// <param name="limit">maximum rows to return, or -1 for all rows</param>
     public FwList listByEntityForUI(string entity_icode, int id, string tab = "", int offset = 0, int limit = -1)
     {
         // convert tab to log_types_icodes
@@ -245,10 +241,10 @@ public class FwActivityLogs : FwModel
         return result;
     }
 
-    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null)
+    public long getCountByLogIType(int log_itype, IList? statuses = null, int? since_days = null, int userId = 0)
     {
-        var sql = $@"SELECT count(*) 
-                    from {db.qid(table_name)} al 
+        var sql = $@"SELECT count(*)
+                    from {db.qid(table_name)} al
                         INNER JOIN {fw.model<FwLogTypes>().table_name} lt on (lt.id=al.log_types_id)
                     where lt.itype=@itype
                      and al.status IN (@statuses)
@@ -260,8 +256,13 @@ public class FwActivityLogs : FwModel
         };
         if (since_days != null)
         {
-            sql += " and al.add_time > DATEADD(day, @since_days, GETDATE())";
-            p["since_days"] = since_days;
+            sql += " and al.add_time > @since_cutoff";
+            p["since_cutoff"] = DateTime.UtcNow.AddDays(since_days.Value);
+        }
+        if (userId != 0)
+        {
+            sql += " and al.users_id=@users_id";
+            p["users_id"] = userId;
         }
 
         return db.valuep(sql, p).toLong();

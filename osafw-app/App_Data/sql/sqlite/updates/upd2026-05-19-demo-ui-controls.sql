@@ -1,0 +1,5 @@
+-- demo UI control fields
+
+ALTER TABLE demos ADD COLUMN frange INTEGER NOT NULL DEFAULT 50;
+
+ALTER TABLE demos ADD COLUMN is_switch INTEGER NOT NULL DEFAULT 0;

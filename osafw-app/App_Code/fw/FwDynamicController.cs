@@ -1,4 +1,4 @@
-﻿// Fw Dynamic controller
+// Fw Dynamic controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2018 Oleg Savchuk www.osalabs.com
@@ -6,11 +6,12 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class FwDynamicController : FwController
+public partial class FwDynamicController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
@@ -22,6 +23,15 @@ public class FwDynamicController : FwController
     public override void init(FW fw)
     {
         base.init(fw);
+    }
+
+    /// <summary>
+    /// Adds dynamic-only mutating actions to the role permission map before normal controller access checks run.
+    /// </summary>
+    public override void checkAccess()
+    {
+        access_actions_to_permissions["SaveAttFiles"] = Permissions.PERMISSION_EDIT;
+        base.checkAccess();
     }
 
     #region Standard REST Actions - Index/Show/ShowForm/Save
@@ -64,7 +74,9 @@ public class FwDynamicController : FwController
             setViewList();
 
         // set standard output parse strings
+#pragma warning disable CS0618 // Preserve dispatch to existing project overrides of setPS().
         var ps = this.setPS();
+#pragma warning restore CS0618
 
         // userlists support if necessary
         if (this.is_userlists)
@@ -170,7 +182,7 @@ public class FwDynamicController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["return_url"] = return_url;
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["base_url"] = base_url;
         ps["is_userlists"] = is_userlists;
@@ -238,7 +250,7 @@ public class FwDynamicController : FwController
 
         ps["id"] = id;
         ps["i"] = item;
-        ps["return_url"] = return_url;
+        setPSReturnContext(ps);
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["tab"] = form_tab;
@@ -266,6 +278,11 @@ public class FwDynamicController : FwController
         return id;
     }
 
+    /// <summary>
+    /// Saves a dynamic controller row and its configured dynamic child/link fields.
+    /// </summary>
+    /// <param name="id">Existing parent row id to update, or zero for a new row.</param>
+    /// <returns>Parsed response data or JSON metadata from <see cref="afterSave(bool, string, bool, string, string, FwDict?)"/>.</returns>
     public virtual FwDict? SaveAction(int id = 0)
     {
         route_onerror = FW.ACTION_SHOW_FORM;
@@ -273,8 +290,11 @@ public class FwDynamicController : FwController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
-        fw.model<Users>().checkReadOnly();
-        if (reqb("refresh"))
+        checkReadOnly();
+        if (id != 0)
+            modelOneOrFail(id);
+
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
@@ -297,6 +317,9 @@ public class FwDynamicController : FwController
         FwDict? lookupJson = null;
         if (fw.isJsonExpected() && !string.IsNullOrEmpty(lookupMode))
             lookupJson = buildLookupJson(id);
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new, more_json: lookupJson);
     }
@@ -329,8 +352,6 @@ public class FwDynamicController : FwController
     /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
     /// If more complex validation required - just override this and call just necessary validation
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="item"></param>
     public virtual void Validate(int id, FwDict item)
     {
         bool result = validateRequiredDynamic(id, item);
@@ -461,9 +482,14 @@ public class FwDynamicController : FwController
         // input name format: item-<~field>#<~id>[field_name]
         var hids = reqh("item-" + field);
         // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-        var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        if (!string.IsNullOrEmpty(del_id))
+            checkSubtableRowBelongsToParent(id, del_id, def, sub_model);
+
         foreach (string row_id in sorted_keys)
         {
+            checkSubtableRowBelongsToParent(id, row_id, def, sub_model);
+
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
@@ -485,7 +511,6 @@ public class FwDynamicController : FwController
     /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
     /// <param name="item">submitted row data from the form</param>
     /// <param name="def">subable definition from config.json</param>
-    /// <returns></returns>
     protected virtual bool validateSubtableRowDynamic(string row_id, FwDict item, FwDict def)
     {
         var result = true;
@@ -515,22 +540,22 @@ public class FwDynamicController : FwController
     #region Delete/Restore Actions
     public virtual void ShowDeleteAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         var ps = new FwDict()
         {
             {"i", modelOneOrFail(id)},
             {"related_id", this.related_id},
-            {"return_url", this.return_url},
             {"base_url", this.base_url},
         };
+        setPSReturnContext(ps);
 
         fw.parser("/common/form/showdelete", ps);
     }
 
     public virtual FwDict? DeleteAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         try
         {
@@ -560,7 +585,7 @@ public class FwDynamicController : FwController
 
     public virtual FwDict? RestoreDeletedAction(int id)
     {
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
 
         model0.update(id, new FwDict() { { model0.field_status, FwModel.STATUS_ACTIVE } });
 
@@ -577,7 +602,7 @@ public class FwDynamicController : FwController
         FwDict cbses = reqh("cb");
         bool is_delete = fw.FORM.ContainsKey("delete");
         if (is_delete)
-            fw.model<Users>().checkReadOnly();
+            checkReadOnly();
 
         int user_lists_id = reqi("addtolist");
         var remove_user_lists_id = reqi("removefromlist");
@@ -687,19 +712,17 @@ public class FwDynamicController : FwController
             if (item.Count > 0)
             {
                 var url = base_url + "/" + id + (is_edit ? "/edit" : "");
-                if (related_id.Length > 0 || return_url.Length > 0)
-                    url += "/?";
                 if (related_id.Length > 0)
-                    url += "related_id=" + Utils.urlescape(related_id);
-                if (return_url.Length > 0)
-                    url += "&return_url=" + Utils.urlescape(return_url);
+                    url = Utils.addUrlQueryParam(url, "related_id", related_id);
+                url = Utils.addReturnUrlQuery(url, return_url, return_title);
                 return new FwDict { { "_redirect", url }, { "id", id } };
             }
         }
 
         var list_url = base_url + "/?dofilter=1&f[s]=" + Utils.urlescape(s);
         if (related_id.Length > 0)
-            list_url += "&related_id=" + Utils.urlescape(related_id);
+            list_url = Utils.addUrlQueryParam(list_url, "related_id", related_id);
+        list_url = Utils.addReturnUrlQuery(list_url, return_url, return_title);
         return new FwDict { { "_redirect", list_url } };
     }
     #endregion
@@ -784,15 +807,17 @@ public class FwDynamicController : FwController
 
     #region Att Files support
 
-    // upload one or many files to the Att storage and link to the current entity and id
-    // json only response
+    /// <summary>
+    /// Uploads files for a saved dynamic row after proving the target parent row is editable in this controller.
+    /// </summary>
+    /// <param name="id">Existing parent row id that the uploaded files will be attached to.</param>
+    /// <returns>JSON response describing the first uploaded attachment or an upload error.</returns>
     public virtual FwDict SaveAttFilesAction(int id)
     {
-        var item = reqh("item");
+        checkReadOnly();
+        modelOneOrFail(id);
 
-        // validation
-        if (id == 0)
-            throw new UserException("Invalid ID");
+        var item = reqh("item");
 
         var files = fw.request?.Form?.Files;
         if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
@@ -843,11 +868,9 @@ public class FwDynamicController : FwController
     #region HELPERS for dynamic fields
 
     /// <summary>
-    /// return config for show/showform fields by tab
+    /// Resolves configured show/showform fields for a form tab, defaulting to the active tab.
     /// </summary>
-    /// <param name="prefix">show_fields or showform_fields</param>
-    /// <param name="tab">optional tab code, if ommited - form_tab used</param>
-    /// <returns></returns>
+    /// <param name="prefix">Config prefix such as <c>show_fields</c> or <c>showform_fields</c>.</param>
     protected virtual FwList getConfigShowFormFieldsByTab(string prefix, string? tab = null)
     {
         tab ??= form_tab;
@@ -860,11 +883,36 @@ public class FwDynamicController : FwController
     }
 
     /// <summary>
+    /// Collects fields from the base config and any tab-specific overrides.
+    /// </summary>
+    /// <param name="prefix">The config prefix, such as `show_fields` or `showform_fields`.</param>
+    /// <returns>Combined list of field definitions across all configured tabs.</returns>
+    protected virtual FwList collectFormFields(string prefix)
+    {
+        var allFields = new FwList();
+        if (config[prefix] is IList fields)
+            allFields.AddRange(new FwList(fields));
+
+        if (config["form_tabs"] is IList form_tabs)
+        {
+            foreach (FwDict tab in form_tabs)
+            {
+                var tabCode = tab["tab"].toStr();
+                if (tabCode.Length == 0)
+                    continue;
+
+                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
+                if (tabFields.Count > 0)
+                    allFields.AddRange(tabFields);
+            }
+        }
+
+        return allFields;
+    }
+
+    /// <summary>
     /// prepare data for fields repeat in ShowAction based on config.json show_fields parameter
     /// </summary>
-    /// <param name="item"></param>
-    /// <param name="ps"></param>
-    /// <returns></returns>
     public virtual FwList prepareShowFields(FwDict item, FwDict ps)
     {
         var id = item[model0.field_id].toInt();
@@ -873,8 +921,12 @@ public class FwDynamicController : FwController
         foreach (FwDict def in fields)
         {
             def["i"] = item; // ref to item
+            def["record_id"] = id;
             string dtype = def["type"].toStr();
             string field = def["field"].toStr();
+
+            if (dtype == "range" || dtype == "switch")
+                def["disabled"] = true;
 
             if (DEF_TYPES_STRUCTURE.Contains(dtype))
                 // structural tags
@@ -964,6 +1016,9 @@ public class FwDynamicController : FwController
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
 
+                if (dtype == "plaintext_json")
+                    def["value"] = formatPlaintextJson(def["value"]);
+
                 // special handling for date combo: prepare select defaults
                 if (dtype == "date_combo")
                 {
@@ -980,6 +1035,13 @@ public class FwDynamicController : FwController
         return fields;
     }
 
+    /// <summary>
+    /// Prepares dynamic form field definitions for rendering in ShowForm, including readonly display
+    /// fields that are allowed in edit screens.
+    /// </summary>
+    /// <param name="item">Current record values used to seed controls and related display data.</param>
+    /// <param name="ps">Page state dictionary shared with templates during ShowForm rendering.</param>
+    /// <returns>Prepared field definitions with per-field template data attached.</returns>
     public virtual FwList prepareShowFormFields(FwDict item, FwDict ps)
     {
         var id = item[model0.field_id].toInt();
@@ -1000,6 +1062,7 @@ public class FwDynamicController : FwController
             //logger(def);
             def["i"] = item; // ref to item
             def["ps"] = ps; // ref to whole ps
+            def["record_id"] = id;
             string dtype = def["type"].toStr(); // type is required
             string field = def["field"].toStr();
 
@@ -1057,20 +1120,23 @@ public class FwDynamicController : FwController
 
                 def["multi_datarow"] = multi_datarow;
             }
-            else if (dtype == "att_edit")
+            else if (dtype == "att" || dtype == "att_edit")
             {
                 def["att"] = fw.model<Att>().one(item[field]);
                 def["value"] = item[field];
             }
-            else if (dtype == "att_links_edit")
+            else if (dtype == "att_links" || dtype == "att_links_edit")
                 def["att_links"] = fw.model<Att>().listLinked(model0.table_name, id);
 
-            else if (dtype == "att_files_edit")
+            else if (dtype == "att_files" || dtype == "att_files_edit")
             {
-                if (!def.ContainsKey("att_upload_url"))
-                    def["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
-                if (!def.ContainsKey("att_post_prefix"))
-                    def["att_post_prefix"] = field;
+                if (dtype == "att_files_edit")
+                {
+                    if (!def.ContainsKey("att_upload_url"))
+                        def["att_upload_url"] = this.base_url + "/(SaveAttFiles)/" + id;
+                    if (!def.ContainsKey("att_post_prefix"))
+                        def["att_post_prefix"] = field;
+                }
 
                 def["att_files"] = fw.model<Att>().listByEntityCategory(model0.table_name, id, def["att_category"].toStr());
             }
@@ -1178,10 +1244,33 @@ public class FwDynamicController : FwController
                     if (def["conv"].toStr() == "time_from_seconds")
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
+
+                if (dtype == "plaintext_json")
+                    def["value"] = formatPlaintextJson(def["value"]);
             }
 
         }
         return fields;
+    }
+
+    /// <summary>
+    /// Pretty-prints valid JSON values for read-only Dynamic fields while leaving invalid text unchanged.
+    /// </summary>
+    protected virtual string formatPlaintextJson(object? value)
+    {
+        var raw = value.toStr();
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        try
+        {
+            using var parsed = JsonDocument.Parse(raw);
+            return JsonSerializer.Serialize(parsed.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (JsonException)
+        {
+            return raw;
+        }
     }
 
     /// <summary>
@@ -1222,7 +1311,7 @@ public class FwDynamicController : FwController
             // input name format: item-<~field>#<~id>[field_name]
             var hids = reqh("item-" + field);
             // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-            var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+            var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
             foreach (string row_id in sorted_keys)
             {
                 if (row_id == del_id) continue; //skip deleted row
@@ -1266,8 +1355,8 @@ public class FwDynamicController : FwController
 
         var showform_fields = _fieldsToHash(getConfigShowFormFieldsByTab("showform_fields"));
 
-        // special auto-processing for fields of particular types - use .Cast<string>().ToArray() to make a copy of keys as we modify fields
-        foreach (string field in fields.Keys.Cast<string>().ToArray())
+        // special auto-processing for fields of particular types - use ToArray() to make a copy of keys as we modify fields
+        foreach (string field in fields.Keys.ToArray())
         {
             if (!showform_fields.ContainsKey(field))
                 continue;
@@ -1480,16 +1569,22 @@ public class FwDynamicController : FwController
         //check if we delete specific row
         var del_id = subtable_del[field].toStr();
 
+        // row ids submitted as: item-<~field>[<~id>]
+        // input name format: item-<~field>#<~id>[field_name]
+        var hids = reqh("item-" + field);
+        // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
+        var sorted_keys = hids.Keys.OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
+        if (!string.IsNullOrEmpty(del_id))
+            checkSubtableRowBelongsToParent(id, del_id, def, sub_model);
+
+        foreach (string row_id in sorted_keys)
+            checkSubtableRowBelongsToParent(id, row_id, def, sub_model);
+
         //mark all related records as under update (status=1)
         sub_model.setUnderUpdateByMainId(id);
 
         //update and add new rows
 
-        // row ids submitted as: item-<~field>[<~id>]
-        // input name format: item-<~field>#<~id>[field_name]
-        var hids = reqh("item-" + field);
-        // sort hids.Keys, so numerical keys - first and keys staring with "new-" will be last
-        var sorted_keys = hids.Keys.Cast<string>().OrderBy(x => x.StartsWith("new-") ? 1 : 0).ThenBy(x => x).ToList();
         var junction_field_status = sub_model.getJunctionFieldStatus();
         foreach (string row_id in sorted_keys)
         {
@@ -1530,12 +1625,12 @@ public class FwDynamicController : FwController
     /// <summary>
     /// modelAddOrUpdate for subtable with dynamic model
     /// </summary>
-    /// <param name="main_id">main entity id</param>
-    /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
-    /// <param name="fields">fields to save to db</param>
-    /// <param name="def">subable definition from config.json</param>
-    /// <param name="sub_model">optional subtable model, if not passed def[model] will be used</param>
-    /// <returns></returns>
+    /// <param name="main_id">Main entity id that must own any existing subtable row.</param>
+    /// <param name="row_id">Submitted row id; new rows use a <c>new-</c> prefix and existing rows must be numeric.</param>
+    /// <param name="fields">Fields to save to the subtable row.</param>
+    /// <param name="def">Subtable field definition from <c>config.json</c>.</param>
+    /// <param name="sub_model">Optional resolved subtable model; when omitted, <paramref name="def"/> supplies the model name.</param>
+    /// <returns>Persisted subtable row id, either newly inserted or the existing row id.</returns>
     protected virtual int modelAddOrUpdateSubtableDynamic(int main_id, string row_id, FwDict fields, FwDict def, FwModel? sub_model = null)
     {
         int id;
@@ -1553,6 +1648,8 @@ public class FwDynamicController : FwController
         }
         else
         {
+            checkSubtableRowBelongsToParent(main_id, row_id, def, sub_model);
+
             id = row_id.toInt();
             sub_model.update(id, fields);
         }
@@ -1560,13 +1657,37 @@ public class FwDynamicController : FwController
         return id;
     }
 
+    /// <summary>
+    /// Blocks forged subtable row ids from updating or deleting children attached to another parent row.
+    /// </summary>
+    /// <param name="main_id">Parent row id submitted with the dynamic save.</param>
+    /// <param name="row_id">Submitted subtable row id, or a <c>new-</c> temporary id for inserts.</param>
+    /// <param name="def">Subtable field definition that names the child model when <paramref name="sub_model"/> is omitted.</param>
+    /// <param name="sub_model">Resolved child model whose <see cref="FwModel.junction_field_main_id"/> stores the parent id.</param>
+    /// <exception cref="AuthException">Thrown when an existing child row is missing, invalid, or belongs to another parent.</exception>
+    protected virtual void checkSubtableRowBelongsToParent(int main_id, string row_id, FwDict def, FwModel? sub_model = null)
+    {
+        if (string.IsNullOrEmpty(row_id) || row_id.StartsWith("new-"))
+            return;
+
+        var id = row_id.toInt();
+        if (id <= 0)
+            throw new AuthException("Bad access - Not authorized");
+
+        sub_model ??= fw.model(def["model"].toStr());
+        var parentField = sub_model.junction_field_main_id;
+        if (string.IsNullOrEmpty(parentField))
+            throw new AuthException("Bad access - Not authorized");
+
+        var row = sub_model.one(id);
+        if (row.Count == 0 || row[parentField].toInt() != main_id)
+            throw new AuthException("Bad access - Not authorized");
+    }
+
 
     /// <summary>
-    /// return first field definition by field name
+    /// Returns the first configured field definition with the requested field name.
     /// </summary>
-    /// <param name="fields"></param>
-    /// <param name="field_name"></param>
-    /// <returns></returns>
     protected FwDict? defByFieldname(string field_name, FwList fields)
     {
         foreach (FwDict def in fields)

@@ -1,4 +1,4 @@
-﻿// User Filters Admin  controller
+// User Filters Admin  controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -59,7 +59,7 @@ public class MyFiltersController : FwAdminController
     {
         form_new_defaults = new() { ["icode"] = related_id };
         var ps = base.ShowFormAction(id)!;
-        ps["is_admin"] = fw.userAccessLevel == Users.ACL_ADMIN;
+        ps["is_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_ADMIN);
         return ps;
     }
 
@@ -82,15 +82,22 @@ public class MyFiltersController : FwAdminController
         var item_old = model0.one(id);
 
         // also check that this filter is user's filter (cannot override system filter)
-        if (item_old.Count > 0 && item_old["is_system"].toInt() == 1)
+        if (item_old.Count > 0 && item_old["is_system"].toInt() == 1 && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
             throw new UserException("Cannot overwrite system filter");
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
         if (is_new || is_overwrite)
-            // read new filter data from session
-            itemdb["idesc"] = Utils.jsonEncode(fw.Session("_filter_" + item["icode"]));
+        {
+            // Store standard list filters separately from per-column filters so both can be restored without mixing keys.
+            var icode = item["icode"].toStr();
+            itemdb["idesc"] = Utils.jsonEncode(new FwDict
+            {
+                ["f"] = fw.SessionDict("_filter_" + icode) ?? [],
+                ["search"] = fw.SessionDict("_filtersearch_" + icode) ?? [],
+            });
+        }
 
         id = this.modelAddOrUpdate(id, itemdb);
 

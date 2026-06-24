@@ -1,0 +1,178 @@
+<!-- component usage: include common/bootstrap_select and add class="selectpicker" to select controls. -->
+
+<!-- adjust to BS5 styles -->
+<style type="text/css">
+  .bootstrap-select>.dropdown-toggle {
+    color: var(--bs-body-color) !important;
+    background-color: var(--bs-body-bg);
+    background-clip: padding-box;
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+  }
+
+  .bootstrap-select>.dropdown-toggle.bs-placeholder,
+  .bootstrap-select>.dropdown-toggle.bs-placeholder:focus,
+  .bootstrap-select>.dropdown-toggle.bs-placeholder:hover {
+    color: var(--bs-secondary-color) !important;
+  }
+
+  .bootstrap-select>.dropdown-toggle:focus {
+    border-color: #86b7fe;
+    outline: none !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), .25);
+  }
+
+  .bootstrap-select .dropdown-menu {
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+  }
+
+  .bootstrap-select .dropdown-menu .dropdown-item {
+    color: var(--bs-body-color);
+  }
+
+  .bootstrap-select .dropdown-menu .dropdown-item:hover,
+  .bootstrap-select .dropdown-menu .dropdown-item:focus {
+    color: var(--bs-body-color);
+    background-color: var(--bs-tertiary-bg);
+  }
+
+  .bootstrap-select .dropdown-menu .dropdown-item.active,
+  .bootstrap-select .dropdown-menu .dropdown-item:active,
+  .bootstrap-select .dropdown-menu .selected .dropdown-item {
+    color: var(--bs-body-color);
+    background-color: var(--bs-secondary-bg);
+  }
+
+  .bootstrap-select .bs-searchbox .form-control {
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
+  }
+
+  .bootstrap-select .bs-searchbox .form-control::placeholder {
+    color: var(--bs-secondary-color);
+  }
+
+  .bootstrap-select>.dropdown-menu>.popover-header {
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+    color: var(--bs-secondary-color) !important;
+  }
+
+  .bootstrap-select>.dropdown-menu>.popover-header>.close {
+    float:right;
+    padding: 0;
+    background-color: transparent;
+    border: 0;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--bs-secondary-color);
+    text-shadow: none;
+    opacity: .75;
+  }
+
+  .bootstrap-select>.dropdown-menu>.popover-header>.close:hover {
+    color: var(--bs-body-color);
+    opacity: 1;
+  }
+</style>
+
+<script>
+  (function () {
+    var componentScope = fw.scopeFromScript();
+    var $componentScope = $(componentScope || document);
+    var $earlySelects = $componentScope.is('select.selectpicker') ? $componentScope : $componentScope.find('select.selectpicker');
+    $earlySelects.removeClass('form-select');
+
+    fw.registerComponent('bootstrap_select', {
+      assetsUrls: [
+        '<~GLOBAL[ASSETS_URL]>/lib/bootstrap-select/css/bootstrap-select.min.css?v<~GLOBAL[SITE_VERSION]>',
+        '<~GLOBAL[ASSETS_URL]>/lib/bootstrap-select/js/bootstrap-select.min.js?v<~GLOBAL[SITE_VERSION]>'
+      ],
+      init: function (scope) {
+        if (!$.fn.selectpicker) return;
+
+        var $scope = $(scope || document);
+        var $selects = $scope.is('select.selectpicker') ? $scope : $scope.find('select.selectpicker');
+
+        $selects.removeClass('form-select');
+
+        $selects.each(function () {
+          var $select = $(this);
+
+          if ($select.parent('.bootstrap-select').length) {
+            $select.selectpicker('refresh');
+          } else {
+            $select.selectpicker();
+          }
+        });
+
+        if ($(document).data('fw-bootstrap-select-handlers')) return;
+        $(document).data('fw-bootstrap-select-handlers', true);
+
+        $(document).on('changed.bs.select.fwBootstrapSelect', 'select.selectpicker', function () {
+          var $select = $(this);
+          $select.data('selectpicker-is-changed', true);
+
+          var $wrapper = $select.closest('.bootstrap-select');
+          if (!$select.prop('multiple') && $wrapper.find('> .dropdown-menu.show').length > 0) {
+            $select.selectpicker('toggle');
+          }
+
+          if ($select.is(':not([data-nosubmit])')) {
+            $select.closest('form[data-list-filter][data-autosubmit]').trigger('submit');
+          }
+        });
+
+        $(document).on('blur.fwBootstrapSelect', '.bootstrap-select > .dropdown-toggle', function () {
+          var $select = $(this).closest('.bootstrap-select').find('> select.selectpicker').first();
+          if (!$select.length || !$select.data('selectpicker-is-changed')) return;
+
+          $select.data('selectpicker-is-changed', false);
+          $select.closest('form[data-check-changes]').trigger('change');
+
+          if ($select.is(':not([data-noautosave])')) {
+            $select.closest('form[data-autosave]').trigger('autosave');
+          }
+        });
+
+        // Selection reset for header close button. Usage: <... data-header="Reset Selection" data-header-reset="1" ...>
+        $(document).on('click.fwBootstrapSelect', '.bootstrap-select > select.selectpicker[data-header][data-header-reset="1"] ~ .dropdown-menu > .popover-header > .close', function () {
+          var $select = $(this).closest('.bootstrap-select').find('> select.selectpicker').first();
+          if (!$select.length) return;
+
+          $select
+            .selectpicker('val', '')
+            .trigger('change')
+            .closest('.bootstrap-select')
+            .find('> .dropdown-toggle')
+            .trigger('blur');
+        });
+
+        // Work around empty dropdowns on long scrolls by centering the selected item when bootstrap-select opens at top.
+        $(document).on('shown.bs.select.fwBootstrapSelect', 'select.selectpicker', function () {
+          var $select = $(this);
+
+          setTimeout(function () {
+            var $scrollContainer = $select.closest('.bootstrap-select').find('div.inner.show').first();
+            if (!$scrollContainer.length || !$scrollContainer[0]) return;
+
+            var $selectedItem = $scrollContainer.find('li.selected').first();
+            if (!$selectedItem.length || !$selectedItem[0]) return;
+
+            var hasScroll = $scrollContainer[0].scrollHeight > $scrollContainer[0].clientHeight;
+            if (hasScroll && $scrollContainer.scrollTop() === 0) {
+              var offset = $selectedItem[0].offsetTop - $scrollContainer[0].clientHeight / 2 - $selectedItem[0].clientHeight;
+              $scrollContainer.scrollTop(offset);
+            }
+          }, 50);
+        });
+      }
+    });
+
+    fw.initComponent('bootstrap_select', {
+      scope: componentScope
+    });
+  })();
+</script>

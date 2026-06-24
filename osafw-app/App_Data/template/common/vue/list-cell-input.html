@@ -24,7 +24,7 @@
 
         <input v-else
                :type="inputType"
-               :class="'form-control'+(error?' is-invalid':'')"
+               :class="inputClass+(error?' is-invalid':'')"
                :id="'cell-'+rowId+'-'+col.field_name"
                v-model="modelValue"
                :maxlength="col.maxlength"
@@ -41,8 +41,8 @@
                @change="$emit('change', $event)"
                @keydown.esc.prevent="onCancel"
                @keydown.enter.prevent="$emit('change', $event)"
-               @keydown.up.prevent="onNavigate('up')"
-               @keydown.down.prevent="onNavigate('down')"
+               @keydown.up="onArrowKey($event, 'up')"
+               @keydown.down="onArrowKey($event, 'down')"
                @keyup="$emit('keyup', $event)">
         <slot name="append"></slot>
         <template v-if="col.append" v-for="(el,index) in col.append" :key="index">
@@ -95,19 +95,28 @@
                     number: 'number',
                     date: 'date',
                     date_popup: 'date',
+                    datetime_popup: 'text',
+                    datetime_local: 'datetime-local',
                     password: 'password',
                     textarea: 'text',
+                    range: 'range',
                     time: 'time',
                     autocomplete: 'autocomplete'
                 };
                 let type = this.type ?? this.col.input_type ?? 'text';
                 return TYPE_MAP[type] ?? 'text';
             },
+            inputClass() {
+                return this.inputType === 'range' ? 'form-range' : 'form-control';
+            },
             modelValue: {
                 get() {
                     const value = this.row[this.col.field_name];
                     if (this.inputType === 'time') {
                         return AppUtils.formatTime(value);
+                    }
+                    if (this.inputType === 'datetime-local') {
+                        return AppUtils.formatDateTimeLocalInput(value);
                     }
                     return value;
                 },
@@ -133,6 +142,11 @@
                     this.onCancel();
                 }
                 this.$emit('navigate', { dir, row: this.row, col: this.col });
+            },
+            onArrowKey(e, dir) {
+                if (this.inputType === 'range') return;
+                e.preventDefault();
+                this.onNavigate(dir);
             },
             onBtnClick(icode) {
                 this.$emit('btnClick', { event: icode, row: this.row, col: this.col });

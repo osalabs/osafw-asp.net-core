@@ -9,15 +9,15 @@ Created as simplified and lightweight alternative to other ASP.NET frameworks li
 - MVC-like
   - code, data, templates are split
   - code consists of: controllers, models, framework core and optional 3rd party libs
-- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](osafw-app/docs/parsepage.md))
-  - data stored by default in SQL Server database [using db.net](https://github.com/osalabs/db.net) ([detailed docs](osafw-app/docs/db.md))
+- uses [ParsePage template engine](https://github.com/osalabs/parsepage) ([detailed docs](docs/templates.md))
+  - data stored by default in SQL Server, with optional SQLite/MySQL providers [using db.net](https://github.com/osalabs/db.net) ([detailed docs](docs/db.md))
 - RESTful with some practical enhancements
-- flexible CRUD flows with `FwDict`/`FwList` or typed DTOs ([guide](osafw-app/docs/crud.md))
+- flexible CRUD flows with `FwDict`/`FwList` or typed DTOs ([guide](docs/crud.md))
 - integrated auth - simple flat access levels auth
 - UI based on [Bootstrap 5](http://getbootstrap.com) with minimal custom CSS and themes support - it's easy to customize or apply your own theme (see [README_THEMES](osafw-app/App_Data/README_THEMES))
 - use of well-known 3rd party libraries: [jQuery](http://jquery.com), [jQuery Form](https://github.com/malsup/form), jGrowl, markdown libs, etc...
-- extensible dashboard panels with charts, table and progress templates ([dashboard.md](osafw-app/docs/dashboard.md))
-- dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`) ([detailed docs](osafw-app/docs/dynamic.md))
+- extensible dashboard panels with charts, table and progress templates ([dashboard.md](docs/dashboard.md))
+- dynamic controllers with JSON configuration (`FwDynamicController`) and Vue.js powered UI (`FwVueController`) ([detailed docs](docs/dynamic.md))
 - base API controller (`FwApiController`) for building REST APIs
 - attachments handling with optional Amazon S3 storage
 - auto database updates and environment self-tests (`FwUpdates`, `FwSelfTest`)
@@ -30,8 +30,8 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ## Documentation
 
-- [CRUD workflows with `FwModel`](osafw-app/docs/crud.md) - compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
-- [Feature modules](osafw-app/docs/feature_modules.md) - generate or scaffold modules from database tables.
+- [CRUD workflows with `FwModel`](docs/crud.md) - compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
+- [Feature modules](docs/feature_modules.md) - generate or scaffold modules from database tables.
 
 ### Development
 1. clone this git repository
@@ -40,6 +40,7 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 3. press Ctrl+F5 to run (or F5 if you really need debugger)
 4. open in browser https://localhost:PORT/Dev/Configure and check configuration. If database not configured:
   - create `demo` database (or other name you have in appsettings.json)
+  - or enable `isSQLite` in `osafw-app/osafw-app.csproj`, set `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
   - click "Initialize DB"
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
@@ -63,6 +64,7 @@ Short summary how to deploy without VS publish (from clone git repo):
   - views.sql - (re-)create views
   - roles.sql (optional, only if RBAC used)
   - demo.sql (optional, demo tables)
+  - for SQLite, use the same file names from `osafw-app/App_Data/sql/sqlite/`
 
 ### Directory structure
 ```
@@ -175,20 +177,22 @@ The following controller fields used above can be defined in controller's `init(
 ### Additional Framework Components
 
 - **FwCache** â€“ simple wrapper around `IMemoryCache` for application and request caching. Accessible in controllers and models via `fw.cache`
-- **FwUpdates** â€“ applies SQL scripts from `/App_Data/sql/updates` automatically in development
+- **FwUpdates** â€“ applies SQL scripts from `/osafw-app/App_Data/sql/updates` automatically in development
 - **FwSelfTest** â€“ runs configuration and controller tests to verify environment
 - **FwActivityLogs** â€“ unified activity and change logging model. Can be used directly or via `fw.logActivity` helper
 - **FwApiController** â€“ base class for building authenticated REST APIs
 - **Entity Builder** â€“ text based definition to generate SQL and CRUD scaffolding
 
+SQLite `FwUpdates` scripts are loaded from `/osafw-app/App_Data/sql/sqlite/updates`; SQL Server scripts stay in `/osafw-app/App_Data/sql/updates`. MySQL scans the root updates folder plus `/osafw-app/App_Data/sql/mysql/updates`, where same-named MySQL scripts override the root script.
+
 ### Per-user Date/Time and Timezones
 
 The framework supports per-user formatting and timezone conversion:
-- Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`) 
+- Defaults come from `appsettings.json` (`appSettings.date_format`, `time_format`, `timezone`)
 - For each user can be overridden - see `users` table fields `date_format`, `time_format`, `timezone` (e.g. on login/profile save).
 - Rendering in templates uses these values automatically via ParsePage. Inputs are interpreted using the userâ€™s format; output can be converted from database timezone to the userâ€™s timezone.
 
-See the detailed guide with examples and constants in [datetime.md](osafw-app/docs/datetime.md).
+See the detailed guide with examples and constants in [datetime.md](docs/datetime.md).
 
 ### `FwConfig`
 
@@ -201,15 +205,15 @@ Most of the global settings are defined in `appsettings.json` `appSettings` sect
 |ROOT_DOMAIN|protocol+hostname|https://osalabs.com|
 |ROOT_URL|part of the url if Application installed under sub-url|/suburl if App installed under osalabs.com/suburl|
 |site_root|physical application path to the root of public directory|C:\inetpub\somesite\www|
-|template|physical path to the root of templates directory|C:\inetpub\somesite\www\App_Data\template|
-|log|physical path to application log file|C:\inetpub\somesite\www\App_Data\logs\main.log|
+|template|physical path to the root of templates directory|C:\inetpub\somesite\www\osafw-app\App_Data\template|
+|log|physical path to application log file|C:\inetpub\somesite\www\osafw-app\App_Data\logs\main.log|
 |tmp|physical path to the system tmp directory|C:\Windows\Temp|
 
 ### How to Debug
 
 Main and recommended approach - use `fw.logger()` function, which is available in controllers and models (so no prefix required).
 Examples: `logger("some string to log", var_to_dump)`, `logger(LogLevel.WARN, "warning message")`
-All logged messages and var content (complex objects will be dumped wit structure when possible) written on debug console as well as to log file (default `/App_Data/logs/main.log`)
+All logged messages and var content (complex objects will be dumped wit structure when possible) written on debug console as well as to log file (default `/osafw-app/App_Data/logs/main.log`)
 You can configure log level in `appsettings.json` - search for `log_level` in `appSettings`
 
 Another debug function that might be helpful is `fw.rw()` - but it output it's parameter directly into response output (i.e. you will see output right in the browser)
@@ -222,16 +226,18 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
   - template path: `/template/userlists`
 - keep all paths without trailing slash, use beginning slash where necessary
 - db updates:
-  - first, make changes in `/App_Data/sql/database.sql` - this file is used to create db from scratch
-  - then create a file `/App_Data/sql/updates/updYYYY-MM-DD[-123].sql` with all the CREATE, ALTER, UPDATE... - this will allow to apply just this update to existing database instances
+  - first, make changes in `/osafw-app/App_Data/sql/database.sql` - this file is used to create db from scratch
+  - then create a file `/osafw-app/App_Data/sql/updates/updYYYY-MM-DD[-123].sql` with all the CREATE, ALTER, UPDATE... - this will allow to apply just this update to existing database instances
+  - for MySQL, put provider-specific update overrides under `/osafw-app/App_Data/sql/mysql/updates/`
+  - for SQLite, mirror the schema change under `/osafw-app/App_Data/sql/sqlite/database.sql` and put SQLite-specific updates under `/osafw-app/App_Data/sql/sqlite/updates/`
 - use `fw.routeRedirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
   - for example, if for a logged user you need to show detailed data and always skip list view - in the `IndexAction()` just use `fw.routeRedirect("ShowForm")`
 - uploads
-  - save all public-readable uploads under `/wwwroot/upload` (default, see `UPLOAD_DIR` in `appsettings.json`)
+  - save all public-readable uploads under `/osafw-app/wwwroot/upload` (default, see `UPLOAD_DIR` in `appsettings.json`)
   - for non-public uploads use `/upload`
   - or `S3` model and upload to the cloud
 - put all validation code into controller's `Validate()`. See usage example in `AdminDemosController`
-- use `logger()` and review `/App_Data/logs/main.log` if you stuck
+- use `logger()` and review `/osafw-app/App_Data/logs/main.log` if you stuck
   - make sure you have `log_level` set to `DEBUG` in `appsettings.json`
 
 ### Reports
@@ -240,21 +246,21 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - all reports accessed via `AdminReportsController`
   - `IndexAction` - shows a list of all available reports (basically renders static html template with a link to specific reports)
   - `ShowAction` - based on passed report code calls related Report model
-- base report model is `FwReports`, major methods (you may override in the specific report):
-  - `getReportFilters()` - set data for the report filters
-  - `getReportData()` - returns report data, usually based on some sql query (see Sample report)
-- `ReportSample` model (in `\App_Code\models\Reports` folder) is a sample report implementation, that can be used as a template to build custom reports
+- base report class is `FwReportsBase`, major methods (you may override in the specific report):
+  - `setFilters()` - set data for the report filters
+  - `getData()` - returns report data, usually based on some sql query (see Sample report)
+- `ReportSample` model (in `\osafw-app\App_Code\models\Reports` folder) is a sample report implementation, that can be used as a template to build custom reports
 - basic steps to create a new report:
-  - copy `\App_Code\models\Reports\Sample.cs` to `\App_Code\models\Reports\Cool.cs` (to create Cool report)
+  - copy `\osafw-app\App_Code\models\Reports\Sample.cs` to `\osafw-app\App_Code\models\Reports\Cool.cs` (to create Cool report)
   - edit `Cool.cs` and rename "Sample" to "Cool"
-  - modify `getReportFilters()` to match your report filters
-  - modify `getReportData()` to edit sql query and related post-processing
-  - copy templates folder `\App_Data\template\reports\sample` to `\App_Data\template\reports\cool`
+  - modify `setFilters()` to match your report filters
+  - modify `getData()` to edit sql query and related post-processing
+  - copy templates folder `\osafw-app\App_Data\template\reports\sample` to `\osafw-app\App_Data\template\reports\cool`
   - edit templates:
     - `title.html` - report title
     - `list_filter.html` - for filters
     - `report_html.html` - for report table/layout/appearance
-  - add link to a new report to `\App_Data\template\reports\index\main.html`
+  - add link to a new report to `\osafw-app\App_Data\template\reports\index\main.html`
 
 **PDF Export for reports setup**
 PDF Reports done by generating report html and then converting it into pdf using Playwright (Chromium).
@@ -269,15 +275,15 @@ To enable PDF export using Playwright (Chromium):
 4. **Manual Initialization**
    - Developers can manually trigger Playwright install from `/Dev/Manage` (look for the "Init Playwright" link).
 5. **Troubleshooting**
-   - If PDF export fails, check `/App_Data/logs/main.log` for errors.
+   - If PDF export fails, check `/osafw-app/App_Data/logs/main.log` for errors.
    - Ensure the browser path is writable and accessible by the IIS user.
 
-For more technical details, see comments in `ConvUtils.cs` and `FwReports.cs`.
+For more technical details, see comments in `ConvUtils.cs` and `FwReportsBase.cs`.
 
 ### Background Service for Scheduled Tasks
 
 Framework includes a background service for scheduled tasks (like send emails, run reports, etc...). Uses **Cronos** nuget package.
 To enable:
-- in Program.cs uncomment `builder.Services.AddHostedService<FwCronService>();`
+- enable `isFwCronService` in `osafw-app/osafw-app.csproj`
 - add tasks like `insert into fwcron(icode, cron) values ('example_sleep', '* * * * *')` - example task to run every minute
 - update `FwCron.runJobAction` to call acutal code for tasks

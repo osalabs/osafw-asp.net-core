@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -44,9 +45,9 @@ public class AdminUsersController : FwDynamicController
         }
     }
 
-    public override FwDict setPS(FwDict? ps = null)
+    public override FwDict setListPS(FwDict? ps = null)
     {
-        ps = base.setPS(ps);
+        ps = base.setListPS(ps);
         ps["is_roles"] = model.isRoles();
         return ps;
     }
@@ -134,13 +135,14 @@ public class AdminUsersController : FwDynamicController
         // Build an IN clause with parameters to avoid per-row queries.
         var activityLogsTable = fw.model<FwActivityLogs>().table_name;
         var logTypesTable = fw.model<FwLogTypes>().table_name;
-        var sql = "select al.item_id as users_id, CAST(al.idate as date) as login_date, count(*) as login_count "
+        var loginDateSql = db.sqlDateExpr("al.idate");
+        var sql = "select al.item_id as users_id, " + loginDateSql + " as login_date, count(*) as login_count "
             + "from " + activityLogsTable + " al "
             + "inner join " + logTypesTable + " lt on lt.id=al.log_types_id "
             + "where lt.icode=@login_icode "
             + "and al.item_id in (" + string.Join(",", inParams) + ") "
             + "and al.idate >= @from_date "
-            + "group by al.item_id, CAST(al.idate as date)";
+            + "group by al.item_id, " + loginDateSql;
 
         var rows = db.arrayp(sql, sqlParams);
         var result = new Dictionary<int, Dictionary<DateTime, int>>();
@@ -182,7 +184,7 @@ public class AdminUsersController : FwDynamicController
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in Controller.save_fields");
 
-        if (reqb("refresh"))
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
@@ -195,6 +197,8 @@ public class AdminUsersController : FwDynamicController
         item["email"] = item["ehack"]; // just because Chrome autofills fields too agressively
 
         Validate(id, item);
+        var rolesLink = reqh("roles_link");
+        model.checkAdminUserMutationAccess(id, item);
         // load old record if necessary
         // var itemOld = model0.one(id);
 
@@ -207,10 +211,13 @@ public class AdminUsersController : FwDynamicController
 
         id = this.modelAddOrUpdate(id, itemdb);
 
-        model.updateLinkedRoles(id, reqh("roles_link"));
+        model.updateLinkedRoles(id, rolesLink);
 
         if (fw.userId == id)
             model.reloadSession(id);
+
+        if (routeRefreshSaveToShowForm(id))
+            return null;
 
         return this.afterSave(success, id, is_new);
     }
@@ -247,10 +254,14 @@ public class AdminUsersController : FwDynamicController
         this.validateCheckResult();
     }
 
-    // cleanup session for current user and re-login as user from id
-    // check access - only users with higher level may login as lower leve
+    /// <summary>
+    /// Re-authenticates the current administrator as a lower-access user for support diagnostics.
+    /// </summary>
+    /// <param name="id">Target user ID to simulate.</param>
     public void SimulateAction(int id)
     {
+        enforcePost();
+
         var user = model.one(id);
         if (user.Count == 0)
             throw new NotFoundException("Wrong User ID");
@@ -264,19 +275,33 @@ public class AdminUsersController : FwDynamicController
         fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
+    /// <summary>
+    /// Sends a password reset link for the selected user from the admin form.
+    /// </summary>
+    /// <param name="id">User ID that should receive the password reset email.</param>
+    /// <returns>JSON response data with delivery status, error text, and a success message.</returns>
     public FwDict SendPwdAction(int id)
     {
+        enforcePost();
+        model.checkAdminUserMutationAccess(id);
+
         FwDict ps = [];
 
         ps["success"] = model.sendPwdReset(id);
         ps["err_msg"] = fw.last_error_send_email;
+        ps["message"] = "Password reminder email sent";
         ps["_json"] = true;
         return ps;
     }
 
-    // for migration to hashed passwords
+    /// <summary>
+    /// Migrates legacy stored passwords to hashed values during controlled admin maintenance.
+    /// </summary>
     public void HashPasswordsAction()
     {
+        enforcePost();
+        model.checkAccessLevel(Users.ACL_SITEADMIN);
+
         rw("hashing passwords");
         var rows = db.array(model.table_name, [], "id");
         foreach (var row in rows)
@@ -289,10 +314,53 @@ public class AdminUsersController : FwDynamicController
         rw("done");
     }
 
+    /// <summary>
+    /// Clears MFA enrollment for the selected user so they can re-enroll on next login.
+    /// </summary>
+    /// <param name="id">User ID whose MFA secret should be reset.</param>
     public void ResetMFAAction(int id)
     {
+        enforcePost();
+        model.checkAdminUserMutationAccess(id);
+
         model.update(id, DB.h("mfa_secret", null));
         //fw.flash("success", "Multi-Factor Authentication ");
         fw.redirect($"{base_url}/ShowForm/{id}/edit");
+    }
+
+    public override void ShowDeleteAction(int id)
+    {
+        model.checkAdminUserMutationAccess(id);
+        base.ShowDeleteAction(id);
+    }
+
+    public override FwDict? DeleteAction(int id)
+    {
+        model.checkAdminUserMutationAccess(id);
+        return base.DeleteAction(id);
+    }
+
+    public override FwDict? RestoreDeletedAction(int id)
+    {
+        model.checkAdminUserMutationAccess(id);
+        return base.RestoreDeletedAction(id);
+    }
+
+    protected override int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        if (keys == null)
+            return 0;
+
+        if (is_delete)
+        {
+            foreach (string id1 in keys)
+            {
+                var id = id1.toInt();
+                if (id > 0)
+                    model.checkAdminUserMutationAccess(id);
+            }
+        }
+
+        return base.saveMultiRows(keys, is_delete, user_lists_id, remove_user_lists_id);
     }
 }

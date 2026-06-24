@@ -1,4 +1,4 @@
-﻿// Fw Vue controller
+// Fw Vue controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
@@ -23,8 +23,7 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set list fields for db select, based on user-selected headers in list_headers
-    /// so we fetch from db only fields that are visible in the list + id field
+    /// Sets the Vue list DB select fields from active headers plus the record id field.
     /// </summary>
     protected override void setListFields()
     {
@@ -101,9 +100,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for initial scope for Vue controller
+    /// Populates initial Vue page state, including globals, headers, form config, and feature flags.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeInitial(FwDict ps)
     {
         ps["XSS"] = fw.Session("XSS");
@@ -126,6 +124,7 @@ public class FwVueController : FwDynamicController
 
         ps["field_id"] = model0.field_id;
         ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
+        ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
 
         // add form tabs with tab-specific field definitions if configured
         if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
@@ -147,6 +146,7 @@ public class FwVueController : FwDynamicController
         // other static params
         ps["related_id"] = this.related_id;
         ps["base_url"] = this.base_url;
+        setPSReturnContext(ps);
         ps["is_userlists"] = this.is_userlists;
         ps["is_activity_logs"] = this.is_activity_logs;
         ps["is_readonly"] = is_readonly;
@@ -154,9 +154,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for list_rows scope for Vue controller
+    /// Populates Vue list rows with sorting, filtering, paging, export, and JSON shaping applied.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeListRows(FwDict ps)
     {
         setListSorting();
@@ -165,7 +164,7 @@ public class FwVueController : FwDynamicController
         setListSearchStatus();
 
         if (list_headers.Count == 0)
-            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+            setViewList(false, false); // initialize list headers only; row JSON does not need filter UI options
 
         //only select from db visible fields + id, save as comma-separated string into list_fields
         setListFields();
@@ -183,9 +182,8 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// set data for lookups scope for Vue controller
+    /// Populates Vue lookup data from configured form fields and optional user-list state.
     /// </summary>
-    /// <param name="ps"></param>
     protected virtual void setScopeLookups(FwDict ps)
     {
         // userlists support if necessary
@@ -193,9 +191,10 @@ public class FwVueController : FwDynamicController
             this.setUserLists(ps);
 
         if (list_headers.Count == 0)
-            setViewList(false); // initialize list_headers and related (can already be initialized in setScopeInitial)
+            setViewList(false, false); // lookup-only JSON does not need filter UI options
 
         FwList showform_fields = collectFormFields("showform_fields");
+        var selectedValuesByLookupModel = listLookupSelectedValuesByLookupModel(showform_fields);
         //FwRow hfields = _fieldsToHash(showform_fields);
 
         // extract lookups from config and add to ps
@@ -207,20 +206,54 @@ public class FwVueController : FwDynamicController
 
             var dtype = def["type"].toStr();
             var lookup_model = def["lookup_model"].toStr();
-            if (lookup_model.Length > 0 && dtype != "autocomplete")
+            if (lookup_model.Length > 0 && dtype != "autocomplete" && !lookups.ContainsKey(lookup_model))
             {
                 //all lookup_models, except autocomplete (for those it could be too large)
-                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def);
+                var selectedValues = selectedValuesByLookupModel[lookup_model] as StrList;
+                lookups[lookup_model] = fw.model(lookup_model).listSelectOptions(def, selectedValues != null && selectedValues.Count > 0 ? selectedValues : null);
             }
 
             var lookup_tpl = def["lookup_tpl"].toStr();
-            if (lookup_tpl.Length > 0)
+            if (lookup_tpl.Length > 0 && !lookups.ContainsKey(lookup_tpl))
             {
                 lookups[lookup_tpl] = FormUtils.selectTplOptions(lookup_tpl);
             }
         }
 
         ps["lookups"] = lookups;
+    }
+
+    private FwDict listLookupSelectedValuesByLookupModel(FwList showformFields)
+    {
+        FwDict result = [];
+        if (list_rows.Count == 0)
+            return result;
+
+        foreach (FwDict def in showformFields)
+        {
+            var fieldName = def["field"].toStr();
+            var lookupModel = def["lookup_model"].toStr();
+            if (fieldName.Length == 0 || def["type"].toStr() == "autocomplete" || lookupModel.Length == 0)
+                continue;
+
+            foreach (FwDict row in list_rows)
+            {
+                var value = row[fieldName].toStr().Trim();
+                if (value.Length == 0)
+                    continue;
+
+                if (result[lookupModel] is not StrList values)
+                {
+                    values = [];
+                    result[lookupModel] = values;
+                }
+
+                if (!values.Contains(value))
+                    values.Add(value);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -303,7 +336,9 @@ public class FwVueController : FwDynamicController
             };
 
             ps["store"] = store;
+#pragma warning disable CS0618 // Preserve dispatch to existing project overrides of setPS().
             ps = setPS(ps);
+#pragma warning restore CS0618
         }
 
         ps["f"] = this.list_filter;
@@ -337,11 +372,14 @@ public class FwVueController : FwDynamicController
         var attachments = new FwDict(); //att_id => att item
         var att_links = new IntList(); //linked att ids
         var att_files = new FwDict(); // per-field: field => [ids]
+        var lookups_by_field = new FwDict();
 
         var fields = collectFormFields(mode == "edit" ? "showform_fields" : "show_fields");
         var processed_fields = new HashSet<string>();
         foreach (FwDict def in fields)
         {
+            def["i"] = item;
+            def["record_id"] = id;
             var field_name = def["field"].toStr();
             var model_name = def["lookup_model"].toStr();
             var dtype = def["type"].toStr();
@@ -388,6 +426,10 @@ public class FwVueController : FwDynamicController
                         rows = multi_model.listLinkedByMainId(id, def); //junction model
                 }
                 multi_rows[field_name] = multi_model.filterListOptionsForJson(rows);
+            }
+            else if (mode == "edit" && (dtype == "select" || dtype == "radio") && model_name.Length > 0)
+            {
+                lookups_by_field[field_name] = fw.model(model_name).listSelectOptions(def);
             }
             else if (dtype == "subtable" || dtype == "subtable_edit")
             {
@@ -440,6 +482,8 @@ public class FwVueController : FwDynamicController
 
         if (multi_rows.Count > 0)
             ps["multi_rows"] = multi_rows;
+        if (lookups_by_field.Count > 0)
+            ps["lookups_by_field"] = lookups_by_field;
         if (subtables.Count > 0)
             ps["subtables"] = subtables;
         if (attachments.Count > 0)
@@ -495,32 +539,10 @@ public class FwVueController : FwDynamicController
     }
 
     /// <summary>
-    /// Collect fields from the base config and any tab-specific overrides for Vue payloads.
+    /// Saves a Vue dynamic controller row after checking update access to the target parent row.
     /// </summary>
-    /// <param name="prefix">The config prefix (show_fields or showform_fields).</param>
-    /// <returns>Combined list of field definitions across all tabs.</returns>
-    protected FwList collectFormFields(string prefix)
-    {
-        var allFields = new FwList();
-        if (config[prefix] is IList fields)
-            allFields.AddRange(new FwList(fields));
-
-        if (config["form_tabs"] is IList form_tabs)
-        {
-            foreach (FwDict tab in form_tabs)
-            {
-                var tabCode = tab["tab"].toStr();
-                if (tabCode.Length == 0)
-                    continue;
-                var tabFields = getConfigShowFormFieldsByTab(prefix, tabCode);
-                if (tabFields.Count > 0)
-                    allFields.AddRange(tabFields);
-            }
-        }
-
-        return allFields;
-    }
-
+    /// <param name="id">Existing parent row id to update, or zero for a new row.</param>
+    /// <returns>JSON-oriented save response with subtable reconciliation metadata when needed.</returns>
     public override FwDict? SaveAction(int id = 0)
     {
         if (this.save_fields == null)
@@ -528,7 +550,9 @@ public class FwVueController : FwDynamicController
         if (reqb("refresh"))
             throw new Exception("Wrong use refresh=1 on Vue Controller");
 
-        fw.model<Users>().checkReadOnly();
+        checkReadOnly();
+        if (id != 0)
+            modelOneOrFail(id);
 
         FwDict item = reqh("item");
         var success = true;
@@ -606,9 +630,12 @@ public class FwVueController : FwDynamicController
         throw new NotImplementedException(); // N/A for Vue controllers
     }
 
+    /// <summary>
+    /// Renders the standard delete confirmation for direct Vue delete-route access.
+    /// </summary>
     public override void ShowDeleteAction(int id)
     {
-        throw new NotImplementedException(); // N/A for Vue controllers
+        base.ShowDeleteAction(id);
     }
 
 }

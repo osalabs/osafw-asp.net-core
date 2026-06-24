@@ -1,6 +1,6 @@
 <form id="FEdit" method="post" class="fw-card" data-check-changes action="<~../url><~uu1 if="id" inline>/<~id></~uu1>" data-errors="<~error[details] json>">
  <input type="hidden" name="XSS" value="<~session[XSS]>">
- <input type="hidden" name="return_url" value="<~return_url>">
+ <~/common/list/return_inputs if="return_url">
 
   <fieldset <~/common/attr/disabled if="is_readonly">>
     <div class="row">
@@ -23,6 +23,10 @@
         <~input_checkbox ifeq="i[input]" value="30">
         <~input_radio ifeq="i[input]" value="40">
         <~input_date ifeq="i[input]" value="50">
+        <~input_number ifeq="i[input]" value="60">
+        <~input_switch ifeq="i[input]" value="70">
+        <~input_range ifeq="i[input]" value="80">
+        <~input_credential ifeq="i[input]" value="90">
 
       </div>
       <div class="col-lg-6">

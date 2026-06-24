@@ -1,21 +1,26 @@
-﻿// DB for ASP.NET - framework convenient database wrapper
+// DB for ASP.NET - framework convenient database wrapper
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2023 Oleg Savchuk www.osalabs.com
 
 /*
- * to use with Mysql:
- * - uncomment #define isMySQL here
- * - uncomment #define isMySQL in Startup.cs
- * - uncomment or add "MySqlConnector" and "Pomelo.Extensions.Caching.MySql" packages in osafw-app.csproj
+ * to use with MySQL:
+ * - enable isMySQL in osafw-app.csproj
  * - in appsettings.json set :
  *   - db/main/connection_string to "Server=127.0.0.1;User ID=XXX;Password=YYY;Database=ZZZ;Allow User Variables=true;"
  *   - db/main/type to "MySQL"
  * - use App_Data/sql/mysql database initialization files
+ *
+ * to use with SQLite:
+ * - enable isSQLite in osafw-app.csproj
+ * - set db/main/type to "SQLite"
+ * - use App_Data/sql/sqlite database initialization files
  */
-//#define isMySQL //uncomment if using MySQL
 #if isMySQL
 using MySqlConnector;
+#endif
+#if isSQLite
+using Microsoft.Data.Sqlite;
 #endif
 
 using Microsoft.AspNetCore.Http;
@@ -100,6 +105,11 @@ public class DBList : List<DBRow>
 
     public DBList() : base() { }
     public DBList(int capacity) : base(capacity) { }
+    /// <summary>
+    /// Creates a database row list from existing typed rows while preserving the <see cref="DBList"/> return contract.
+    /// </summary>
+    /// <param name="collection">Typed database rows to copy into this list.</param>
+    public DBList(IEnumerable<DBRow> collection) : base(collection) { }
 
     public static implicit operator FwList(DBList rows)
     {
@@ -222,6 +232,7 @@ public class DB : IDisposable
     public const string DBTYPE_OLE = "OLE";
     public const string DBTYPE_ODBC = "ODBC";
     public const string DBTYPE_MYSQL = "MySQL";
+    public const string DBTYPE_SQLITE = "SQLite";
 
     //special value for current db time in queries (GETDATE() or NOW()) can be used as a value like this:
     // db.insert("table", DB.h("idatetime", DB.NOW)); - insert a row with current datetime
@@ -233,6 +244,7 @@ public class DB : IDisposable
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_cache = new(); // schema, connstr => table => [field => type]
     protected static ConcurrentDictionary<string, ConcurrentDictionary<string, FwDict>> schema_fk_cache = new(); // foreign keys, connstr => table => [field => referenced table]
     protected static ConcurrentDictionary<string, string> timezone_cache = new(); // resolved db timezones per connection string
+    protected static ConcurrentDictionary<string, bool> timezone_detection_cache = new(); // whether timezone was configured or detected, not fallback
 
     public static string last_sql = ""; // last executed sql
     public static int SQL_QUERY_CTR = 0; // counter for SQL queries during request
@@ -248,21 +260,23 @@ public class DB : IDisposable
     protected HttpContext? context;
 
     public string db_name = "";
-    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL
+    public string dbtype = DBTYPE_SQLSRV; // SQL=SQL Server, OLE=OleDB, MySQL=MySQL, SQLite=SQLite
+    public bool is_log_pii = false; // log parameter values only when explicitly enabled for local debugging
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     protected readonly FwDict conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
     private TimeZoneInfo? timezoneInfo;
     private bool isTimezoneInited;
     private bool isTimezoneResolving;
+    private bool isTimezoneDetected;
 
     private string quotes = "[]"; // for SQL Server - [], for MySQL - `, for OLE - depends on provider
     private string sql_ole_identity = "SELECT @@identity"; // default OLE identity query
     private string sql_now = "GETDATE()"; // default query for current datetime
     private string limit_method = "TOP"; // for SQL Server 2005+, for MySQL - LIMIT, for OLE - depends on provider
     private string offset_method = "FETCH NEXT"; // for SQL Server 2012+, for MySQL - LIMIT, for OLE - depends on provider
-    private string utc_field_suffix = "_utc"; // skip dates auto conversion if the datetime field name has this suffix, like "next_run_utc", used in Cron Service that works with UTC only
-    private string set_param_suffix = "_SET"; // suffix added to the SQL param name on update
+    private const string UTC_FIELD_SUFFIX = "_utc";
+    private const string UPDATE_SET_PARAM_SUFFIX = "_SET";
     protected Dictionary<string, FwDict> schema = []; // schema for currently connected db
 
     private DbConnection? conn; // actual db connection - SqlConnection or OleDbConnection
@@ -278,9 +292,23 @@ public class DB : IDisposable
         public required string[] Names;
         public required bool[] IsSkip;
         public required bool[] IsDateTime;
+        public required bool[] IsDateTimeOffset;
         public required bool[] IsDateOnly;
+        public required bool[] IsUtcField;
         public required bool[] IsString;
         public required int FieldCount;
+    }
+
+    private sealed class DBParamValue(string fieldName, string fieldType, object? value)
+    {
+        public string FieldName { get; } = fieldName;
+        public string FieldType { get; } = fieldType;
+        public object? Value { get; } = value;
+
+        public override string ToString()
+        {
+            return Value?.ToString() ?? "";
+        }
     }
 
     private ReaderMeta getReaderMeta(DbDataReader dbread)
@@ -291,12 +319,15 @@ public class DB : IDisposable
             string[] names = new string[fieldCount];
             bool[] skip = new bool[fieldCount];
             bool[] isDt = new bool[fieldCount];
+            bool[] isDto = new bool[fieldCount];
             bool[] isDateOnly = new bool[fieldCount];
+            bool[] isUtcField = new bool[fieldCount];
             bool[] isStr = new bool[fieldCount];
 
             for (int i = 0; i < fieldCount; i++)
             {
                 names[i] = dbread.GetName(i);
+                isUtcField[i] = isUtcFieldName(names[i]);
 
                 var dtypeName = dbread.GetDataTypeName(i);
                 if (is_check_ole_types && UNSUPPORTED_OLE_TYPES.ContainsKey(dtypeName))
@@ -307,7 +338,13 @@ public class DB : IDisposable
 
                 var ftype = dbread.GetFieldType(i);
                 isStr[i] = (ftype == typeof(string));
-                isDt[i] = (ftype == typeof(DateTime));
+                var isSqliteDateType = dbtype == DBTYPE_SQLITE
+                    && (dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("datetime", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("datetime2", StringComparison.OrdinalIgnoreCase)
+                        || dtypeName.Equals("timestamp", StringComparison.OrdinalIgnoreCase));
+                isDt[i] = (ftype == typeof(DateTime)) || isSqliteDateType;
+                isDto[i] = (ftype == typeof(DateTimeOffset)) || isDateTimeOffsetType(dtypeName);
                 if (isDt[i])
                     isDateOnly[i] = dtypeName.Equals("date", StringComparison.OrdinalIgnoreCase);
             }
@@ -317,7 +354,9 @@ public class DB : IDisposable
                 Names = names,
                 IsSkip = skip,
                 IsDateTime = isDt,
+                IsDateTimeOffset = isDto,
                 IsDateOnly = isDateOnly,
+                IsUtcField = isUtcField,
                 IsString = isStr,
                 FieldCount = fieldCount
             };
@@ -327,11 +366,156 @@ public class DB : IDisposable
     }
 
     /// <summary>
+    /// Determines whether a database field name explicitly declares UTC storage.
+    /// </summary>
+    /// <param name="fieldName">Column or parameter-derived field name.</param>
+    /// <returns><c>true</c> when the name ends in the framework UTC suffix.</returns>
+    private static bool isUtcFieldName(string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+            return false;
+
+        var normalized = fieldName.TrimStart('@');
+        if (normalized.EndsWith(UPDATE_SET_PARAM_SUFFIX, StringComparison.OrdinalIgnoreCase))
+            normalized = normalized[..^UPDATE_SET_PARAM_SUFFIX.Length];
+        normalized = Regex.Replace(normalized, @"_\d+$", "");
+
+        return normalized.EndsWith(UTC_FIELD_SUFFIX, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines whether a provider type name is SQL Server's offset-aware timestamp type.
+    /// </summary>
+    /// <param name="typeName">Provider data type name returned by the reader or schema metadata.</param>
+    /// <returns><c>true</c> for SQL Server <c>datetimeoffset</c>.</returns>
+    private static bool isDateTimeOffsetType(string typeName)
+    {
+        return typeName.Equals("datetimeoffset", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Converts a database datetime value into the framework's internal UTC/date-only representation.
+    /// </summary>
+    /// <param name="dt">Datetime value read from the provider.</param>
+    /// <param name="isDateOnly">Whether the database column is a SQL <c>date</c>.</param>
+    /// <param name="isUtcField">Whether the field name explicitly marks the value as already UTC.</param>
+    /// <returns>A date-only unspecified value or a UTC instant.</returns>
+    private DateTime normalizeReadDateTime(DateTime dt, bool isDateOnly, bool isUtcField)
+    {
+        if (isDateOnly)
+            return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+
+        if (isUtcField)
+            return asUtcDateTime(dt);
+
+        return convertDbDateTimeToUtc(dt);
+    }
+
+    /// <summary>
+    /// Reads a provider datetimeoffset value without losing its original offset.
+    /// </summary>
+    /// <param name="dbread">Reader positioned on the current row.</param>
+    /// <param name="ordinal">Column ordinal to read.</param>
+    /// <returns>The provider value as a <see cref="DateTimeOffset"/>.</returns>
+    private static DateTimeOffset readDateTimeOffset(DbDataReader dbread, int ordinal)
+    {
+        var value = dbread.GetValue(ordinal);
+        if (value is DateTimeOffset dto)
+            return dto;
+
+        if (value is DateTime dt)
+            return new DateTimeOffset(asUtcDateTime(dt));
+
+        return DateTimeOffset.Parse(value.toStr(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Normalizes an instant-like <see cref="DateTime"/> to UTC without applying database timezone rules.
+    /// </summary>
+    /// <param name="dt">Input date/time whose kind may be local, UTC, or unspecified.</param>
+    /// <returns>A UTC <see cref="DateTime"/> value.</returns>
+    private static DateTime asUtcDateTime(DateTime dt)
+    {
+        return dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+        };
+    }
+
+    /// <summary>
+    /// Converts a framework parameter wrapper or raw value into the actual ADO.NET parameter value.
+    /// </summary>
+    /// <param name="paramName">SQL parameter name.</param>
+    /// <param name="value">Raw parameter value or framework parameter wrapper.</param>
+    /// <returns>The value to pass to the provider.</returns>
+    private object? normalizeParamValue(string paramName, object? value)
+    {
+        var fieldName = paramName;
+        var fieldType = "";
+        var hasFieldMetadata = false;
+        if (value is DBParamValue dbParam)
+        {
+            fieldName = dbParam.FieldName;
+            fieldType = dbParam.FieldType;
+            value = dbParam.Value;
+            hasFieldMetadata = true;
+        }
+
+        if (value == NOW)
+            return value;
+
+        var isUtcField = isUtcFieldName(fieldName);
+        var isOffsetField = isDateTimeOffsetType(fieldType);
+
+        if (value is DateTimeOffset dto)
+        {
+            if (isOffsetField)
+                return isUtcField ? dto.ToUniversalTime() : dto;
+
+            if (!hasFieldMetadata)
+                return isUtcField ? dto.ToUniversalTime() : dto;
+
+            var utc = dto.UtcDateTime;
+            return isUtcField ? utc : convertUtcToDb(utc);
+        }
+
+        if (value is DateTime dt)
+        {
+            if (isOffsetField)
+                return new DateTimeOffset(asUtcDateTime(dt));
+
+            if (isUtcField)
+                return asUtcDateTime(dt);
+
+            if (dt.Kind == DateTimeKind.Unspecified)
+                return dt; // treat as date-only/no timezone
+
+            var utc = asUtcDateTime(dt);
+            return convertUtcToDb(utc);
+        }
+
+        return value;
+    }
+
+    /// <summary>
+    /// Wraps helper-built parameters with the source field metadata needed for UTC and type decisions.
+    /// </summary>
+    /// <param name="fieldName">Database field name that produced the parameter.</param>
+    /// <param name="fieldType">Framework field type from loaded schema.</param>
+    /// <param name="value">Parameter value after DB operation normalization.</param>
+    /// <returns>A lightweight metadata wrapper consumed when provider parameters are created.</returns>
+    private static DBParamValue paramValue(string fieldName, string fieldType, object? value)
+    {
+        return new DBParamValue(fieldName, fieldType, value);
+    }
+
+    /// <summary>
     ///  "synax sugar" helper to build FwRow from list of arguments instead more complex New FwRow from {...}
     ///  Example: db.row("table", h("id", 123)) => "select * from table where id=123"
     ///  </summary>
     ///  <param name="args">even number of args required</param>
-    ///  <returns></returns>
     public static FwDict h(params object?[] args)
     {
         if (args.Length == 0) return [];
@@ -348,14 +532,176 @@ public class DB : IDisposable
         return result;
     }
 
-    //split multiple sql statements by:
-    //;+newline
-    //;+newline+GO
-    //newline+GO
+    /// <summary>
+    /// Splits trusted SQL script text into executable statements for interactive/simple script use.
+    /// </summary>
+    /// <param name="sql">
+    /// Trusted SQL script text with simple semicolon terminators or line-only GO separators.
+    /// </param>
+    /// <returns>
+    /// SQL statements in execution order, with empty statements removed.
+    /// </returns>
     public static string[] splitMultiSQL(string sql)
     {
-        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline); //first, remove lines starting with '-- ' sql comment
-        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+");
+        if (string.IsNullOrWhiteSpace(sql))
+            return [];
+
+        sql = Regex.Replace(sql, @"^--\s.*[\r\n]*", "", RegexOptions.Multiline);
+        return Regex.Split(sql, @";[\n\r]+(?:GO[\n\r]*)?|[\n\r]+GO[\n\r]+")
+            .Select(item => item.Trim())
+            .Where(item => item.Length > 0)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Splits trusted SQL Server script text into executable batches while preserving statement scope.
+    /// </summary>
+    /// <param name="sql">
+    /// Trusted SQL Server script text that may contain variables, control-flow statements, semicolon
+    /// terminators, comments, string literals, and line-only GO batch separators.
+    /// </param>
+    /// <returns>SQL Server batches in execution order, split only at line-only GO separators.</returns>
+    public static string[] splitMultiSQLBatches(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            return [];
+
+        List<string> result = [];
+        StringBuilder current = new();
+        bool inString = false;
+        bool inBracketIdentifier = false;
+        bool inQuotedIdentifier = false;
+        bool inBlockComment = false;
+
+        string[] lines = sql.Split(["\r\n", "\n", "\r"], StringSplitOptions.None);
+        for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            var line = lines[lineIndex];
+            if (!inString
+                && !inBracketIdentifier
+                && !inQuotedIdentifier
+                && !inBlockComment
+                && Regex.IsMatch(line, @"^\s*GO(?:\s*(?:--.*)?)?$", RegexOptions.IgnoreCase))
+            {
+                var batch = current.ToString().Trim();
+                if (batch.Length > 0)
+                    result.Add(batch);
+                current.Clear();
+                continue;
+            }
+
+            current.AppendLine(line);
+            updateSqlBatchState(line, ref inString, ref inBracketIdentifier, ref inQuotedIdentifier, ref inBlockComment);
+        }
+
+        var lastBatch = current.ToString().Trim();
+        if (lastBatch.Length > 0)
+            result.Add(lastBatch);
+        return result.ToArray();
+    }
+
+    /// <summary>
+    /// Splits trusted SQL Server script text for execution while preserving scoped T-SQL batches.
+    /// </summary>
+    /// <param name="sql">
+    /// Trusted SQL Server script text. Line-only <c>GO</c> is the explicit batch separator; simple
+    /// non-scoped batches may also use semicolon-newline separators for legacy compatibility.
+    /// </param>
+    /// <returns>SQL Server commands in execution order.</returns>
+    public static string[] splitMultiSQLForSqlServer(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            return [];
+
+        List<string> result = [];
+        const string moduleDdlPattern =
+            @"\A(?:CREATE\s+(?:OR\s+ALTER\s+)?|ALTER\s+)(?:VIEW|PROC(?:EDURE)?|FUNCTION|TRIGGER)\b";
+        const string scopedBatchPattern =
+            @"(?im)^\s*(DECLARE\s+@|IF\b|ELSE\b|BEGIN\b|WHILE\b|BEGIN\s+TRY\b|BEGIN\s+CATCH\b)";
+
+        foreach (var batch in splitMultiSQLBatches(sql))
+        {
+            var firstStatement = Regex.Replace(
+                batch,
+                @"\A(?:\s|--[^\r\n]*(?:\r?\n|\r)|/\*.*?\*/)*",
+                "",
+                RegexOptions.Singleline);
+
+            var preserveBatch =
+                Regex.IsMatch(firstStatement, moduleDdlPattern, RegexOptions.IgnoreCase)
+                || Regex.IsMatch(batch, scopedBatchPattern);
+
+            if (preserveBatch)
+                result.Add(batch);
+            else
+                result.AddRange(splitMultiSQL(batch));
+        }
+
+        return result.ToArray();
+    }
+
+    /// <summary>
+    /// Updates scanner state for SQL Server batch splitting without treating semicolons as batch boundaries.
+    /// </summary>
+    /// <param name="line">Current script line.</param>
+    /// <param name="inString">Whether scanning is currently inside a single-quoted string literal.</param>
+    /// <param name="inBracketIdentifier">Whether scanning is currently inside a bracket-quoted identifier.</param>
+    /// <param name="inQuotedIdentifier">Whether scanning is currently inside a double-quoted identifier.</param>
+    /// <param name="inBlockComment">Whether scanning is currently inside a block comment.</param>
+    private static void updateSqlBatchState(
+        string line,
+        ref bool inString,
+        ref bool inBracketIdentifier,
+        ref bool inQuotedIdentifier,
+        ref bool inBlockComment)
+    {
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            char next = i + 1 < line.Length ? line[i + 1] : '\0';
+
+            if (inBlockComment)
+            {
+                if (c == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+
+            char closeChar = inString ? '\'' : inBracketIdentifier ? ']' : inQuotedIdentifier ? '"' : '\0';
+            if (closeChar != '\0')
+            {
+                if (c == closeChar)
+                {
+                    if (next == closeChar)
+                        i++;
+                    else
+                        inString = inBracketIdentifier = inQuotedIdentifier = false;
+                }
+                continue;
+            }
+
+            switch (c)
+            {
+                case '-' when next == '-':
+                    return;
+                case '/' when next == '*':
+                    inBlockComment = true;
+                    i++;
+                    break;
+                case '\'':
+                    inString = true;
+                    break;
+                case '[':
+                    inBracketIdentifier = true;
+                    break;
+                case '"':
+                    inQuotedIdentifier = true;
+                    break;
+            }
+        }
     }
 
     /// <summary>
@@ -401,7 +747,15 @@ public class DB : IDisposable
         {
             quotes = "``";
             limit_method = "LIMIT";
+            offset_method = "LIMIT";
             sql_now = "NOW()";
+        }
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            quotes = "\"";
+            limit_method = "LIMIT";
+            offset_method = "LIMIT";
+            sql_now = "CURRENT_TIMESTAMP";
         }
         else if (dbtype == DBTYPE_OLE)
         {
@@ -410,6 +764,7 @@ public class DB : IDisposable
                 quotes = "\""; // for DB2
                 sql_ole_identity = "SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1";
                 limit_method = "LIMIT";
+                offset_method = "LIMIT";
                 sql_now = "CURRENT TIMESTAMP";
             }
             else
@@ -434,7 +789,7 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// set optional context for request level cache storage (ex: HttpContext.Items)
+    /// Supplies request-scoped storage for connection and query caches, usually <see cref="HttpContext.Items"/>.
     /// </summary>
     public void setContext(HttpContext? context)
     {
@@ -459,6 +814,16 @@ public class DB : IDisposable
         return DbTimezoneInfo.Id;
     }
 
+    /// <summary>
+    /// Reports whether the DB timezone came from configuration or from a successful database probe.
+    /// </summary>
+    /// <returns><c>true</c> when the timezone was explicitly configured or detected without falling back to UTC.</returns>
+    public bool isTimezoneDetectionOk()
+    {
+        initTimezoneInfo(isAllowQuery: false);
+        return isTimezoneDetected;
+    }
+
     private bool isDbTimezoneUTC => DbTimezoneInfo.Id == TimeZoneInfo.Utc.Id;
 
     private void initTimezoneInfo(bool isAllowQuery = true)
@@ -473,6 +838,7 @@ public class DB : IDisposable
         {
 
             var tzId = conf["timezone"].toStr();
+            var isDetected = !string.IsNullOrEmpty(tzId);
             var cache_key = $"{dbtype}:{connstr}";
 
             if (string.IsNullOrEmpty(tzId))
@@ -481,9 +847,24 @@ public class DB : IDisposable
                 {
                     if (isAllowQuery)
                     {
-                        tzId = detectTimezoneFromDb();
-                        timezone_cache[cache_key] = tzId;
+                        var detection = detectTimezoneFromDb();
+                        tzId = detection.timezoneId;
+                        isDetected = detection.isDetected;
+                        if (isDetected)
+                        {
+                            timezone_cache[cache_key] = tzId;
+                            timezone_detection_cache[cache_key] = true;
+                        }
+                        else
+                        {
+                            timezone_cache.TryRemove(cache_key, out _);
+                            timezone_detection_cache.TryRemove(cache_key, out _);
+                        }
                     }
+                }
+                else
+                {
+                    isDetected = timezone_detection_cache.TryGetValue(cache_key, out var cachedDetected) && cachedDetected;
                 }
             }
 
@@ -492,11 +873,13 @@ public class DB : IDisposable
                 try
                 {
                     timezoneInfo = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+                    isTimezoneDetected = isDetected;
                 }
                 catch (Exception ex)
                 {
                     logger(LogLevel.WARN, "DB timezone resolve failed for ", db_name, " tz=", tzId, " error=", ex.Message);
                     timezoneInfo = TimeZoneInfo.Utc;
+                    isTimezoneDetected = false;
                 }
                 isTimezoneInited = true;
             }
@@ -508,9 +891,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// connect to DB server using connection string defined in web.config appSettings, key db|main|connection_string (by default)
+    /// Opens or reuses the configured provider connection and initializes database timezone handling.
     /// </summary>
-    /// <returns></returns>
     public DbConnection connect()
     {
         var cache_key = "DB#" + connstr;
@@ -559,10 +941,6 @@ public class DB : IDisposable
         this.conn?.Close();
     }
 
-    /// <summary>
-    /// return internal connection object
-    /// </summary>
-    /// <returns></returns>
     public DbConnection getConnection()
     {
         if (conn == null)
@@ -584,6 +962,13 @@ public class DB : IDisposable
             result = new MySqlConnection(connstr);
         }
 #endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            ensureSqliteDirectory(connstr);
+            result = new SqliteConnection(connstr);
+        }
+#endif
         else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             result = new OleDbConnection(connstr);
@@ -600,48 +985,80 @@ public class DB : IDisposable
         }
 
         result.Open();
+#if isSQLite
+        if (dbtype == DBTYPE_SQLITE)
+        {
+            using var pragma = result.CreateCommand();
+            pragma.CommandText = "PRAGMA foreign_keys = ON";
+            pragma.ExecuteNonQuery();
+        }
+#endif
         return result;
     }
 
-    private string detectTimezoneFromDb()
+#if isSQLite
+    private static void ensureSqliteDirectory(string connstr)
     {
+        if (string.IsNullOrWhiteSpace(connstr))
+            return;
+
+        var builder = new SqliteConnectionStringBuilder(connstr);
+        var dataSource = builder.DataSource;
+        if (string.IsNullOrWhiteSpace(dataSource) || dataSource == ":memory:")
+            return;
+
+        var dir = Path.GetDirectoryName(Path.GetFullPath(dataSource));
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+    }
+#endif
+
+    private (string timezoneId, bool isDetected) detectTimezoneFromDb()
+    {
+        if (dbtype == DBTYPE_SQLSRV)
+        {
+            try
+            {
+                var tzId = valuep("SELECT CURRENT_TIMEZONE_ID()").toStr();
+                if (!string.IsNullOrEmpty(tzId))
+                    return (tzId, true);
+            }
+            catch (Exception ex)
+            {
+                logger(LogLevel.TRACE, "DB timezone SQL Server id probe failed for ", db_name, ": ", ex.Message);
+            }
+        }
+
         try
         {
-            // MS SQL Server 2022+
-            if (dbtype == DBTYPE_SQLSRV)
-            {
-                // Direct match - No ambiguity
-                var tzId = valuep("SELECT CURRENT_TIMEZONE_ID()").toStr();
-                if (!string.IsNullOrEmpty(tzId)) return tzId;
-            }
-
-            // Fallback for MySQL or older SQL Server versions
-            // Notice that this method can introduce ambiguity, i.e., getting "South Africa Standard Time" instead of "E. Europe Standard Time" because they share an offset, but SAST doesn't have daylight saving.
-            // It's acceptable for displaying dates to users, but not for future dates calculations, so consider setting the DB Server timezone explicitly in the "db.main.timezone" in appsettings.config.
-            //
-            // Work with minutes offset as it's safer and simpler than parsing hours and minutes string with possible + sign, like "+03:00", which is not parsable by TimeSpan.TryParse().
+            // Offset fallback is ambiguous when several zones share the same current offset.
             var offset_sql = dbtype switch
             {
                 DBTYPE_SQLSRV => "SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET())",
+#if isMySQL
                 DBTYPE_MYSQL => "SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())",
-                _ => ""
+#endif
+                _ => "",
             };
 
-            var offset_mins = valuep(offset_sql).toStr();
-            if (int.TryParse(offset_mins, out int minutes))
+            if (!string.IsNullOrEmpty(offset_sql))
             {
-                var offset = TimeSpan.FromMinutes(minutes);
-                var now_utc = DateTime.UtcNow;
-
-                var candidates = TimeZoneInfo.GetSystemTimeZones()
-                    .Where(tz => tz.GetUtcOffset(now_utc) == offset)
-                    .ToList();
-
-                if (candidates.Count > 0)
+                var offset_minutes = valuep(offset_sql).toStr();
+                if (int.TryParse(offset_minutes, out var minutes))
                 {
-                    // Logic to pick the most likely "Standard" zone
-                    return candidates.FirstOrDefault(tz => tz.Id.Contains("Standard Time", StringComparison.OrdinalIgnoreCase))?.Id
-                           ?? candidates[0].Id;
+                    // match by current offset (includes DST) instead of BaseUtcOffset to avoid off-by-one-hour errors
+                    var offset = TimeSpan.FromMinutes(minutes);
+                    var nowUtc = DateTime.UtcNow;
+                    var candidates = TimeZoneInfo.GetSystemTimeZones()
+                        .Where(tzinfo => tzinfo.GetUtcOffset(nowUtc) == offset)
+                        .ToList();
+
+                    if (candidates.Count > 0)
+                    {
+                        var preferred = candidates.FirstOrDefault(tzinfo => tzinfo.Id.EndsWith("Standard Time", StringComparison.OrdinalIgnoreCase));
+                        var found = preferred ?? candidates[0];
+                        return (found.Id, true);
+                    }
                 }
             }
         }
@@ -650,7 +1067,7 @@ public class DB : IDisposable
             logger(LogLevel.WARN, "DB timezone autodetect failed for ", db_name, ": ", ex.Message);
         }
 
-        return DateUtils.TZ_UTC;
+        return (DateUtils.TZ_UTC, false);
     }
 
     /// <summary>
@@ -677,33 +1094,6 @@ public class DB : IDisposable
             return dtUtc;
 
         return TimeZoneInfo.ConvertTimeFromUtc(dtUtc, DbTimezoneInfo);
-    }
-
-    /// <summary>
-    /// Normalize parameter values before sending to DB, converting UTC DateTime to DB timezone and preserving date-only values.
-    /// </summary>
-    private object? convertParamValue(string name, object? value)
-    {
-        if (value == NOW)
-            return value;
-
-        if (value is DateTime dt
-            && !(name.EndsWith(utc_field_suffix) || name.EndsWith(utc_field_suffix + set_param_suffix)) // TODO we actually need to check agains the field name
-        )
-        {
-            if (dt.Kind == DateTimeKind.Unspecified)
-                return dt; // treat as date-only/no timezone
-
-            DateTime utc = dt.Kind switch
-            {
-                DateTimeKind.Utc => dt,
-                DateTimeKind.Local => dt.ToUniversalTime(),
-                _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
-            };
-            return convertUtcToDb(utc);
-        }
-
-        return value;
     }
 
     // transactions support
@@ -753,12 +1143,9 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// query database with sql and optional parameters, return DbDataReader to read results from
+    /// Runs SQL with optional parameters and returns an open reader; list values expand for <c>IN</c> clauses.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params">param => value, value can be IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"</param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
+    /// <param name="params">Parameter map; values may be lists, for example <c>id IN (@ids)</c>.</param>
     public DbDataReader query(string sql, FwDict? in_params = null)
     {
         connect();
@@ -786,7 +1173,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                sqlCommand.Parameters.AddWithValue(p, convertParamValue(p, @params[p]));
+                sqlCommand.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 sqlCommand.Transaction = (SqlTransaction)tran;
@@ -803,7 +1190,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                oleDbCommand.Parameters.AddWithValue("?", convertParamValue(p, pvalue));
+                oleDbCommand.Parameters.AddWithValue("?", normalizeParamValue(p, pvalue));
             }
 
             if (tran != null)
@@ -819,12 +1206,28 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                mySqlCommand.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                mySqlCommand.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 mySqlCommand.Transaction = (MySqlTransaction)tran;
 
             dbcomm = mySqlCommand;
+        }
+#endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var sqliteCommand = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                sqliteCommand.Parameters.AddWithValue(namedParam(p), normalizeParamValue(p, @params[p]) ?? DBNull.Value);
+
+            if (tran != null)
+                sqliteCommand.Transaction = (SqliteTransaction)tran;
+
+            dbcomm = sqliteCommand;
         }
 #endif
         else
@@ -848,40 +1251,65 @@ public class DB : IDisposable
     /// in case @params contains an IList (example: new int[] {1,2,3}) - then sql query has something like "id IN (@ids)"
     /// need to expand array into single params
     /// </summary>
-    /// <param name="sql"></param>
     /// <param name="params">if input params null - make empty hashtable</param>
     private static void expandParams(ref string sql, ref FwDict @params)
     {
-        foreach (string p in @params.Keys.Cast<string>().ToList())
+        foreach (string p in @params.Keys.ToList())
         {
             if (@params[p] is IList arr)
             {
                 var arrstr = new StringBuilder();
+                var paramBase = p.TrimStart('@', '$', ':');
                 for (var i = 0; i <= arr.Count - 1; i++)
                 {
-                    var pnew = p + "_" + i.ToString();
+                    var pnew = paramBase + "_" + i.ToString();
                     @params[pnew] = arr[i];
                     if (i > 0) arrstr.Append(',');
                     arrstr.Append("@" + pnew);
                 }
-                sql = sql.Replace("@" + p, arrstr.ToString());
+                sql = sql.Replace(namedParam(p), arrstr.ToString());
                 @params.Remove(p);
             }
         }
     }
 
+    private static string namedParam(string name)
+    {
+        return name.StartsWith('@') || name.StartsWith('$') || name.StartsWith(':') ? name : "@" + name;
+    }
+
+    private static object? logParamValue(object? value)
+    {
+        return value is DBParamValue dbParam ? dbParam.Value : value;
+    }
+
+    private static FwDict logParamValues(FwDict @params)
+    {
+        FwDict result = new(@params.Count);
+        foreach (var item in @params)
+            result[namedParam(item.Key)] = logParamValue(item.Value);
+
+        return result;
+    }
+
     private void logQueryAndParams(string sql, FwDict @params)
     {
         if (@params.Count > 0)
+        {
             if (@params.Count == 1) // one param - just include inline for easier log reading
             {
-                var pname = @params.Keys.Cast<string>().First();
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", pname, "=", @params[pname], " }");
+                var pname = @params.Keys.First();
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", is_log_pii ? logParamValue(@params[pname]) : "[hidden]", " }");
             }
             else
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, @params);
+            {
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " ", is_log_pii ? logParamValues(@params) : " params=" + string.Join(", ", @params.Keys.Select(namedParam)));
+            }
+        }
         else
+        {
             logger(LogLevel.INFO, "DB:", db_name, " ", sql);
+        }
     }
 
     public void closeQuery(DbDataReader? dbread = null)
@@ -918,9 +1346,7 @@ public class DB : IDisposable
     /// <summary>
     /// Helper method to convert named parameters to positional placeholders
     /// </summary>
-    /// <param name="sql"></param>
     /// <param name="paramNames">ordered list (since order is important) of param names without "@"</param>
-    /// <returns></returns>
     private string convertNamedToPositional(string sql, out List<string> paramNames)
     {
         //logger(LogLevel.INFO, "SQL IN:", sql);
@@ -966,7 +1392,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(p, @params[p]));
+                dbcomm.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
@@ -989,7 +1415,7 @@ public class DB : IDisposable
                 // p name is without "@", but @params may or may not contain "@" prefix
                 var pvalue = @params.TryGetValue(p, out object? value) ? value : @params["@" + p];
                 //logger(LogLevel.INFO, "DB:", db_name, " ", "param: ", p, " = ", pvalue);
-                dbcomm.Parameters.AddWithValue("?", convertParamValue(p, pvalue));
+                dbcomm.Parameters.AddWithValue("?", normalizeParamValue(p, pvalue));
             }
 
             if (tran != null)
@@ -1005,7 +1431,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, convertParamValue(@params[p]));
+                dbcomm.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
 
             if (tran != null)
                 dbcomm.Transaction = (MySqlTransaction)tran;
@@ -1014,6 +1440,29 @@ public class DB : IDisposable
 
             if (is_get_identity)
                 result = (int)dbcomm.LastInsertedId; //TODO change result type to long
+        }
+#endif
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            using var dbcomm = new SqliteCommand(sql, (SqliteConnection)conn!)
+            {
+                CommandTimeout = sql_command_timeout
+            };
+            foreach (string p in @params.Keys)
+                dbcomm.Parameters.AddWithValue(namedParam(p), normalizeParamValue(p, @params[p]) ?? DBNull.Value);
+
+            if (tran != null)
+                dbcomm.Transaction = (SqliteTransaction)tran;
+
+            result = dbcomm.ExecuteNonQuery();
+
+            if (is_get_identity)
+            {
+                dbcomm.Parameters.Clear();
+                dbcomm.CommandText = "SELECT last_insert_rowid()";
+                result = dbcomm.ExecuteScalar().toInt();
+            }
         }
 #endif
         else
@@ -1026,7 +1475,6 @@ public class DB : IDisposable
     /// execute multiple sql statements from a single string (like file script)
     /// Important! Use only to execute trusted scripts
     /// </summary>
-    /// <param name="sql"></param>
     /// <param name="is_ignore_errors">if true - if error happened, it's ignored and next statements executed anyway</param>
     /// <returns>number of successfully executed statements</returns>
     public int execMultipleSQL(string sql, bool is_ignore_errors = false)
@@ -1034,7 +1482,7 @@ public class DB : IDisposable
         var result = 0;
 
         //extract separate each sql statement
-        string[] asql = DB.splitMultiSQL(sql);
+        string[] asql = dbtype == DBTYPE_SQLSRV ? DB.splitMultiSQLForSqlServer(sql) : DB.splitMultiSQL(sql);
         foreach (string sqlone1 in asql)
         {
             var sqlone = sqlone1.Trim();
@@ -1088,14 +1536,14 @@ public class DB : IDisposable
                 }
                 else
                 {
-                    // "_utc" field name suffix convention, don't convert if the field already stores UTC date
-                    if (dbread.GetName(i).EndsWith(utc_field_suffix))
-                        dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                    else
-                        dt = convertDbDateTimeToUtc(dt);
-
+                    dt = normalizeReadDateTime(dt, meta.IsDateOnly[i], meta.IsUtcField[i]);
                     value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 }
+            }
+            else if (meta.IsDateTimeOffset[i])
+            {
+                var dt = readDateTimeOffset(dbread, i).UtcDateTime;
+                value = dt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.DateTimeFormatInfo.InvariantInfo);
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i) ?? "";
@@ -1107,12 +1555,18 @@ public class DB : IDisposable
         return result;
     }
 
-    //read database row values into generic type
+    /// <summary>
+    /// Materializes the current data-reader row into a typed DTO.
+    /// </summary>
+    /// <remarks>
+    /// Single-row query helpers decide whether a record exists before calling this method, so this materializer
+    /// only represents an actual row and does not encode the not-found state.
+    /// </remarks>
+    /// <typeparam name="T">DTO type with writable properties matching returned column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="dbread">Open data reader positioned on the row to materialize.</param>
+    /// <returns>A populated DTO instance for the current data-reader row.</returns>
     protected T readRow<T>(DbDataReader dbread) where T : new()
     {
-        if (!dbread.HasRows)
-            return new T(); //if no rows - return empty row
-
         T result = new();
         var meta = getReaderMeta(dbread);
         var props = FwExtensions.getWritableProperties<T>();
@@ -1125,59 +1579,49 @@ public class DB : IDisposable
                 value = null;
             else if (meta.IsDateTime[i])
             {
-                var dt = dbread.GetDateTime(i);
-
-                // "_utc" field name suffix convention, don't convert if the field already stores UTC date
-                if (dbread.GetName(i).EndsWith(utc_field_suffix))
-                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                else
-                    dt = convertDbDateTimeToUtc(dt, meta.IsDateOnly[i]);
-
                 // keep DateTime value type to avoid boxing to string
-                value = dt;
+                value = normalizeReadDateTime(dbread.GetDateTime(i), meta.IsDateOnly[i], meta.IsUtcField[i]);
+            }
+            else if (meta.IsDateTimeOffset[i])
+            {
+                value = readDateTimeOffset(dbread, i);
             }
             else if (meta.IsString[i])
                 value = dbread.GetString(i);
             else
                 value = dbread.GetValue(i);
 
-            result.setPropertyValue(props, meta.Names[i], value!);
+            result.setPropertyValue(props, meta.Names[i], value);
         }
         return result;
     }
 
     /// <summary>
-    /// read signle irst row using table/where/orderby
+    /// Reads the first row from a helper-built table query.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="where"></param>
-    /// <param name="order_by"></param>
-    /// <returns></returns>
     public DBRow row(string table, FwDict where, string order_by = "")
     {
-        var qp = buildSelect(table, where, order_by, 1);
+        var qp = buildSelect(table, where, order_by, limit: 1);
         return rowp(qp.sql, qp.@params);
     }
 
     /// <summary>
-    /// read single first row using table/where/orderby with generic type
+    /// Reads the first matching row from a table query into a typed DTO.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="where"></param>
-    /// <param name="order_by"></param>
-    /// <returns></returns>
-    public T row<T>(string table, FwDict where, string order_by = "") where T : new()
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="table">Database table name to query.</param>
+    /// <param name="where">Column filters used to build the query.</param>
+    /// <param name="order_by">Optional SQL order clause used before the first row is selected.</param>
+    /// <returns>A populated DTO when a record exists; otherwise, <see langword="null"/>.</returns>
+    public T? row<T>(string table, FwDict where, string order_by = "") where T : class, new()
     {
-        var qp = buildSelect(table, where, order_by, 1);
+        var qp = buildSelect(table, where, order_by, limit: 1);
         return rowp<T>(qp.sql, qp.@params);
     }
 
     /// <summary>
-    /// read single first row using parametrized sql query
+    /// Reads the first row from a parameterized SQL query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public DBRow rowp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1188,26 +1632,37 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read single first row using parametrized sql query with generic type
+    /// Reads the first row from a parameterized SQL query into a typed DTO.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
-    public T rowp<T>(string sql, FwDict? @params = null) where T : new()
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="sql">SQL query expected to return zero or more rows.</param>
+    /// <param name="params">Optional query parameters keyed by parameter name.</param>
+    /// <returns>A populated DTO when the query returns a record; otherwise, <see langword="null"/>.</returns>
+    public T? rowp<T>(string sql, FwDict? @params = null) where T : class, new()
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
-        var result = hasRow ? readRow<T>(dbread) : new T();
+        var result = hasRow ? readRow<T>(dbread) : null;
         closeQuery(dbread);
         return result;
     }
 
-    public DBList readArray(DbDataReader dbread)
+    /// <summary>
+    /// Materializes rows from a data reader and optionally stops after a caller-defined maximum.
+    /// </summary>
+    /// <param name="dbread">Open reader positioned before the first row.</param>
+    /// <param name="limit">Maximum rows to materialize; -1 means no explicit cap.</param>
+    /// <returns>Database rows converted through the normal DB value conversion path.</returns>
+    public DBList readArray(DbDataReader dbread, int limit = -1)
     {
         DBList result = new(DBList.DEFAULT_CAPACITY); //pre-allocate capacity
 
         while (dbread.Read())
+        {
             result.Add(readRow(dbread));
+            if (limit > -1 && result.Count >= limit)
+                break;
+        }
 
         closeQuery(dbread);
         return result;
@@ -1225,11 +1680,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read all rows using parametrized query
+    /// Reads all rows from a parameterized SQL query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public virtual DBList arrayp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1237,11 +1689,18 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read all rows using parametrized query with generic type
+    /// Reads rows from a parameterized query and stops materializing after a caller-defined maximum.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
+    /// <param name="limit">Maximum rows to materialize; -1 means no explicit cap. Use for user-authored read-only queries where SQL-level limiting is not portable.</param>
+    public virtual DBList arrayp(string sql, FwDict? @params, int limit)
+    {
+        DbDataReader dbread = query(sql, @params);
+        return readArray(dbread, limit);
+    }
+
+    /// <summary>
+    /// Reads typed rows from a parameterized SQL query.
+    /// </summary>
     public List<T> arrayp<T>(string sql, FwDict? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
@@ -1302,75 +1761,139 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// return all rows with all fields from the table based on coditions/order
-    /// array("table", where, "id asc", Utils.qh("field1|id field2|iname"))
+    /// Validates paging arguments before SQL is generated so provider-specific failures do not leak to callers.
+    /// </summary>
+    /// <param name="order_by">ORDER BY clause body supplied by the caller, without the `ORDER BY` keyword.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return, or -1 for no limit.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> or <paramref name="limit"/> is outside the supported range.</exception>
+    /// <exception cref="ArgumentException">Thrown when offset paging lacks a portable limit or deterministic order.</exception>
+    private static void validatePaging(string order_by, int offset, int limit)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset), "Offset must be greater than or equal to 0.");
+
+        if (limit < -1)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be -1 or greater.");
+
+        if (offset > 0 && limit < 0)
+            throw new ArgumentException("Offset paging requires a limit.", nameof(limit));
+
+        if (offset > 0 && string.IsNullOrWhiteSpace(order_by))
+            throw new ArgumentException("Offset paging requires an order_by value.", nameof(order_by));
+    }
+
+    /// <summary>
+    /// Returns whether the provider needs an over-fetch plus in-memory trim to emulate offset paging.
+    /// </summary>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns><c>true</c> when the SQL should fetch <c>offset + limit</c> rows and trim locally.</returns>
+    private bool isClientOffsetPaging(int offset, int limit)
+    {
+        return offset > 0 && limit > -1 && offset_method == "TOP";
+    }
+
+    /// <summary>
+    /// Trims rows for providers that emulate offset paging by over-fetching with TOP.
+    /// </summary>
+    /// <param name="rows">Rows fetched from the provider.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns>A DBList containing the requested page.</returns>
+    private DBList trimClientOffset(DBList rows, int offset, int limit)
+    {
+        if (!isClientOffsetPaging(offset, limit))
+            return rows;
+
+        if (offset >= rows.Count)
+            return [];
+
+        return new DBList(rows.GetRange(offset, Math.Min(limit, rows.Count - offset)));
+    }
+
+    /// <summary>
+    /// Trims typed rows for providers that emulate offset paging by over-fetching with TOP.
+    /// </summary>
+    /// <typeparam name="T">Typed DTO row returned by the DB reader.</typeparam>
+    /// <param name="rows">Rows fetched from the provider.</param>
+    /// <param name="offset">Number of rows to skip before returning results.</param>
+    /// <param name="limit">Maximum number of rows to return.</param>
+    /// <returns>A typed list containing the requested page.</returns>
+    private List<T> trimClientOffset<T>(List<T> rows, int offset, int limit)
+    {
+        if (!isClientOffsetPaging(offset, limit))
+            return rows;
+
+        if (offset >= rows.Count)
+            return [];
+
+        return rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
+    }
+
+    /// <summary>
+    /// Reads rows from a helper-built table query with optional field alias mapping and provider-aware paging.
     /// </summary>
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
     /// <param name="order_by">optional order by, MUST BE QUOTED</param>
     /// <param name="aselect_fields">optional select fields array or hashtable("field"=>"alias") or arraylist of hashtable("field"=>1,"alias"=>1) for cases if there could be several same fields with diff aliases), if not set * returned</param>
-    /// <returns></returns>
-    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null)
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
+    /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
+    public virtual DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1)
     {
-        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
-        return arrayp(qp.sql, qp.@params);
-    }
+        validatePaging(order_by, offset, limit);
+        if (limit == 0)
+            return [];
 
-    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null) where T : new()
-    {
-        var qp = buildSelect(table, where, order_by, select_fields: buildSelectFields(aselect_fields));
-        return arrayp<T>(qp.sql, qp.@params);
+        var qp = buildSelect(table, where, order_by, offset, limit, buildSelectFields(aselect_fields));
+        return trimClientOffset(arrayp(qp.sql, qp.@params), offset, limit);
     }
 
     /// <summary>
-    /// Build and execute raw select statement with offset/limit according to server type
-    /// !All parameters must be properly enquoted
+    /// Returns typed rows from a helper-built table query with optional provider-aware paging.
     /// </summary>
-    /// <param name="fields"></param>
-    /// <param name="from"></param>
-    /// <param name="where"></param>
-    /// <param name="where_params"></param>
-    /// <param name="orderby"></param>
-    /// <param name="offset"></param>
-    /// <param name="limit"></param>
-    /// <returns></returns>
-    /// <exception cref="ApplicationException"></exception>
+    /// <typeparam name="T">DTO type with writable properties matching selected column names or <see cref="DBNameAttribute"/> aliases.</typeparam>
+    /// <param name="table">table name</param>
+    /// <param name="where">where conditions</param>
+    /// <param name="order_by">optional order by, MUST BE QUOTED</param>
+    /// <param name="aselect_fields">optional select fields array or alias map; when omitted, all fields are returned</param>
+    /// <param name="offset">optional number of ordered rows to skip before returning results</param>
+    /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
+    /// <returns>Typed DTO rows matching the query and paging constraints.</returns>
+    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1) where T : new()
+    {
+        validatePaging(order_by, offset, limit);
+        if (limit == 0)
+            return [];
+
+        var qp = buildSelect(table, where, order_by, offset, limit, buildSelectFields(aselect_fields));
+        return trimClientOffset(arrayp<T>(qp.sql, qp.@params), offset, limit);
+    }
+
+    /// <summary>
+    /// Executes a caller-built SELECT statement with provider-aware paging; SQL fragments must already be quoted.
+    /// </summary>
     public DBList selectRaw(string fields, string from, string where, FwDict where_params, string orderby, int offset = 0, int limit = -1)
     {
-        DBList result;
-        //TODO rework with limit() method
-        if (offset_method == "FETCH NEXT") // for SQL Server 2012+
-        {
-            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " OFFSET " + offset + " ROWS " + (limit > 0 ? " FETCH NEXT " + limit + " ROWS ONLY" : "");
-            result = this.arrayp(sql, where_params);
-        }
-        else if (limit_method == "LIMIT") // MySQL, DB2
-        {
-            var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby + " LIMIT " + offset + ", " + limit;
-            result = this.arrayp(sql, where_params);
-        }
-        else if (limit_method == "TOP")
-        {
-            // OLE - for Access - emulate using TOP and return just a limit portion (bad perfomance, but no way)
-            var sql = "SELECT TOP " + (offset + limit) + " " + fields + " FROM " + from + " WHERE " + where + " ORDER BY " + orderby;
-            var rows = this.arrayp(sql, where_params);
-            if (offset >= rows.Count)
-                // offset too far
-                result = [];
-            else
-                result = (DBList)rows.GetRange(offset, Math.Min(limit, rows.Count - offset));
-        }
-        else
-            throw new ApplicationException("Unsupported db type");
+        validatePaging(orderby, offset, limit);
+        if (limit == 0)
+            return [];
 
-        return result;
+        var sql = "SELECT " + fields + " FROM " + from + " WHERE " + where;
+        if (orderby.Length > 0)
+            sql += " ORDER BY " + orderby;
+
+        if (limit > -1)
+        {
+            if (isClientOffsetPaging(offset, limit))
+                sql = this.limit(sql, checked(offset + limit));
+            else
+                sql = this.limit(sql, limit, offset);
+        }
+        return trimClientOffset(this.arrayp(sql, where_params), offset, limit);
     }
 
-    /// <summary>
-    /// read column helper
-    /// </summary>
-    /// <param name="dbread"></param>
-    /// <returns></returns>
     public List<string> readCol(DbDataReader dbread)
     {
         List<string> result = new(DBList.DEFAULT_CAPACITY);
@@ -1382,11 +1905,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// read first column using parametrized query
+    /// Reads the first column from a parameterized query.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public virtual List<string> colp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
@@ -1394,14 +1914,13 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// return just one column values as arraylist
+    /// Reads one column from a helper-built table query, defaulting to the first selected field.
     /// </summary>
     /// <param name="table">table name</param>
     /// <param name="where">where conditions</param>
     /// <param name="field_name">optional field name, if empty - first field returned</param>
     /// <param name="order_by">optional order by (MUST be quoted)</param>
     /// <param name="limit">optional limit, if -1 - no limit applied</param>
-    /// <returns></returns>
     public virtual List<string> col(string table, FwDict where, string field_name, string order_by = "", int limit = -1)
     {
         field_name ??= "";
@@ -1410,7 +1929,7 @@ public class DB : IDisposable
             field_name = "*";
         else
             field_name = qid(field_name);
-        var qp = buildSelect(table, where, order_by, limit, field_name);
+        var qp = buildSelect(table, where, order_by, limit: limit, select_fields: field_name);
         return colp(qp.sql, qp.@params);
     }
 
@@ -1427,23 +1946,23 @@ public class DB : IDisposable
         if (result is DateTime dt)
         {
             var isDateOnly = false;
+            var isUtcField = false;
             try
             {
                 var typeName = dbread.GetDataTypeName(0);
                 isDateOnly = string.Equals(typeName, "date", StringComparison.OrdinalIgnoreCase);
+                isUtcField = isUtcFieldName(dbread.GetName(0));
             }
             catch
             {
                 // ignore metadata errors and fall back to datetime conversion
             }
 
-            // "_utc" field name suffix convention, don't convert if the field already stores UTC date
-            if (dbread.GetName(0).EndsWith(utc_field_suffix))
-                dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-            else
-                dt = convertDbDateTimeToUtc(dt, isDateOnly);
-
-            result = dt;
+            result = normalizeReadDateTime(dt, isDateOnly, isUtcField);
+        }
+        else if (result is DateTimeOffset dto)
+        {
+            result = dto.UtcDateTime;
         }
 
         closeQuery(dbread);
@@ -1465,11 +1984,7 @@ public class DB : IDisposable
     /// value("table", where, "count(*)")
     /// value("table", where, "MAX(id)")
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="where"></param>
     /// <param name="field_name">(if not set - first selected field used) field name, special cases: "1", "count(*)", "SUM(field)", AVG/MAX/MIN,...</param>
-    /// <param name="order_by"></param>
-    /// <returns></returns>
     public virtual object? value(string table, FwDict where, string field_name = "", string order_by = "")
     {
         field_name ??= "";
@@ -1563,10 +2078,7 @@ public class DB : IDisposable
     ///    table => [table], "table", `table`
     ///    schema.table => [schema].[table], "schema"."table", `schema`.`table`
     /// </summary>
-    /// <param name="str"></param>
     /// <param name="is_force">if false - quoting won't be applied if there are only alphanumeric chars</param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
     public string qid(string str, bool is_force = true)
     {
         str ??= "";
@@ -1611,6 +2123,78 @@ public class DB : IDisposable
 
         // Join the parts back together with '.'
         return string.Join(".", parts);
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that converts a value to nullable-safe text.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference to convert.</param>
+    /// <returns>A SQL expression returning text, with database nulls converted to an empty string.</returns>
+    public string sqlTextExpr(string expr)
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"COALESCE(CAST({expr} AS TEXT), '')",
+            DBTYPE_MYSQL => $"IFNULL(CAST({expr} AS CHAR), '')",
+            DBTYPE_OLE => $"IIF(ISNULL({expr}), '', CSTR({expr}))",
+            _ => $"ISNULL(CAST({expr} as NVARCHAR(255)), '')",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that converts a value for numeric comparison.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference to convert.</param>
+    /// <returns>A SQL expression suitable for numeric filtering in list searches.</returns>
+    public string sqlNumberExpr(string expr)
+    {
+        var sqliteText = $"TRIM(CAST({expr} AS TEXT))";
+        var sqliteDotCount = $"(LENGTH({sqliteText})-LENGTH(REPLACE({sqliteText}, '.', '')))";
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"CASE WHEN {sqliteText}<>'' AND {sqliteText} GLOB '*[0-9]*' AND {sqliteText} NOT GLOB '*[^0-9.+-]*' AND INSTR(SUBSTR({sqliteText}, 2), '+')=0 AND INSTR(SUBSTR({sqliteText}, 2), '-')=0 AND {sqliteDotCount}<=1 THEN CAST({expr} AS REAL) ELSE NULL END",
+            DBTYPE_MYSQL => $"CAST({expr} AS DECIMAL(18,1))",
+            DBTYPE_OLE => $"CDbl({expr})",
+            _ => $"TRY_CONVERT(DECIMAL(18,1),CAST({expr} as NVARCHAR))",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that extracts the date portion of a value.
+    /// </summary>
+    /// <param name="expr">SQL expression or column reference containing a date or datetime value.</param>
+    /// <returns>A SQL expression that can be used for provider-neutral date filtering or grouping.</returns>
+    public string sqlDateExpr(string expr)
+    {
+        return dbtype switch
+        {
+            DBTYPE_SQLITE => $"date({expr})",
+            DBTYPE_MYSQL => $"DATE({expr})",
+            DBTYPE_OLE => $"DateValue({expr})",
+            _ => $"TRY_CONVERT(DATE, {expr})",
+        };
+    }
+
+    /// <summary>
+    /// Builds a provider-specific SQL expression that concatenates text expressions.
+    /// </summary>
+    /// <param name="expressions">SQL expressions or quoted literals to concatenate in order.</param>
+    /// <returns>A SQL expression that concatenates all parts while treating nulls as empty text.</returns>
+    public string sqlConcat(params string[] expressions)
+    {
+        if (expressions.Length == 0)
+            return "''";
+
+        if (dbtype == DBTYPE_SQLITE)
+            return string.Join(" || ", expressions.Select(sqlTextExpr));
+
+        if (dbtype == DBTYPE_OLE)
+            return string.Join(" & ", expressions.Select(sqlTextExpr));
+
+        if (dbtype == DBTYPE_MYSQL)
+            return "CONCAT(" + string.Join(", ", expressions.Select(sqlTextExpr)) + ")";
+
+        return "CONCAT(" + string.Join(", ", expressions) + ")";
     }
 
 
@@ -1672,6 +2256,8 @@ public class DB : IDisposable
         if (value != null)
             if (value is DateTime dt)
                 result = dt;
+            else if (value is DateTimeOffset dto)
+                result = dto.UtcDateTime;
             else
                 if (DateTime.TryParse(value.ToString(), out DateTime tmpdate))
                     result = tmpdate;
@@ -1680,16 +2266,57 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// returns sql with TOP or LIMIT or FETCH accoring to server's method
+    /// Converts a value to <see cref="DateTimeOffset"/> for offset-aware database fields.
     /// </summary>
-    /// <param name="sql">simple statement starting with SELECT</param>
-    /// <param name="limit"></param>
-    /// <returns></returns>
-    /// TODO add support for offset
-    public string limit(string sql, int limit)
+    /// <param name="value">Date/time value, string, or offset-aware value.</param>
+    /// <returns>A parsed offset-aware value, or <c>null</c> when conversion fails.</returns>
+    public DateTimeOffset? qdto(object value)
+    {
+        if (value is DateTimeOffset dto)
+            return dto;
+
+        if (value is DateTime dt)
+            return new DateTimeOffset(asUtcDateTime(dt));
+
+        if (DateTimeOffset.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed))
+            return parsed;
+
+        return null;
+    }
+
+    /// <summary>
+    /// Adds provider-specific TOP, LIMIT, or OFFSET/FETCH paging to a SELECT statement.
+    /// </summary>
+    /// <param name="sql">simple statement starting with SELECT; SQL Server offset paging requires an ORDER BY clause</param>
+    /// <param name="limit">maximum number of rows to return</param>
+    /// <param name="offset">optional number of rows to skip before returning results</param>
+    public string limit(string sql, int limit, int offset = 0)
     {
         string result;
-        if (limit_method == "FETCH")
+
+        if (limit < 0)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be greater than or equal to 0.");
+
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset), "Offset must be greater than or equal to 0.");
+
+        if (offset > 0)
+        {
+            if (offset_method == "FETCH NEXT")
+            {
+                if (!Regex.IsMatch(sql, @"\border\s+by\b", RegexOptions.IgnoreCase))
+                    throw new ArgumentException("SQL Server offset paging requires SQL with ORDER BY.", nameof(sql));
+
+                result = sql + " OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+            }
+            else if (offset_method == "LIMIT")
+                result = sql + " LIMIT " + offset + ", " + limit;
+            else if (offset_method == "TOP")
+                throw new NotSupportedException("Offset paging is not supported by limit() for TOP-based providers. Use array() or selectRaw() so the over-fetched rows can be trimmed.");
+            else
+                throw new ApplicationException("Unsupported db type");
+        }
+        else if (limit_method == "FETCH")
             result = sql + " FETCH FIRST " + limit + " ROWS ONLY";
         else if (limit_method == "LIMIT")
             result = sql + " LIMIT " + limit;
@@ -1700,9 +2327,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// returns sql string with function for current database time according to Server type
+    /// Returns the provider-specific SQL expression for current database time.
     /// </summary>
-    /// <returns></returns>
     public string sqlNOW()
     {
         return sql_now;
@@ -1711,7 +2337,6 @@ public class DB : IDisposable
     /// <summary>
     /// fetch current database time
     /// </summary>
-    /// <returns></returns>
     public DateTime Now()
     {
         var val = valuep($"SELECT {sqlNOW()}");
@@ -1724,11 +2349,8 @@ public class DB : IDisposable
     /// <summary>
     /// prepare query and parameters - parameters will be converted to types appropriate for the related fields
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="fields"></param>
     /// <param name="join_type">"where"(default), "update"(for SET), "insert"(for VALUES)</param>
     /// <param name="suffix">optional suffix to append to each param name</param>
-    /// <returns></returns>
     public DBQueryAndParams prepareParams(string table, IDictionary fields, string join_type = "where", string suffix = "")
     {
         connect();
@@ -1758,6 +2380,11 @@ public class DB : IDisposable
         {
             var fieldValue = fields[fname] ?? DBNull.Value;
             var dbop = field2Op(table, fname, fieldValue, is_for_where);
+            // Keep original field metadata with generated params for _utc/datetimeoffset decisions.
+            var fieldType = "";
+            var fieldNameLc = fname.ToLowerInvariant();
+            if (schema.TryGetValue(table, out var schemaTable) && schemaTable.TryGetValue(fieldNameLc, out object? schemaValue))
+                fieldType = schemaValue.toStr();
 
             var delim = $" {dbop.opstr} ";
             var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix
@@ -1774,13 +2401,13 @@ public class DB : IDisposable
                     // special case for between
                     if (dbop.value is IList list && list.Count >= 2)
                     {
-                        @params[param_name + "_1"] = list[0];
-                        @params[param_name + "_2"] = list[1];
+                        @params[param_name + "_1"] = paramValue(fname, fieldType, list[0]);
+                        @params[param_name + "_2"] = paramValue(fname, fieldType, list[1]);
                     }
                     else
                     {
-                        @params[param_name + "_1"] = DBNull.Value;
-                        @params[param_name + "_2"] = DBNull.Value;
+                        @params[param_name + "_1"] = paramValue(fname, fieldType, DBNull.Value);
+                        @params[param_name + "_2"] = paramValue(fname, fieldType, DBNull.Value);
                     }
                     // BETWEEN @p1 AND @p2
                     sql += $"@{param_name}_1 AND @{param_name}_2";
@@ -1793,7 +2420,7 @@ public class DB : IDisposable
                         var i = 1;
                         foreach (var pvalue in list)
                         {
-                            @params[param_name + "_" + i] = pvalue;
+                            @params[param_name + "_" + i] = paramValue(fname, fieldType, pvalue);
                             sql_params.Add("@" + param_name + "_" + i);
                             i += 1;
                         }
@@ -1805,12 +2432,22 @@ public class DB : IDisposable
                 {
                     if (dbop.value == DB.NOW)
                     {
-                        // if value is NOW object - don't add it to params, just use NOW()/GETDATE() in sql
-                        sql += sqlNOW();
+                        // DB.NOW uses field semantics: DB-local by default, UTC for _utc, offset-aware for SQL Server datetimeoffset.
+                        var isUtcField = isUtcFieldName(fname);
+                        if (isDateTimeOffsetType(fieldType) && dbtype == DBTYPE_SQLSRV)
+                            sql += isUtcField ? "TODATETIMEOFFSET(SYSUTCDATETIME(), '+00:00')" : "SYSDATETIMEOFFSET()";
+#if isMySQL
+                        else if (isUtcField && dbtype == DBTYPE_MYSQL)
+                            sql += "UTC_TIMESTAMP()";
+#endif
+                        else if (isUtcField && dbtype == DBTYPE_SQLSRV)
+                            sql += "SYSUTCDATETIME()";
+                        else
+                            sql += sqlNOW();
                     }
                     else
                     {
-                        @params[param_name] = dbop.value;
+                        @params[param_name] = paramValue(fname, fieldType, dbop.value);
                         sql += "@" + param_name;
                     }
                 }
@@ -1949,6 +2586,8 @@ public class DB : IDisposable
                     else
                         result = field_value.toLong();
                 }
+                else if (field_value is bool)
+                    result = field_value.toBool() ? 1 : 0;
                 else
                     result = field_value.toLong();
             }
@@ -1960,6 +2599,11 @@ public class DB : IDisposable
             else if (field_type == "datetime")
             {
                 var dt = this.qd(field_value);
+                result = dt ?? (object)DBNull.Value;
+            }
+            else if (field_type == "datetimeoffset")
+            {
+                var dt = this.qdto(field_value);
                 result = dt ?? (object)DBNull.Value;
             }
             else if (field_type == "float")
@@ -1983,8 +2627,6 @@ public class DB : IDisposable
     /// Example: Dim rows = db.array("users", New FwRow From {{"status", db.opEQ(0)}})
     /// <![CDATA[ select * from users where status=0 ]]>
     /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
     public DBOperation opEQ(object value)
     {
         if (value == null || value == DBNull.Value)
@@ -1998,8 +2640,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"status", db.opNOT(127)}})
     ///  <![CDATA[ select * from users where status<>127 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opNOT(object value)
     {
         return new DBOperation(DBOps.NOT, value);
@@ -2010,8 +2650,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opLE(50)}})
     ///  <![CDATA[ select * from users where access_level<=50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opLE(object value)
     {
         return new DBOperation(DBOps.LE, value);
@@ -2022,8 +2660,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opLT(50)}})
     ///  <![CDATA[ select * from users where access_level<50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opLT(object value)
     {
         return new DBOperation(DBOps.LT, value);
@@ -2034,8 +2670,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opGE(50)}})
     ///  <![CDATA[ select * from users where access_level>=50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opGE(object value)
     {
         return new DBOperation(DBOps.GE, value);
@@ -2046,8 +2680,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"access_level", db.opGT(50)}})
     ///  <![CDATA[ select * from users where access_level>50 ]]>
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opGT(object value)
     {
         return new DBOperation(DBOps.GT, value);
@@ -2057,7 +2689,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opISNULL()}})
     ///  select * from users where field IS NULL
     ///  </summary>
-    ///  <returns></returns>
     public DBOperation opISNULL()
     {
         return new DBOperation(DBOps.ISNULL);
@@ -2066,7 +2697,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opISNOTNULL()}})
     ///  select * from users where field IS NOT NULL
     ///  </summary>
-    ///  <returns></returns>
     public DBOperation opISNOTNULL()
     {
         return new DBOperation(DBOps.ISNOTNULL);
@@ -2075,8 +2705,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = DB.array("users", New FwRow From {{"address1", db.opLIKE("%Orlean%")}})
     ///  select * from users where address1 LIKE '%Orlean%'
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opLIKE(object value)
     {
         return new DBOperation(DBOps.LIKE, value);
@@ -2085,8 +2713,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = DB.array("users", New FwRow From {{"address1", db.opNOTLIKE("%Orlean%")}})
     ///  select * from users where address1 NOT LIKE '%Orlean%'
     ///  </summary>
-    ///  <param name="value"></param>
-    ///  <returns></returns>
     public DBOperation opNOTLIKE(object value)
     {
         return new DBOperation(DBOps.NOTLIKE, value);
@@ -2100,8 +2726,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"id", db.opIN(1, 2)}})
     ///  select * from users where id IN (1,2)
     ///  </summary>
-    ///  <param name="args"></param>
-    ///  <returns></returns>
     public DBOperation opIN(params object[] args)
     {
         object values;
@@ -2130,8 +2754,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"id", db.opNOTIN(1, 2)}})
     ///  select * from users where id NOT IN (1,2)
     ///  </summary>
-    ///  <param name="args"></param>
-    ///  <returns></returns>
     public DBOperation opNOTIN(params object[] args)
     {
         object values;
@@ -2156,7 +2778,6 @@ public class DB : IDisposable
     ///  Example: Dim rows = db.array("users", New FwRow From {{"field", db.opBETWEEN(10,20)}})
     ///  select * from users where field BETWEEN 10 AND 20
     ///  </summary>
-    ///  <returns></returns>
     public DBOperation opBETWEEN(object from_value, object to_value)
     {
         return new DBOperation(DBOps.BETWEEN, new object[] { from_value, to_value });
@@ -2178,6 +2799,12 @@ public class DB : IDisposable
         {
             insert_id = exec(qp.sql, qp.@params, true);
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            insert_id = exec(qp.sql, qp.@params, true);
+        }
+#endif
         else
             throw new ApplicationException("Get last insert ID for DB type [" + dbtype + "] not implemented");
 
@@ -2191,9 +2818,7 @@ public class DB : IDisposable
     /// <summary>
     /// insert record into table
     /// </summary>
-    /// <param name="table"></param>
     /// <param name="fields">last inserted id</param>
-    /// <returns></returns>
     public virtual int insert(string table, IDictionary fields)
     {
         if (fields.Count < 1)
@@ -2211,9 +2836,7 @@ public class DB : IDisposable
     /// insert typed record into table
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="table"></param>
     /// <param name="data">last inserted id</param>
-    /// <returns></returns>
     public virtual int insert<T>(string table, T data)
     {
         if (data == null)
@@ -2225,12 +2848,10 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// update records in table
+    /// Updates records using dictionary fields and where predicates.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="fields">key => value</param>
-    /// <param name="where">key => value/opXX</param>
-    /// <returns></returns>
+    /// <param name="fields">Column values keyed by field name.</param>
+    /// <param name="where">Where predicates keyed by field name or operator expression.</param>
     public virtual int update(string table, IDictionary fields, IDictionary where)
     {
         var qp = buildUpdate(table, fields, where);
@@ -2243,12 +2864,9 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// update records in table
+    /// Updates records using a typed object converted to column values.
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="data">typed object</param>
-    /// <param name="where">key => value/opXX</param>
-    /// <returns></returns>
+    /// <param name="where">Where predicates keyed by field name or operator expression.</param>
     public int update<T>(string table, T data, IDictionary where)
     {
         if (data == null)
@@ -2259,11 +2877,8 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// update records in table - alias for exec()
+    /// Executes a parameterized update statement through the shared SQL executor.
     /// </summary>
-    /// <param name="sql"></param>
-    /// <param name="params"></param>
-    /// <returns></returns>
     public int updatep(string sql, FwDict? @params = null)
     {
         return exec(sql, @params);
@@ -2282,11 +2897,10 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// delete records from table
+    /// Deletes records matching the provided predicates; an empty predicate deletes the whole table.
     /// </summary>
-    /// <param name="table">table name</param>
-    /// <param name="where">optional where, WARNING, if empty - DELETE ALL RECORDS in table</param>
-    /// <returns>number of affected rows</returns>
+    /// <param name="where">Where predicates; empty means delete all records in the table.</param>
+    /// <returns>Number of affected rows.</returns>
     public int del(string table, FwDict? where = null)
     {
         where ??= [];
@@ -2295,16 +2909,15 @@ public class DB : IDisposable
     }
 
     /// <summary>
-    /// build SELECT sql string
+    /// Builds SELECT SQL and parameters from trusted table, where, order, paging, and field fragments.
     /// </summary>
-    /// <param name="table">table name</param>
-    /// <param name="where">where conditions</param>
-    /// <param name="order_by">optional order by string, MUST BE QUOTED</param>
-    /// <param name="limit">optional limit number of results</param>
-    /// <param name="select_fields">optional (default "*") fields to select, MUST already be quoted!</param>
-    /// <returns></returns>
-    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int limit = -1, string select_fields = "*")
+    /// <param name="where">Where predicates keyed by field name or operator expression.</param>
+    /// <param name="order_by">Trusted ORDER BY body; SQL identifiers must already be quoted.</param>
+    /// <param name="select_fields">Trusted SELECT field list; SQL identifiers must already be quoted.</param>
+    protected DBQueryAndParams buildSelect(string table, IDictionary where, string order_by = "", int offset = 0, int limit = -1, string select_fields = "*")
     {
+        validatePaging(order_by, offset, limit);
+
         DBQueryAndParams result = new()
         {
             sql = "SELECT"
@@ -2321,7 +2934,12 @@ public class DB : IDisposable
             result.sql += " ORDER BY " + order_by;
 
         if (limit > -1)
-            result.sql = this.limit(result.sql, limit);
+        {
+            if (isClientOffsetPaging(offset, limit))
+                result.sql = this.limit(result.sql, checked(offset + limit));
+            else
+                result.sql = this.limit(result.sql, limit, offset);
+        }
 
         return result;
     }
@@ -2335,7 +2953,7 @@ public class DB : IDisposable
 
         //logger(LogLevel.DEBUG, "buildUpdate:", table, fields);
 
-        var set_params = prepareParams(table, fields, "update", set_param_suffix);
+        var set_params = prepareParams(table, fields, "update", UPDATE_SET_PARAM_SUFFIX);
         result.sql += set_params.sql;
         result.@params = set_params.@params;
 
@@ -2382,6 +3000,9 @@ public class DB : IDisposable
     // return array of table names in current db
     public StrList tables()
     {
+        if (dbtype == DBTYPE_SQLITE)
+            return new StrList(colp("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"));
+
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
         StrList result = new(dataTable.Rows.Count);
@@ -2394,9 +3015,13 @@ public class DB : IDisposable
 
             // skip any system tables or views (VIEW, ACCESS TABLE, SYSTEM TABLE)
             var tableType = row["TABLE_TYPE"].toStr();
-            if (tableType != "TABLE" && tableType != "BASE TABLE" && tableType != "PASS-THROUGH")
+            if (!tableType.Equals("TABLE", StringComparison.OrdinalIgnoreCase)
+                && !tableType.Equals("BASE TABLE", StringComparison.OrdinalIgnoreCase)
+                && !tableType.Equals("PASS-THROUGH", StringComparison.OrdinalIgnoreCase))
                 continue;
             string tblname = row["TABLE_NAME"].toStr();
+            if (tblname.StartsWith("sqlite_", StringComparison.OrdinalIgnoreCase))
+                continue;
             if (tblname.Length > 0)
                 result.Add(tblname);
         }
@@ -2407,13 +3032,16 @@ public class DB : IDisposable
     // return array of view names in current db
     public StrList views()
     {
+        if (dbtype == DBTYPE_SQLITE)
+            return new StrList(colp("SELECT name FROM sqlite_schema WHERE type='view' ORDER BY name"));
+
         DbConnection conn = this.connect();
         DataTable dataTable = conn.GetSchema("Tables");
         StrList result = new(dataTable.Rows.Count);
         foreach (DataRow row in dataTable.Rows)
         {
             // skip non-views
-            if (row["TABLE_TYPE"].toStr() != "VIEW") continue;
+            if (!row["TABLE_TYPE"].toStr().Equals("VIEW", StringComparison.OrdinalIgnoreCase)) continue;
 
             string tblname = row["TABLE_NAME"].toStr();
             if (tblname.Length > 0)
@@ -2441,6 +3069,8 @@ public class DB : IDisposable
             result = field_type;
         else if (field_type == "datetime")
             result = field_type;
+        else if (field_type == "datetimeoffset")
+            result = field_type;
         else if (field_type == "float")
             result = field_type;
         else if (field_type == "decimal")
@@ -2449,6 +3079,25 @@ public class DB : IDisposable
             result = "varchar";
 
         return result;
+    }
+
+    /// <summary>
+    /// Returns full schema metadata for one table field, or an empty dictionary when it cannot be found.
+    /// </summary>
+    public FwDict schemaField(string table, string field_name)
+    {
+        if (string.IsNullOrEmpty(table) || string.IsNullOrEmpty(field_name))
+            return [];
+
+        try
+        {
+            var schema = tableSchemaFull(table);
+            return schema[field_name.ToLowerInvariant()] as FwDict ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     // return array of foreign keys in the table as array of hashtables
@@ -2560,6 +3209,36 @@ public class DB : IDisposable
                 row["fw_subtype"] = subtype.ToLowerInvariant();
             }
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var tableName = table.Contains('.') ? table.Split('.').Last() : table;
+            var rows = arrayp($"PRAGMA table_xinfo({qid(tableName)})");
+            var pkRows = rows.Where(row => row["hidden"].toInt() != 1 && row["pk"].toInt() > 0).ToList();
+            var identityColumn = pkRows.Count == 1 ? pkRows[0]["name"].toStr() : "";
+            foreach (FwDict row in rows)
+            {
+                if (row["hidden"].toInt() == 1)
+                    continue;
+
+                var subtype = row["type"].toStr();
+                var maxlenMatch = Regex.Match(subtype, @"\((\d+)(?:,\d+)?\)");
+                var precisionScaleMatch = Regex.Match(subtype, @"\((\d+),(\d+)\)");
+                row["fw_type"] = mapTypeSQLite2Fw(subtype);
+                row["fw_subtype"] = subtype.ToLowerInvariant();
+                row["is_nullable"] = row["notnull"].toBool() || row["pk"].toBool() ? 0 : 1;
+                row["default"] = row["dflt_value"];
+                row["maxlen"] = maxlenMatch.Success ? maxlenMatch.Groups[1].Value.toInt() : (row["fw_type"].toStr() == "varchar" ? -1 : 0);
+                row["numeric_precision"] = precisionScaleMatch.Success ? precisionScaleMatch.Groups[1].Value.toInt() : 0;
+                row["numeric_scale"] = precisionScaleMatch.Success ? precisionScaleMatch.Groups[2].Value.toInt() : 0;
+                row["charset"] = "";
+                row["collation"] = "";
+                row["pos"] = row["cid"].toInt() + 1;
+                row["is_identity"] = row["name"].toStr() == identityColumn && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                result.Add(row);
+            }
+        }
+#endif
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -2687,6 +3366,26 @@ public class DB : IDisposable
                             AND col2.ORDINAL_POSITION = col1.ORDINAL_POSITION)" +
                 where, where_params);
         }
+#if isSQLite
+        else if (dbtype == DBTYPE_SQLITE)
+        {
+            var tableName = table.Contains('.') ? table.Split('.').Last() : table;
+            var rows = this.arrayp($"PRAGMA foreign_key_list({qid(tableName)})");
+            foreach (FwDict row in rows)
+            {
+                result.Add(new DBRow()
+                {
+                    {"table", tableName},
+                    {"column", row["from"].toStr()},
+                    {"name", "FK_" + tableName + "_" + row["from"].toStr() + "_" + row["id"].toStr()},
+                    {"pk_table", row["table"].toStr()},
+                    {"pk_column", row["to"].toStr()},
+                    {"on_update", row["on_update"].toStr()},
+                    {"on_delete", row["on_delete"].toStr()}
+                });
+            }
+        }
+#endif
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
@@ -2723,7 +3422,7 @@ public class DB : IDisposable
     {
         //logger(LogLevel.DEBUG, "loadTableSchema:" + table);
         // for unsupported schemas - use config schema
-        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL)
+        if (dbtype != DBTYPE_SQLSRV && dbtype != DBTYPE_OLE && dbtype != DBTYPE_MYSQL && dbtype != DBTYPE_SQLITE)
         {
             if (schema.Count == 0)
                 schema = (Dictionary<string, FwDict>?)conf["schema"] ?? [];
@@ -2811,6 +3510,12 @@ public class DB : IDisposable
                     break;
                 }
 
+            case "datetimeoffset":
+                {
+                    result = "datetimeoffset";
+                    break;
+                }
+
             case "date":
                 {
                     result = "date";
@@ -2824,6 +3529,26 @@ public class DB : IDisposable
         }
 
         return result;
+    }
+
+    // map SQLite declared type to FW's
+    protected static string mapTypeSQLite2Fw(string dbtype)
+    {
+        var subtype = dbtype.toStr().ToLowerInvariant();
+        if (subtype.Contains("datetimeoffset"))
+            return "datetimeoffset";
+        if (subtype.Contains("datetime") || subtype.Contains("timestamp"))
+            return "datetime";
+        if (subtype.Contains("date"))
+            return "date";
+        if (subtype.Contains("int") || subtype.Contains("bool"))
+            return "int";
+        if (subtype.Contains("real") || subtype.Contains("floa") || subtype.Contains("doub"))
+            return "float";
+        if (subtype.Contains("numeric") || subtype.Contains("decimal") || subtype.Contains("money"))
+            return "decimal";
+
+        return "varchar";
     }
 
     [SupportedOSPlatform("windows")]

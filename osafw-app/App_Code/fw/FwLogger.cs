@@ -3,12 +3,7 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
-//if you use Sentry https://docs.sentry.io/platforms/dotnet/guides/aspnetcore/
-//  install Sentry.AspNetCore (uncomment in csproj)
-//  in appsettings.json set your Sentry.Dsn
-//  in Program - uncomment webBuilder.UseSentry();
-//  uncomment define below
-// #define isSentry
+// To use Sentry, enable isSentry in osafw-app.csproj and set Sentry.Dsn in appsettings.json.
 
 using Microsoft.AspNetCore.Http;
 using System;

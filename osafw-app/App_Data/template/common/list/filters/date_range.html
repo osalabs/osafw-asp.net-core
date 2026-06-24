@@ -1,0 +1,22 @@
+<div class="dropdown fw-column-filter fw-column-filter-dropdown" data-column-filter-type="date_range">
+  <input type="hidden" name="search[<~filter[field]>]" value="<~filter[search_value]>" data-column-filter-json>
+  <~/common/list/filters/summary_button>
+  <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
+    <select class="form-select form-select-sm mb-2" data-column-filter-blank>
+      <option value="">`date range`</option>
+      <option value="blank" <~/common/attr/selected ifeq="filter[blank_op]" value="blank">>`blank`</option>
+      <option value="not_blank" <~/common/attr/selected ifeq="filter[blank_op]" value="not_blank">>`not blank`</option>
+    </select>
+    <input type="date" value="<~filter[from]>" class="form-control form-control-sm mb-2" data-column-filter-from>
+    <input type="date" value="<~filter[to]>" class="form-control form-control-sm mb-2" data-column-filter-to>
+    <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+      <button type="button" class="btn btn-sm btn-outline-secondary" title="Today" data-column-filter-quick="today">`Today`</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" title="Last 7 days" data-column-filter-quick="week">`Week`</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" title="Last 30 days" data-column-filter-quick="30">`30`</button>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-primary flex-fill" data-column-filter-apply>`Apply`</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-column-filter-clear>`Clear`</button>
+    </div>
+  </div>
+</div>

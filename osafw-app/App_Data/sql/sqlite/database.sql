@@ -1,0 +1,2 @@
+-- Application-specific SQLite tables.
+-- Keep this file in sync with App_Data/sql/database.sql for SQL Server installs.

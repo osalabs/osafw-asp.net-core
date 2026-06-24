@@ -1,8 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using Microsoft.Data.SqlClient;
 
 namespace osafw.Tests
@@ -29,6 +30,9 @@ namespace osafw.Tests
                             id              INT,
                             iname           NVARCHAR(64) NOT NULL default '',
                             idatetime       DATETIME2,
+                            idatetime_utc   DATETIME2,
+                            ioffset         DATETIMEOFFSET,
+                            ioffset_utc     DATETIMEOFFSET,
                             fdate           DATE
                         )");
                 db.exec($"INSERT INTO {table_name} (id, iname) VALUES (1,'test1'),(2,'test2'),(3,'test3')");
@@ -153,9 +157,23 @@ namespace osafw.Tests
         [TestMethod()]
         public void rowTypedTest()
         {
-            var row = db.row<Demos.Row>(table_name, DB.h("id", 1));
+            var row = db.row<Demos.Row>(table_name, DB.h("id", 1)) ?? throw new AssertFailedException("Expected typed row.");
             Assert.AreEqual(1, row.id);
             Assert.AreEqual("test1", row.iname);
+        }
+
+        [TestMethod()]
+        public void rowTypedMissingTest()
+        {
+            var row = db.row<Demos.Row>(table_name, DB.h("id", 999));
+            Assert.IsNull(row);
+
+            var rowp = db.rowp<Demos.Row>("SELECT * FROM " + table_name + " WHERE id=999;");
+            Assert.IsNull(rowp);
+
+            var dictRow = db.row(table_name, DB.h("id", 999));
+            Assert.IsNotNull(dictRow);
+            Assert.AreEqual(0, dictRow.Count);
         }
 
         [TestMethod()]
@@ -188,6 +206,47 @@ namespace osafw.Tests
             Assert.AreEqual("test1", rows[0].iname);
             Assert.AreEqual("test2", rows[1].iname);
             Assert.AreEqual("test3", rows[2].iname);
+        }
+
+        [TestMethod()]
+        public void arrayLimitOffsetTest()
+        {
+            DBList firstPage = db.array(table_name, DB.h(), "id", offset: 0, limit: 2);
+            Assert.HasCount(2, firstPage);
+            Assert.AreEqual("test1", firstPage[0]["iname"]);
+            Assert.AreEqual("test2", firstPage[1]["iname"]);
+
+            DBList secondRow = db.array(table_name, DB.h(), "id", offset: 1, limit: 1);
+            Assert.HasCount(1, secondRow);
+            Assert.AreEqual("test2", secondRow[0]["iname"]);
+
+            DBList empty = db.array(table_name, DB.h(), "id", offset: 0, limit: 0);
+            Assert.HasCount(0, empty);
+        }
+
+        [TestMethod()]
+        public void arrayTypedLimitOffsetTest()
+        {
+            List<Demos.Row> rows = db.array<Demos.Row>(table_name, DB.h(), "id", offset: 1, limit: 1);
+
+            Assert.HasCount(1, rows);
+            Assert.AreEqual("test2", rows[0].iname);
+        }
+
+        [TestMethod()]
+        public void modelListByWhereUsesOffsetLimitTest()
+        {
+            var fw = TestHelpers.CreateFw();
+            fw.db = db;
+            var model = new PagingModel(fw, table_name);
+
+            DBList rows = model.listByWhere(offset: 1, limit: 1, orderby: "id");
+            Assert.HasCount(1, rows);
+            Assert.AreEqual("test2", rows[0]["iname"]);
+
+            List<PagingRow> typedRows = model.listTByWhere(offset: 2, limit: 1, orderby: "id");
+            Assert.HasCount(1, typedRows);
+            Assert.AreEqual("test3", typedRows[0].iname);
         }
 
         [TestMethod()]
@@ -518,6 +577,193 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
+        public void UtcSuffixAndDateTimeOffsetRoundTripWithConfiguredDbTimezone()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            tzDb.insert(table_name, DB.h(
+                "id", 8,
+                "iname", "test_utc_suffix",
+                "idatetime", utc,
+                "idatetime_utc", utc,
+                "ioffset_utc", utc));
+
+            var row = tzDb.row(table_name, DB.h("id", 8));
+            Assert.AreEqual("2024-06-01 12:00:00", row["idatetime"]);
+            Assert.AreEqual("2024-06-01 12:00:00", row["idatetime_utc"]);
+            Assert.AreEqual("2024-06-01 12:00:00", row["ioffset_utc"]);
+
+            var stored = tzDb.rowp($@"
+                SELECT
+                    CONVERT(varchar(19), idatetime, 120) AS idatetime,
+                    CONVERT(varchar(19), idatetime_utc, 120) AS idatetime_utc,
+                    CONVERT(varchar(19), CAST(ioffset_utc AS datetime2), 120) AS ioffset_utc,
+                    DATEPART(TZOFFSET, ioffset_utc) AS ioffset_offset
+                FROM {tzDb.qid(table_name)}
+                WHERE id = @id", DB.h("@id", 8));
+
+            Assert.AreEqual("2024-06-01 05:00:00", stored["idatetime"]);
+            Assert.AreEqual("2024-06-01 12:00:00", stored["idatetime_utc"]);
+            Assert.AreEqual("2024-06-01 12:00:00", stored["ioffset_utc"]);
+            Assert.AreEqual("0", stored["ioffset_offset"]);
+        }
+
+        [TestMethod()]
+        public void TypedReadPreservesDateTimeOffset()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            tzDb.insert(table_name, DB.h(
+                "id", 9,
+                "iname", "test_datetimeoffset",
+                "idatetime_utc", utc,
+                "ioffset_utc", offset));
+
+            var row = tzDb.row<TimezoneRow>(table_name, DB.h("id", 9));
+
+            Assert.IsNotNull(row);
+            Assert.AreEqual(utc, row!.idatetime_utc);
+            Assert.AreEqual(offset.ToUniversalTime(), row.ioffset_utc);
+        }
+
+        [TestMethod()]
+        public void UtcSuffixDbNowUsesUtcCurrentTime()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var before = DateTime.UtcNow.AddSeconds(-10);
+
+            tzDb.insert(table_name, DB.h(
+                "id", 10,
+                "iname", "test_now_utc",
+                "idatetime_utc", DB.NOW,
+                "ioffset_utc", DB.NOW));
+
+            var after = DateTime.UtcNow.AddSeconds(10);
+            var stored = tzDb.rowp($@"
+                SELECT
+                    CONVERT(varchar(19), idatetime_utc, 120) AS idatetime_utc,
+                    CONVERT(varchar(19), CAST(SWITCHOFFSET(ioffset_utc, '+00:00') AS datetime2), 120) AS ioffset_utc,
+                    DATEPART(TZOFFSET, ioffset_utc) AS ioffset_offset
+                FROM {tzDb.qid(table_name)}
+                WHERE id = @id", DB.h("@id", 10));
+
+            var storedDateTime = DateTime.Parse(stored["idatetime_utc"].toStr(), CultureInfo.InvariantCulture);
+            var storedOffsetUtc = DateTime.Parse(stored["ioffset_utc"].toStr(), CultureInfo.InvariantCulture);
+
+            Assert.IsTrue(storedDateTime >= before && storedDateTime <= after);
+            Assert.IsTrue(storedOffsetUtc >= before && storedOffsetUtc <= after);
+            Assert.AreEqual("0", stored["ioffset_offset"].toStr());
+        }
+
+        [TestMethod()]
+        public void RawDateTimeOffsetParameterPreservesOffset()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            tzDb.exec($@"
+                INSERT INTO {tzDb.qid(table_name)} (id, iname, ioffset)
+                VALUES (@id, @iname, @value)", DB.h(
+                "@id", 11,
+                "@iname", "test_raw_offset",
+                "@value", offset));
+
+            var stored = tzDb.rowp($@"
+                SELECT
+                    CONVERT(varchar(19), CAST(ioffset AS datetime2), 120) AS wall_time,
+                    CONVERT(varchar(19), CAST(SWITCHOFFSET(ioffset, '+00:00') AS datetime2), 120) AS utc_time,
+                    DATEPART(TZOFFSET, ioffset) AS offset_minutes
+                FROM {tzDb.qid(table_name)}
+                WHERE id = @id", DB.h("@id", 11));
+
+            Assert.AreEqual("2024-06-01 15:00:00", stored["wall_time"]);
+            Assert.AreEqual("2024-06-01 12:00:00", stored["utc_time"]);
+            Assert.AreEqual("180", stored["offset_minutes"].toStr());
+        }
+
+        [TestMethod()]
+        public void RawExpandedUtcParameterKeepsUtcSuffix()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+            var row = tzDb.rowp(
+                "SELECT CONVERT(varchar(19), @sent_at_utc, 120) AS sent_at",
+                DB.h("sent_at_utc", new[] { utc }));
+
+            Assert.AreEqual("2024-06-01 12:00:00", row["sent_at"]);
+        }
+
+        [TestMethod()]
+        public void InvalidConfiguredTimezoneFallsBackButIsNotDetected()
+        {
+            var conf = new FwDict
+            {
+                ["type"] = DB.DBTYPE_SQLSRV,
+                ["connection_string"] = connstr,
+                ["timezone"] = "Invalid/Timezone",
+            };
+            using var tzDb = new DB(conf, "main");
+
+            tzDb.connect();
+
+            Assert.AreEqual(DateUtils.TZ_UTC, tzDb.getTimezoneId());
+            Assert.IsFalse(tzDb.isTimezoneDetectionOk());
+        }
+
+        [TestMethod()]
+        public void DemoTimezoneFieldsRoundTripAgainstDemoTable()
+        {
+            if (db.valuep("SELECT OBJECT_ID('dbo.demos')").toStr() == "")
+                Assert.Inconclusive("dbo.demos is not available in the local demo database.");
+
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var email = "tz-demo-" + Guid.NewGuid().ToString("N") + "@example.test";
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+            var offset = new DateTimeOffset(2024, 6, 1, 15, 0, 0, TimeSpan.FromHours(3));
+
+            try
+            {
+                tzDb.insert("demos", DB.h(
+                    "iname", "Timezone demo test",
+                    "email", email,
+                    "fdatetime", utc,
+                    "fdatetime_utc", utc,
+                    "fdatetime_offset", offset,
+                    "fdatetime_local", utc));
+
+                var row = tzDb.row("demos", DB.h("email", email));
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_utc"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_offset"]);
+                Assert.AreEqual("2024-06-01 12:00:00", row["fdatetime_local"]);
+
+                var stored = tzDb.rowp(@"
+                    SELECT
+                        CONVERT(varchar(19), fdatetime, 120) AS fdatetime,
+                        CONVERT(varchar(19), fdatetime_utc, 120) AS fdatetime_utc,
+                        CONVERT(varchar(19), CAST(fdatetime_offset AS datetime2), 120) AS fdatetime_offset,
+                        DATEPART(TZOFFSET, fdatetime_offset) AS offset_minutes,
+                        CONVERT(varchar(19), fdatetime_local, 120) AS fdatetime_local
+                    FROM demos
+                    WHERE email=@email", DB.h("@email", email));
+
+                Assert.AreEqual("2024-06-01 05:00:00", stored["fdatetime"]);
+                Assert.AreEqual("2024-06-01 12:00:00", stored["fdatetime_utc"]);
+                Assert.AreEqual("2024-06-01 15:00:00", stored["fdatetime_offset"]);
+                Assert.AreEqual("180", stored["offset_minutes"].toStr());
+                Assert.AreEqual("2024-06-01 05:00:00", stored["fdatetime_local"]);
+            }
+            finally
+            {
+                tzDb.del("demos", DB.h("email", email));
+            }
+        }
+
+        [TestMethod()]
         public void updateOrInsertTest()
         {
             db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 5), DB.h("id", 5));
@@ -527,6 +773,40 @@ namespace osafw.Tests
             db.updateOrInsert(table_name, DB.h("iname", "test5", "id", 3), DB.h("id", 3));
             r = db.row(table_name, DB.h("id", 3));
             Assert.AreEqual("test5", r["iname"]);
+        }
+
+        private DB dbWithTimezone(string timezone)
+        {
+            var conf = new FwDict
+            {
+                ["type"] = DB.DBTYPE_SQLSRV,
+                ["connection_string"] = connstr,
+                ["timezone"] = timezone,
+            };
+
+            return new DB(conf, "main");
+        }
+
+        private sealed class TimezoneRow
+        {
+            public DateTime idatetime_utc { get; set; }
+            public DateTimeOffset ioffset_utc { get; set; }
+        }
+
+        private sealed class PagingRow
+        {
+            public int id { get; set; }
+            public string iname { get; set; } = string.Empty;
+        }
+
+        private sealed class PagingModel : FwModel<PagingRow>
+        {
+            public PagingModel(FW fw, string tableName)
+                : base(fw)
+            {
+                table_name = tableName;
+                field_status = "";
+            }
         }
 
         [TestMethod()]
@@ -586,6 +866,131 @@ namespace osafw.Tests
             string[] queries = DB.splitMultiSQL(sql1 + ";\n\r" + sql2 + ";\n\r");
             Assert.AreEqual(queries[0], sql1);
             Assert.AreEqual(queries[1], sql2);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsBeginEndBlockTogetherTest()
+        {
+            string sql = @"--- user timezone auto preference
+
+IF COL_LENGTH('dbo.users', 'timezone') IS NOT NULL
+BEGIN
+    UPDATE dbo.users
+    SET timezone = ''
+    WHERE timezone = 'UTC';
+
+    DECLARE @timezoneDefaultConstraint sysname;
+
+    SELECT @timezoneDefaultConstraint = dc.name
+    FROM sys.default_constraints dc
+    INNER JOIN sys.columns c ON c.default_object_id = dc.object_id
+    WHERE dc.parent_object_id = OBJECT_ID(N'dbo.users')
+      AND c.name = N'timezone';
+
+    IF @timezoneDefaultConstraint IS NOT NULL
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX);
+        SET @sql = N'ALTER TABLE dbo.users DROP CONSTRAINT ' + QUOTENAME(@timezoneDefaultConstraint);
+        EXEC sp_executesql @sql;
+    END
+
+    ALTER TABLE dbo.users ADD CONSTRAINT DF_users_timezone DEFAULT '' FOR timezone;
+END";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(1, queries.Length);
+            Assert.Contains("UPDATE dbo.users", queries[0]);
+            Assert.Contains("EXEC sp_executesql @sql", queries[0]);
+            Assert.Contains("ALTER TABLE dbo.users ADD CONSTRAINT", queries[0]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerSplitsSimpleSemicolonBatchesTest()
+        {
+            string sql = @"DROP VIEW IF EXISTS dbo.AdminControllerList;
+CREATE VIEW dbo.AdminControllerList AS SELECT 1 AS id;
+";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.AreEqual("DROP VIEW IF EXISTS dbo.AdminControllerList", queries[0]);
+            Assert.AreEqual("CREATE VIEW dbo.AdminControllerList AS SELECT 1 AS id;", queries[1]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsModuleDdlBatchTogetherTest()
+        {
+            string sql = @"CREATE PROCEDURE dbo.TestProcedure AS
+SELECT 1 AS first_value;
+SELECT 2 AS second_value;
+GO
+SELECT 3;";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.Contains("CREATE PROCEDURE dbo.TestProcedure", queries[0]);
+            Assert.Contains("SELECT 1 AS first_value;", queries[0]);
+            Assert.Contains("SELECT 2 AS second_value;", queries[0]);
+            Assert.AreEqual("SELECT 3;", queries[1]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLBatchesIgnoresGoInsideCommentsAndStringsTest()
+        {
+            string sql = @"SELECT 'GO';
+-- GO
+/*
+GO
+*/
+GO -- batch separator
+SELECT 2;";
+
+            string[] queries = DB.splitMultiSQLBatches(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.Contains("SELECT 'GO';", queries[0]);
+            Assert.Contains("-- GO", queries[0]);
+            Assert.Contains("/*", queries[0]);
+            Assert.AreEqual("SELECT 2;", queries[1]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsIfElseBranchesTogetherTest()
+        {
+            string sql = @"IF 1 = 1
+    UPDATE dbo.users SET timezone = '';
+ELSE
+    UPDATE dbo.users SET timezone = 'UTC';
+SELECT 2;";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(1, queries.Length);
+            Assert.Contains("ELSE", queries[0]);
+            Assert.Contains("timezone = 'UTC'", queries[0]);
+            Assert.Contains("SELECT 2;", queries[0]);
+        }
+
+        [TestMethod()]
+        public void splitMultiSQLForSqlServerKeepsSqlServerVariablesInOneBatchTest()
+        {
+            string sql = @"DECLARE @ConstraintName nvarchar(256);
+SELECT @ConstraintName = 'DF_users_timezone';
+IF @ConstraintName IS NOT NULL
+    EXEC('ALTER TABLE users DROP CONSTRAINT ' + @ConstraintName);
+GO
+SELECT 2;";
+
+            string[] queries = DB.splitMultiSQLForSqlServer(sql);
+
+            Assert.AreEqual(2, queries.Length);
+            Assert.Contains("DECLARE @ConstraintName", queries[0]);
+            Assert.Contains("SELECT @ConstraintName", queries[0]);
+            Assert.Contains("EXEC('ALTER TABLE users DROP CONSTRAINT ' + @ConstraintName)", queries[0]);
+            Assert.AreEqual("SELECT 2;", queries[1]);
         }
 
         [TestMethod()]

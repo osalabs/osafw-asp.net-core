@@ -1,6 +1,4 @@
-﻿//uncomment to enable ExcelDataReader - install ExcelDataReader NuGet package and ExcelDataReader.DataSet (for CSV)
-//#define ExcelDataReader
-#if ExcelDataReader
+#if isExcelDataReader
 using ExcelDataReader;
 #endif
 
@@ -100,6 +98,23 @@ public class Utils
         return string.Join(" ", result);
     }
 
+    public static bool tryGetValueIgnoreCase(IDictionary<string, object?> values, string key, out object? value)
+    {
+        if (values.TryGetValue(key, out value))
+            return true;
+
+        foreach (var kv in values)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                value = kv.Value;
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
 
     // remove elements from dictionary, leave only those which keys passed
     public static void hashFilter(FwDict hash, string[] keys)
@@ -125,21 +140,17 @@ public class Utils
         }
     }
 
-    // leave just allowed chars in string - for routers: prefix part, controller, action or for route ID
+    /// <summary>
+    /// Keeps only route-safe characters for prefixes, controller/action names, and route ids.
+    /// </summary>
     public static string routeFixChars(string str)
     {
         return Regex.Replace(str, "[^A-Za-z0-9_-]+", "");
     }
 
-    /* <summary>
-    * Split string exactly into 2 voidstrings using regular expression
-    * </summary>
-    * <param name="re">string suitable for RegEx</param>
-    * <param name="source">string to be splitted</param>
-    * <param name="dest1">ByRef destination string 1</param>
-    * <param name="dest2">ByRef destination string 2</param>
-    * <remarks></remarks>
-    */
+    /// <summary>
+    /// Splits a string into exactly two output strings using a regular expression delimiter.
+    /// </summary>
     public static void split2(string re, string source, ref string dest1, ref string dest2)
     {
         dest1 = "";
@@ -185,6 +196,80 @@ public class Utils
             str = "http://" + str;
         }
         return str;
+    }
+
+    /// <summary>
+    /// Checks whether a return URL points back into this application.
+    /// </summary>
+    /// <param name="url">Return URL supplied by the request.</param>
+    /// <param name="rootDomain">Application root domain from configuration, for example <c>https://localhost:44315</c>.</param>
+    /// <returns><c>true</c> for root-relative app paths or absolute URLs under <paramref name="rootDomain"/>; otherwise <c>false</c>.</returns>
+    public static bool isAppUrl(string url, string rootDomain)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        var raw = url.Trim();
+        var localPath = @"/(?!/)[^\\\r\n]*";
+        if (string.IsNullOrWhiteSpace(rootDomain))
+            return Regex.IsMatch(raw, $"^{localPath}$", RegexOptions.IgnoreCase);
+
+        var appRoot = Regex.Escape(rootDomain.TrimEnd('/'));
+        return Regex.IsMatch(raw, $"^(?:{localPath}|{appRoot}(?:[/?#].*)?)$", RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// Adds one URL-encoded query parameter to a URL while preserving existing query strings.
+    /// </summary>
+    /// <param name="url">Base URL that may already contain query parameters.</param>
+    /// <param name="name">Query parameter name.</param>
+    /// <param name="value">Query parameter value. Empty values are ignored.</param>
+    /// <returns>The URL with the parameter appended, or the original URL when the value is empty or the parameter already exists.</returns>
+    public static string addUrlQueryParam(string url, string name, string value)
+    {
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(name))
+            return url;
+
+        var hashIndex = url.IndexOf('#');
+        var fragment = hashIndex >= 0 ? url[hashIndex..] : string.Empty;
+        var baseUrl = hashIndex >= 0 ? url[..hashIndex] : url;
+
+        if (Regex.IsMatch(baseUrl, $@"(?:\?|&){Regex.Escape(name)}=", RegexOptions.IgnoreCase))
+            return url;
+
+        var sep = baseUrl.Contains('?') ? (baseUrl.EndsWith('?') || baseUrl.EndsWith('&') ? "" : "&") : "?";
+        return baseUrl + sep + name + "=" + urlescape(value) + fragment;
+    }
+
+    /// <summary>
+    /// Adds return navigation query parameters to a URL.
+    /// </summary>
+    /// <param name="url">Destination URL that should preserve return metadata.</param>
+    /// <param name="returnUrl">Return destination URL.</param>
+    /// <param name="returnTitle">Human-readable title for the return destination.</param>
+    /// <returns>The destination URL with `return_url` and optional `return_title` query parameters.</returns>
+    public static string addReturnUrlQuery(string url, string returnUrl, string returnTitle)
+    {
+        url = addUrlQueryParam(url, "return_url", returnUrl);
+        return addUrlQueryParam(url, "return_title", returnTitle);
+    }
+
+    /// <summary>
+    /// Builds URL-encoded return navigation query parameters for callers that are assembling a query string separately.
+    /// </summary>
+    /// <param name="returnUrl">Return destination URL.</param>
+    /// <param name="returnTitle">Human-readable title for the return destination.</param>
+    /// <param name="prefix">Prefix to place before the first parameter, usually <c>&amp;</c> or <c>?</c>.</param>
+    /// <returns>An encoded query fragment, or an empty string when no return URL is present.</returns>
+    public static string buildReturnUrlQuery(string returnUrl, string returnTitle, string prefix = "&")
+    {
+        if (string.IsNullOrEmpty(returnUrl))
+            return string.Empty;
+
+        var result = prefix + "return_url=" + urlescape(returnUrl);
+        if (!string.IsNullOrEmpty(returnTitle))
+            result += "&return_title=" + urlescape(returnTitle);
+        return result;
     }
 
     public static string getIP(HttpContext? context)
@@ -237,7 +322,6 @@ public class Utils
     /// This method is obsolete. Use <see cref="FwExtensions.toDateOrNull(object, string)"/> instead.
     /// </summary>
     [Obsolete("This method is obsolete. Please use the 'toDateOrNull' extension method instead.")]
-    /// <returns></returns>
     public static DateTime? toDateOrNull(object o, string exact_format = "") => o.toDateOrNull(exact_format);
 
     /// <summary>
@@ -247,10 +331,8 @@ public class Utils
     public static DateTime? f2date(object field) => field.toDateOrNull();
 
     /// <summary>
-    /// return true if field is date (DateTime.MinValue is not considered as date)
+    /// Returns whether a value converts to a real date; <see cref="DateTime.MinValue"/> is treated as empty.
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isDate(object? o)
     {
         var dt = o.toDateOrNull();
@@ -340,8 +422,6 @@ public class Utils
     /// <summary>
     /// just return false if input cannot be converted to float
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isFloat(object? o)
     {
         return o != null && double.TryParse(o.ToString(), out double _);
@@ -350,8 +430,6 @@ public class Utils
     /// <summary>
     /// just return false if input cannot be converted to int
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isInt(object? o)
     {
         return o != null && int.TryParse(o.ToString(), out int _);
@@ -360,8 +438,6 @@ public class Utils
     /// <summary>
     /// just return false if input cannot be converted to long
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isLong(object? o)
     {
         return o != null && long.TryParse(o.ToString(), out long _);
@@ -378,8 +454,6 @@ public class Utils
     /// instead of `string.IsNullOrEmpty(itemdb["iname"].toStr())`
     /// use `isEmpty(itemdb["iname"])`
     /// </summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
     public static bool isEmpty(object? o)
     {
         if (o == null) return true;
@@ -419,10 +493,8 @@ public class Utils
     }
 
     /// <summary>
-    /// return content-type mime string by file extension, default is "application/octet-stream"
+    /// Resolves a MIME type by extension, defaulting to <c>application/octet-stream</c>.
     /// </summary>
-    /// <param name="ext">extension - doc, .jpg, ... (dot is optional)</param>
-    /// <returns></returns>
     public static string ext2mime(string? ext)
     {
         FwDict mime_map = qh(MIME_MAP);
@@ -449,7 +521,7 @@ public class Utils
     /// </param>
     public static void ImportSpreadsheet(string filePath, Func<string, FwDict, bool> rowCallback, bool isHeaderRow = true)
     {
-#if ExcelDataReader
+#if isExcelDataReader
         // ExcelDataReader needs this once per process for legacy encodings
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -461,7 +533,7 @@ public class Utils
         do
         {
             string sheetName = reader.Name ?? "Sheet1";
-            StrList headers = null;      // lazily initialised so no per‑row realloc
+            StrList? headers = null;      // lazily initialised so no per‑row realloc
 
             while (reader.Read())
             {
@@ -474,7 +546,7 @@ public class Utils
                     continue;                  // move to first data row
                 }
 
-                var row = new FwRow(reader.FieldCount);
+                var row = new FwDict(reader.FieldCount);
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     string colName = headers != null && i < headers.Count ? headers[i] : $"F{i}";
@@ -488,7 +560,7 @@ public class Utils
         }
         while (reader.NextResult());           // advance to next worksheet
 #else
-        throw new NotSupportedException("ExcelDataReader is not available. Please install the NuGet package and enable in Utils");
+        throw new NotSupportedException("ExcelDataReader is not available. Enable isExcelDataReader in osafw-app.csproj.");
 #endif
     }
 
@@ -519,14 +591,12 @@ public class Utils
         return result.ToString();
     }
 
-    /* <summary>
-    * standard function for exporting to csv
-    * </summary>
-    * <param name="csv_export_headers">CSV headers row, comma-separated format</param>
-    * <param name="csv_export_fields">empty, * or Utils.qw format</param>
-    * <param name="rows">DB array</param>
-    * <returns></returns>
-    */
+    /// <summary>
+    /// Builds CSV content from row dictionaries using explicit headers/fields or the first row's keys.
+    /// </summary>
+    /// <param name="csv_export_headers">Comma-separated CSV header row.</param>
+    /// <param name="csv_export_fields">Empty, <c>*</c>, or whitespace-delimited field names.</param>
+    /// <param name="rows">Rows to export.</param>
     public static StringBuilder getCSVExport(string csv_export_headers, string csv_export_fields, FwList rows)
     {
         string headers_str = csv_export_headers;
@@ -539,7 +609,7 @@ public class Utils
             {
                 if (rows[0] is FwDict firstRow)
                 {
-                    fields = firstRow.Keys.Cast<string>().ToArray();
+                    fields = firstRow.Keys.ToArray();
                     headers_str = string.Join(",", fields);
                 }
             }
@@ -570,8 +640,6 @@ public class Utils
     /// <summary>
     /// export to XLS based on /common/list/export templates
     /// </summary>
-    /// <param name="fw"></param>
-    /// <param name="filename"></param>
     /// <param name="csv_export_headers">comma-separated names for headers in specific order</param>
     /// <param name="csv_export_fields">qw-string(space separated) list of fields to match headers</param>
     /// <param name="rows">db array of rows</param>
@@ -646,10 +714,8 @@ public class Utils
     }
 
     /// <summary>
-    /// return file size by path, if file not exists or not accessible - return 0
+    /// Returns file size, or zero when the path is missing or inaccessible.
     /// </summary>
-    /// <param name="filepath"></param>
-    /// <returns></returns>
     public static long fileSize(string filepath)
     {
         long result = 0;
@@ -672,13 +738,9 @@ public class Utils
     }
 
 
-    /* <summary>
-    * Merge hashes - copy all key-values from hash2 to hash1 with overwriting existing keys
-    * </summary>
-    * <param name="hash1"></param>
-    * <param name="hash2"></param>
-    * <remarks></remarks>
-    */
+    /// <summary>
+    /// Copies all key-values from the second dictionary into the first, overwriting existing keys.
+    /// </summary>
     public static void mergeHash(FwDict hash1, FwDict hash2)
     {
         if (hash2 != null)
@@ -720,7 +782,7 @@ public class Utils
     {
         if (hash2 != null)
         {
-            StrList keys = new(hash2.Keys.Cast<string>());
+            StrList keys = new(hash2.Keys);
             foreach (string key in keys)
             {
                 if (hash2[key] is FwDict ht)
@@ -841,31 +903,64 @@ public class Utils
         return result;
     }
 
-    /* <summary>
-    * convert data structure to JSON string
-    * </summary>
-    * <param name="data">any data like single value, arraylist, hashtable, etc..</param>
-    * <returns></returns>
-    */
+    /// <summary>
+    /// Serializes arbitrary framework values such as rows, lists, dictionaries, or scalar values to JSON.
+    /// </summary>
     public static string jsonEncode(object data, bool is_pretty = false)
     {
         return JsonSerializer.Serialize(data, data.GetType(), is_pretty ? jsonSerializerOptionsPretty : jsonSerializerOptions);
     }
 
-    //overload alias for jsonDecode(string)
     public static object? jsonDecode(object str)
     {
         return jsonDecode(str.toStr());
     }
 
-    /* <summary>
-    * convert JSON string into data structure
-    * </summary>
-    * <param name="str">JSON string</param>
-    * <returns>value or FwRow (objects) or FwList (arrays) or null if cannot be converted</returns>
-    * <remarks></remarks>
-    */
+    /// <summary>
+    /// Converts JSON text into framework values: scalars, <see cref="FwDict"/> objects, <see cref="FwList"/> arrays, or null on failure.
+    /// </summary>
     public static object? jsonDecode(string str)
+    {
+        try
+        {
+            return jsonDecodeOrThrow(str);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Converts JSON text into a framework dictionary, or null when the payload is malformed or not an object.
+    /// </summary>
+    public static FwDict? jsonDecodeDict(string str)
+    {
+        return jsonDecode(str) as FwDict;
+    }
+
+    public static FwDict? jsonDecodeDict(object str)
+    {
+        return jsonDecodeDict(str.toStr());
+    }
+
+    /// <summary>
+    /// Converts JSON text into a framework object list, or null when the payload is malformed or not an array.
+    /// </summary>
+    public static ObjList? jsonDecodeList(string str)
+    {
+        return jsonDecode(str) as ObjList;
+    }
+
+    public static ObjList? jsonDecodeList(object str)
+    {
+        return jsonDecodeList(str.toStr());
+    }
+
+    /// <summary>
+    /// Converts JSON text into framework values and throws when the payload is malformed.
+    /// </summary>
+    public static object? jsonDecodeOrThrow(string str)
     {
         if (string.IsNullOrEmpty(str))
             return null;
@@ -877,20 +972,10 @@ public class Utils
             CommentHandling = JsonCommentHandling.Skip
         };
 
-        object? result;
-        try
-        {
-            var reader = new Utf8JsonReader(jsonUtf8, options);
-            reader.Read(); //initial read
+        var reader = new Utf8JsonReader(jsonUtf8, options);
+        reader.Read(); //initial read
 
-            result = jsonDecodeRead(ref reader);
-        }
-        catch (Exception)
-        {
-            //ignore json errors, just return null, uncomment and log error for debug
-            throw;
-        }
-        return result;
+        return jsonDecodeRead(ref reader);
     }
 
     private static object? jsonDecodeRead(ref Utf8JsonReader reader)
@@ -1017,7 +1102,7 @@ public class Utils
     // return FwRow keys as an array
     public static string[] hashKeys(FwDict h)
     {
-        return h.Keys.Cast<string>().ToArray();
+        return h.Keys.ToArray();
     }
 
     // capitalize first word in string
@@ -1336,12 +1421,9 @@ public class Utils
         return Regex.Replace(str ?? "", @"[\n\r]+", ",");
     }
 
-    /* <summary>
-    * for each row in rows add keys/values to this row (by ref)
-    * </summary>
-    * <param name="rows">db array</param>
-    * <param name="fields">keys/values to add</param>
-    */
+    /// <summary>
+    /// Adds the provided key-values to every row in a framework list in place.
+    /// </summary>
     public static void arrayInject(FwList rows, FwDict fields)
     {
         foreach (FwDict row in rows)
@@ -1354,35 +1436,21 @@ public class Utils
         }
     }
 
-    /* <summary>
-    *  escapes/encodes string so it can be passed as part of the url
-    *  </summary>
-    *  <param name="str"></param>
-    *  <returns></returns>
-    */
     public static string urlescape(string? str)
     {
-        return HttpUtility.UrlEncode(str, Encoding.UTF8)?.ToLowerInvariant() ?? "";
+        return HttpUtility.UrlEncode(str, Encoding.UTF8) ?? "";
     }
 
-    /* <summary>
-    *  unescapes/decodes escaped/encoded string back
-    *  </summary>
-    *  <param name="str"></param>
-    *  <returns></returns>
-    */
     public static string urlunescape(string str)
     {
         return HttpUtility.UrlDecode(str);
     }
 
     /// <summary>
-    /// load content from url
+    /// Loads URL content with optional POST parameters and headers, returning empty string on errors.
     /// </summary>
-    /// <param name="url">url to get data from</param>
-    /// <param name="parameters">optional, name/value params if set - post will be used, instead of get</param>
-    /// <param name="headers">optional, name/value headers to add to request</param>
-    /// <returns>content received. empty string if error</returns>
+    /// <param name="parameters">When provided, values are sent as form POST data instead of GET.</param>
+    /// <param name="headers">Optional request headers to add.</param>
     public static string loadUrl(string url, FwDict? parameters = null, FwDict? headers = null)
     {
         string content;
@@ -1430,11 +1498,9 @@ public class Utils
     /// <summary>
     /// sent multipart/form-data POST request to remote URL with files and formFields
     /// </summary>
-    /// <param name="url"></param>
     /// <param name="files">key=fieldname, value=filepath</param>
     /// <param name="formFields">optional, key=fieldname, value=value</param>
     /// <param name="cert">optional, certificate</param>
-    /// <returns></returns>
     /// TODO - combine this method with loadUrl() ?
     public static string sendFileToUrl(
         string url,
@@ -1520,7 +1586,7 @@ public class Utils
             if (!string.IsNullOrEmpty(json))
             {
                 result = Utils.jsonDecode(json) as FwDict ?? [];
-                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", result);
+                fw.logger(LogLevel.TRACE, "REQUESTED JSON:", fw.config("log_pii").toBool() ? result : new StrList(result.Keys));
             }
         }
         catch (Exception ex)
@@ -1667,18 +1733,17 @@ public class Utils
         {
             if (headers.Count == 0 && rows[0] is FwDict firstRow)
             {
-                var keys = firstRow.Keys.Cast<object?>()
-                    .Select(k => k.toStr())
+                var keys = firstRow.Keys
                     .Where(k => k.Length > 0)
                     .ToArray();
                 foreach (var key in keys)
                     headers.Add(new FwDict() { { "field_name", key } });
             }
 
-            foreach (FwDict row in rows.Cast<object?>().OfType<FwDict>())
+            foreach (FwDict row in rows)
             {
                 FwList cols = [];
-                foreach (FwDict hf in headers.Cast<object?>().OfType<FwDict>())
+                foreach (FwDict hf in headers)
                 {
                     var fieldname = hf["field_name"].toStr();
                     cols.Add(new FwDict()
@@ -1694,21 +1759,16 @@ public class Utils
     }
 
     /// <summary>
-    /// return file content OR "" if no file exists or some other error happened (ignore errors)
+    /// Reads file content, returning empty string when the file is missing or unreadable.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <returns></returns>
     public static string getFileContent(string filename)
     {
         return getFileContent(filename, out _);
     }
 
     /// <summary>
-    /// return file content OR "" if no file exists or some other error happened (see error)
+    /// Reads file content and exposes read failures through the output exception.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <param name="error"></param>
-    /// <returns></returns>
     public static string getFileContent(string filename, out Exception? error)
     {
         error = null;
@@ -1733,20 +1793,16 @@ public class Utils
     }
 
     /// <summary>
-    /// return array of file lines OR empty array if no file exists or some other error happened (ignore errors)
+    /// Reads file lines, returning an empty array when the file is missing or unreadable.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <returns></returns>
     public static string[] getFileLines(string filename)
     {
         return getFileLines(filename, out _);
     }
 
     /// <summary>
-    /// return array of file lines OR empty array if no file exists or some other error happened (see error)
+    /// Reads file lines and exposes read failures through the output exception.
     /// </summary>
-    /// <param name="filename"></param>
-    /// <returns></returns>
     public static string[] getFileLines(string filename, out Exception? error)
     {
         error = null;
@@ -1765,8 +1821,6 @@ public class Utils
     /// <summary>
     /// replace or append file content
     /// </summary>
-    /// <param name="filename"></param>
-    /// <param name="fileData"></param>
     /// <param name="isAppend">False by default </param>
     public static void setFileContent(string filename, ref string fileData, bool isAppend = false)
     {

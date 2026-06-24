@@ -3,9 +3,6 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
-//if you use Roles - uncomment define isRoles here
-#define isRoles
-
 using OtpNet;
 using QRCoder;
 using System;
@@ -82,7 +79,12 @@ public class Users : FwModel<Users.Row>
     }
 
     #region standard one/add/update overrides
-    public DBRow oneByEmail(string email)
+    /// <summary>
+    /// Load a user row by email for login and account validation flows.
+    /// </summary>
+    /// <param name="email">Email address submitted by the user.</param>
+    /// <returns>User row, or an empty row when no matching user exists.</returns>
+    public virtual DBRow oneByEmail(string email)
     {
         FwDict where = [];
         where["email"] = email;
@@ -95,10 +97,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// return full user name - First Name Last Name
+    /// Formats a user display name from nullable/object id inputs used by audit fields.
     /// </summary>
-    /// <param name="id">Object type because if upd_users_id could be null</param>
-    /// <returns></returns>
     public override string iname(object? id)
     {
         string result = "";
@@ -134,13 +134,13 @@ public class Users : FwModel<Users.Row>
         if (!item.ContainsKey("ui_mode"))
             item["ui_mode"] = fw.config("ui_mode").toInt();
 
-        // set default date/time format and timezone from the config if not set
+        // set default date/time format; empty timezone means browser auto-detect.
         if (!item.ContainsKey("date_format"))
             item["date_format"] = fw.config("date_format").toInt();
         if (!item.ContainsKey("time_format"))
             item["time_format"] = fw.config("time_format").toInt();
         if (!item.ContainsKey("timezone"))
-            item["timezone"] = fw.config("timezone");
+            item["timezone"] = "";
 
         return base.add(item);
     }
@@ -166,31 +166,36 @@ public class Users : FwModel<Users.Row>
         return base.list(statuses);
     }
 
-    public override FwList listSelectOptions(FwDict? def = null)
+    /// <summary>
+    /// Returns user options for assignment controls, preserving the current inactive user only when
+    /// editing a record that already references that user.
+    /// </summary>
+    /// <param name="def">Dynamic field definition or lookup parameters.</param>
+    /// <param name="selected_id">Explicit selected user id or ids for hand-written forms.</param>
+    /// <param name="valueFromIname">When true, use the base name-valued lookup behavior.</param>
+    /// <param name="baseWhere">Optional base predicates; delegated to the framework lookup implementation.</param>
+    /// <param name="inameSql">Optional label SQL expression; defaults to first-name plus last-name for users.</param>
+    /// <returns>User option rows ordered by first and last name.</returns>
+    public override FwList listSelectOptions(FwDict? def = null, object? selected_id = null, bool valueFromIname = false, FwDict? baseWhere = null, string? inameSql = null)
     {
-        string sql = "select id, fname+' '+lname as iname from " + db.qid(table_name) + " where status=@status order by " + getOrderBy();
-        return db.arrayp(sql, DB.h("status", STATUS_ACTIVE));
+        if (string.IsNullOrEmpty(inameSql) && !valueFromIname)
+            inameSql = db.sqlConcat("fname", db.q(" "), "lname");
+        return base.listSelectOptions(def, selected_id, valueFromIname, baseWhere, inameSql);
     }
     #endregion
 
     #region Work with Passwords/MFA
     /// <summary>
-    /// performs any required password cleaning (for now - just limit pwd length at 32 and trim)
+    /// Trims plaintext passwords to the legacy maximum before hashing or comparison.
     /// </summary>
-    /// <param name="plain_pwd">non-encrypted plain pwd</param>
-    /// <param name="trim_at">max length</param>
-    /// <returns>clean plain pwd</returns>
     public string cleanPwd(string plain_pwd, int trim_at = 32)
     {
         return plain_pwd[..Math.Min(trim_at, plain_pwd.Length)].Trim();
     }
 
     /// <summary>
-    /// generate password hash from plain password
+    /// Hashes a plaintext password after applying the framework's legacy trim rule.
     /// </summary>
-    /// <param name="plain_pwd">plain pwd</param>
-    /// <param name="trim_at">max length to trim plain pwd before hashing</param>
-    /// <returns>hash using https://github.com/BcryptNet/bcrypt.net </returns>
     public string hashPwd(string plain_pwd, int trim_at = 32)
     {
         try
@@ -204,12 +209,9 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// return true if plain password has the same hash as provided
+    /// Verifies a plaintext password against a stored hash after applying the legacy trim rule.
     /// </summary>
-    /// <param name="plain_pwd">plain pwd from user input</param>
-    /// <param name="pwd_hash">password hash previously generated by hashPwd</param>
-    /// <returns></returns>
-    public bool checkPwd(string plain_pwd, string pwd_hash, int trim_at = 32)
+    public virtual bool checkPwd(string plain_pwd, string pwd_hash, int trim_at = 32)
     {
         try
         {
@@ -222,11 +224,9 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// generate reset token, save to users and send pwd reset link to the user
+    /// Creates a reset token, saves it on the user row, and emails the reset link.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    public bool sendPwdReset(int id)
+    public virtual bool sendPwdReset(int id)
     {
         var pwd_reset_token = Utils.getRandStr(PWD_RESET_TOKEN_LEN);
 
@@ -244,10 +244,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// evaluate password's stength and return a score (>60 good, >80 strong)
+    /// Scores password strength using the legacy heuristic; values over 60 are good and over 80 are strong.
     /// </summary>
-    /// <param name="pwd"></param>
-    /// <returns></returns>
     public double scorePwd(string pwd)
     {
         var result = 0;
@@ -286,10 +284,6 @@ public class Users : FwModel<Users.Row>
         return result;
     }
 
-    /// <summary>
-    /// generate a new MFA secret
-    /// </summary>
-    /// <returns></returns>
     internal string generateMFASecret()
     {
         return Base32Encoding.ToString(KeyGeneration.GenerateRandomKey());
@@ -304,11 +298,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// check if code is valid against provided MFA secret
+    /// Validates a submitted TOTP code against a supplied MFA secret.
     /// </summary>
-    /// <param name="mfa_secret"></param>
-    /// <param name="code"></param>
-    /// <returns></returns>
     public bool isValidMFACode(string mfa_secret, string code)
     {
         if (string.IsNullOrEmpty(mfa_secret))
@@ -320,11 +311,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// check if code is valid against user's MFA secret
+    /// Validates a submitted TOTP code against the user's saved MFA secret.
     /// </summary>
-    /// <param name="id">users.id</param>
-    /// <param name="code"></param>
-    /// <returns></returns>
     public bool isValidMFA(int id, string code)
     {
         var user = this.one(id);
@@ -332,11 +320,9 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// check if code is a MFA recovery code, if yes - remove that code from user's recovery codes
+    /// Consumes a matching MFA recovery code from the user's saved recovery-code list.
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="code"></param>
-    /// <returns>true if code is a recovery code</returns>
+    /// <returns><c>true</c> when the submitted code was accepted as a recovery code.</returns>
     public bool checkMFARecovery(int id, string code)
     {
         var result = false;
@@ -366,10 +352,9 @@ public class Users : FwModel<Users.Row>
 
     #region Login/Session
     /// <summary>
-    /// reset session and fill with user info from id, log login activity, update login time and timezone if provided
+    /// Rebuilds the login session, records login activity, updates login time, and applies browser timezone for Auto users.
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="timezone"></param>
+    /// <param name="timezone">Browser-detected timezone id used only when the saved user preference is empty (<c>auto</c>).</param>
     public void doLogin(int id, string timezone = "")
     {
         reloadSession(id, is_clear: true);
@@ -383,9 +368,9 @@ public class Users : FwModel<Users.Row>
         if (!string.IsNullOrEmpty(timezone))
         {
             var user = one(id);
-            if (string.IsNullOrEmpty(user["timezone"]) || user["timezone"] == DateUtils.TZ_UTC)
+            if (string.IsNullOrEmpty(user["timezone"]))
             {
-                fields["timezone"] = timezone;
+                // Empty user timezone means Auto; keep the DB preference empty and resolve it per session.
                 fw.Session("timezone", timezone);
             }
         }
@@ -443,19 +428,16 @@ public class Users : FwModel<Users.Row>
 
     #region Access Control
     /// <summary>
-    /// return true if currently logged user has at least minimum requested access level
+    /// Checks the current user's access level against a minimum.
     /// </summary>
-    /// <param name="min_acl">minimum required access level</param>
-    /// <returns></returns>
     public virtual bool isAccessLevel(int min_acl)
     {
         return fw.userAccessLevel >= min_acl;
     }
 
     /// <summary>
-    /// if currently logged user has at least minimum requested access level. Throw AuthException if user's acl is not enough
+    /// Throws when the current user's access level is below the requested minimum.
     /// </summary>
-    /// <param name="min_acl">minimum required access level</param>
     public void checkAccessLevel(int min_acl)
     {
         if (!isAccessLevel(min_acl))
@@ -465,10 +447,37 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// return true if user is ReadOnly user
+    /// Enforces the hierarchy rule for privileged AdminUsers mutations.
     /// </summary>
-    /// <param name="id">optional, if not passed - currently logged user checked</param>
-    /// <returns></returns>
+    /// <param name="targetUsersId">Existing target user id, or zero for a new user.</param>
+    /// <param name="fields">Submitted user fields that may include <c>access_level</c>.</param>
+    public virtual void checkAdminUserMutationAccess(int targetUsersId, FwDict? fields = null)
+    {
+        if (isSiteAdmin())
+            return;
+
+        var currentAccessLevel = fw.userAccessLevel;
+
+        if (targetUsersId > 0)
+        {
+            var target = one(targetUsersId);
+            if (target.Count == 0)
+                throw new NotFoundException("Wrong User ID");
+            if (target["access_level"].toInt() >= currentAccessLevel)
+                throw new AuthException("Access Denied. Cannot modify user with equal or higher access level");
+        }
+
+        if (fields != null
+            && fields.ContainsKey("access_level")
+            && fields["access_level"].toInt() >= currentAccessLevel)
+        {
+            throw new AuthException("Access Denied. Cannot grant equal or higher access level");
+        }
+    }
+
+    /// <summary>
+    /// Checks whether the target user, or the current user by default, is read-only.
+    /// </summary>
     public virtual bool isReadOnly(int id = -1)
     {
         if (id == -1)
@@ -482,10 +491,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// check if logged user is readonly, if yes - throws AuthEception
+    /// Throws when the target user, or the current user by default, is read-only.
     /// </summary>
-    /// <param name="id">optional, if not passed - currently logged user checked</param>
-    /// <exception cref="AuthException"></exception>
     public virtual void checkReadOnly(int id = -1)
     {
         if (isReadOnly(id))
@@ -493,9 +500,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// return true if roles support enabled
+    /// Returns whether RBAC support is enabled at compile time.
     /// </summary>
-    /// <returns></returns>
     public bool isRoles()
     {
 #if isRoles
@@ -507,10 +513,8 @@ public class Users : FwModel<Users.Row>
 
     //
     /// <summary>
-    /// get all RBAC info for the user/recource
+    /// Builds RBAC flags for a user/resource pair, defaulting to the current request context.
     /// </summary>
-    /// <param name="users_id"></param>
-    /// <param name="resource_icode"></param>
     /// <returns>hashtable with permissions keys:
     ///     list => true if user has list permission
     ///     view => true if user has view permission
@@ -586,7 +590,6 @@ public class Users : FwModel<Users.Row>
     /// <summary>
     /// return all allowed permissions as { permissions.icode => true }
     /// </summary>
-    /// <returns></returns>
     public FwDict allPermissions()
     {
         var result = new FwDict();
@@ -608,24 +611,20 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// shortcut for isAccessByRolesResourceAction with current user/controller
+    /// Checks current controller/action access for the current user through RBAC.
     /// </summary>
-    /// <param name="resource_action"></param>
-    /// <param name="resource_action_more"></param>
-    /// <returns></returns>
     public bool isAccessByRolesAction(string resource_action, string resource_action_more = "")
     {
         return isAccessByRolesResourceAction(fw.userId, fw.route.controller, resource_action, resource_action_more);
     }
 
     /// <summary>
-    /// check if currently logged user roles has access to controller/action
+    /// Checks RBAC access for a controller/resource action and optional sub-action.
     /// </summary>
     /// <param name="users_id">usually currently logged user - fw.userId</param>
     /// <param name="resource_icode">resource code like controller name 'AdminUsers'</param>
     /// <param name="resource_action">resource action like controller's action 'Index' or '' </param>
     /// <param name="resource_action_more">optional additional action string, usually route.action_more to help distinguish sub-actions</param>
-    /// <returns></returns>
     public bool isAccessByRolesResourceAction(int users_id, string resource_icode, string resource_action, string resource_action_more = "", FwDict? access_actions_to_permissions = null)
     {
         logger("isAccessByRolesResourceAction", DB.h("users_id", users_id, "resource_icode", resource_icode, "resource_action", resource_action, "resource_action_more", resource_action_more));
@@ -658,12 +657,8 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// check if currently logged user roles has access to resource with specific permission
+    /// Checks whether any user role grants a specific permission on a resource.
     /// </summary>
-    /// <param name="users_id"></param>
-    /// <param name="resource_icode"></param>
-    /// <param name="permission_icode"></param>
-    /// <returns></returns>
     public bool isAccessByRolesResourcePermission(int users_id, string resource_icode, string permission_icode)
     {
 #if isRoles
@@ -814,13 +809,13 @@ public class Users : FwModel<Users.Row>
         }
 
         result = db.colp($@"with rids as (
-                        select resources_id 
+                        select resources_id
                         from {fw.model<RolesResourcesPermissions>().table_name}
                         where permissions_id in (select id from {fw.model<Permissions>().table_name} where icode=@icode)
                           and roles_id in ({roles_sql})
                         )
 
-                        select icode from {fw.model<Resources>().table_name} r, rids 
+                        select icode from {fw.model<Resources>().table_name} r, rids
                          where r.id=rids.resources_id", p);
 #endif
 
@@ -830,7 +825,6 @@ public class Users : FwModel<Users.Row>
     /// <summary>
     /// shortcut to check if currently logged user is a Site Admin
     /// </summary>
-    /// <returns></returns>
     public bool isSiteAdmin()
     {
         return isAccessLevel(ACL_SITEADMIN);

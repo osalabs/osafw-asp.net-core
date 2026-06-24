@@ -43,9 +43,9 @@ public class FwKeysXmlRepository : IXmlRepository
 
     public void StoreElement(XElement element, string friendlyName)
     {
-        // Because keys can be updated as well as added, 
+        // Because keys can be updated as well as added,
         // we should check if there's an existing row for this key ID.
-        // The system includes a <key id="GUID"> in the XML. 
+        // The system includes a <key id="GUID"> in the XML.
         // We can parse the <key id="..."> from the element:
 
         var keyId = element.Attribute("id")?.Value;
@@ -83,8 +83,8 @@ public class FwKeysXmlRepository : IXmlRepository
 
     private void _cleanup()
     {
-        db.exec($@"DELETE FROM {table_name} 
-                WHERE itype=@itype 
-                  AND upd_time < DATEADD(day, -90, GETDATE())", new FwDict { { "itype", ITYPE_DATA_PROTECTION_KEY } });
+        db.exec($@"DELETE FROM {table_name}
+                WHERE itype=@itype
+                  AND upd_time < @cutoff", new FwDict { { "itype", ITYPE_DATA_PROTECTION_KEY }, { "cutoff", DateTime.UtcNow.AddDays(-90) } });
     }
 }

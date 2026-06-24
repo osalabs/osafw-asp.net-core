@@ -9,6 +9,7 @@
     <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
         {{plaintextValue}}
     </p>
+    <pre v-else-if="def.type=='plaintext_json'" class="form-control-plaintext mb-0 font-monospace small" style="white-space: pre-wrap; overflow: auto">{{jsonPlaintextValue}}</pre>
     <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
         <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">
             {{lookupValue}}
@@ -25,7 +26,7 @@
             {{item[def.field+'_iname']??'-'}}
         </template>
     </p>
-    <div v-else-if="def.type=='markdown'" class="form-control-plaintext" v-html="renderMarkdown(value)"></div>
+    <div v-else-if="def.type=='markdown'" class="form-control-plaintext" v-html="renderMarkdown(value, isTrustedMarkdown)"></div>
     <p v-else-if="def.type=='noescape'" class="form-control-plaintext" v-html="value"></p>
     <p v-else-if="def.type=='float'" class="form-control-plaintext">{{Number(value).toFixed(2)}}</p>
     <p v-else-if="def.type=='plaintext_currency'" class="form-control-plaintext">
@@ -57,7 +58,7 @@
             <img :src="attachments[value]?.url_preview??''">
             <div class="card-body">
                 <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
-                <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
+                <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill>`Download`</a>
             </div>
         </div>
         <div v-else class="fw-empty-state text-center mx-auto py-2">`No attachment selected`</div>
@@ -65,7 +66,7 @@
     <template v-else-if="def.type=='att_edit'">
         <div class="row">
             <div class="col-3 col-lg-5">
-                <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+                <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><~/common/icons/file-earmark-image>`Select/Upload`</button></p>
                 <att-select v-if="is_att_select_modal"
                             :category="def.att_category"
                             @hidden="is_att_select_modal=false"
@@ -76,8 +77,8 @@
                     <img class="card-img-top" :src="attachments[value]?.url_preview??''" alt="">
                     <div class="card-body text-truncate">
                         <p class="card-text att-iname">{{attachments[value]?.iname??''}}</p>
-                        <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default" title="`Download`"><i class="bi bi-cloud-download-fill"></i></a>
-                        <button type="button" class="btn btn-default ms-1" @click="this.value=''" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+                        <a :href="attachments[value]?.url??''" target="_blank" class="btn btn-default" title="`Download`"><~/common/icons/cloud-download-fill></a>
+                        <button type="button" class="btn btn-default ms-1" @click="this.value=''" title="`Remove`"><~/common/icons/x-circle-fill></button>
                     </div>
                 </div>
                 <div v-else class="fw-empty-state text-center mx-auto py-2">`No attachment selected`</div>
@@ -91,7 +92,7 @@
                     <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
                     <div class="card-body text-truncate">
                         <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
-                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i> `Download`</a>
+                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill>`Download`</a>
                     </div>
                 </div>
             </div>
@@ -99,7 +100,7 @@
         <div v-if="!att_links.length" class="fw-empty-state text-center mx-auto py-2">`No attachments selected`</div>
     </template>
     <template v-else-if="def.type=='att_links_edit'">
-        <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><i class="bi bi-file-earmark-image"></i> `Select/Upload`</button></p>
+        <p><button type="button" class="btn btn-default" @click="is_att_select_modal=true"><~/common/icons/file-earmark-image>`Select/Upload`</button></p>
         <att-select v-if="is_att_select_modal"
                     :category="def.att_category"
                     @hidden="is_att_select_modal=false"
@@ -111,8 +112,8 @@
                     <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
                     <div class="card-body text-truncate">
                         <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
-                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><i class="bi bi-cloud-download-fill"></i></a>
-                        <button type="button" class="btn btn-default ms-1" @click="onAttLinkDelete(att_id)" title="`Remove`"><i class="bi bi-x-circle-fill"></i></button>
+                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default" title="`Download`" aria-label="`Download`"><~/common/icons/cloud-download-fill></a>
+                        <button type="button" class="btn btn-default ms-1" @click="onAttLinkDelete(att_id)" title="`Remove`"><~/common/icons/x-circle-fill></button>
                     </div>
                 </div>
             </div>
@@ -135,7 +136,7 @@
              @dragover.prevent.stop="onDropOver"
              @dragleave.prevent.stop="onDropLeave"
              @drop.prevent.stop="onDrop">
-            <button type="button" class="btn" @click="onChooseFiles"><i class="bi bi-cloud-upload"></i> Choose files or drag and drop your files here</button>
+            <button type="button" class="btn" @click="onChooseFiles"><~/common/icons/cloud-upload>Choose files or drag and drop your files here</button>
             <input ref="fileInput" class="d-none" data-noautosave type="file" name="file" :multiple="def.multiple" @change="onAttFilesInputChange">
         </div>
 
@@ -151,7 +152,7 @@
                 <!-- hidden input to persist selected file on autosave/submit -->
                 <input type="hidden" class="att-post-prefix" :name="att_post_prefix+'['+att_id+']'" value="1">
                 &nbsp;&#183;&nbsp;<span class="text-truncate"><a :href="attachments[att_id]?.url??'#'" target="_blank" class="att-iname">{{attachments[att_id]?.iname??att_id}}</a> <span class="att-size text-muted ms-2">({{bytes2str(attachments[att_id]?.fsize??0)}})</span></span>
-                <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" @click.prevent="onAttFileDelete(att_id)"><i class="bi bi-x-circle-fill"></i></button>
+                <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" title="`Remove`" aria-label="`Remove`" @click.prevent="onAttFileDelete(att_id)"><~/common/icons/x-circle-fill></button>
             </div>
         </div>
         <div v-if="!att_files.length && !uploading_files.length" class="fw-empty-state text-center mx-auto py-2">`No files uploaded`</div>
@@ -200,6 +201,7 @@
             <option v-if="def.is_option_empty" value="">{{def.option0_title ?? '- select -'}}</option>
             <option v-for="lrow in lookupOptions"
                     :key="def.field_name+'#'+lrow.id"
+                    :class="lrow.class || ''"
                     :value="lrow.id">
                 {{lrow.iname}}
             </option>
@@ -255,10 +257,27 @@
         <form-control-help-block :text="def.help_text" />
     </template>
 
-    <template v-else-if="['input','email','number','date_popup'].includes(def.type)">
+    <template v-else-if="def.type=='range'">
+        <div class="d-flex align-items-center gap-3">
+            <input class="form-range flex-grow-1"
+                   type="range"
+                   v-model="value"
+                   :class="class_control"
+                   :required="def.required"
+                   :min="def.min"
+                   :max="def.max"
+                   :step="def.step"
+                   :disabled="isReadonlyControl">
+            <output class="badge text-bg-secondary">{{value}}</output>
+        </div>
+        <p class="err-WRONG">`Invalid`</p>
+        <form-control-help-block :text="def.help_text" />
+    </template>
+
+    <template v-else-if="['input','email','number','date_popup','datetime_popup','datetime_local'].includes(def.type)">
         <input class="form-control"
                :type="inputType"
-               v-model="value"
+               v-model="inputValue"
                :class="class_control+(is_invalid?' is-invalid':'')"
                :maxlength="def.maxlength"
                :required="def.required"
@@ -294,6 +313,21 @@
                    false-value="0">
             <label class="form-check-label" :for="'list-edit-pane-cb-'+def.field">Yes</label>
         </div>
+    </template>
+
+    <template v-else-if="def.type=='switch'">
+        <div class="form-check form-switch fw-switch-control mb-1">
+            <input class="form-check-input"
+                   :id="'list-edit-pane-switch-'+def.field"
+                   type="checkbox"
+                   role="switch"
+                   v-model="value"
+                   true-value="1"
+                   false-value="0"
+                   :disabled="isReadonlyControl">
+            <label class="form-check-label" :for="'list-edit-pane-switch-'+def.field">On</label>
+        </div>
+        <form-control-help-block :text="def.help_text" />
     </template>
 
     <template v-else-if="def.type=='radio'">
@@ -356,7 +390,8 @@
     import { mapStores } from 'pinia';
     import Multiselect from 'Multiselect';
 
-    let md = null; // markdown-it instance
+    let md = null; // markdown-it instance for untrusted stored values
+    let mdTrusted = null; // markdown-it instance for explicit trusted renderers
 
     fwApp.component('form-one-control', {
         template: '#form-one-control-template',
@@ -401,6 +436,14 @@
                 },
                 set(new_value) {
                     this.$emit('update-form-field', { field: this.def.field, value: new_value });
+                }
+            },
+            inputValue: {
+                get() {
+                    return this.def.type === 'datetime_local' ? AppUtils.formatDateTimeLocalInput(this.value) : this.value;
+                },
+                set(new_value) {
+                    this.value = new_value;
                 }
             },
             value_autocomplete: {
@@ -461,6 +504,12 @@
             is_invalid_true() {
                 return this.error === true;
             },
+            isReadonlyControl() {
+                return this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
+            },
+            isTrustedMarkdown() {
+                return this.def.trusted === true || this.def.trusted === 1 || this.def.trusted === '1' || this.def.trusted === 'true';
+            },
             class_control() {
                 return (this.def.class_control ?? '') + (this.is_invalid ? ' is-invalid' : '');
             },
@@ -471,6 +520,9 @@
                     number: 'number',
                     date: 'date',
                     date_popup: 'date',
+                    datetime_popup: 'text',
+                    datetime_local: 'datetime-local',
+                    range: 'range',
                     password: 'password',
                     textarea: 'text'
                 };
@@ -488,12 +540,17 @@
                     const time = AppUtils.is24h(this.fwStore.global) ? 'HH:mm:ss' : 'h:mm:ss AM/PM';
                     return date + ' ' + time;
                 }
+                if (this.def.type === 'datetime_local') {
+                    return 'yyyy-mm-dd hh:mm';
+                }
                 if (this.def.type === 'time') {
                     return AppUtils.is24h(this.fwStore.global) ? 'HH:mm' : 'h:mm AM/PM';
                 }
                 return this.def.placeholder ?? '';
             },
             lookupOptions: function () {
+                const fieldRows = this.form.lookups_by_field?.[this.def.field];
+                if (fieldRows) return fieldRows;
                 var lookup_model = this.def.lookup_model;
                 if (lookup_model) {
                     return this.lookups[lookup_model] ?? [];
@@ -517,6 +574,15 @@
                 if (this.def.lookup_model) return this.lookupValue;
                 if (this.def.conv === 'time_from_seconds') return AppUtils.formatTime(this.value);
                 return this.value;
+            },
+            jsonPlaintextValue() {
+                const raw = this.value == null ? '' : String(this.value);
+                if (!raw.trim()) return raw;
+                try {
+                    return JSON.stringify(JSON.parse(raw), null, 2);
+                } catch (e) {
+                    return raw;
+                }
             },
             currencySymbol() {
                 // Use def.currency_symbol if provided, else default to "$"
@@ -738,21 +804,22 @@
             bytes2str(bytes) {
                 return AppUtils.bytes2str(bytes);
             },
-            renderMarkdown(text) {
-                if (!md && window.markdownit) {
+            renderMarkdown(text, isTrustedMarkdown = false) {
+                let parser = isTrustedMarkdown ? mdTrusted : md;
+                if (!parser && window.markdownit) {
                     const mdOptions = {
-                        html: true,
+                        html: isTrustedMarkdown,
                         breaks: true,
                         linkify: true
                     };
-                    md = window.markdownit(mdOptions);
-                    if (window.markdownitSub) md.use(window.markdownitSub);
-                    if (window.markdownitSup) md.use(window.markdownitSup);
-                    if (window.markdownitAbbr) md.use(window.markdownitAbbr);
-                    if (window.markdownitIns) md.use(window.markdownitIns);
-                    if (window.markdownitMark) md.use(window.markdownitMark);
-                    if (window.markdownitContainer) {
-                        md.use(window.markdownitContainer, 'foobar', {
+                    parser = window.markdownit(mdOptions);
+                    if (window.markdownitSub) parser.use(window.markdownitSub);
+                    if (window.markdownitSup) parser.use(window.markdownitSup);
+                    if (window.markdownitAbbr) parser.use(window.markdownitAbbr);
+                    if (window.markdownitIns) parser.use(window.markdownitIns);
+                    if (window.markdownitMark) parser.use(window.markdownitMark);
+                    if (isTrustedMarkdown && window.markdownitContainer) {
+                        parser.use(window.markdownitContainer, 'foobar', {
                             validate: name => name.trim().length,
                             render: (tokens, idx) => {
                                 if (tokens[idx].nesting === 1) {
@@ -768,17 +835,22 @@
                             }
                         });
                     }
-                    if (window.markdownItAttrs) md.use(window.markdownItAttrs);
-                    if (md.renderer && md.renderer.rules) {
-                        md.renderer.rules.table_open = function () {
+                    if (isTrustedMarkdown && window.markdownItAttrs) parser.use(window.markdownItAttrs);
+                    if (parser.renderer && parser.renderer.rules) {
+                        parser.renderer.rules.table_open = function () {
                             return '<table class="table">';
                         };
                     }
+                    if (isTrustedMarkdown) {
+                        mdTrusted = parser;
+                    } else {
+                        md = parser;
+                    }
                 }
-                if (md) {
-                    return md.render(text ?? '');
+                if (parser) {
+                    return parser.render(text ?? '');
                 } else {
-                    return text;
+                    return isTrustedMarkdown ? (text ?? '') : AppUtils.htmlescape(text ?? '');
                 }
             }
         }

@@ -1,0 +1,23 @@
+<div class="dropdown fw-column-filter fw-column-filter-dropdown" data-column-filter-type="<~filter[type]>">
+  <input type="hidden" name="search[<~filter[field]>]" value="<~filter[search_value]>" data-column-filter-json>
+  <~/common/list/filters/summary_button>
+  <div class="dropdown-menu p-2 shadow fw-column-filter-menu">
+    <select class="form-select form-select-sm mb-2" data-column-filter-blank>
+      <option value=""><~multi_label ifeq="filter[type]" value="multi_select" inline>`selected values`</~multi_label><~autocomplete_label ifeq="filter[type]" value="autocomplete" inline>`value`</~autocomplete_label></option>
+      <option value="blank" <~/common/attr/selected ifeq="filter[blank_op]" value="blank">>`blank`</option>
+      <option value="not_blank" <~/common/attr/selected ifeq="filter[blank_op]" value="not_blank">>`not blank`</option>
+    </select>
+    <~select_filter ifeq="filter[type]" value="multi_select" inline>
+      <select class="form-select form-select-sm fw-column-filter-multi" multiple data-column-filter-values title="`Use Ctrl to select multiple values`">
+        <~filter[options] select="filter[values_csv]" multi=",">
+      </select>
+    </~select_filter>
+    <~autocomplete_filter ifeq="filter[type]" value="autocomplete" inline>
+      <input type="text" value="<~filter[values_csv]>" class="form-control form-control-sm" placeholder="`Start typing to select...`" data-column-filter-values-text data-autocomplete="<~filter[autocomplete_url]>">
+    </~autocomplete_filter>
+    <div class="d-flex gap-2 mt-2">
+      <button type="button" class="btn btn-sm btn-primary flex-fill" data-column-filter-apply>`Apply`</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-column-filter-clear>`Clear`</button>
+    </div>
+  </div>
+</div>

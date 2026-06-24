@@ -25,7 +25,7 @@
             <td><~ok if="is_db_config"><~fail unless="is_db_config"></td>
             <td>
                 <~failmsg1 unless="is_db_config" inline>
-                    Set DBNAME, USER, PWD, HOST, PORT in the Config file. Create empty database if not yet done.
+                    Set the main database connection in the active app configuration. Create the empty database if it does not exist yet.
                 </~failmsg1>
             </td>
         </tr>
@@ -34,24 +34,17 @@
             <td><~ok if="is_db_conn"><~fail unless="is_db_conn"></td>
             <td>
                 <~failmsg2 unless="is_db_conn" inline>
-                    1. check DBNAME, USER, PWD, HOST, PORT in the Config file.<br>
-                    2. check db server on host <i><~GLOBAL[DB][HOST] default="HOST NOT SET"></i> is up and running<br>
-                    3. read error message carefully:<br>
-                    <pre class="text-danger"><~db_conn_err></pre>
+                    Check that the configured database server is reachable, the database exists, and the configured credentials have access. See application log for details.
                 </~failmsg2>
             </td>
         </tr>
         <tr>
-            <td>DB Time Zone</td>
+            <td>DB timezone</td>
             <td><~ok if="is_db_tz"><~fail unless="is_db_tz"></td>
             <td>
-                DB Time Zone: <b><~db_tzId></b> <~db_tzInfo><br>
-                DB Class Instance Time Zone: <b><~db_class_tzId></b><br>
+                Resolved DB timezone: <b><~db_timezone_id default="-"></b><br>
                 <~failmsg_db_tz unless="is_db_tz" inline>
-                    <br>
-                    <pre class="text-danger"><~db_tz_err></pre>
-                    1. Automatic DB Time Zone detection failed.<br>
-                    2. Set DB time zone manually in "appsettings.json" under "db.main.timezone" section.<br>
+                    Set <code>appSettings.db.main.timezone</code> in <code>appsettings.json</code> when autodetection cannot resolve the intended Windows timezone id.
                 </~failmsg_db_tz>
             </td>
         </tr>
@@ -60,12 +53,9 @@
             <td><~ok if="is_db_tables"><~fail unless="is_db_tables"></td>
             <td>
                 <~failmsg3 unless="is_db_tables" inline>
-                    Looks like your database is not created or empty. Create, then run <i>db/database.sql</i> against it with a command like:<br>
-                    <code>mysql -u root -p &lt; db/database.sql</code>
-                    <br>
-                    or using <a href="http://phpminiadmin.sourceforge.net/" target="_blank">phpMiniAdmin</a>
-                    <br>
-                    or <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(InitDB)">Initialize DB</button>
+                    The database is reachable, but required tables were not found. Initialize the database from the bundled SQL scripts or run the schema scripts manually.
+                    <~initdb if="GLOBAL[IS_DEV]" inline><br>
+                    <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(InitDB)?XSS=<~SESSION[XSS]>">Initialize DB</button></~initdb>
                 </~failmsg3>
             </td>
         </tr>
@@ -74,16 +64,16 @@
             <td><~ok if="is_write_dirs"><~fail unless="is_write_dirs"></td>
             <td>
                 <~failmsg4 unless="is_write_dirs" inline>
-                    Check <~GLOBAL[PUBLIC_UPLOAD_DIR]> is writable by web server
+                    Check that the configured upload directory is writable by the web application process.
                 </~failmsg4>
             </td>
         </tr>
         <tr>
-            <td>/logs/main.log</td>
+            <td>Application log writable</td>
             <td><~ok if="is_error_log"><~fail unless="is_error_log"></td>
-            <td><~GLOBAL[site_error_log]> <~error_log_size bytes>
+            <td><~error_log_size bytes>
                 <~failmsg5 unless="is_error_log" inline>
-                    Ensure webserver can write to this file, so you can see debug/error info
+                    Ensure the configured application log path is writable so server-side diagnostics can be recorded.
                 </~failmsg5>
             </td>
         </tr>

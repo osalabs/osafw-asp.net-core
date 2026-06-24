@@ -1,10 +1,61 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>osafw</RootNamespace>
     <Nullable>enable</Nullable>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
   </PropertyGroup>
+
+  <!-- Optional compile-time features. Uncomment the blocks you need. -->
+
+  <!-- SQLite provider and SQLite-backed sessions.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isSQLite</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- MySQL provider and MySQL-backed sessions. Package references are included automatically when enabled.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isMySQL</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- AWS S3 attachment storage. AWSSDK packages are referenced by default.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isS3</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Role/resource permission checks. Initialize roles.sql when enabling this.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isRoles</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Windows Authentication / Negotiate login. Package reference is included automatically when enabled.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isWindowsAuth</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Hosted scheduled task runner for fwcron.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isFwCronService</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Sentry logger integration. Package reference is included automatically when enabled.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isSentry</DefineConstants>
+  </PropertyGroup>
+  -->
+
+  <!-- Utils.ImportSpreadsheet support. Package reference is included automatically when enabled.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isExcelDataReader</DefineConstants>
+  </PropertyGroup>
+  -->
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.Core" Version="4.0.3.15" />
@@ -12,13 +63,14 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageReference Include="Markdig" Version="1.0.0" />
-    <PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-rc1" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-rc1" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.10.0" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.10.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSQLite($|;)'))" />
     <PackageReference Include="Microsoft.Playwright" Version="1.58.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.3" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.72.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.3" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isWindowsAuth($|;)'))" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.71" />
-    <PackageReference Include="OpenAI" Version="2.8.0" />
+    <PackageReference Include="OpenAI" Version="2.10.0" />
     <PackageReference Include="Otp.NET" Version="1.4.1" />
     <PackageReference Include="QRCoder" Version="1.7.0" />
     <PackageReference Include="System.Data.Odbc" Version="10.0.3" />
@@ -26,19 +78,11 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.3" />
     <PackageReference Include="Cronos" Version="0.11.1" />
     <PackageReference Include="CronExpressionDescriptor" Version="2.45.0" />
-    
-    <!-- uncomment if use Windows authentication -->
-    <!--PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="7.0.10" /-->
-    
-    <!-- uncomment if use Sentry logging -->
-    <!--PackageReference Include="Sentry.AspNetCore" Version="5.0.1" /-->
-    
-    <!-- uncomment if use Utils.ImportSpreadsheet -->
-    <!--PackageReference Include="ExcelDataReader" Version="3.7.0" /-->
-    
-    <!-- uncomment if use MySQL -->
-    <!--PackageReference Include="MySqlConnector" Version="2.3.7" />
-    <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" /-->
+
+    <PackageReference Include="Sentry.AspNetCore" Version="5.0.1" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSentry($|;)'))" />
+    <PackageReference Include="ExcelDataReader" Version="3.7.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isExcelDataReader($|;)'))" />
+    <PackageReference Include="MySqlConnector" Version="2.3.7" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
+    <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
   </ItemGroup>
 
   <!-- no need to publish App_Data -->

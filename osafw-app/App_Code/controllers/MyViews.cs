@@ -1,4 +1,4 @@
-﻿// User Views Admin  controller
+// User Views Admin  controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -56,9 +56,9 @@ public class MyViewsController : FwAdminController
         }
     }
 
-    public override FwDict setPS(FwDict? ps = null)
+    public override FwDict setListPS(FwDict? ps = null)
     {
-        var result = base.setPS(ps);
+        var result = base.setListPS(ps);
         result["select_icodes"] = model.listSelectIcodes();
         return result;
     }

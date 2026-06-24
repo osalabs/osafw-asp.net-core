@@ -31,7 +31,7 @@ This documentation describes the structure and deployment of the application bui
 - **Authentication Method:** %%Windows Auth, Active Directory, OAuth%%
 
 ### Uploads
-- **Storage Location:** <~att_local unless="is_S3" inline>local file system</~att_local> <~att_S3 if="is_S3" inline>AWS S3</~att_S3>
+- **Storage Location:** <~att_local unless="isS3" inline>local file system</~att_local> <~att_S3 if="isS3" inline>AWS S3</~att_S3>
 
 ### User Interface
 - **Target Screen Resolutions:** Full HD and half-screen layouts.

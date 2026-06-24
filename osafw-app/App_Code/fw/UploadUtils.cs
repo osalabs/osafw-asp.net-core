@@ -4,6 +4,8 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace osafw;
@@ -47,6 +49,127 @@ public class UploadParams
 
 public class UploadUtils
 {
+    private static readonly HashSet<string> ActiveContentExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".css",
+        ".htm",
+        ".html",
+        ".js",
+        ".mjs",
+        ".svg",
+        ".svgz",
+        ".swf",
+        ".wasm",
+        ".xht",
+        ".xhtml",
+        ".xml",
+        ".xslt",
+    };
+
+    /// <summary>
+    /// Normalizes a filename or extension to the framework upload extension format.
+    /// </summary>
+    /// <param name="filenameOrExt">Original filename, path, or dot-prefixed extension to normalize.</param>
+    /// <returns>Lowercase extension including the leading dot, or an empty string when no extension is present.</returns>
+    public static string normalizeUploadExt(string? filenameOrExt)
+    {
+        var value = filenameOrExt?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        string ext;
+        if (value.StartsWith('.') && value.IndexOfAny(['\\', '/']) < 0 && value.LastIndexOf('.') == 0)
+            ext = value.ToLowerInvariant();
+        else
+            ext = getUploadFileExt(value);
+
+        if (ext == ".jpeg")
+            ext = ".jpg";
+
+        return ext;
+    }
+
+    /// <summary>
+    /// Checks whether an extension represents browser-active content that should never be rendered inline from user uploads.
+    /// </summary>
+    /// <param name="filenameOrExt">Original filename, path, or dot-prefixed extension to inspect.</param>
+    /// <returns><c>true</c> when the extension is commonly executable or script-capable in browsers.</returns>
+    public static bool isActiveContentExt(string? filenameOrExt)
+    {
+        return ActiveContentExtensions.Contains(normalizeUploadExt(filenameOrExt));
+    }
+
+    /// <summary>
+    /// Checks whether a client-supplied content type is browser-active and should be treated as unsafe metadata.
+    /// </summary>
+    /// <param name="contentType">HTTP content type supplied by the browser or storage metadata.</param>
+    /// <returns><c>true</c> when the type can execute or activate browser parsing beyond inert download handling.</returns>
+    public static bool isActiveContentType(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+            return false;
+
+        var value = contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
+        return value == "image/svg+xml"
+            || value == "text/html"
+            || value == "text/css"
+            || value == "application/xhtml+xml"
+            || value == "application/xml"
+            || value == "text/xml"
+            || value.Contains("javascript")
+            || value.Contains("ecmascript")
+            || value.EndsWith("+xml");
+    }
+
+    private static bool isTrustedInlineExt(string normalizedExt, string trustedInlineExts)
+    {
+        if (string.IsNullOrEmpty(normalizedExt) || string.IsNullOrWhiteSpace(trustedInlineExts))
+            return false;
+
+        foreach (var ext in trustedInlineExts.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (string.Equals(normalizeUploadExt(ext), normalizedExt, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns a safe content type for user attachment responses or storage metadata.
+    /// </summary>
+    /// <param name="filenameOrExt">Original filename, path, or dot-prefixed extension used for server-side MIME lookup.</param>
+    /// <param name="submittedContentType">Optional client-supplied content type used only to detect active-content mismatches.</param>
+    /// <returns>A server-selected content type, downgraded to <c>application/octet-stream</c> for active or unknown content.</returns>
+    public static string contentTypeForAttachment(string? filenameOrExt, string? submittedContentType = "")
+    {
+        if (isActiveContentExt(filenameOrExt) || isActiveContentType(submittedContentType))
+            return "application/octet-stream";
+
+        var contentType = mimeMapping(filenameOrExt ?? string.Empty);
+        return isActiveContentType(contentType) ? "application/octet-stream" : contentType;
+    }
+
+    /// <summary>
+    /// Resolves a safe Content-Disposition mode for user attachments.
+    /// </summary>
+    /// <param name="filenameOrExt">Original filename, path, or dot-prefixed extension to inspect.</param>
+    /// <param name="requestedDisposition">Requested disposition, usually <c>inline</c> or <c>attachment</c>.</param>
+    /// <param name="submittedContentType">Optional client-supplied content type used to detect active-content mismatches.</param>
+    /// <param name="trustedInlineExts">Optional space/comma/semicolon-separated extensions trusted for inline serving.</param>
+    /// <returns><c>inline</c> only for safe raster images or trusted extensions requested inline; otherwise <c>attachment</c>.</returns>
+    public static string dispositionForAttachment(string? filenameOrExt, string requestedDisposition = "attachment", string? submittedContentType = "", string trustedInlineExts = "")
+    {
+        if (!string.Equals(requestedDisposition, "inline", StringComparison.OrdinalIgnoreCase))
+            return "attachment";
+
+        if (isActiveContentExt(filenameOrExt) || isActiveContentType(submittedContentType))
+            return "attachment";
+
+        var normalizedExt = normalizeUploadExt(filenameOrExt);
+        return isUploadImgExtAllowed(normalizedExt) || isTrustedInlineExt(normalizedExt, trustedInlineExts) ? "inline" : "attachment";
+    }
+
     // simple upload from posted field name to destination directory with different options
     public static bool uploadSimple(UploadParams up)
     {

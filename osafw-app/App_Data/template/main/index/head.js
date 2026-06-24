@@ -1,4 +1,4 @@
-﻿let is_dark_mode = document.documentElement.getAttribute('data-bs-theme') == 'dark';
+let is_dark_mode = document.documentElement.getAttribute('data-bs-theme') == 'dark';
 const styles = getComputedStyle(document.documentElement);
 let themeColor = '#007bff';
 let bodyColor = '#999999';

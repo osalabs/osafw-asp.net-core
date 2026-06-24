@@ -1,4 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -84,7 +84,11 @@ namespace osafw.Tests
                 Assert.IsTrue(File.Exists(filePath), "Excel file should be created");
 
                 using var doc = SpreadsheetDocument.Open(filePath, false);
-                var sheetData = doc.WorkbookPart!.WorksheetParts.First().Worksheet.Elements<SheetData>().First();
+                var workbookPart = doc.WorkbookPart;
+                Assert.IsNotNull(workbookPart);
+                var worksheet = workbookPart!.WorksheetParts.First().Worksheet;
+                Assert.IsNotNull(worksheet);
+                var sheetData = worksheet!.Elements<SheetData>().First();
                 var worksheetRows = sheetData.Elements<Row>().ToList();
 
                 var headerCells = worksheetRows[0].Elements<Cell>().Select(c => c.CellValue!.Text).ToList();

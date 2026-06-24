@@ -57,6 +57,12 @@ public class FwControllerBehaviorTests
             list_filter = filter;
         }
 
+        public void ConfigureSearch(string fields, FwDict fieldNames)
+        {
+            search_fields = fields;
+            view_list_map = fieldNames;
+        }
+
         public FwDict CurrentFilter => list_filter;
         public string CurrentOrderBy => list_orderby;
     }
@@ -144,5 +150,53 @@ public class FwControllerBehaviorTests
         Assert.AreEqual("iname", controller.CurrentFilter["sortby"]);
         Assert.AreEqual("desc", controller.CurrentFilter["sortdir"]);
         StringAssert.Contains(controller.CurrentOrderBy, "iname");
+    }
+
+    [TestMethod]
+    public void SetPS_AddsSearchPlaceholderFieldsFromMappedFields()
+    {
+        var (_, _, controller) = BuildController();
+        controller.ConfigureSearch("!id email fname", new FwDict
+        {
+            ["id"] = "ID",
+            ["email"] = "Email",
+            ["fname"] = "First Name",
+        });
+
+#pragma warning disable CS0618 // This test verifies the legacy compatibility wrapper.
+        var ps = controller.setPS();
+#pragma warning restore CS0618
+
+        Assert.AreEqual("ID, Email, First Name", ps["list_filter_search_placeholder_fields"]);
+        Assert.IsFalse(ps.ContainsKey("list_filter_search_placeholder"));
+    }
+
+    [TestMethod]
+    public void SetListPS_SearchPlaceholderHandlesGroupsFallbacksAndDuplicates()
+    {
+        var (_, _, controller) = BuildController();
+        controller.ConfigureSearch("iname,!id missing !id", new FwDict
+        {
+            ["id"] = "ID",
+            ["iname"] = "Name",
+        });
+
+        var ps = controller.setListPS();
+
+        Assert.AreEqual("Name, ID, [missing]", ps["list_filter_search_placeholder_fields"]);
+    }
+
+    [TestMethod]
+    public void SetListPS_SearchPlaceholderIsEmptyWithoutSearchFields()
+    {
+        var (_, _, controller) = BuildController();
+        controller.ConfigureSearch("", new FwDict
+        {
+            ["id"] = "ID",
+        });
+
+        var ps = controller.setListPS();
+
+        Assert.AreEqual("", ps["list_filter_search_placeholder_fields"]);
     }
 }

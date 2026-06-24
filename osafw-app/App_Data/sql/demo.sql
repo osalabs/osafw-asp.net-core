@@ -33,6 +33,7 @@ CREATE TABLE demos (
 
   fint                  INT NOT NULL DEFAULT 0,           /*accept only INT*/
   ffloat                FLOAT NOT NULL DEFAULT 0,         /*accept float digital values*/
+  frange                INT NOT NULL DEFAULT 50,          /*range slider value 0-100*/
 
   dict_link_auto_id     INT NOT NULL DEFAULT 0,           /*index of autocomplete field - linked to demo_dicts*/
   dict_link_multi       NVARCHAR(255) NOT NULL DEFAULT '',    /*multiple select values, link to demo_dicts*/
@@ -41,10 +42,14 @@ CREATE TABLE demos (
   fradio                INT NOT NULL DEFAULT 0,           /*index of radio selection*/
   fyesno                BIT NOT NULL DEFAULT 0,           /*yes/no field 0 - NO, 1 - YES*/
   is_checkbox           TINYINT NOT NULL DEFAULT 0,       /*checkbox field 0 - not set, 1 - set*/
+  is_switch             TINYINT NOT NULL DEFAULT 0,       /*switch field 0 - off, 1 - on*/
 
   fdate_combo           DATE,                             /*date field with 3 combos editing*/
   fdate_pop             DATE,                             /*date field with popup editing*/
   fdatetime             DATETIME2,                         /*date+time field*/
+  fdatetime_utc         DATETIME2,                         /*UTC instant marked by _utc suffix*/
+  fdatetime_offset      DATETIMEOFFSET,                    /*offset-aware instant*/
+  fdatetime_local       DATETIME2,                         /*browser datetime-local input demo*/
   ftime                 INT NOT NULL DEFAULT 0,           /*time field - we always store time as seconds from start of the day [0-86400]*/
 
   att_id                int NULL FOREIGN KEY REFERENCES att(id), /*optional attached image*/
@@ -104,7 +109,7 @@ CREATE TABLE demos_items (
 TEST DATA
 INSERT statements for demos table
 */
-INSERT INTO demos (parent_id, demo_dicts_id, iname, idesc, email, fint, ffloat, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, fdate_combo, fdate_pop, fdatetime, ftime, att_id, status, add_time, add_users_id)
+INSERT INTO demos (parent_id, demo_dicts_id, iname, idesc, email, fint, ffloat, frange, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, is_switch, fdate_combo, fdate_pop, fdatetime, fdatetime_utc, fdatetime_offset, fdatetime_local, ftime, att_id, status, add_time, add_users_id)
 SELECT TOP 100
   ABS(CHECKSUM(NEWID())) % 10,    -- random parent_id between 0 and 9
   ABS(CHECKSUM(NEWID())) % 3 + 1, -- random demo_dicts_id between 1 and 3
@@ -113,15 +118,20 @@ SELECT TOP 100
   CONCAT('email', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential email
   ABS(CHECKSUM(NEWID())) % 1000, -- random fint between 0 and 999
   ABS(CHECKSUM(NEWID())) % 1000 + RAND(), -- random ffloat between 0 and 1000
+  ABS(CHECKSUM(NEWID())) % 101, -- random frange between 0 and 100
   ABS(CHECKSUM(NEWID())) % 3 + 1, -- random dict_link_auto_id between 1 and 3
   CONCAT('LinkMulti', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential dict_link_multi
   ABS(CHECKSUM(NEWID())) % 3 + 1, -- random fcombo between 1 and 3
   ABS(CHECKSUM(NEWID())) % 3 + 1, -- random fradio between 1 and 3
   ABS(CHECKSUM(NEWID())) % 2,    -- random fyesno either 0 or 1
   ABS(CHECKSUM(NEWID())) % 2,    -- random is_checkbox either 0 or 1
+  ABS(CHECKSUM(NEWID())) % 2,    -- random is_switch either 0 or 1
   DATEFROMPARTS(2023, ABS(CHECKSUM(NEWID())) % 12 + 1, ABS(CHECKSUM(NEWID())) % 28 + 1), -- random fdate_combo between Jan 1, 2023 and Dec 31, 2023
   DATEFROMPARTS(2023, ABS(CHECKSUM(NEWID())) % 12 + 1, ABS(CHECKSUM(NEWID())) % 28 + 1), -- random fdate_pop between Jan 1, 2023 and Dec 31, 2023
   DATEADD(MINUTE, ABS(CHECKSUM(NEWID())) % 1440, CONVERT(DATETIME2, GETDATE())), -- random fdatetime within 24 hours of current datetime
+  DATEADD(MINUTE, ABS(CHECKSUM(NEWID())) % 1440, CONVERT(DATETIME2, SYSUTCDATETIME())), -- random UTC datetime
+  TODATETIMEOFFSET(DATEADD(MINUTE, ABS(CHECKSUM(NEWID())) % 1440, CONVERT(DATETIME2, SYSUTCDATETIME())), '+00:00'), -- random UTC datetimeoffset
+  DATEADD(MINUTE, ABS(CHECKSUM(NEWID())) % 1440, CONVERT(DATETIME2, GETDATE())), -- random browser datetime-local sample
   ABS(CHECKSUM(NEWID())) % 86400, -- random ftime between 0 and 86400 (seconds in a day)
   NULL, -- NULL for att_id due to foreign key
   0, -- status = 0 (ok)

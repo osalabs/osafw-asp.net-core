@@ -2,11 +2,23 @@
 /osafw-app/obj
 /osafw-app/bin
 *.log
+*.code-workspace
+*.csproj.user
+*.sublime-project
+*.sublime-workspace
 /osafw-app/upload/*
 !/osafw-app/upload/.gitkeep
+/osafw-app/App_Data/db/*
+!/osafw-app/App_Data/db/.gitkeep
 /osafw-tests/obj
 /osafw-tests/bin
 /TestsProject/obj
 /TestsProject/bin
 
 /osafw-app/Properties/launchSettings.json
+/docs/drafts
+/artifacts/
+/docs/agents/local_instructions.md
+/docs/agents/artifacts/*
+!/docs/agents/artifacts/.gitignore
+/codex-security-scans/**

@@ -112,10 +112,8 @@ public class DateUtils
     }
 
     /// <summary>
-    /// return true if string is date in format MM/DD/YYYY or D/M/YYYY
+    /// Returns whether a string matches the legacy date formats MM/DD/YYYY or D/M/YYYY.
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
     public static bool isDateStr(string str)
     {
         return Regex.IsMatch(str, @"^\d{1,2}/\d{1,2}/\d{4}$");
@@ -130,6 +128,43 @@ public class DateUtils
     public static bool isDateSQL(string str)
     {
         return Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2}$") || Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$");
+    }
+
+    /// <summary>
+    /// Detects the browser-native datetime-local wire format so form saves can treat it as a user-local wall time.
+    /// </summary>
+    /// <param name="str">Submitted value from an HTML <c>input type="datetime-local"</c>.</param>
+    /// <returns><c>true</c> when the value is <c>yyyy-MM-ddTHH:mm</c> or <c>yyyy-MM-ddTHH:mm:ss</c>.</returns>
+    public static bool isDateTimeLocalStr(string str)
+    {
+        return Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$");
+    }
+
+    /// <summary>
+    /// Detects ISO datetime values that carry an explicit UTC or numeric offset.
+    /// </summary>
+    /// <param name="str">Datetime string from JSON or browser/Vue state.</param>
+    /// <returns><c>true</c> when the value includes a <c>Z</c> or numeric timezone offset.</returns>
+    public static bool isDateTimeOffsetStr(string str)
+    {
+        return Regex.IsMatch(str, @"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d{1,7})?)?(Z|[+-]\d{2}:?\d{2})$", RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// Parses a browser-native datetime-local value without assigning a timezone.
+    /// </summary>
+    /// <param name="str">Submitted value from an HTML <c>input type="datetime-local"</c>.</param>
+    /// <returns>An unspecified <see cref="DateTime"/> wall time, or <c>null</c> when parsing fails.</returns>
+    public static DateTime? DateTimeLocal2Date(string str)
+    {
+        if (string.IsNullOrEmpty(str))
+            return null;
+
+        string[] formats = ["yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss"];
+        if (DateTime.TryParseExact(str, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime tmpdate))
+            return DateTime.SpecifyKind(tmpdate, DateTimeKind.Unspecified);
+
+        return null;
     }
 
     public static DateTime? SQL2Date(string str)
@@ -181,7 +216,7 @@ public class DateUtils
     }
 
     /// <summary>
-    /// convert human date input to SQL date
+    /// Converts human-entered date text into SQL date text using the configured user formats.
     /// </summary>
     /// <param name="str">human date input per current user settings (see date_format)</param>
     /// <param name="date_format">See DATE_FORMAT_* constants.</param>
@@ -205,7 +240,7 @@ public class DateUtils
     }
 
     /// <summary>
-    /// convert human date input to date only string per user settings
+    /// Converts human-entered date text into a date-only string using user settings.
     /// </summary>
     /// <remarks>Example: 1/17/2023 12:00:00 AM => 1/17/2023</remarks>
     /// <param name="str">date/time string</param>
@@ -225,13 +260,12 @@ public class DateUtils
     }
 
     /// <summary>
-    /// convert human date input to time only string per user settings
+    /// Converts human-entered date text into a time-only string using user settings.
     /// </summary>
     /// <remarks>Example: 1/17/2023 3:12 AM => 3:12 AM</remarks>
     /// <param name="str">date/time string</param>
     /// <param name="date_format">See DATE_FORMAT_* constants.</param>
     /// <param name="time_format">See TIME_FORMAT_* constants</param>
-    /// <returns></returns>
     public static string Str2TimeOnly(string str, int date_format, int time_format)
     {
         string result = "";

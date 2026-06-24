@@ -1,10 +1,9 @@
-﻿// Direct DB Access Controller
+// Direct DB Access Controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 
@@ -138,6 +137,11 @@ public class AdminDBController : FwController
         return result;
     }
 
+    /// <summary>
+    /// Lists tables through the framework provider abstraction so Direct DB works with SQLite and other providers.
+    /// </summary>
+    /// <param name="tablehead">Output table headers expected by the Direct DB result renderer.</param>
+    /// <param name="tablerows">Output table rows containing table names and approximate row counts.</param>
     private void show_tables(ref FwList tablehead, ref FwList tablerows)
     {
         tablehead = [];
@@ -150,14 +154,8 @@ public class AdminDBController : FwController
 
         tablerows = [];
 
-        DbConnection conn = db.connect();
-        DataTable dataTable = conn.GetSchema("Tables");
-        foreach (DataRow row in dataTable.Rows)
+        foreach (string tblname in db.tables())
         {
-            string tblname = row["TABLE_NAME"].toStr();
-            if (tblname.StartsWith("MSys"))
-                continue;
-
             FwDict tblrow = [];
             var fields = new FwList();
             tblrow["fields"] = fields;
@@ -178,6 +176,11 @@ public class AdminDBController : FwController
         }
     }
 
+    /// <summary>
+    /// Counts rows for a table while keeping Direct DB table listing resilient to provider-specific table quirks.
+    /// </summary>
+    /// <param name="tblname">Provider-returned table name to count.</param>
+    /// <returns>Row count, or -1 when the provider cannot count a listed table.</returns>
     private long get_tbl_count(string tblname)
     {
         long result = -1;

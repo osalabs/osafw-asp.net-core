@@ -19,16 +19,16 @@ let mainApp = {
 
         await this.fwStore.loadInitial();
         if (this.fwStore.current_screen) {
-            await this.fwStore.setCurrentScreen(this.fwStore.current_screen, this.fwStore.current_id);
+            await this.fwStore.setCurrentScreen(this.fwStore.current_screen, this.fwStore.current_id, { replace: true });
         } else {
-            this.fwStore.current_screen = 'list';
+            await this.fwStore.setCurrentScreen('list', 0, { replace: true });
         }
 
         //handle back/forward browser nav
         window.addEventListener('popstate', (e) => {
             let state = window.history.state;
             if (state?.screen) {
-                this.fwStore.setCurrentScreen(state.screen, state.id);
+                this.fwStore.setCurrentScreen(state.screen, state.id, { skipHistory: true });
             }
         })
 

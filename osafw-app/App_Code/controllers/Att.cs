@@ -1,4 +1,4 @@
-﻿// Att public downloads controller
+// Att public downloads controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -31,7 +31,7 @@ public class AttController : FwController
         var id = item["id"].toInt();
 
         if (item["is_s3"].toBool())
-            model.redirectS3(item, size);
+            model.redirectS3(item, size, "attachment");
 
         model.transmitFile(id, size);
     }
@@ -46,18 +46,16 @@ public class AttController : FwController
             throw new NotFoundException();
 
         var id = item["id"].toInt();
-
-        if (item["is_s3"].toBool())
-        {
-            model.redirectS3(item, size);
-            return;
-        }
+        model.checkAccess(id);
 
         if (is_preview)
         {
             if (item["is_image"].toBool())
             {
-                model.transmitFile(id, size, "inline");
+                if (item["is_s3"].toBool())
+                    model.redirectS3(item, size, "inline");
+                else
+                    model.transmitFile(id, size, "inline");
             }
             else
             {
@@ -67,7 +65,10 @@ public class AttController : FwController
         }
         else
         {
-            model.transmitFile(id, size, "inline");
+            if (item["is_s3"].toBool())
+                model.redirectS3(item, size, "inline");
+            else
+                model.transmitFile(id, size, "inline");
         }
     }
 }

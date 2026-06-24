@@ -1,4 +1,4 @@
-﻿// Configuration check controller for Developers
+// Configuration check controller for Developers
 //  - perform basic testing of configuration
 //  WARNING: better to remove this file on production
 //
@@ -54,44 +54,8 @@ public class DevConfigureController : FwController
                 db = fw.getDB();
                 db.connect();
                 ps["is_db_conn"] = true;
-
-                var sql_tzId = "";
-                var sql_tzInfo = "";
-
-                try {
-                    if (db.dbtype == DB.DBTYPE_SQLSRV)
-                    {
-                        sql_tzId = "SELECT CURRENT_TIMEZONE_ID()";
-                        sql_tzInfo = "SELECT CURRENT_TIMEZONE()";
-                    }
-                    else if (db.dbtype == DB.DBTYPE_MYSQL)
-                    {
-                        sql_tzId = "SELECT @@system_time_zone";
-                        sql_tzInfo = "SELECT TIME_FORMAT(TIMEDIFF(NOW(), UTC_TIMESTAMP), '%H:%i')";
-                    }
-                    else
-                    {
-                        throw new Exception($"DB Time Zone check for the db type {db.dbtype} is not supported.");
-                    }
-
-                    var tzId = db.valuep(sql_tzId, DB.h()).toStr();
-                    ps["db_tzId"] = tzId;
-
-                    var tz = db.valuep(sql_tzInfo, DB.h()).toStr();
-                    ps["db_tzInfo"] = tz;
-
-                    var db_class_tzId = db.getTimezoneId();
-                    ps["db_class_tzId"] = db_class_tzId;
-
-                    if (tzId == db_class_tzId)
-                        ps["is_db_tz"] = true;
-                    else
-                        throw new Exception("DB Time Zone and DB Class Instance Time Zone is not equal.");
-                }
-                catch (Exception ex)
-                {
-                    ps["db_tz_err"] = ex.Message;
-                }
+                ps["db_timezone_id"] = db.getTimezoneId();
+                ps["is_db_tz"] = db.isTimezoneDetectionOk();
 
                 try
                 {
@@ -100,12 +64,12 @@ public class DevConfigureController : FwController
                 }
                 catch (Exception ex)
                 {
-                    ps["db_tables_err"] = ex.Message;
+                    logger(LogLevel.WARN, "DevConfigure DB table check failed:", ex.Message);
                 }
             }
             catch (Exception ex)
             {
-                ps["db_conn_err"] = ex.Message;
+                logger(LogLevel.WARN, "DevConfigure DB connection check failed:", ex.Message);
             }
         }
 
@@ -148,17 +112,60 @@ public class DevConfigureController : FwController
         return result;
     }
 
+    /// <summary>
+    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
+    /// </summary>
+    private void dropExistingForeignKeys()
+    {
+        if (db.dbtype != DB.DBTYPE_SQLSRV)
+            return;
+
+        db.exec($@"
+DECLARE @sql NVARCHAR(MAX) = N'';
+
+SELECT @sql += N'ALTER TABLE '
+    + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
+    + N'.'
+    + QUOTENAME(OBJECT_NAME(parent_object_id))
+    + N' DROP CONSTRAINT '
+    + QUOTENAME(name)
+    + N';'
+FROM sys.foreign_keys;
+
+IF LEN(@sql) > 0
+    EXEC sp_executesql @sql");
+    }
+
+    /// <summary>
+    /// Initializes a development database from the bundled SQL scripts so a fresh clone can run the demo app.
+    /// </summary>
+    /// <returns>
+    /// Template data containing the generated admin password when one or more SQL statements executed.
+    /// </returns>
     public FwDict InitDBAction()
     {
         if (!fw.config("IS_DEV").toBool())
             throw new AuthException("Not in a DEV mode");
 
+        enforcePost();
+
+        return initDatabase();
+    }
+
+    /// <summary>
+    /// Runs the development database initialization scripts after request-level bootstrap guards pass.
+    /// </summary>
+    /// <returns>Template data containing the generated admin password when one or more SQL statements executed.</returns>
+    protected virtual FwDict initDatabase()
+    {
         FwDict ps = [];
         int sql_ctr = 0;
-        string[] files = ["fwdatabase.sql", "database.sql", "lookups.sql", "views.sql"];
+        var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
+        dropExistingForeignKeys();
+        string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
-            var sql_file = fw.config("site_root") + @"\App_Data\sql\" + file;
+            var sql_file = Path.Combine(sql_root, file);
             logger("Checking sql file:", sql_file);
             if (File.Exists(sql_file))
             {
@@ -179,31 +186,24 @@ public class DevConfigureController : FwController
         return ps;
     }
 
-    public FwDict? ApplyUpdatesAction()
+    public FwDict? PendingUpdatesAction()
     {
-        //only allow apply updates if in DEV mode or if user is site admin
-        if (!fw.config("IS_DEV").toBool() && !fw.model<Users>().isSiteAdmin())
-            throw new AuthException("Not in a DEV mode");
+        var pendingRows = fw.model<FwUpdates>().listPending();
+        fw.Session("FW_UPDATES_CTR", pendingRows.Count.ToString());
 
-        fw.model<FwUpdates>().loadUpdates();
+        var adminUrl = "/Admin/FwUpdates?dofilter=1&f[status]=0";
+        var adminLink = fw.isLogged
+            ? adminUrl
+            : "/Login?gourl=" + Utils.urlescape(adminUrl);
 
-        // apply updates - if any and echo results. If error happens we stay on this page
-        try
+        fw.rw("<b>Pending framework updates</b>");
+        fw.rw("<p>Framework database updates are pending. Review and apply them from Admin FwUpdates.</p>");
+        foreach (var row in pendingRows)
         {
-            fw.model<FwUpdates>().applyPending(true);
+            var iname = Utils.htmlescape(row["iname"].toStr());
+            fw.rw("&nbsp;&#183;&nbsp;" + iname);
         }
-        catch (Exception ex)
-        {
-            fw.rw("Error: " + ex.Message);
-            fw.rw("");
-            fw.rw("<b>Press F5 to continue applying updates</b><br>");
-            fw.rw("or go to <a href='/Admin/FwUpdates'>Admin FwUpdates</a>");
-            fw.rw("or go to <a href='/Login'>Login</a><br>");
-            return null;
-        }
-
-        // all success - show link back to home
-        fw.rw("All updates applied successfully. <a href='/'>Back to Home</a>");
+        fw.rw("<p><a href='/'>Home</a> or <a href='" + Utils.htmlescape(adminLink) + "'>Admin FwUpdates</a></p>");
         return null;
     }
 }

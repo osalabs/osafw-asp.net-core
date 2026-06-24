@@ -6,11 +6,15 @@
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2024 Oleg Savchuk www.osalabs.com
 
+using System;
+
 namespace osafw;
 
 public class AdminActivityLogsController : FwController
 {
-    public static new int access_level = Users.ACL_MEMBER; // any logged in user can add comments
+    public static new int access_level = Users.ACL_MEMBER; // projects may lower this to allow visitor comments
+
+    protected const string COMMENT_ENTITY_ALLOWLIST = "demos";
 
     protected FwActivityLogs model = null!;
 
@@ -24,7 +28,7 @@ public class AdminActivityLogsController : FwController
         db = model.getDB();
 
         required_fields = "log_type entity item_id";
-        save_fields = "reply_id item_id idate users_id idesc";
+        save_fields = "reply_id item_id idate idesc";
 
         //set default return url just for the case
         if (Utils.isEmpty(return_url))
@@ -49,8 +53,11 @@ public class AdminActivityLogsController : FwController
     {
         route_onerror = FW.ACTION_INDEX;
 
-        fw.model<Users>().checkReadOnly();
-        if (reqb("refresh"))
+        checkReadOnly();
+        if (id != 0)
+            throw new AuthException("Activity log comments cannot be updated");
+
+        if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
@@ -78,7 +85,7 @@ public class AdminActivityLogsController : FwController
             if (fwentity.Count == 0)
                 throw new UserException("Invalid entity");
             // TODO Customize - check if entity is allowed for this log_type
-            // TODO Customize - check if logged user can add comments for this entity
+            checkCommentTargetAccess(fwentity["icode"].toStr(), item["item_id"].toInt());
 
             itemdb["log_types_id"] = log_type["id"];
             itemdb["fwentities_id"] = fwentity["id"];
@@ -86,9 +93,7 @@ public class AdminActivityLogsController : FwController
 
         if (!Utils.isDate(itemdb["idate"]))
             itemdb["idate"] = DB.NOW; //if no date specified - use current date
-        if (itemdb["users_id"].toInt() == 0)
-            if (fw.userId > 0)
-                itemdb["users_id"] = fw.userId; //if no user specified - use current user, unless visitor
+        itemdb["users_id"] = fw.userId > 0 ? fw.userId : null; // always derive author from session
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -108,6 +113,40 @@ public class AdminActivityLogsController : FwController
         // End If
 
         this.validateCheckResult();
+    }
+
+    /// <summary>
+    /// Requires view access to the object that receives a user comment.
+    /// </summary>
+    protected virtual void checkCommentTargetAccess(string entityIcode, int itemId)
+    {
+        var targetModelName = DevEntityBuilder.tablenameToModel(Utils.name2fw(entityIcode));
+        FwModel targetModel;
+        try
+        {
+            targetModel = fw.model(targetModelName);
+        }
+        catch (Exception ex) when (ex is ApplicationException || ex is InvalidOperationException)
+        {
+            throw new AuthException("Access Denied. Cannot comment on this record");
+        }
+
+        var target = targetModel.one(itemId);
+        if (target.Count == 0)
+            throw new AuthException("Access Denied. Cannot comment on this record");
+
+        try
+        {
+            targetModel.checkAccess(itemId, Permissions.PERMISSION_VIEW);
+            return;
+        }
+        catch (NotImplementedException)
+        {
+            if (Utils.qh(COMMENT_ENTITY_ALLOWLIST).ContainsKey(entityIcode))
+                return;
+        }
+
+        throw new AuthException("Access Denied. Cannot comment on this record");
     }
 
 }

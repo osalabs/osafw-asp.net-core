@@ -65,12 +65,8 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
     }
 
     /// <summary>
-    /// check if at least one record exists for resource/permission and multiple roles - i.e. user has a role with resource's permission
+    /// Checks whether any role grants the requested permission on a resource.
     /// </summary>
-    /// <param name="resources_id"></param>
-    /// <param name="permissions_id"></param>
-    /// <param name="roles_ids"></param>
-    /// <returns></returns>
     public bool isExistsByResourcePermissionRoles(int resources_id, int permissions_id, IList roles_ids)
     {
         var where = new FwDict
@@ -85,44 +81,32 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
     }
 
     /// <summary>
-    /// list of records for given role and resource
+    /// Lists permission rows for one role/resource pair.
     /// </summary>
-    /// <param name="roles_id"></param>
-    /// <param name="resources_id"></param>
-    /// <returns></returns>
     public DBList listByRoleResource(int roles_id, int resources_id)
     {
         return db.array(table_name, DB.h("roles_id", roles_id, "resources_id", resources_id));
     }
 
     /// <summary>
-    /// list of records for given MULTIPLE roles and resources
+    /// Lists permission rows for multiple roles and resources.
     /// </summary>
-    /// <param name="roles_ids"></param>
-    /// <param name="resources_ids"></param>
-    /// <returns></returns>
     public DBList listByRolesResources(IList roles_ids, IList resources_ids)
     {
         return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "resources_id", db.opIN(resources_ids)));
     }
 
     /// <summary>
-    /// list of records for given MULTIPLE roles and permissions
+    /// Lists permission rows for multiple roles and permissions.
     /// </summary>
-    /// <param name="roles_ids"></param>
-    /// <param name="permissions_ids"></param>
-    /// <returns></returns>
     public DBList listByRolesPermissions(IList roles_ids, IList permissions_ids)
     {
         return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "permissions_id", db.opIN(permissions_ids)));
     }
 
     /// <summary>
-    /// return hashtable of [resources_id#permissions_id => row] for given role and resource
+    /// Builds a matrix keyed by <c>resources_id#permissions_id</c> for one role/resource pair.
     /// </summary>
-    /// <param name="roles_id"></param>
-    /// <param name="resources_id"></param>
-    /// <returns></returns>
     public FwDict matrixRowByRoleResource(int roles_id, int resources_id)
     {
         var result = new FwDict();

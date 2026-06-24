@@ -1,4 +1,4 @@
-﻿// Forgotten Password controller
+// Forgotten Password controller
 //
 // Part of ASP.NET osa framework  www.osalabs.com/osafw/asp.net
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
@@ -50,10 +50,8 @@ public class PasswordController : FwController
             throw new UserException("Please enter your Email");
 
         var user = model.oneByEmail(login);
-        if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE)
-            throw new UserException("Not a valid Email");
-
-        model.sendPwdReset(user["id"].toInt());
+        if (user.Count > 0 && user["status"].toInt() == Users.STATUS_ACTIVE)
+            model.sendPwdReset(user["id"].toInt());
 
         fw.redirect(base_url + "/(Sent)");
     }

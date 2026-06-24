@@ -34,13 +34,13 @@
         <small class="form-text">`best`: 1110x300 px</small>
       </label>
       <div class="col-md-3 col-lg-2">
-        <p><button type="button" class="btn btn-default on-select-att" data-att-preview-size="l" data-att-category="spage_banner"><i class="bi bi-image"></i> `Select/Upload`</button></p>
+        <p><button type="button" class="btn btn-default on-select-att" data-att-preview-size="l" data-att-category="spage_banner"><~/common/icons/image>`Select/Upload`</button></p>
       </div>
       <div class="col-md-6 col-lg-8">
         <div class="att-info att-item" <~/common/attr/display_none unless="att">>
           <input id="head_att_id" name="item[head_att_id]" value="<~i[head_att_id]>" type="hidden">
           <img src="<~/att/url>/<~att[icode]>?preview=1&size=l" class="img-fluid">
-          <p class="mt-3"><button type="button" class="btn btn-default on-remove-att text-danger"><i class="bi bi-x-circle-fill"></i> `Remove image`</button></p>
+          <p class="mt-3"><button type="button" class="btn btn-default on-remove-att text-danger"><~/common/icons/x-circle-fill>`Remove image`</button></p>
         </div>
       </div>
     </div>
@@ -63,23 +63,25 @@
     </div>
   </div>
 
-  <div class="row form-row">
-    <label class="col-form-label col-md-3 col-lg-2" for="custom_head">`Custom Head`</label>
-    <div class="col-md-9 col-lg-10">
-      <textarea id="custom_head" name="item[custom_head]" rows="3" class="form-control autoresize"><~i[custom_head]></textarea>
+  <~trusted_executable_fields if="is_site_admin" inline>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3 col-lg-2" for="custom_head">`Custom Head`</label>
+      <div class="col-md-9 col-lg-10">
+        <textarea id="custom_head" name="item[custom_head]" rows="3" class="form-control autoresize"><~i[custom_head]></textarea>
+      </div>
     </div>
-  </div>
-  <div class="row form-row">
-    <label class="col-form-label col-md-3 col-lg-2" for="custom_css">`Custom CSS`</label>
-    <div class="col-md-9 col-lg-10">
-      <textarea id="custom_css" name="item[custom_css]" rows="3" class="form-control autoresize"><~i[custom_css]></textarea>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3 col-lg-2" for="custom_css">`Custom CSS`</label>
+      <div class="col-md-9 col-lg-10">
+        <textarea id="custom_css" name="item[custom_css]" rows="3" class="form-control autoresize"><~i[custom_css]></textarea>
+      </div>
     </div>
-  </div>
-  <div class="row form-row">
-    <label class="col-form-label col-md-3 col-lg-2" for="custom_js">`Custom JS`</label>
-    <div class="col-md-9 col-lg-10">
-      <textarea id="custom_js" name="item[custom_js]" rows="3" class="form-control autoresize"><~i[custom_js]></textarea>
+    <div class="row form-row">
+      <label class="col-form-label col-md-3 col-lg-2" for="custom_js">`Custom JS`</label>
+      <div class="col-md-9 col-lg-10">
+        <textarea id="custom_js" name="item[custom_js]" rows="3" class="form-control autoresize"><~i[custom_js]></textarea>
+      </div>
     </div>
-  </div>
+  </~trusted_executable_fields>
 
 </fieldset>

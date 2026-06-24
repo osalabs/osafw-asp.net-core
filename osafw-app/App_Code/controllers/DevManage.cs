@@ -79,20 +79,30 @@ public class DevManageController : FwController
         fw.flash("success", "Application Caches cleared");
 
         FwCache.clear();
+        fw.model<FwControllers>().removeCacheAll();
         db.clearSchemaCache();
         fw.parsePageInstance().clear_cache();
 
         fw.redirect(base_url);
     }
 
-    public void DeleteMenuItemsAction()
+    /// <summary>
+    /// Clears generated menu item rows during developer maintenance.
+    /// </summary>
+    /// <returns>JSON success payload for AJAX requests, otherwise redirects back to the developer manage page.</returns>
+    public FwDict? DeleteMenuItemsAction()
     {
-        fw.flash("success", "Menu Items cleared");
+        enforcePost();
 
         db.del("menu_items", []);
         FwCache.remove("menu_items");
 
+        if (fw.isJsonExpected())
+            return new FwDict { ["_json"] = new FwDict { ["message"] = "Menu Items cleared" } };
+
+        fw.flash("success", "Menu Items cleared");
         fw.redirect(base_url);
+        return null;
     }
 
     public void ReloadSessionAction()
@@ -113,7 +123,7 @@ public class DevManageController : FwController
         ps["is_rbac"] = fw.model<Users>().isRoles();
         ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
 
-        ps["is_S3"] = S3.IS_ENABLED;
+        ps["isS3"] = S3.IS_ENABLED;
         ps["db_type"] = fw.getDB().dbtype;
 
         if (!Utils.isEmpty(is_export))
@@ -132,7 +142,7 @@ public class DevManageController : FwController
     #region Fw Updates
     public void RefreshViewsAction()
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().refreshViews();
         fw.flash("success", "Views refreshed");
         fw.redirect("/Admin/FwUpdates");
@@ -140,7 +150,7 @@ public class DevManageController : FwController
 
     public void MarkFwUpdatesAppliedAction()
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().markAllPendingApplied();
         fw.flash("success", "All pending updates marked as applied");
         fw.redirect("/Admin/FwUpdates");
@@ -148,7 +158,7 @@ public class DevManageController : FwController
 
     public FwDict? ApplyFwUpdateAction(int id)
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().applyOne(id);
 
         if (fw.isJsonExpected())
@@ -167,8 +177,8 @@ public class DevManageController : FwController
 
     public FwDict? ApplyFwUpdatesAction()
     {
-        checkXSS();
-        var ids = reqh("cb").Keys.Cast<string>().Select(x => x.toInt()).ToList();
+        enforcePost();
+        var ids = reqh("cb").Keys.Select(x => x.toInt()).ToList();
         fw.model<FwUpdates>().applyList(ids);
 
         if (fw.isJsonExpected())
@@ -185,9 +195,28 @@ public class DevManageController : FwController
         }
     }
 
+    public FwDict? ApplyPendingFwUpdatesAction()
+    {
+        enforcePost();
+        fw.model<FwUpdates>().applyPending();
+
+        if (fw.isJsonExpected())
+        {
+            var ps = new FwDict();
+            ps["message"] = "Pending updates applied";
+            return new FwDict { { "_json", ps } };
+        }
+        else
+        {
+            fw.flash("success", "Pending updates applied");
+            fw.redirect("/Admin/FwUpdates");
+            return null;
+        }
+    }
+
     public void ReloadFwUpdatesAction()
     {
-        checkXSS();
+        enforcePost();
         fw.model<FwUpdates>().loadUpdates();
         fw.flash("success", "New Updates reloaded from disk");
         fw.redirect("/Admin/FwUpdates");
@@ -196,6 +225,8 @@ public class DevManageController : FwController
 
     public void CreateModelAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var table_name = item["table_name"].toStr().Trim();
         var model_name = item["model_name"].toStr().Trim();
@@ -214,6 +245,8 @@ public class DevManageController : FwController
 
     public void CreateControllerAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var model_name = item["model_name"].toStr().Trim();
         var controller_url = item["controller_url"].toStr().Trim();
@@ -248,6 +281,8 @@ public class DevManageController : FwController
 
     public void CreateReportAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var repcode = item["report_code"].toStr().Trim();
 
@@ -259,6 +294,8 @@ public class DevManageController : FwController
 
     public void ExtractControllerAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var controller_name = item["controller_name"].toStr().Trim();
 
@@ -323,6 +360,8 @@ public class DevManageController : FwController
     // analyse database tables and create db.json describing entities, fields and relationships
     public FwDict AnalyseDBAction()
     {
+        enforcePost();
+
         FwDict ps = [];
         var item = reqh("item");
         string connstr = item["connstr"] + "";
@@ -376,6 +415,8 @@ public class DevManageController : FwController
 
     public void DBAnalyzerSaveAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         string dbname = item["db"] + "";
         var dbConfigs = fw.config("db") as FwDict ?? throw new UserException("Wrong DB selection");
@@ -402,6 +443,8 @@ public class DevManageController : FwController
 
     public void EntityBuilderSaveAction()
     {
+        enforcePost();
+
         var item = reqh("item");
         var is_create_all = reqi("DoMagic") == 1;
 
@@ -459,6 +502,8 @@ public class DevManageController : FwController
 
     public void DBInitializerSaveAction()
     {
+        enforcePost();
+
         var is_sql_only = reqi("DoSQL") == 1;
 
         if (is_sql_only)
@@ -518,6 +563,8 @@ public class DevManageController : FwController
 
     public void AppCreatorSaveAction()
     {
+        enforcePost();
+
         var f = reqh("f");
         var search = f["s"].toStr();
         var item = reqh("item");

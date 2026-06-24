@@ -10,9 +10,9 @@ global using IntList = System.Collections.Generic.List<int>;
 
 // from fw/FwCollections.cs
 global using FwDict = osafw.FwDict;
-global using FwList = osafw.FwList; // List<object?> with FwDict-friendly interop
+global using FwList = osafw.FwList; // List<FwDict> with legacy dictionary interop
 
 // for function parameters where more generic types are acceptable
 global using FwDictLike = System.Collections.IDictionary; // FwDict compatible
-global using FwListLike = System.Collections.IList;      // IList<IFwDict>
-global using FwItemsLike = System.Collections.IEnumerable; // IEnumerable<IFwDict> for APIs that do not change the collection
+global using FwListLike = System.Collections.IList;      // IList of dictionary-shaped rows
+global using FwItemsLike = System.Collections.IEnumerable; // IEnumerable of dictionary-shaped rows for APIs that do not change the collection

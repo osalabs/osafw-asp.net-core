@@ -1,0 +1,830 @@
+# Templates and ParsePage
+
+This project renders HTML through ParsePage templates under `osafw-app/App_Data/template/`. The template layer is intentionally lightweight: it is good at composition, repetition, small conditionals, and output formatting. It is not where business rules should live.
+
+## Start Here
+
+- Use this doc when changing templates, shared UI fragments, layout includes, or ParsePage parser behavior.
+- Start from the controller action and matching template folder before editing shared fragments.
+- Prefer common templates and small overrides before copying large blocks of markup.
+- Check `osafw-app/App_Code/fw/ParsePage.cs` when a parser feature is ambiguous or when older docs and current behavior differ.
+
+## Mental Model
+
+- Controllers decide what data the screen needs.
+- Models prepare shared state and business-specific data.
+- ParsePage merges that data into HTML fragments.
+- A layout wraps the screen output into the final page shell.
+
+When building or fixing a screen, identify:
+
+1. Which controller action owns the route?
+2. Which template folder matches that action?
+3. Which shared partials or layout fragments does the screen reuse?
+
+## Template Folder Structure
+
+A standard admin screen usually looks like this:
+
+```text
+osafw-app/App_Data/template/admin/<screen>/
+  config.json
+  index/
+    main.html
+    title.html
+    list_table.html
+    list_filter_more.html
+    load_script.html
+  show/
+    main.html
+    title.html
+    form.html
+    btn_std_more.html
+    load_script.html
+  showform/
+    main.html
+    title.html
+    form.html
+    btn_std_more.html
+    load_script.html
+```
+
+Shared building blocks live under:
+
+- `osafw-app/App_Data/template/common/list/`
+- `osafw-app/App_Data/template/common/form/`
+- `osafw-app/App_Data/template/common/vue/`
+- `osafw-app/App_Data/template/layout/`
+
+If a file is missing, ParsePage usually renders empty output for that slot. Override only the files you actually need.
+
+## The Most Important Rule
+
+ParsePage conditions and repeat attributes work on ParsePage tags, not plain HTML tags.
+
+Wrong:
+
+```html
+<div class="row" if="attachments">...</div>
+```
+
+Right:
+
+```html
+<~attachments_block if="attachments" inline>
+  <div class="row">...</div>
+</~attachments_block>
+```
+
+Use ParsePage attributes such as `if`, `unless`, and `repeat` on `<~...>` tags.
+
+## Common Patterns
+
+### Include another template file
+
+```html
+<~/common/list/pagination>
+<~/layout/sidebar>
+```
+
+### Shared icon partials
+
+Use `osafw-app/App_Data/template/common/icons/` for static icons instead of writing icon-library markup directly in templates.
+
+```html
+<a class="btn btn-primary" href="<~../url>/new"><~/common/icons/plus-lg>`Add New`</a>
+```
+
+Icon partial filenames use the current Bootstrap icon name without the `bi-` prefix, such as `plus-lg.html` or `cloud-download.html`. The partial owns icon spacing with `me-1`, so do not add a literal space between the icon include and following label. Dynamic config-driven icons still use class strings documented in `dynamic.md`.
+
+### Inline conditional block
+
+```html
+<~warning if="has_warning" inline>
+  <div class="alert alert-warning"><~message></div>
+</~warning>
+```
+
+### Repeat rows
+
+```html
+<~rows repeat inline>
+  <tr>
+    <td><~repeat.iteration></td>
+    <td><~iname></td>
+  </tr>
+</~rows>
+```
+
+### Toggle a small HTML attribute
+
+```html
+<input
+  type="checkbox"
+  name="item[is_active]"
+  value="1"
+  <~/common/attr/checked if="i[is_active]">
+>
+```
+
+### Render a controller-selected partial
+
+```html
+<~std_pane sub="panes[plate1]">
+```
+
+That pattern is useful when the controller chooses which shared fragment to render.
+
+## Dynamic Controller Conventions
+
+For `FwDynamicController` and `FwVueController` screens, behavior is usually split across:
+
+- controller overrides in `osafw-app/App_Code/controllers/`
+- model helpers in `osafw-app/App_Code/models/`
+- `config.json`
+- shared `common/form`, `common/list`, or `common/vue` fragments
+- screen-specific overrides under `osafw-app/App_Data/template/admin/...`
+
+Common file roles:
+
+- `index/main.html`: page shell for list view
+- `index/list_filter_more.html`: custom filters or extra list controls
+- `index/list_table.html`: list/table override when common markup is not enough
+- `show/form.html`: read-only record rendering
+- `showform/form.html`: add/edit form rendering
+- `load_script.html`: screen-specific assets or JS includes
+
+Prefer `load_script.html` over large inline `<script>` blocks in `main.html`.
+
+## Practical Rules
+
+- Keep business rules in controllers/models, not in templates.
+- Reuse shared common fragments before cloning large sections of list or form markup.
+- Keep route literal templates such as `url.html` on a single line with no trailing newline byte; otherwise the newline can leak into generated URLs.
+- When a screen-specific block needs JavaScript, prefer `load_script.html`.
+- When a value should be raw HTML, use `noescape` deliberately and trace where it is produced. For markdown HTML, use `markdown="trusted"` only for server-controlled or already-sanitized content.
+- When exact matching matters, use comparison attributes (`ifeq`, `ifne`, etc.) instead of relying on truthiness.
+
+## Pitfalls
+
+- Do not put `if`, `unless`, `repeat`, or similar attributes on plain HTML tags.
+- Be careful with string flags: non-empty strings are truthy for `if`.
+- Missing template files often render empty output rather than failing loudly.
+- Avoid copying large legacy template chunks when a shared common fragment plus a small override will do.
+- Recursive templates are allowed for tree-like structures such as sitemaps, but ParsePage stops rendering deeper file includes after its recursion-depth limit and logs a `WARN`.
+- Avoid bare `<~title>` inside a local `title.html`; it can still expand recursively until the depth limit. The intended fix is usually `<~title var>` or passing `title` explicitly.
+
+## Related Docs
+
+- [design_system.html](design_system.html) for visual design tokens, theme behavior, and shared UI component examples.
+- [layout.md](layout.md) for page-shell composition.
+- [dashboard.md](dashboard.md) for dashboard/admin screen structure.
+- [dynamic.md](dynamic.md) for `config.json`-driven screens.
+
+## Parser Reference
+
+ParsePage is a template parser engine, good for web development.
+
+## Overview
+
+When you create a website you have to generate html code for the client's browser. There are many ways how to do that, but one of the best practices is to separate _code_, _data_ and _design_. It works as: _data_ stored in some database, _code_ read it, combine with _design_ and output to browser. Something like that implemented in modern MVC web frameworks.
+
+Separating _design_ from _code_ and _data_ can be done using _templates_. Therefore each html page generated for browser should be created with one or more templates.
+
+Websites contains many pages, but usually most of pages have same layout (i.e. top nav, aside nav, main content area, footer).
+
+**Core idea of ParsePage templates** is to have main page template and then build final page from sub-templates stored in directory specific for particular page. This is a bit different approach from what other template engines offer.
+
+Templates contains special tags `<~tag>`, which replaced by actual data passed to ParsePage engine or by content of other templates (i.e. templates may include other templates).
+
+```mermaid
+graph TD
+    A["Data tag=value"] -->|"Passed to"| B["ParsePage Engine"]
+    B -->|Loads| C["Main Layout Template (e.g. layout.html)"]
+    C -->|Includes| D["Sub-Templates Directory (e.g. /test)"]
+    D -->|Loads| E["Sub-Template Files (e.g. title.html, main.html)"]
+    C -->|Includes| F["Common Templates (e.g. /common/footer)"]
+    E -->|"May include"| F
+    C -->|Contains| G["Template Tags <~tag>"]
+    G -->|"Replaced by"| H["Data or Sub-Template Content"]
+    F -->|Reusable| H
+    H -->|Combined| I["Final HTML Output"]
+```
+
+This diagram shows how the ParsePage engine combines data, main layout, sub-templates, and common templates to generate the final HTML output. Template tags are replaced by data or sub-template content recursively.
+
+## Sample
+
+### Sample code.
+This will load `layout.html` layout and insert/parse sub-templates from `/test` directory, then output to browser;
+```php
+$ps=array(
+  'data' => 'Hello World!',
+  'more_data' => 12345,
+);
+parse_page('/test', '/layout.html', $ps);
+```
+
+### Sample main template:
+
+_/layout.html_
+```html
+<!DOCTYPE html>
+<html lang="en"><head></head>
+<body>
+  <h1><~title></h1>
+  <~main>
+  <~/common/footer>
+</body>
+</html>
+```
+
+### Sub-templates for test page:
+
+_/test/title.html_
+```html
+Test page header
+```
+
+_/test/main.html_
+```html
+<p><~data></p>
+<p><~more_data></p>
+```
+
+
+this will output:
+```html
+<!DOCTYPE html>
+<html lang="en"><head></head>
+<body>
+  <h1>Test page header</h1>
+  <p>Hello World!</p>
+  <p>12345</p>
+  <footer>site footer<footer>
+</body>
+</html>
+```
+
+## Documentation
+
+### /template directory structure
+
+All templates should be placed under single directory accessible by website code, we name it `/template` (relative to website root).
+**Sample** structure:
+```
+layout.html  - main template for website pages
+layout_print.html - main template for printed pages
+layout_simple.html - main template for website pages with some simpler layout
+common/ - directory with common sub-templates used by multiple layouts
+home/ - directory with sub-templates for website Home page
+contact/ - directory with sub-templates for website Contact page
+```
+
+---
+
+### Code
+
+Generally ParsePage called as following (depending on language syntax will differ):
+
+`parse_page(BASE_DIR, LAYOUT_TPL_FILE, PS, [OUTPUT_FILENAME])`
+
+There is also a helper `parse_json(PS)` which returns a JSON string representation of the passed hashtable.
+
+where:
+- `BASE_DIR` - directory (relative to /template) with sub-templates for current page
+- `LAYOUT_TPL_FILE` - path (relative to /template) to main page template/layout used for current page
+- `PS` - "parse strings" - associative array (hashtable) with variable names/values to be replaced in templates
+- `OUTPUT_FILENAME` - optional, output file name, if defined ParsePage will write output to this file, instead of output to browser
+
+### Tag syntax
+
+Tags in templates should be in `<~tag_name [optional attributes]>` format.
+
+`tag_name` could be:
+
+- **name of the variable** passed to ParsePage engine. In this case ParsePage replace tag with variable value (optionally processed according attributes).
+  - if variable is an array/hashtable squares can be used to get particular keys/index - `<~var[aaa][0][bbb]>`
+  - if no variable with such name passed ParsePage will look for sub-template file with such name (see below)
+- **path to sub-template**. In this case ParsePage will look for sub-template file, parse it recursively and replace tag with parsed content
+  - if no file found tag repalced with empty string
+  - path can be:
+    - `tag_name` - will look for `tag_name.html` in `BASE_DIR` (i.e. default sub-template extension is `html`)
+    - `tag_name.ext` - will look for `tag_name.ext` in `BASE_DIR`
+    - `./tag_name` - (relative path) will look for `tag_name.html` in directory relative to currently parsed template file (see samples)
+    - `/subdir/tag_name` - (absolute path) will look for `/subdir/tag_name.html` relative to `/template` directory
+    - `subfolder/*.html` - include all html files from a folder and parse them as a single template
+    - `subfolder/*.*` - include all files from a folder
+
+Note, CSRF shield integrated - all vars escaped, if var shouldn't be escaped use `noescape` attr: `<~raw_variable noescape>`
+
+<table>
+  <thead><tr><th>PS</th><th>Template</th><th>Output</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>
+<pre lang="php">
+'username' => 'John',
+'user' => array(
+  'id' => 123,
+  'status' => 'Active'
+),
+'orders' => array(
+  array(
+    'no'=>1,
+    'item'=>'Pen'
+  ),
+  array(
+    'no'=>2,
+    'item'=>'Pencil'
+  )
+),
+'csrf' => '&lt;b&gt;test&lt;/b&gt;',
+</pre>
+      </td>
+      <td>
+<pre>
+User: <~username><br>
+Status: <~user[status]><br>
+First item: <~orders[0][item]><br>
+Test: <~csrf>
+</pre>
+      </td>
+      <td>
+User: John<br>
+Status: Active<br>
+First item: Pen<br>
+Test: &lt;b&gt;test&lt;/b&gt;
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+### Objects support
+
+It's also possible to pass objects (with public properties/fields) to ParsePage engine and use them in templates.
+Example:
+
+```csharp
+public class User {
+    public int id { get; set; }
+    public string Name { get; set; }
+    public string Email; // public field
+}
+
+var u1 = new User { id = 1, Name = "John", Email = "john@email.com" };
+var u2 = new User { id = 2, Name = "Amy", Email = "amy@email.com" };
+var ps = new FwDict {
+    { "user", u1 },
+    { "all_users", new List<User> { u1, u2 } }
+};
+```
+
+And related template:
+
+```
+User ID:<~user[id]>;
+Username:<~user[Name]>;
+Email:<~user[Email]>;
+
+<~all_users repeat inline>
+  <~id> - <~Name> - <~Email>;
+</~all_users>
+```
+
+### Supported attributes
+
+- `var` - tag is variable, no fileseek necessary even if no such variable passed to ParsePage: `<~tag var>`
+- `ifXX` - if confitions, if false - tag replaced with empty string
+  - `<~tag ifeq="var" value="XXX">` - tag/template will be parsed only if var=XXX
+  - `<~tag ifne="var" value="XXX">` - tag/template will be parsed only if var!=XXX
+  - `<~tag ifgt="var" value="XXX">` - tag/template will be parsed only if var>XXX
+  - `<~tag ifge="var" value="XXX">` - tag/template will be parsed only if var>=XXX
+  - `<~tag iflt="var" value="XXX">` - tag/template will be parsed only if var<XXX
+  - `<~tag ifle="var" value="XXX">` - tag/template will be parsed only if var<=XXX
+- `vvalue` - used with `ifXX` conditions to indicate that value to compare should be read from PS variable
+  - `<~tag ifeq="var" vvalue="var2">` - tag parsed if PS['var']==PS['var2']
+- `if`
+    - `<~tag if="var">` - tag parsed if var is evaluated as TRUE, equivalent to `if ($var)`
+- `unless`
+    - `<~tag unless="var">` - tag parsed if var is evaluated as TRUE, equivalent to `if (!$var)`
+    - TRUE values:
+      - non-empty string, but not equal to '0'!
+      - 1 or other non-zero number
+      - true (boolean)
+    - FALSE values:
+      - '0'
+      - 0
+      - false (boolean)
+      - ''
+      - unset/undefined variable
+
+<table>
+  <thead><tr><th>PS</th><th>Template</th><th>Output</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>
+<pre lang="php">
+'username' => 'John',
+'is_logged' => true,
+'is_admin' => false,
+</pre>
+      </td>
+      <td>
+<pre>
+User: <~username if="is_logged">
+<~adm if="is_admin" inline>(admin)< /~adm>
+<~usr unless="is_admin" inline>(user)< /~usr>
+</pre>
+      </td>
+      <td>
+User: John (user)
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+- `repeat` - this tag is repeat content (PS should contain reference to array of hashtables),
+  - `<~tag repeat inline>repeated sub-template content</~tag>` - inline sample
+  - inside repeat sub-template supported repeat vars:
+    - repeat.first (0-not first, 1-first)
+    - repeat.last  (0-not last, 1-last)
+    - repeat.total (total number of items)
+    - repeat.index  (0-based)
+    - repeat.iteration (1-based)
+
+<table>
+  <thead>
+    <tr><th>PS</th><th>Template</th><th>Output</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+<pre lang="php">
+'rows' => db_array('select fname from users')
+</pre>
+      </td>
+      <td>
+<pre>
+<~rows repeat inline>
+  <~fname>
+  <~comma unless="repeat.last" inline>,< /~comma>
+< /~rows>
+</pre>
+      </td>
+      <td>
+        John, Emma, Walter
+      </td>
+    </tr>
+    <tr>
+      <td>
+<pre lang="php">
+'rows' => db_array('select fname from users')
+</pre>
+      </td>
+      <td>
+
+```
+  <~rows repeat>
+```
+
+rows.html template file:
+```
+  <~fname>
+  <~comma unless="repeat.last" inline>,</~comma>
+```
+
+
+</td>
+      <td>
+        John, Emma, Walter
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+- `sub` - this tag tells parser to use sub-hashtable for parse sub-template (PS variable should contain reference to hashtable)
+- `inline` - this tag tells parser that sub-template is not in file - it's between <~tag>...</~tag> , useful in combination with 'repeat' and 'if'. In case of 'if' tag name doesn't really matter and not need to exists in PS. **Note** if you have 2 or more inline tags with exactly the same name and attributes in same template file, content of all of them will be replaced by inline sub-template of the first tag. In the example below it will output "sold!" in both cases (i.e. not "already sold"):
+  - workaround for this - use different labels. For below example just add "2" like `<~somelabel2...</~somelabel2>`
+  - **Important - use `</~tag>` for closing tags, i.e. backslash then tilde**
+```
+     <~somelabel inline if="is_sold">
+       <div>sold!</div>
+     </~somelabel>
+     ...other content in same file...
+     <~somelabel inline if="is_sold">
+       <div>already sold</div>
+     </~somelabel>
+```
+
+- `parent` - this tag needs to be read from parent's PS var, not from current PS hashtable (usually used inside `repeat` sub-templates), example:
+```
+     <~rows repeat inline>
+       <~var_in_rows> <~var_in_parent_ps parent>
+     </~rows>
+```
+
+
+`PARSEPAGE.TOP` and `PARSEPAGE.PARENT` can be used in tag expressions to access values from the top-most or parent hashtables directly:
+```
+  <~PARSEPAGE.TOP[user][id]>
+  <~some_subtag sub="child" inline>
+    Parent name: <~PARSEPAGE.PARENT[name]>
+  </~some_subtag>
+```
+
+
+`select="var"` - load a file and use it as `value|display` list for `<select>` options. If `multi` attribute is used parser splits selected values by delimiter (comma by default) so several options can be pre-selected.
+```
+     <select name="item[fruit]">
+       <option value=""> - select a fruit -</option>
+       <~./fruits.sel select="fruit">
+     </select>
+
+     <!-- multi-select example -->
+     <select name="item[cities]" multiple>
+       <~./cities.sel select="cities" multi=",">
+     </select>
+
+     and file fruits.sel contains:
+     10|Apple
+     20|Cherry
+     30|Grape
+
+     if PS contains 'fruit'=>10 then Apple will be selected by default.
+```
+
+- `radio="var" name="YYY" [delim="ZZZ"]` - this tag tell parser to load file and use it as value|display for <input type=radio> html tags, example: `<~fradio.sel radio="fradio" name="item[fradio]" delim="&nbsp;">`
+- `selvalue="var"` - display value (fetched from the tag name file) for the var (example: to display 'select' and 'radio' values in List view), example: `<~fcombo.sel selvalue="fcombo">`
+  - **Note**, it doesn't work for direct values, you can't write `<~fcombo.sel selvalue="10">`. Instead put 10 into PS var and use var name.
+- `nolang` - do not parse `\`language strings\`` inside the included file or inline template (useful for `.js` files)
+
+<table>
+  <thead>
+    <tr><th>PS</th><th>Template</th><th>Output</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+<pre lang="php">
+'fruit' => 20
+</pre>
+      </td>
+      <td>
+<pre>
+<~fruits.sel selvalue="fruit">
+
+fruits.sel file:
+10|Apple
+20|Cherry
+30|Grape
+</pre>
+      </td>
+      <td>
+Cherry
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+- `htmlescape` - replace special symbols by their html equivalents (such as <>,",'). This attribute is applied automatically to all tags by default (except if tag is a path to subtemplate from another file)
+- `noescape` - will not apply htmlescape to tag value
+- `url` - add prefix "http://" if tag value doesn't start with any protocol
+- `number_format` - formats number, examples:
+  - `<~tag number_format>` - for 123456.789 outputs 123,456.79
+  - `<~tag number_format="1" nfthousands="">` - for 123456.789 outputs 123456.8 (no comma)
+- `currency` - formats number as currency string
+- `bytes` - formats numeric value (bytes) into a human-readable string using KiB/MiB/GiB. Example: `<~file_size bytes>` -> `12.35 MiB`.
+- `date` - will format tag value as date, format depends on language: [PHP](http://php.net/manual/en/function.date.php), [ASP.NET](https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
+  - `<~tag date>` or `<~tag date="d M Y H:i">`
+  - however support several cross-language values:
+    - `<~tag date>` - output as "m/d/yyyy" - date only
+    - `<~tag date="short">` - output as "m/d/yyyy hh:mm" - date and time short (to minutes)
+    - `<~tag date="long">` - output as "m/d/yyyy hh:mm:ss" - date and time long
+    - `<~tag date="sql">` - output as "yyyy-mm-dd hh:mm:ss" - sql standard date and time
+    - `<~tag date="datetime-local">` - output as "yyyy-MM-ddTHH:mm" for native browser datetime-local inputs
+  - When ParsePage is created from `FW`, date formatting uses the current user's date/time formats and `OutputTimezone = fw.userTimezone`.
+  - Date-only inputs keep their original calendar day. This applies to SQL `YYYY-MM-DD` values, explicit user-format dates, and date-only `DateTime` values.
+  - Real datetimes are still timezone-converted before formatting, so midnight `datetime` values can legitimately move to the previous or next day for another user timezone.
+- `truncate` - truncates a variable to a character length (default 80), optionally - append trchar if truncated, truncate at word boundary (trword), truncate at end or in the middle (trend)
+  - `<~tag truncate="80" trchar="..." trword="1" trend="1">` - default values
+- `strip_tags` - remove any html tags from value, use with `noescape`
+- `trim` - remove leading and trailing space from value
+- `nl2br` - convert newline chars to `<br>`
+- `count` - ouput count of elements in value instead of value (for arrays only)
+- `lower` - convert value to lowercase
+- `upper` - convert value to uppercase
+- `capitalize` - capitalize first word, `capitalize="all"` - capitalize all words
+- `default` - if value is empty, ouput default value instead
+  - `<~tag default="none">`
+- `urlencode` - encode value for URLs
+- `json` (was `var2js`) - ouput variable as JSON string
+- `markdown` - convert markdown text to html using the [Markdig](https://github.com/lunet-io/markdig) library on ASP.NET. Raw HTML and markdown-generated attributes are disabled by default; use `markdown="trusted"` only for trusted content. Note: may wrap tag with `<p>`
+- `noparse` - doesn't parse file and just include file by tag path as is, ignores all other attrs except `if`
+
+
+- `<~session[var]>` - this tag is a SESSION variable, not in PS hashtable (for PHP it's $_SESSION, for ASP.NET it's current context's HttpSessionState object)
+- `<~global[var]>` - this tag is a global var, not in PS hashtable (for PHP it's $_GLOBALS, for ASP.NET it depends on framework global storage implementation). Special globals `ROOT_URL` and `ROOT_DOMAIN` are always available.
+
+### Commenting tags
+
+- to comment a `<~sometag>` so it won't be displayed just prepend it with '#', for example: `<~#sometag>`. It will be replaced with empty string without parsing
+- to comment an inline tag like `<~rows repeat inline>...</~rows>`, just wrap it into other inline tag with false condition, for example:
+```
+  <~hide if="#" inline>
+    <~rows repeat inline>...</~rows>
+  </~hide>
+```
+
+### Multi-language support
+
+PHP and ASP.NET implementations support multi-lanugage templates.
+Text that need to be replaced according to user's display language should be placed in templates between backtick characters.
+Parser then look for replacements in `/template/lang/$lang.txt` files, where `$lang` is "en", "es", "ua", for example.
+You need to create these files and fill with replacements in this format:
+```
+  english string === string in another language
+```
+Default lanugage is English, so en.txt doesn't need be created.
+
+Note that `.js` template files are not parsed for backtick language strings automatically.
+
+For example, you have a template:
+```
+  `Hello` <~username>
+```
+
+And `/template/lang/es.txt` file for Spanish translations contains line:
+```
+    Hello === Hola
+```
+
+If user's language is English, parser will output `Hello John`.
+And if user's language will be Spanish, parser will output `Hola John`.
+
+---
+
+### Common Templates (`/common`)
+
+The `/common` directory contains reusable sub-templates and utility files that can be included from any page or layout.
+These help keep your templates DRY and consistent. Below are the most important templates and their usage:
+
+#### Utility and HTML Attribute Templates
+- **cl/active.html**: Outputs `active` (for menu highlighting). Usage: `<~/common/cl/active>`
+- **attr/checked.html**: Outputs `checked="checked"` (for form checkboxes). Usage: `<~/common/attr/checked>`
+- **attr/disabled.html**: Outputs `disabled="disabled"` (for form elements). Usage: `<~/common/attr/disabled>`
+- **clactive.html**: Outputs `class="active"` (for menu or tab highlighting). Usage: `<~/common/clactive>`
+- **comma.html**: Outputs a comma, used in lists. Usage: `<~/common/comma>` (with `unless="repeat.last"` to avoid trailing comma).
+- **dot.html**: Outputs a dot wrapped in nbsp, used as visaul delimiter. Usage: `<~/common/dot>`
+- **char/**: misc character templates Usage: `<~/common/char/gt>` outputs `&gt;`.
+
+#### JavaScript Components and CSS Includes
+- **ajaxform.html**: Includes jQuery Form plugin. Usage: `<~/common/ajaxform>`
+- **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`
+- **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS through `fw.initComponent` so repeated includes share one loaded asset. Usage: `<~/common/autocomplete>`
+- **bootstrap_select.html**: Includes bootstrap-select JS/CSS through `fw.initComponent`, initializes `select.selectpicker`, and preserves autosave/list-filter behavior. Usage: `<~/common/bootstrap_select>`
+- **modal.html**: Loads `fw-modal.js`, adds `.on-fw-modal` remote modal triggers, `.on-fw-modal-link` same-modal link loading, and lookup add/edit helpers. Usage: `<~/common/modal>`
+- **select2.html**: Includes Select2 JS/CSS and related helpers for styled selects. Initializes on all `.select2` elements. Usage: `<~/common/select2>`
+- **calendar.html**: Includes Bootstrap Datepicker JS/CSS and datepicker initialization on all `.date` elements. Usage: `<~/common/calendar>`
+- **html_editor.html**: Includes HTML editor (TinyMCE) JS/CSS and initialize it on all `.fw-html-editor` elements. Usage: `<~/common/html_editor>`
+- **markdown_editor.html**: Includes Markdown editor JS/CSS and initializes it on all `textarea.markdown` elements. The preview follows the safe default renderer: raw HTML and markdown attribute/container extensions are disabled. For server-controlled or already-sanitized editor fields only, add `data-markdown-trusted="1"` or class `markdown-trusted` to enable raw HTML plus container/attribute extensions in preview. Markdown edits use the same autosave timing as plain textareas: 30 seconds after typing stops or on blur. Usage: `<~/common/markdown_editor>`
+- **sortable.html**: Includes jQuery UI Sortable JS and initializes on `.fw-sortable` elements. Usage: `<~/common/sortable>`
+- **uploader.html**: Includes File Upload JS/CSS. Usage: `<~/common/uploader>`
+
+#### Creating JavaScript Component Includes
+
+Prefer a small `/common/*.html` include that calls `fw.initComponent()` with a scoped init. Include that template wherever the controls appear, including remote modal content.
+
+```html
+<script>
+  fw.initComponent('component_name', {
+    scope: fw.scopeFromScript(),
+    assetsUrls: [
+      '<~GLOBAL[ASSETS_URL]>/lib/vendor/vendor.css?v<~GLOBAL[SITE_VERSION]>',
+      '<~GLOBAL[ASSETS_URL]>/lib/vendor/vendor.js?v<~GLOBAL[SITE_VERSION]>'
+    ],
+    params: {
+      optionName: '<~value>'
+    },
+    init: function (scope, params) {
+      var $scope = $(scope || document);
+      $scope.find('.component-selector').each(function () {
+        var $el = $(this);
+        if ($el.data('fw-component-name-inited')) return;
+        $el.data('fw-component-name-inited', true);
+
+        // Initialize the vendor plugin or framework behavior here.
+      });
+    }
+  });
+</script>
+```
+
+`fw.initComponent()` deduplicates CSS and JS loads by component name and asset index, waits for those assets, and then runs `init(scope, params)` for the current include. This is the normal pattern for reusable form controls and modal content. Use a distinct component name when the asset list changes.
+
+Keep component init idempotent. Mark initialized elements with jQuery `data(...)`, and guard document-level event bindings with a document data flag so repeated includes do not bind duplicate handlers.
+
+If a component creates plugin state or DOM outside the current scope, make cleanup idempotent too. `fw.disposeComponents(scope)` dispatches `fw-dispose`, calls registered component `dispose(scope)` callbacks, and runs framework cleanup for common plugins before modal content is replaced or removed.
+
+Use `fw.registerComponent(name, config)` only when the config must be reused later by name without repeating the full asset and init block:
+
+```js
+fw.registerComponent('component_name', {
+  assetsUrls: ['...'],
+  init: function (scope, params) {
+    // shared init
+  }
+});
+
+fw.initComponent('component_name', {
+  scope: fw.scopeFromScript(),
+  params: {}
+});
+```
+
+Do not call registered component `init` directly. The registry stores reusable config only; asset load state is tracked separately by `fw.loadScript()` and `fw.loadStyle()`, so all usage should still go through `fw.initComponent()`.
+
+`modal.html` lookup saves update the target select/input, dispatch a bubbling `fw-lookup-saved` event from the target, then dispatch the usual bubbling `change` event for compatibility. `event.detail` contains `mode`, `id`, `value`, `label`, `data`, `option`, `target`, `trigger`, `modal`, and `form`.
+
+Remote modal content can namespace duplicate DOM IDs. Generic modal triggers opt in with `data-fw-modal-namespace-ids="1"`; lookup add/edit modals namespace IDs by default and can opt out with `data-fw-modal-namespace-ids="0"`. Namespaced elements keep `data-fw-original-id`; add `data-fw-keep-id="1"` to preserve an ID. Modal scripts that run with namespacing should use scoped selectors such as `$(fw.scopeFromScript()).find(...)`.
+
+Remote modal triggers copy Bootstrap `data-bs-*` modal options to the generated modal, except trigger/dismiss attributes (`data-bs-toggle`, `data-bs-target`, `data-bs-dismiss`). For a static backdrop, use `data-bs-backdrop="static" data-bs-keyboard="false"`. Use `data-modal-class` to add classes to the generated root `.modal`; keep using `data-modal-dialog-class` or `data-modal-content-class` for dialog/content class overrides.
+
+Remote modals focus the first visible form control after fetched content is loaded and Bootstrap has shown the modal. Set `data-modal-focus="#field_id"` on the trigger to choose a specific focus target, or `data-modal-focus="none"` to leave Bootstrap's default modal focus unchanged. In namespaced lookup modals, a simple `#field_id` selector can target either the rendered ID or the original `data-fw-original-id`.
+
+Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disposeComponents(scope)`. Custom components that attach DOM outside their own scope or need explicit cleanup should either register a component `dispose(scope)` callback or listen for the bubbling `fw-dispose` event.
+
+#### Select/Option List Templates (`/common/sel`)
+- **sel/access_level.sel**: List of access levels for user roles. Usage: `<select><~/common/sel/access_level.sel select="access_level"></select>`.
+- **sel/country.sel**: List of countries. Usage: `<select><~/common/sel/country.sel select="country"></select>`.
+- **sel/state.sel**: List of US states. Usage: `<select><~/common/sel/state.sel select="state"></select>`.
+- **sel/status.sel**: List of common statuses (Active, Inactive, etc.). Usage: `<select><~/common/sel/status.sel select="status"></select>`.
+- **sel/yn.sel**: Yes/No options with 1|0 values. Usage: `<select><~/common/sel/yn.sel select="field"></select>`.
+- **sel/yn_char.sel**: Yes/No options with 'Y'|'N' values. Usage: `<select><~/common/sel/yn_char.sel select="field"></select>`.
+
+#### Other Common Templates
+- **list/** - Directory with common templates for list screens.
+  - `list/filters/*.html` renders opt-in typed list column filters for Dynamic/Vue-compatible server-rendered tables. The shared `thead.html` delegates each search cell to `list/filters/cell.html`, which chooses text, date range, multi-select/autocomplete, number, boolean, or none based on the nested `filter` metadata on each `list_headers` row. Text filters stay inline as a compact operator/input group; other typed filters render a one-line dropdown trigger with draft controls plus `Apply` and `Clear`.
+  - Custom server-rendered column filters use static controller-local overrides: set `list_column_filters.fields[field].template` to `custom`, then add `index/list_filter_custom.html` under the controller template directory. The partial receives the same header context as the common cell, so use nested `filter[...]` values such as `filter[type]`, `filter[field]`, `filter[label]`, `filter[search_value]`, `filter[is_active]`, `filter[selected_options]`, and the shared `list/filters/summary.html` partial when useful. Keep the visible cell one line high and commit the typed JSON into the hidden `search[field]` input only on `Apply` for dropdown-style filters.
+- **form/** - Directory with common templates for form screens.
+- **form/show/** - Directory with common templates for showing records. Used in Dynamic controllers.
+- **form/showform/** - Directory with common templates for edit forms. Used in Dynamic controllers.
+- **form/showdelete/** - Directory with common templates for delete confirmation screens.
+- **activitylogs/** - Directory with common templates for displaying activity logs.
+- **vue/** - Directory with Vue.js components for Vue-based controllers.
+  - `vue/list-column-filter.html` is the shared Vue table-header filter component. It reads nested `header.filter` metadata, keeps using `header.search_value`, and serializes typed filters back through `search[field]` JSON. Custom `filter.component` implementations are still supported and should own their own compact/dropdown UI.
+- **virtual/** - Directory with standard templates for Virtual controllers.
+- **icons/** - Directory for custom svg icons.
+- **list/return_breadcrumbs.html** - Shared origin breadcrumb. Controllers can pass app-local `return_url` plus `return_title`; shared list/form headers render the origin link only when that metadata is present.
+- **list/return_inputs.html** - Shared hidden `return_url`/`return_title` inputs for forms that need to preserve return navigation.
+- **list/urlq.html, list/urlqa.html** - Shared cached URL suffix fragments for preserving `related_id`, `return_url`, and `return_title` in links that need a new query string (`urlq`) or append to an existing query string (`urlqa`). Keep URL-fragment templates single-line with no trailing newline because they render inside HTML URL attributes.
+
+---
+
+## Default File Structure for /index, /show, /showform Directories
+
+When creating templates for dynamic controllers (such as admin CRUD screens), the following subdirectories and files are commonly used under each entity's template folder (e.g. `/template/admin/demosdynamic`). Each subdirectory corresponds to a controller action:
+
+### /index
+Used for the list (index) view. Typical files:
+- **main.html**: Main entry point for the list page. Includes title, filter, table, and buttons.
+  - to switch list screen to an optional compact header:
+    1. index/main.html changes: `page_header -> page_header_compact`, `filter_std -> filter_compact`
+    2. index/list_filter_more.html changes: remove/cleanup or update custom filters
+- **title.html**: Page title for the list view.
+- **list_table.html**: Table markup for displaying the list of records. Usually includes or overrides common list templates.
+- **list_row_btn.html**: Custom buttons for each row in the list.
+- **list_filter_more.html**: Additional filter fields for the list.
+- **btn_multidel_more.html**: Additional multi-delete buttons (optional, can be removed if empty).
+- **col_custom.html**: Custom column rendering (optional).
+- **onload.js**: JS to run on jquery page load (optional, can be removed if empty).
+- **load_script.html**: Additional scripts to include (optional, can be removed if empty).
+- **return_url.html, row_click_url.html, userlist_entity.html, list_filter_search_placeholder.html**: Advanced customizations (optional).
+
+### /show
+Used for the view (read-only) details page. Typical files:
+- **main.html**: Main entry point for the show page. Includes navigation, buttons, and the form.
+- **title.html**: Page title for the show view.
+- **form.html**: Renders the fields for the record. Can use repeat to render each field, or override for custom fields.
+- **custom_field.html**: Custom rendering for specific fields (optional).
+- **subtable.html, subtable_demos_items.html**: For related subtables (optional, can be removed if no subtables used in specific controller).
+- **btn_std_more.html**: Additional standard buttons (optional, can be removed if empty).
+- **userlist_entity.html, return_url.html**: Advanced customizations (optional).
+- **onload.js, load_script.html**: JavaScript and scripts for the show page (optional, can be removed if empty).
+
+### /showform
+Used for the add/edit (form) page. Typical files:
+- **main.html**: Main entry point for the form page. Includes navigation, buttons, and the form.
+- **title.html**: Page title for the form (add/edit) view.
+- **form.html**: Renders the form fields. Can use repeat to render each field, or override for custom fields.
+- **subtable.html, subtable_demos_items.html**: For related subtables (optional, can be removed if no subtables used in specific controller).
+- **btn_std_more.html**: Additional standard buttons (optional, can be removed if empty).
+- **onload.js**: JS to run on jquery page load (optional, can be removed if empty).
+- **load_script.html**: Additional scripts to include, typically: `<~/common/calendar>` (optional, can be removed if empty).
+
+#### Notes
+- Any file in these folders can be created to override the default/common template behavior for that specific entity or view.
+- If a file is missing, the ParsePage engine will render empty content for that part.
+- Use these files to customize the look, layout, or logic for a specific entity's list, view, or form screens.
+
+**Example:** See `template/admin/demosdynamic` for a real-world structure and customizations.

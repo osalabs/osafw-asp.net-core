@@ -9,40 +9,40 @@
     <ul class="dropdown-menu text-small shadow">
       <!--li>
           <a href="<~/my/filters/url>" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[controller]" value="MyFilters">">
-              <i class="bi bi-funnel"></i> <~/my/filters/index/title>
+              <~/common/icons/funnel><~/my/filters/index/title>
           </a>
       </li-->
       <li>
         <a href="<~/my/views/url>" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[controller]" value="MyViews">">
-          <i class="bi bi-list-stars"></i> <~/my/views/index/title>
+          <~/common/icons/list-stars><~/my/views/index/title>
         </a>
       </li>
       <li>
         <a href="<~/my/lists/url>" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[controller]" value="MyLists">">
-          <i class="bi bi-flag-fill"></i> <~/my/lists/index/title>
+          <~/common/icons/flag-fill><~/my/lists/index/title>
         </a>
       </li>
       <li>
         <a href="<~/my/settings/url>" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[controller]" value="MySettings">">
-          <i class="bi bi-file-person"></i> <~/my/settings/showform/title>
+          <~/common/icons/file-person><~/my/settings/showform/title>
         </a>
       </li>
       <li>
         <a href="<~/my/password/url>" class="dropdown-item <~/common/cl/active ifeq="GLOBAL[controller]" value="MyPassword">">
-          <i class="bi bi-key"></i> `Change Password`
+          <~/common/icons/key>`Change Password`
         </a>
       </li>
       <~feedback_menu if="GLOBAL[feedback_email]" inline>
       <li>
         <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modal-my-feedback">
-          <i class="bi bi-bug"></i> <~/my/feedback/showform/title>
+          <~/common/icons/bug><~/my/feedback/showform/title>
         </a>
       </li>
       </~feedback_menu>
       <li><hr class="dropdown-divider"></li>
       <li>
         <a class="dropdown-item" href="<~/login/url_logoff>">
-          <i class="bi bi-box-arrow-right"></i> `Logoff`
+          <~/common/icons/box-arrow-right>`Logoff`
         </a>
       </li>
     </ul>

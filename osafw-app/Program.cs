@@ -1,7 +1,3 @@
-//#define isMySQL // uncomment if using MySQL, see fw/DB.cs for full instructions
-#if isMySQL
-#endif
-
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.AspNetCore.DataProtection;
@@ -15,22 +11,29 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication;
+#if isWindowsAuth
+using Microsoft.AspNetCore.Authentication.Negotiate;
+#endif
 using System;
 
 namespace osafw;
 
 public static class Program
 {
+    private const bool ALLOW_PLAINTEXT_DP_KEYS = false;
+
     public static void Main(string[] args)
     {
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
         var builder = WebApplication.CreateBuilder(args);
 
-        // If you use Sentry, enable it here:
-        // builder.WebHost.UseSentry();
+#if isSentry
+        builder.WebHost.UseSentry();
+#endif
 
         // read the environment settings
         var settings = FwConfig.settingsForEnvironment(builder.Configuration);
+
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
@@ -71,34 +74,18 @@ public static class Program
         // Data Protection
         // repository used for keys storage in the DB
         var repository = new FwKeysXmlRepository(new DB(connStr, dbType, "main"));
-        builder.Services.AddDataProtection().SetApplicationName(appName);
+        var dataProtectionBuilder = builder.Services.AddDataProtection().SetApplicationName(appName);
+        if (OperatingSystem.IsWindows())
+            dataProtectionBuilder.ProtectKeysWithDpapi(protectToLocalMachine: true);
+        else if (!ALLOW_PLAINTEXT_DP_KEYS)
+            throw new ApplicationException("Data Protection key encryption requires Windows DPAPI or an explicit local/dev plaintext fallback.");
         builder.Services.Configure<KeyManagementOptions>(options =>
             {
                 options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
             });
 
-#if isMySQL
-        // If using MySQL for distributed cache (and sessions)
-        builder.Services.AddDistributedMySqlCache(options =>
-        {
-            var csb = new MySqlConnector.MySqlConnectionStringBuilder(connStr);
-            if (string.IsNullOrEmpty(csb.Database))
-                throw new ApplicationException("No database name defined in connection_string");
-
-            // Setup session store
-            options.ConnectionString = csb.ConnectionString;
-            options.SchemaName = csb.Database; // database name
-            options.TableName = "fwsessions";
-        });
-#else
-        // If using SQL Server for distributed cache (and sessions)
-        builder.Services.AddDistributedSqlServerCache(options =>
-        {
-            options.ConnectionString = connStr;
-            options.SchemaName = "dbo";
-            options.TableName = "fwsessions";
-        });
-#endif
+        // Session rows use the provider-specific cache backing store for the main DB.
+        builder.Services.AddFwSessionCache(connStr, dbType);
 
         // Form upload/limits
         builder.Services.Configure<FormOptions>(options =>
@@ -127,14 +114,19 @@ public static class Program
                 options.Cookie.HttpOnly = cookieHttpOnlySetting.Value;
         });
 
-        // Windows Active Directory authentication support (optional)
-        // builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
+#if isWindowsAuth
+        builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme).AddNegotiate();
+#endif
 
         // Memory cache
         builder.Services.AddMemoryCache();
 
+#if isFwCronService
         if (settings["is_cron_enabled"].toBool())
             builder.Services.AddHostedService<FwCronService>();
+#endif
+        if (settings["ASSISTANT_WORKER_ENABLED"].toBool())
+            builder.Services.AddHostedService<AssistantRunWorkerService>();
 
         // Build the WebApplication
         var app = builder.Build();
@@ -145,13 +137,27 @@ public static class Program
 
         FwCache.MemoryCache = app.Services.GetRequiredService<IMemoryCache>();
 
-        // If dev - developer exception page
-        if (app.Environment.IsDevelopment())
+        // Detailed exception pages are allowed only when framework dev mode is enabled.
+        if (isDevelopmentEnv)
         {
             app.UseDeveloperExceptionPage();
         }
         else
         {
+            app.UseExceptionHandler(errorApp =>
+            {
+                errorApp.Run(async context =>
+                {
+                    if (!context.Response.HasStarted)
+                    {
+                        context.Response.Clear();
+                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                        context.Response.ContentType = "text/plain; charset=utf-8";
+                        await context.Response.WriteAsync(FW.GENERIC_SERVER_ERROR_MESSAGE);
+                    }
+                });
+            });
+
             // In production - redirect HTTP to HTTPS, optionally UseHsts if needed
             app.UseHttpsRedirection();
             // app.UseHsts(); // if strict-transport
@@ -196,6 +202,10 @@ public static class Program
             }
         });
 
+#if isWindowsAuth
+        app.UseAuthentication();
+#endif
+
         // Security headers
         app.Use(async (context, next) =>
         {
@@ -232,15 +242,24 @@ public static class Program
                 return;
             }
 
+#if isWindowsAuth
             // Windows Authentication Support
             if (!context.User.Identity?.IsAuthenticated ?? true)
             {
                 var path = request.Path.ToString();
                 if (path.StartsWith("/winlogin", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    await context.ChallengeAsync(Microsoft.AspNetCore.Server.IISIntegration.IISDefaults.AuthenticationScheme);
+                    await context.ChallengeAsync(NegotiateDefaults.AuthenticationScheme);
                     return;
                 }
+            }
+#endif
+
+            if (!FwConfig.isTrustedHost(request.Host.ToString()))
+            {
+                response.StatusCode = StatusCodes.Status400BadRequest;
+                await response.WriteAsync("Bad Host: request Host is not configured. Check appSettings.ROOT_DOMAIN or appSettings.override.*.hostname_match.");
+                return;
             }
 
             // Call the FW "core" pipeline
