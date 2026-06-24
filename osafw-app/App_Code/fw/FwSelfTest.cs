@@ -407,6 +407,7 @@ public class FwSelfTest
     /// </summary>
     public virtual void echo_start()
     {
+        fw.responseWrite("<!doctype html><html><head><title>Site Self Test</title></head><body>" + Environment.NewLine);
         echo("<h1>Site Self Test</h1>");
         // If Not is_logged Then echo("<a href='" & fw.config("ROOT_URL") & "/Login'>Login</a> as an administrator to see error details and perform additional tests")
         echo("<a href='#summary'>Test Summary</a>");
@@ -429,6 +430,7 @@ public class FwSelfTest
             echo("Test count error", "total != ok+warn+err", Result.ERR);
 
         echo("<br><br><br><br><br>"); // add some footer spacing for easier review
+        fw.responseWrite("</body></html>" + Environment.NewLine);
     }
 
 

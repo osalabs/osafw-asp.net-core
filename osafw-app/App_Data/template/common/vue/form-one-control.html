@@ -112,7 +112,7 @@
                     <img class="card-img-top" :src="attachments[att_id]?.url_preview??''" alt="">
                     <div class="card-body text-truncate">
                         <p class="card-text att-iname">{{attachments[att_id]?.iname??''}}</p>
-                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default"><~/common/icons/cloud-download-fill></a>
+                        <a :href="attachments[att_id]?.url??''" target="_blank" class="btn btn-default" title="`Download`" aria-label="`Download`"><~/common/icons/cloud-download-fill></a>
                         <button type="button" class="btn btn-default ms-1" @click="onAttLinkDelete(att_id)" title="`Remove`"><~/common/icons/x-circle-fill></button>
                     </div>
                 </div>
@@ -152,7 +152,7 @@
                 <!-- hidden input to persist selected file on autosave/submit -->
                 <input type="hidden" class="att-post-prefix" :name="att_post_prefix+'['+att_id+']'" value="1">
                 &nbsp;&#183;&nbsp;<span class="text-truncate"><a :href="attachments[att_id]?.url??'#'" target="_blank" class="att-iname">{{attachments[att_id]?.iname??att_id}}</a> <span class="att-size text-muted ms-2">({{bytes2str(attachments[att_id]?.fsize??0)}})</span></span>
-                <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" @click.prevent="onAttFileDelete(att_id)"><~/common/icons/x-circle-fill></button>
+                <button type="button" class="btn btn-sm btn-link text-danger on-remove-att" title="`Remove`" aria-label="`Remove`" @click.prevent="onAttFileDelete(att_id)"><~/common/icons/x-circle-fill></button>
             </div>
         </div>
         <div v-if="!att_files.length && !uploading_files.length" class="fw-empty-state text-center mx-auto py-2">`No files uploaded`</div>

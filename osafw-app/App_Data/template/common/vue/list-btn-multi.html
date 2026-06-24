@@ -15,7 +15,8 @@
         <template v-for="btn in uioptions.buttons">
             <button type="button"
                     :class="btn.class??'btn btn-default me-2'"
-                    :title="btn.title"
+                    :title="btn.title || btn.hint || btn.label || 'Action'"
+                    :aria-label="btn.title || btn.hint || btn.label || 'Action'"
                     @click="onCustom(btn.url)"
                     :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
                 <i :class="btn.icon" v-if="btn.icon"></i> {{btn.label}}

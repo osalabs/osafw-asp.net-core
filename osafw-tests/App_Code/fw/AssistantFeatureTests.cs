@@ -521,16 +521,19 @@ public class AssistantFeatureTests
 
         var catalog = AssistantNavigationCatalog.Parse(json);
         var passwordRows = catalog.find(fw, "I want to change my password", "edit");
+        var uploadRows = catalog.find(fw, "Where do I manage uploads?", "list");
 
         Assert.IsTrue(catalog.controllers.Count > 5);
         Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/Users"));
         Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/KBArticles"));
+        Assert.IsTrue(catalog.controllers.Any(static item => item.url == "/Admin/Att"));
         Assert.IsTrue(catalog.controllers.All(static item => item.url.StartsWith("/", StringComparison.Ordinal)));
         Assert.IsTrue(passwordRows.Count > 0);
         var passwordRow = (FwDict)passwordRows[0]!;
         Assert.AreEqual("Change Password", passwordRow["label"]);
         Assert.AreEqual("/My/Password", passwordRow["url"]);
         Assert.AreEqual("list", passwordRow["action"]);
+        Assert.IsTrue(uploadRows.Cast<FwDict>().Any(static row => row["url"].toStr() == "/Admin/Att"));
     }
 
     [TestMethod]

@@ -630,9 +630,12 @@ public class FwVueController : FwDynamicController
         throw new NotImplementedException(); // N/A for Vue controllers
     }
 
+    /// <summary>
+    /// Renders the standard delete confirmation for direct Vue delete-route access.
+    /// </summary>
     public override void ShowDeleteAction(int id)
     {
-        throw new NotImplementedException(); // N/A for Vue controllers
+        base.ShowDeleteAction(id);
     }
 
 }

@@ -144,6 +144,25 @@
       ]
     },
     {
+      "url": "/Admin/Att",
+      "controller": "AdminAtt",
+      "label": "Manage Uploads",
+      "description": "Manage uploaded files, upload library items, categories, file metadata, downloads, and upload edits.",
+      "keywords": ["uploads", "upload", "manage uploads", "files", "attachments", "attachment manager", "media library", "documents"],
+      "min_access_level": 80,
+      "actions": ["list", "view", "new", "edit"],
+      "list_filters": [
+        { "name": "s", "label": "Search", "type": "text" },
+        { "name": "att_categories_id", "label": "Category", "type": "number" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ],
+      "prefill_fields": [
+        { "name": "iname", "label": "Title", "type": "text" },
+        { "name": "att_categories_id", "label": "Category", "type": "number" },
+        { "name": "status", "label": "Status", "type": "select", "options": { "0": "Active", "10": "Inactive", "127": "Deleted" } }
+      ]
+    },
+    {
       "url": "/Admin/Reports",
       "controller": "AdminReports",
       "label": "Reports",
