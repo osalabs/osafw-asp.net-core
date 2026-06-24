@@ -10,6 +10,8 @@ param(
 $EnvironmentName = "Develop"
 $GitBranch = "develop"
 $DeployName = "deploy-develop"
+# Optional: set to your app's deploy notification endpoint, for example "https://deploy.samplesite.tld/Notify".
+$NotifyWebhook = ""
 $DeployScriptName = [System.IO.Path]::GetFileNameWithoutExtension($PSCommandPath)
 
 $DeployExitCode = 1

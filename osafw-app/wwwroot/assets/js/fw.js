@@ -595,6 +595,14 @@ window.fw={
       }
     });
 
+    $(document).on('keydown', 'form[data-list-filter] input[name="f[s]"]', function (e) {
+      if (e.which == 13) {
+        e.preventDefault();
+        $(this.form).trigger('submit');
+        return false;
+      }
+    });
+
     //on filter form submit - add advanced search fields into form
     $ffilter.on('submit', function (e) {
         var $f = $ffilter;

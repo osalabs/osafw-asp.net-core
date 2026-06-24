@@ -1,0 +1,7 @@
+<a class="btn btn-default" href="<~../url>"><~/common/icons/arrow-left-circle><span class="btn-label">`Back`</span></a>
+<form method="post" action="<~../url>/(DeleteEntity)" class="mb-0" onsubmit="return confirm('Delete all RAG sources and chunks for this entity item?')">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <input type="hidden" name="entity_icode" value="<~i[entity_icode]>">
+  <input type="hidden" name="item_id" value="<~i[item_id]>">
+  <button type="submit" class="btn btn-default"><span class="text-danger"><~/common/icons/x-circle-fill></span><span class="btn-label">`Delete Entity Sources`</span></button>
+</form>

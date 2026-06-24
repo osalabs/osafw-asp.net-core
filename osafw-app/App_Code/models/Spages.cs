@@ -49,7 +49,17 @@ public class Spages : FwModel<Spages.Row>
         var item_old = one(id);
         // home page cannot be deleted
         if (!item_old["is_home"].toBool())
+        {
+            try
+            {
+                fw.model<RagSources>().deleteByEntity(FwEntities.ICODE_SPAGE, id);
+            }
+            catch
+            {
+                // RAG tables are optional and may not be installed.
+            }
             base.delete(id, is_perm);
+        }
     }
 
     public bool isExistsByUrl(string url, int parent_id, int not_id)

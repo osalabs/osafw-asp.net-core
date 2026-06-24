@@ -9,6 +9,19 @@ namespace osafw;
 
 public class Settings : FwModel<Settings.Row>
 {
+    public const string ICAT_AI = "AI";
+    public const int INPUT_TEXT = 0;
+    public const int INPUT_TEXTAREA = 10;
+    public const int INPUT_SELECT = 20;
+    public const int INPUT_SELECT_MULTI = 21;
+    public const int INPUT_CHECKBOX = 30;
+    public const int INPUT_RADIO = 40;
+    public const int INPUT_DATE = 50;
+    public const int INPUT_NUMBER = 60;
+    public const int INPUT_SWITCH = 70;
+    public const int INPUT_RANGE = 80;
+    public const int INPUT_CREDENTIAL = 90;
+
     public class Row
     {
         public int id { get; set; }
@@ -49,6 +62,29 @@ public class Settings : FwModel<Settings.Row>
         return read(icode).toInt();
     }
 
+    public string read(string icode, string defaultValue)
+    {
+        return getValue(icode, defaultValue);
+    }
+
+    public bool readBool(string icode, bool defaultValue = false)
+    {
+        var value = read(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value.toBool();
+    }
+
+    public int readInt(string icode, int defaultValue = 0)
+    {
+        var value = read(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value.toInt(defaultValue);
+    }
+
+    public long readLong(string icode, long defaultValue = 0)
+    {
+        var value = read(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value.toLong(defaultValue);
+    }
+
     /// <summary>
     /// Reads a site setting as a nullable date.
     /// </summary>
@@ -79,6 +115,13 @@ public class Settings : FwModel<Settings.Row>
         var row = oneByIcode(icode);
         return row.TryGetValue("ivalue", out string? value) ? value.toStr() : string.Empty;
     }
+
+    public string getValue(string icode, string defaultValue)
+    {
+        var value = getValue(icode);
+        return string.IsNullOrEmpty(value) ? defaultValue : value;
+    }
+
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);
@@ -97,6 +140,20 @@ public class Settings : FwModel<Settings.Row>
             fields["is_user_edit"] = "0"; // all auto-added settings is not user-editable by default
             this.add(fields);
         }
+    }
+
+    /// <summary>
+    /// Lists categories currently used by settings rows for the admin settings tabs.
+    /// </summary>
+    public FwList listCategories()
+    {
+        FwList rows = db.arrayp($@"
+select icat
+  from {db.qid(table_name)}
+ group by icat
+ order by case when icat='' then 0 else 1 end, icat", DB.h());
+
+        return rows;
     }
 
     // check if item exists for a given icode

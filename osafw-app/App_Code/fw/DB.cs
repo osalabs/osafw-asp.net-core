@@ -1278,6 +1278,20 @@ public class DB : IDisposable
         return name.StartsWith('@') || name.StartsWith('$') || name.StartsWith(':') ? name : "@" + name;
     }
 
+    private static object? logParamValue(object? value)
+    {
+        return value is DBParamValue dbParam ? dbParam.Value : value;
+    }
+
+    private static FwDict logParamValues(FwDict @params)
+    {
+        FwDict result = new(@params.Count);
+        foreach (var item in @params)
+            result[namedParam(item.Key)] = logParamValue(item.Value);
+
+        return result;
+    }
+
     private void logQueryAndParams(string sql, FwDict @params)
     {
         if (@params.Count > 0)
@@ -1285,11 +1299,11 @@ public class DB : IDisposable
             if (@params.Count == 1) // one param - just include inline for easier log reading
             {
                 var pname = @params.Keys.First();
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", pname, "=", is_log_pii ? @params[pname] : "[hidden]", " }");
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " { ", is_log_pii ? logParamValue(@params[pname]) : "[hidden]", " }");
             }
             else
             {
-                logger(LogLevel.INFO, "DB:", db_name, " ", sql, is_log_pii ? @params : " params=" + string.Join(", ", @params.Keys));
+                logger(LogLevel.INFO, "DB:", db_name, " ", sql, " ", is_log_pii ? logParamValues(@params) : " params=" + string.Join(", ", @params.Keys.Select(namedParam)));
             }
         }
         else

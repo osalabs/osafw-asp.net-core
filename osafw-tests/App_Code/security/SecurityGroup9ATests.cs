@@ -18,6 +18,14 @@ public class SecurityGroup9ATests
         public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
     }
 
+    private sealed class DashboardSettings : Settings
+    {
+        public override DBRow oneByIcode(string icode)
+        {
+            return new DBRow(DB.h("id", 1, "icode", icode, "ivalue", "0"));
+        }
+    }
+
     private sealed record ValueCall(string Table, FwDict Where);
 
     private sealed record QueryCall(string Sql, FwDict Params);
@@ -164,6 +172,9 @@ public class SecurityGroup9ATests
         var users = new DashboardUsers();
         users.init(fw);
         TestHelpers.RegisterModel(fw, (Users)users);
+        var settings = new DashboardSettings();
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
         var controller = new MainController();
         controller.init(fw);
 
@@ -197,7 +208,7 @@ public class SecurityGroup9ATests
     {
         var db = new DB("", DB.DBTYPE_SQLSRV);
         var messages = new List<string>();
-        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => arg?.ToString() ?? ""))));
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
         var method = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var sql = "update users set pwd=@pwd where pwd_reset=@reset";
@@ -224,7 +235,7 @@ public class SecurityGroup9ATests
             is_log_pii = true
         };
         var messages = new List<string>();
-        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => arg?.ToString() ?? ""))));
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
         var method = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var sql = "select * from users where pwd=@pwd";
@@ -237,6 +248,38 @@ public class SecurityGroup9ATests
 
         var log = string.Join("\n", messages);
         Assert.IsTrue(log.Contains("plaintext-password"));
+        Assert.IsTrue(log.Contains("{ plaintext-password }"));
+        Assert.IsFalse(log.Contains("@pwd=plaintext-password"));
+    }
+
+    [TestMethod]
+    public void DbLogging_LogPiiUnwrapsHelperParameterMetadata()
+    {
+        var db = new DB("", DB.DBTYPE_SQLSRV)
+        {
+            is_log_pii = true
+        };
+        var messages = new List<string>();
+        db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
+        var logMethod = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
+        var paramMethod = typeof(DB).GetMethod("paramValue", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new AssertFailedException("Expected DB.paramValue");
+        var sql = "select * from att_categories where icode=@icode and prio=@prio";
+        var parameters = new FwDict
+        {
+            ["icode"] = paramMethod.Invoke(null, ["icode", "varchar", "general"]),
+            ["prio"] = paramMethod.Invoke(null, ["prio", "int", 10])
+        };
+
+        logMethod.Invoke(db, [sql, parameters]);
+
+        var log = string.Join("\n", messages);
+        Assert.IsTrue(log.Contains("@icode => general"));
+        Assert.IsTrue(log.Contains("@prio => 10"));
+        Assert.IsFalse(log.Contains("FieldName"));
+        Assert.IsFalse(log.Contains("FieldType"));
+        Assert.IsFalse(log.Contains("Value"));
     }
 
     [TestMethod]
@@ -254,7 +297,8 @@ public class SecurityGroup9ATests
         Assert.IsTrue(developmentOverride.GetProperty("log_pii").GetBoolean());
         Assert.IsTrue(appSettings.TryGetProperty("access_levels", out var accessLevels));
         Assert.IsFalse(appSettings.TryGetProperty("accesss_levels", out _));
-        Assert.IsTrue(accessLevels.TryGetProperty("/Main", out _));
+        Assert.IsTrue(accessLevels.TryGetProperty("/Main", out var mainAccessLevel));
+        Assert.AreEqual(Users.ACL_MEMBER, mainAccessLevel.GetInt32());
     }
 
     private static bool hasUsersIdScope(FwDict parameters)

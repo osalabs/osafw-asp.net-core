@@ -12,6 +12,9 @@ public class FwModelLookupTests
         public readonly List<string> SqlCalls = [];
         public readonly List<FwDict> ParamCalls = [];
         public readonly Queue<DBList> Results = [];
+        public readonly List<FwDict> UpdateFields = [];
+        public readonly List<FwDict> UpdateWhere = [];
+        public int UpdateResult { get; set; } = 1;
 
         public FakeDb() : base("", DB.DBTYPE_SQLSRV) { }
 
@@ -21,6 +24,13 @@ public class FwModelLookupTests
             ParamCalls.Add(@params == null ? [] : new FwDict(@params));
             return Results.Count > 0 ? Results.Dequeue() : [];
         }
+
+        public override int update(string table, FwDict fields, FwDict where)
+        {
+            UpdateFields.Add(new FwDict(fields));
+            UpdateWhere.Add(new FwDict(where));
+            return UpdateResult;
+        }
     }
 
     private class LookupModel : FwModel
@@ -29,6 +39,16 @@ public class FwModelLookupTests
             : base(fw)
         {
             table_name = "lookup_rows";
+        }
+    }
+
+    private class UpdateModel : FwModel
+    {
+        public UpdateModel(FW fw)
+            : base(fw)
+        {
+            table_name = "update_rows";
+            is_log_changes = false;
         }
     }
 
@@ -79,6 +99,31 @@ public class FwModelLookupTests
         var fw = TestHelpers.CreateFw();
         fw.db = db;
         return new LookupModel(fw);
+    }
+
+    private static UpdateModel BuildUpdateModel(FakeDb db)
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.db = db;
+        return new UpdateModel(fw);
+    }
+
+    [TestMethod]
+    public void Update_ReturnsWhetherDatabaseAffectedRows()
+    {
+        var updatedDb = new FakeDb { UpdateResult = 1 };
+        var updatedModel = BuildUpdateModel(updatedDb);
+
+        Assert.IsTrue(updatedModel.update(5, DB.h("iname", "Updated")));
+        Assert.HasCount(1, updatedDb.UpdateWhere);
+        Assert.AreEqual(5, updatedDb.UpdateWhere[0]["id"]);
+
+        var missedDb = new FakeDb { UpdateResult = 0 };
+        var missedModel = BuildUpdateModel(missedDb);
+
+        Assert.IsFalse(missedModel.update(6, DB.h("iname", "Missing")));
+        Assert.HasCount(1, missedDb.UpdateWhere);
+        Assert.AreEqual(6, missedDb.UpdateWhere[0]["id"]);
     }
 
     [TestMethod]

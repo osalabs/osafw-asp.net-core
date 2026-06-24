@@ -13,6 +13,10 @@ public class FwEntities : FwModel
     //constants for standard entities
     public const string ICODE_USERS = "users";
     public const string ICODE_ASSISTANT = "assistant";
+    public const string ICODE_ASSISTANT_MESSAGE = "assistant_message";
+    public const string ICODE_ATT = "att";
+    public const string ICODE_KB = "kb";
+    public const string ICODE_SPAGE = "spage";
     public FwEntities() : base()
     {
         table_name = "fwentities";

@@ -1,6 +1,6 @@
 <div class="card dashboard-card">
     <div class="svg-container <~value_class>">
-       <~icon_block if="icon" inline><i class="bi <~icon>"></i></~icon_block>
+       <~icon_block if="icon" inline><~icon_link_start if="url" inline><a href="<~url>" class="text-reset text-decoration-none" aria-label="<~title>"></~icon_link_start><i class="bi <~icon>"></i><~icon_link_end if="url" inline></a></~icon_link_end></~icon_block>
     </div>
     <div class="card-body <~blink3 if="url" inline>on-card-click</~blink3>" data-url="<~url>">
       <div class="card-content">
@@ -21,6 +21,7 @@
         <~type_html ifeq="type" value="html">
         <~type_areachart ifeq="type" value="areachart">
         <~type_progress ifeq="type" value="progress">
+        <~type_assistant ifeq="type" value="assistant">
       </div>
     </div>
 </div>
