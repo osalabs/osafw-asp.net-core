@@ -125,7 +125,7 @@ public class FwCron : FwModel
     /// <param name="from_date">The reference date after which the next occurrence is calculated.</param>
     /// <param name="end_date">Optional end date beyond which no runs should occur.</param>
     /// <returns>The next scheduled DateTime in UTC, or null if none exists.</returns>
-    private static DateTime? calculateNextRun(string cron, DateTime from_date, DateTime? end_date)
+    internal static DateTime? calculateNextRun(string cron, DateTime from_date, DateTime? end_date)
     {
         // Try parsing the CRON expression
         if (!CronExpression.TryParse(cron, out var cron_expression))

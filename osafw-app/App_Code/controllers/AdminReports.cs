@@ -300,7 +300,7 @@ public class AdminReportsController : FwController
     /// </summary>
     /// <param name="id">Existing report id or 0 for new reports.</param>
     /// <param name="item">Submitted report fields.</param>
-    private void validateCustomReport(int id, FwDict item)
+    internal void validateCustomReport(int id, FwDict item)
     {
         validateRequired(id, item, "icode iname sql_template");
         item["icode"] = FwReportsBase.cleanupRepcode(item["icode"].toStr().Trim());

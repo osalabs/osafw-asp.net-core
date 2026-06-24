@@ -15,12 +15,15 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 #endif
 using System;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("osafw-tests")]
 
 namespace osafw;
 
 public static class Program
 {
-    private const bool ALLOW_PLAINTEXT_DP_KEYS = false;
+    internal const bool ALLOW_PLAINTEXT_DP_KEYS = false;
 
     public static void Main(string[] args)
     {

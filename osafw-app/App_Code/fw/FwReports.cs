@@ -592,7 +592,7 @@ ORDER BY {lookupDb.qid("iname")}";
     /// </summary>
     /// <param name="rows">Accessible custom report rows.</param>
     /// <returns>The same row list with derived display flags attached.</returns>
-    private DBList withIndexDisplayState(DBList rows)
+    internal DBList withIndexDisplayState(DBList rows)
     {
         foreach (var row in rows)
         {

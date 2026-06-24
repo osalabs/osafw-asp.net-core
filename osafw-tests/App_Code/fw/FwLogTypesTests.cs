@@ -1,6 +1,4 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
-using System.Reflection;
 
 namespace osafw.Tests
 {
@@ -18,27 +16,19 @@ namespace osafw.Tests
         [TestMethod]
         public void Constants_AreStable()
         {
-            var expected = new Dictionary<string, object>
-            {
-                { nameof(FwLogTypes.ITYPE_SYSTEM), 0 },
-                { nameof(FwLogTypes.ITYPE_USER), 10 },
-                { nameof(FwLogTypes.ICODE_ADDED), "added" },
-                { nameof(FwLogTypes.ICODE_UPDATED), "updated" },
-                { nameof(FwLogTypes.ICODE_DELETED), "deleted" },
-                { nameof(FwLogTypes.ICODE_COMMENT), "comment" },
-                { nameof(FwLogTypes.ICODE_USERS_SIMULATE), "simulate" },
-                { nameof(FwLogTypes.ICODE_USERS_LOGIN), "login" },
-                { nameof(FwLogTypes.ICODE_USERS_LOGIN_FAIL), "login_fail" },
-                { nameof(FwLogTypes.ICODE_USERS_LOGOFF), "logoff" },
-                { nameof(FwLogTypes.ICODE_USERS_CHPWD), "chpwd" },
-            };
-
-            foreach (var kvp in expected)
-            {
-                var field = typeof(FwLogTypes).GetField(kvp.Key, BindingFlags.Public | BindingFlags.Static);
-                Assert.IsNotNull(field, $"Field {kvp.Key} should exist");
-                Assert.AreEqual(kvp.Value, field!.GetRawConstantValue(), $"Field {kvp.Key} should keep its value");
-            }
+            Assert.AreEqual(0, value(FwLogTypes.ITYPE_SYSTEM));
+            Assert.AreEqual(10, value(FwLogTypes.ITYPE_USER));
+            Assert.AreEqual("added", value(FwLogTypes.ICODE_ADDED));
+            Assert.AreEqual("updated", value(FwLogTypes.ICODE_UPDATED));
+            Assert.AreEqual("deleted", value(FwLogTypes.ICODE_DELETED));
+            Assert.AreEqual("comment", value(FwLogTypes.ICODE_COMMENT));
+            Assert.AreEqual("simulate", value(FwLogTypes.ICODE_USERS_SIMULATE));
+            Assert.AreEqual("login", value(FwLogTypes.ICODE_USERS_LOGIN));
+            Assert.AreEqual("login_fail", value(FwLogTypes.ICODE_USERS_LOGIN_FAIL));
+            Assert.AreEqual("logoff", value(FwLogTypes.ICODE_USERS_LOGOFF));
+            Assert.AreEqual("chpwd", value(FwLogTypes.ICODE_USERS_CHPWD));
         }
+
+        private static T value<T>(T value) => value;
     }
 }

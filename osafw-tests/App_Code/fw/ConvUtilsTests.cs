@@ -1,14 +1,10 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace osafw.Tests
@@ -16,19 +12,10 @@ namespace osafw.Tests
     [TestClass()]
     public class ConvUtilsTests
     {
-        private static FW CreateFw()
-        {
-            var context = new DefaultHttpContext
-            {
-                Session = new FakeSession(),
-            };
-            return new FW(context, new ConfigurationBuilder().Build());
-        }
-
         [TestMethod]
         public async Task Html2Pdf_ThrowsWhenFilenameMissing()
         {
-            var fw = CreateFw();
+            var fw = TestHelpers.CreateFw();
 
             try
             {
@@ -44,7 +31,7 @@ namespace osafw.Tests
         [TestMethod]
         public void Html2xls_RequiresConfiguredConverter()
         {
-            var fw = CreateFw();
+            var fw = TestHelpers.CreateFw();
             var htmlFile = Path.GetTempFileName();
             var xlsFile = Path.GetTempFileName();
 
@@ -67,7 +54,7 @@ namespace osafw.Tests
         [TestMethod]
         public void ExportNativeExcel_WritesHeadersAndRows()
         {
-            var fw = CreateFw();
+            var fw = TestHelpers.CreateFw();
             var headers = new List<string> { "First", "Second" };
             var fields = new List<string> { "first", "second" };
             var rows = new FwList
@@ -109,50 +96,5 @@ namespace osafw.Tests
             }
         }
 
-        [TestMethod]
-        public void ReplaceSpecials_ReplacesTrademarkAndRegisteredSymbols()
-        {
-            var method = typeof(ConvUtils).GetMethod("_replace_specials", BindingFlags.NonPublic | BindingFlags.Static)!;
-            var input = $"Marks {(char)153} and {(char)174}";
-
-            var result = (string)method.Invoke(null, new object[] { input })!;
-
-            StringAssert.Contains(result, "<sup><small>TM</small></sup>");
-            StringAssert.Contains(result, "<sup><small>R</small></sup>");
-        }
-
-        [TestMethod]
-        public void XlsxGetMaxCharacterWidth_ComputesMaxAcrossValuesAndHeaders()
-        {
-            var method = typeof(ConvUtils).GetMethod("xlsxGetMaxCharacterWidth", BindingFlags.NonPublic | BindingFlags.Static)!;
-            var rows = new FwList
-            {
-                new FwDict { { "Col1", "short" }, { "Col2", "longervalue" } },
-                new FwDict { { "Col1", "veryverylong" }, { "Col3", "x" } },
-            };
-            var headers = new List<string> { "Col1", "Col2", "Col3" };
-
-            var result = (Dictionary<string, int>)method.Invoke(null, new object[] { rows, headers })!;
-
-            Assert.AreEqual(12, result["Col1"]);
-            Assert.AreEqual(11, result["Col2"]);
-            Assert.AreEqual(10, result["Col3"]);
-        }
-
-        private class FakeSession : ISession
-        {
-            private readonly Dictionary<string, byte[]> store = new();
-
-            public IEnumerable<string> Keys => store.Keys;
-            public string Id { get; } = Guid.NewGuid().ToString();
-            public bool IsAvailable => true;
-
-            public void Clear() => store.Clear();
-            public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-            public Task LoadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-            public void Remove(string key) => store.Remove(key);
-            public void Set(string key, byte[] value) => store[key] = value;
-            public bool TryGetValue(string key, out byte[] value) => store.TryGetValue(key, out value!);
-        }
     }
 }

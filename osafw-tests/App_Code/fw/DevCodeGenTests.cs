@@ -4,16 +4,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 
 namespace osafw.Tests;
 
 [TestClass]
 public class DevCodeGenTests
 {
-    private static readonly Type CodeGenType = typeof(FW).Assembly.GetType("osafw.DevCodeGen")
-        ?? throw new InvalidOperationException("DevCodeGen type was not found.");
-
     [TestMethod]
     public void CreateModel_ClearsFieldIcodeWhenTableHasNoIcode()
     {
@@ -401,28 +397,19 @@ public class DevCodeGenTests
     private static void InvokeUpdateControllerConfig(FW fw, FwDict entity, FwDict config)
     {
         var codeGen = CreateCodeGen(fw);
-        var method = CodeGenType.GetMethod("updateControllerConfig", BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.updateControllerConfig was not found.");
-
-        method.Invoke(codeGen, new object?[] { entity, config, new FwList() });
+        codeGen.updateControllerConfig(entity, config, new FwList());
     }
 
     private static void InvokeCreateModel(FW fw, FwDict entity)
     {
         var codeGen = CreateCodeGen(fw);
-        var method = CodeGenType.GetMethod("createModel", BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.createModel was not found.");
-
-        method.Invoke(codeGen, new object?[] { entity });
+        codeGen.createModel(entity);
     }
 
     private static string InvokeBuildLookupInsertSql(FW fw, FwDict item)
     {
         var codeGen = CreateCodeGen(fw);
-        var method = CodeGenType.GetMethod("buildLookupInsertSql", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("DevCodeGen.buildLookupInsertSql was not found.");
-
-        return method.Invoke(codeGen, new object?[] { item })?.toStr() ?? "";
+        return codeGen.buildLookupInsertSql(item);
     }
 
     private static int InvokeAddToFormColumns(
@@ -434,26 +421,17 @@ public class DevCodeGenTests
         FwDict sysFields,
         FwList fields)
     {
-        var method = CodeGenType.GetMethod("addToFormColumns", BindingFlags.Static | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.addToFormColumns was not found.");
-
-        return method.Invoke(null, new object?[] { fld, sf, sff, showFieldsTabs, showFormFieldsTabs, sysFields, fields }).toInt();
+        return DevCodeGen.addToFormColumns(fld, sf, sff, showFieldsTabs, showFormFieldsTabs, sysFields, fields);
     }
 
     private static void InvokeAddToTabColumn(Dictionary<string, List<List<FwDict>>> showFieldsTabs, string tab, int col, FwDict field)
     {
-        var method = CodeGenType.GetMethod("addToTabColumn", BindingFlags.Static | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.addToTabColumn was not found.");
-
-        method.Invoke(null, new object?[] { showFieldsTabs, tab, col, field });
+        DevCodeGen.addToTabColumn(showFieldsTabs, tab, col, field);
     }
 
     private static FwList InvokeMakeLayoutForFields(List<List<FwDict>> fieldsCols)
     {
-        var method = CodeGenType.GetMethod("makeLayoutForFields", BindingFlags.Static | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.makeLayoutForFields was not found.");
-
-        return (FwList)(method.Invoke(null, new object?[] { fieldsCols }) ?? new FwList());
+        return DevCodeGen.makeLayoutForFields(fieldsCols);
     }
 
     private static FwDict FindField(FwList fields, string fieldName)
@@ -467,23 +445,14 @@ public class DevCodeGenTests
         throw new InvalidOperationException($"Field '{fieldName}' was not found.");
     }
 
-    private static object CreateCodeGen(FW fw)
+    private static DevCodeGen CreateCodeGen(FW fw)
     {
-        var ctor = CodeGenType.GetConstructor(
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            binder: null,
-            types: new[] { typeof(FW), typeof(DB) },
-            modifiers: null)
-            ?? throw new InvalidOperationException("DevCodeGen constructor was not found.");
-        return ctor.Invoke(new object?[] { fw, fw.db });
+        return new DevCodeGen(fw, fw.db);
     }
 
     private static string InvokeBuildRowPropertyType(IDictionary field)
     {
-        var method = CodeGenType.GetMethod("buildRowPropertyType", BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("DevCodeGen.buildRowPropertyType was not found.");
-
-        return method.Invoke(null, new object?[] { field }).toStr();
+        return DevCodeGen.buildRowPropertyType(field);
     }
 
     private static FwList TenGeneratedFields()

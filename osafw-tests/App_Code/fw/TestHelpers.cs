@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,33 +8,30 @@ namespace osafw.Tests;
 
 internal static class TestHelpers
 {
-        public static FW CreateFw(IDictionary<string, string?>? settings = null)
-        {
-            var context = new DefaultHttpContext
-            {
-                Session = new FakeSession(),
-            };
-
-            var hostName = FwConfig.hostname;
-            if (!string.IsNullOrEmpty(hostName))
-                context.Request.Host = new HostString(hostName);
+    public static FW CreateFw(IDictionary<string, string?>? settings = null)
+    {
+        var context = CreateHttpContext();
 
         var configurationBuilder = new ConfigurationBuilder().AddInMemoryCollection(settings ?? new Dictionary<string, string?>());
         var fw = new FW(context, configurationBuilder.Build());
         return fw;
     }
 
-    public static void RegisterModel<T>(FW fw, T model) where T : class
+    public static DefaultHttpContext CreateHttpContext(string? host = null)
     {
-        var modelsField = typeof(FW).GetField("models", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (modelsField == null)
-            throw new System.InvalidOperationException("models field not found on FW");
+        var context = new DefaultHttpContext
+        {
+            Session = new FakeSession(),
+        };
 
-        if (modelsField.GetValue(fw) is not FwDict cache)
-            throw new System.InvalidOperationException("models cache is not initialized");
+        var hostName = host ?? FwConfig.hostname;
+        if (!string.IsNullOrEmpty(hostName))
+            context.Request.Host = new HostString(hostName);
 
-        cache[typeof(T).Name] = model;
+        return context;
     }
+
+    public static void RegisterModel<T>(FW fw, T model) where T : class => fw.registerModelForTesting(model);
 
     public class FakeSession : ISession
     {

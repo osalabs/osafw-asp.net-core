@@ -17,6 +17,8 @@ public class FwCustomReport : FwReportsBase
     private FwReports reportModel = null!;
     private FwList paramDefs = [];
 
+    internal FwReports ReportModel => reportModel;
+
     public FwCustomReport(FwDict report)
     {
         this.report = new FwDict(report);
@@ -222,7 +224,7 @@ public class FwCustomReport : FwReportsBase
     /// <summary>
     /// Converts raw DB rows into header and cell collections for the generic custom-report table template.
     /// </summary>
-    private void buildResultTable()
+    internal void buildResultTable()
     {
         var headers = new FwList();
         var rows = new FwList();
@@ -296,7 +298,7 @@ public class FwCustomReport : FwReportsBase
     /// <summary>
     /// Applies user-requested sorting to the materialized result rows after validating the field exists in the result shape.
     /// </summary>
-    private void sortResultRows()
+    internal void sortResultRows()
     {
         var sortby = f["sortby"].toStr();
         if (string.IsNullOrEmpty(sortby) || list_rows.Count == 0 || !list_rows[0].ContainsKey(sortby))

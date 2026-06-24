@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 
 namespace osafw.Tests;
@@ -209,8 +208,6 @@ public class SecurityGroup9ATests
         var db = new DB("", DB.DBTYPE_SQLSRV);
         var messages = new List<string>();
         db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
-        var method = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var sql = "update users set pwd=@pwd where pwd_reset=@reset";
         var parameters = new FwDict
         {
@@ -218,7 +215,7 @@ public class SecurityGroup9ATests
             ["@reset"] = "reset-code"
         };
 
-        method.Invoke(db, [sql, parameters]);
+        db.logQueryAndParams(sql, parameters);
 
         var log = string.Join("\n", messages);
         Assert.IsTrue(log.Contains("@pwd"));
@@ -236,15 +233,13 @@ public class SecurityGroup9ATests
         };
         var messages = new List<string>();
         db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
-        var method = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
         var sql = "select * from users where pwd=@pwd";
         var parameters = new FwDict
         {
             ["@pwd"] = "plaintext-password"
         };
 
-        method.Invoke(db, [sql, parameters]);
+        db.logQueryAndParams(sql, parameters);
 
         var log = string.Join("\n", messages);
         Assert.IsTrue(log.Contains("plaintext-password"));
@@ -261,18 +256,14 @@ public class SecurityGroup9ATests
         };
         var messages = new List<string>();
         db.setLogger((_, args) => messages.Add(string.Join("", args.Select(arg => FwLogger.dumper(arg)))));
-        var logMethod = typeof(DB).GetMethod("logQueryAndParams", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new AssertFailedException("Expected DB.logQueryAndParams");
-        var paramMethod = typeof(DB).GetMethod("paramValue", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new AssertFailedException("Expected DB.paramValue");
         var sql = "select * from att_categories where icode=@icode and prio=@prio";
         var parameters = new FwDict
         {
-            ["icode"] = paramMethod.Invoke(null, ["icode", "varchar", "general"]),
-            ["prio"] = paramMethod.Invoke(null, ["prio", "int", 10])
+            ["icode"] = DB.paramValue("icode", "varchar", "general"),
+            ["prio"] = DB.paramValue("prio", "int", 10)
         };
 
-        logMethod.Invoke(db, [sql, parameters]);
+        db.logQueryAndParams(sql, parameters);
 
         var log = string.Join("\n", messages);
         Assert.IsTrue(log.Contains("@icode => general"));

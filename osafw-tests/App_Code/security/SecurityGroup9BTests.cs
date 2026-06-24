@@ -2,7 +2,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 
 namespace osafw.Tests;
 
@@ -331,11 +330,10 @@ public class SecurityGroup9BTests
     [TestMethod]
     public void DataProtectionKeyProtection_DefaultConstDisallowsPlaintextFallback()
     {
-        var field = typeof(Program).GetField("ALLOW_PLAINTEXT_DP_KEYS", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new AssertFailedException("Expected ALLOW_PLAINTEXT_DP_KEYS constant");
-
-        Assert.AreEqual(false, field.GetRawConstantValue());
+        Assert.IsFalse(allowPlaintextDpKeys());
     }
+
+    private static bool allowPlaintextDpKeys() => Program.ALLOW_PLAINTEXT_DP_KEYS;
 
     [TestMethod]
     public void DataProtectionKeyProtection_StartupUsesDpapiOrFailsClosedInline()

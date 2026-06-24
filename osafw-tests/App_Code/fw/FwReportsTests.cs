@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
-using System.Reflection;
 
 namespace osafw.Tests;
 
@@ -168,9 +167,7 @@ public class FwReportsTests
             }
         };
 
-        typeof(FwReports)
-            .GetMethod("withIndexDisplayState", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(model, [rows]);
+        model.withIndexDisplayState(rows);
 
         Assert.AreEqual("1", rows[0]["is_autorun"]);
         Assert.AreEqual("", rows[1]["is_autorun"]);
@@ -225,9 +222,7 @@ public class FwReportsTests
             new FwDict { ["id"] = "2", ["amount"] = "2", ["status"] = "0", ["name"] = "Beta" }
         ];
 
-        typeof(FwCustomReport)
-            .GetMethod("buildResultTable", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(report, null);
+        report.buildResultTable();
 
         var headers = report.ps["result_headers"] as FwList ?? throw new AssertFailedException("Missing result headers");
         var totals = report.ps["result_totals"] as FwList ?? throw new AssertFailedException("Missing result totals");
@@ -273,9 +268,7 @@ public class FwReportsTests
             new FwDict { ["name"] = "Gamma", ["amount"] = "2" }
         ];
 
-        typeof(FwCustomReport)
-            .GetMethod("sortResultRows", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(report, null);
+        report.sortResultRows();
 
         Assert.AreEqual("Beta", report.list_rows[0]["name"]);
         Assert.AreEqual("Alpha", report.list_rows[1]["name"]);
@@ -325,13 +318,7 @@ public class FwReportsTests
             ["iname"] = "Sample Custom",
             ["sql_template"] = "select 1 as id"
         };
-        var method = typeof(AdminReportsController)
-            .GetMethod("validateCustomReport", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new AssertFailedException("validateCustomReport not found");
-
-        var ex = Assert.ThrowsExactly<TargetInvocationException>(() => method.Invoke(controller, [0, item]));
-
-        Assert.IsInstanceOfType(ex.InnerException, typeof(ValidationException));
+        Assert.ThrowsExactly<ValidationException>(() => controller.validateCustomReport(0, item));
         Assert.AreEqual("HARDCODED", fw.FormErrors["icode"]);
     }
 
@@ -472,9 +459,7 @@ public class FwReportsTests
         {
             get
             {
-                return (FwReports)(typeof(FwCustomReport)
-                    .GetField("reportModel", BindingFlags.Instance | BindingFlags.NonPublic)!
-                    .GetValue(this) ?? throw new AssertFailedException("reportModel not initialized"));
+                return ReportModel;
             }
         }
     }

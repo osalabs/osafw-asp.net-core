@@ -20,7 +20,7 @@ public class FwUpdates : FwModel
     }
 
     //comparer for sorting files by name without extension
-    private class FileNameWithoutExtComparer : IComparer<string>
+    internal class FileNameWithoutExtComparer : IComparer<string>
     {
         public int Compare(string? x, string? y)
         {

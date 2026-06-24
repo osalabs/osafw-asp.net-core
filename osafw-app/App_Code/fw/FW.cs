@@ -1708,6 +1708,14 @@ public class FW : IDisposable
         throw new InvalidOperationException($"Model cache entry for {tt.Name} is not of expected type {typeof(T).FullName}.");
     }
 
+    /// <summary>
+    /// Seeds the current request model cache for tests that need controlled model collaborators.
+    /// </summary>
+    internal void registerModelForTesting<T>(T model) where T : class
+    {
+        models[typeof(T).Name] = model;
+    }
+
     // return model object by model class name
     public FwModel model(string model_name)
     {

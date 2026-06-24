@@ -7,6 +7,7 @@ Use these as starting points, then fill the placeholders and remove anything tha
 ## Prompt Catalog
 
 - `fw_upgrade.md` - upgrade a downstream app from an older framework snapshot while preserving app-specific behavior.
+- `app_test_bootstrap_cleanup.md` - remove inherited framework implementation tests from a downstream app while keeping app smoke and app-specific coverage.
 - `orchestrator.md` - coordinate a large or risky task with planning, bounded delegation, implementation packets, verification, review, and closeout.
 - `pr_code_review.md` - review a GitHub PR, fix confirmed issues, verify, and repeat until ready for rereview.
 - `agent_reflection.md` - periodically inspect task summaries and improve shared agent instructions only where the pattern is stable and worth the added guidance.
@@ -17,6 +18,6 @@ Use these as starting points, then fill the placeholders and remove anything tha
 
 ## Selection Notes
 
-Task-summary history shows repeated work in PR review/fix loops, security hardening, framework upgrades, docs and agent-instruction hygiene, test stabilization, focused feature work, and occasional large multi-step efforts. Prefer one of those specific prompts over a broad generic request when starting that workflow.
+Task-summary history shows repeated work in PR review/fix loops, security hardening, framework upgrades, downstream app test cleanup, docs and agent-instruction hygiene, test stabilization, focused feature work, and occasional large multi-step efforts. Prefer one of those specific prompts over a broad generic request when starting that workflow.
 
 Do not let prompts override repo instructions. The local `AGENTS.md`, task summary rules, security guardrails, documentation sync rules, and testing guidance remain authoritative.

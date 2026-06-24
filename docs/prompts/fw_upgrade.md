@@ -23,6 +23,7 @@ Do a framework upgrade, not a blind overwrite.
 8. Add any new framework files, templates, scripts, SQL updates, package references, and config changes needed by the latest framework.
 9. For schema changes, update both fresh-install schema files and additive update/migration scripts where applicable.
 10. Preserve project business behavior and compatibility. Treat existing app-specific logic as authoritative unless the task explicitly changes product behavior.
+11. If the app repo still carries inherited framework implementation tests, run `app_test_bootstrap_cleanup.md` after framework files are merged so the app keeps app-specific tests and a small smoke suite instead of the full upstream framework suite.
 
 ## Verification
 

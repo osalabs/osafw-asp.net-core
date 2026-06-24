@@ -299,7 +299,7 @@ public class DB : IDisposable
         public required int FieldCount;
     }
 
-    private sealed class DBParamValue(string fieldName, string fieldType, object? value)
+    internal sealed class DBParamValue(string fieldName, string fieldType, object? value)
     {
         public string FieldName { get; } = fieldName;
         public string FieldType { get; } = fieldType;
@@ -506,7 +506,7 @@ public class DB : IDisposable
     /// <param name="fieldType">Framework field type from loaded schema.</param>
     /// <param name="value">Parameter value after DB operation normalization.</param>
     /// <returns>A lightweight metadata wrapper consumed when provider parameters are created.</returns>
-    private static DBParamValue paramValue(string fieldName, string fieldType, object? value)
+    internal static DBParamValue paramValue(string fieldName, string fieldType, object? value)
     {
         return new DBParamValue(fieldName, fieldType, value);
     }
@@ -1292,7 +1292,7 @@ public class DB : IDisposable
         return result;
     }
 
-    private void logQueryAndParams(string sql, FwDict @params)
+    internal void logQueryAndParams(string sql, FwDict @params)
     {
         if (@params.Count > 0)
         {

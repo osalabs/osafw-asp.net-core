@@ -580,7 +580,7 @@ class DevCodeGen
     /// </summary>
     /// <param name="item">Lookup controller values keyed by `fwcontrollers` column name.</param>
     /// <returns>SQL Server script block that inserts the lookup row only when its `icode` is absent.</returns>
-    private string buildLookupInsertSql(FwDict item)
+    internal string buildLookupInsertSql(FwDict item)
     {
         return Environment.NewLine + $@"IF NOT EXISTS (SELECT 1 FROM fwcontrollers WHERE icode={db.q(item["icode"])})
 BEGIN
@@ -1965,7 +1965,7 @@ END" + Environment.NewLine;
         return regex.Replace(template, rowClassBlock, 1);
     }
 
-    private static string buildRowPropertyType(IDictionary field)
+    internal static string buildRowPropertyType(IDictionary field)
     {
         var fwType = field["fw_type"].toStr().ToLowerInvariant();
         var fwSubtype = field["fw_subtype"].toStr().ToLowerInvariant();

@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
-using System.Reflection;
 
 namespace osafw.Tests;
 
@@ -125,12 +124,7 @@ public class SecurityStoredRenderingTests
             new FwDict { ["field"] = "trusted_body", ["type"] = "markdown", ["trusted"] = true }
         };
 
-        var codeGenType = typeof(FW).Assembly.GetType("osafw.DevCodeGen")
-            ?? throw new InvalidOperationException("DevCodeGen type was not found.");
-        var method = codeGenType.GetMethod("makeValueTags", BindingFlags.Static | BindingFlags.Public)
-            ?? throw new InvalidOperationException("DevCodeGen.makeValueTags was not found.");
-
-        method.Invoke(null, [fields]);
+        DevCodeGen.makeValueTags(fields);
 
         Assert.AreEqual("<~i[body] markdown>", ((FwDict)fields[0])["value"]);
         Assert.AreEqual("<~i[trusted_body] markdown=\"trusted\">", ((FwDict)fields[1])["value"]);

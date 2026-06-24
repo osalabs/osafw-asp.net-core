@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -59,12 +58,7 @@ public class DevEntityBuilderTests
 
     private static Dictionary<string, object?> InvokeParseField(string line, string comment)
     {
-        var entityBuilderType = typeof(FW).Assembly.GetType("osafw.DevEntityBuilder")
-            ?? throw new InvalidOperationException("DevEntityBuilder type was not found.");
-        var method = entityBuilderType.GetMethod("ParseField", BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("DevEntityBuilder.ParseField was not found.");
-
-        return (Dictionary<string, object?>)(method.Invoke(null, new object?[] { line, comment })
-            ?? throw new InvalidOperationException("DevEntityBuilder.ParseField returned null."));
+        return DevEntityBuilder.ParseField(line, comment)
+            ?? throw new InvalidOperationException("DevEntityBuilder.ParseField returned null.");
     }
 }

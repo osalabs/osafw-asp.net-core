@@ -334,7 +334,7 @@ class DevEntityBuilder
     // FieldName [Type(Length)] [NULL|NOT NULL] [DEFAULT(Value)] [UNIQUE|PRIMARY] [UI:option,option(some other value),option,...]
     // FieldName.id [NULL] [UI:option,option(some other value),option,...] -- foreign key
     // FieldName FK(TableName.FieldName) [NULL] [UI:option,option(some other value),option,...] -- foreign key
-    private static Dictionary<string, object?>? ParseField(string line, string comment)
+    internal static Dictionary<string, object?>? ParseField(string line, string comment)
     {
         var field = new Dictionary<string, object?>();
         if (comment.Length > 0) field["comments"] = comment;
