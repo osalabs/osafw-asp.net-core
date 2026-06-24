@@ -26,6 +26,12 @@ public class AdminAttController : FwAdminController
         list_sortmap = Utils.qh("id|id iname|iname add_time|add_time fsize|fsize ext|ext category|att_categories_id status|status");
     }
 
+    private bool hasPostedFile()
+    {
+        var files = fw.request?.Form?.Files;
+        return files != null && files.Count > 0 && files[0] != null && files[0].Length > 0;
+    }
+
     public override void checkAccess()
     {
         // add custom actions to permissions mapping
@@ -118,14 +124,16 @@ public class AdminAttController : FwAdminController
         FwDict itemdb = FormUtils.filter(item, save_fields);
         if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
+        model.convertUserInput(itemdb);
 
         if (id > 0)
         {
             model.update(id, itemdb);
             fw.flash("updated", 1);
 
-            // Proceed upload, if any - for edit - just one file
-            model.uploadOne(id, 0, false);
+            // Proceed upload, if any - for edit - just one file.
+            if (hasPostedFile())
+                model.uploadOne(id, 0, false);
         }
         else
         {
@@ -177,11 +185,8 @@ public class AdminAttController : FwAdminController
 
         if (itemdb["fsize"].toInt() == 0)
         {
-            var files = fw.request?.Form?.Files;
-            if (files == null || files.Count == 0 || files[0] == null || files[0].Length == 0)
-            {
+            if (!hasPostedFile())
                 fw.FormErrors["file1"] = "NOFILE";
-            }
         }
 
         this.validateCheckResult();

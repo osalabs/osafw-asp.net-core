@@ -67,6 +67,15 @@ namespace osafw.Tests
 
 
         [TestMethod()]
+        public void field2typedIntEmptyStringTest()
+        {
+            Assert.AreSame(DBNull.Value, db.field2typed("int", ""));
+            Assert.AreEqual(0L, db.field2typed("int", "0"));
+            Assert.AreNotSame(DBNull.Value, db.field2typed("int", "   "));
+        }
+
+
+        [TestMethod()]
         public void loggerTest()
         {
             try

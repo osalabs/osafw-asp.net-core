@@ -469,7 +469,14 @@ public abstract class FwModel : IDisposable
             var fw_type = field_schema["fw_type"].toStr();
             //var fw_subtype = field_schema["fw_subtype"].toStr();
 
-            if (fw_type == "date")
+            if (fw_type == "int"
+                && field_schema["is_nullable"].toBool()
+                && item[fieldname] is string intValue
+                && intValue.Length == 0)
+            {
+                item[fieldname] = DBNull.Value;
+            }
+            else if (fw_type == "date")
             {
                 // skip if value is DB.NOW object or DateTime object
                 if (item[fieldname] is DateTime || item[fieldname] == DB.NOW)
@@ -1097,7 +1104,7 @@ ORDER BY {getOrderBy()}";
     public virtual FwList listLinkedByMainId(int main_id, FwDict? def = null)
     {
         if (junction_model_linked == null)
-            throw new ApplicationException("junction_model_linked not defined in model " + this.GetType().Name);            
+            throw new ApplicationException("junction_model_linked not defined in model " + this.GetType().Name);
 
         var linked_rows = listByMainId(main_id, def);
         var selectedIds = new StrList();

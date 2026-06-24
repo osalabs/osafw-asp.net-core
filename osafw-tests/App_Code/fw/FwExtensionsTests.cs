@@ -417,5 +417,48 @@ namespace osafw.Tests
         }
 
         #endregion
+
+        #region applyTo
+
+        private sealed class NullableIntDto
+        {
+            public int? optional_int { get; set; } = 5;
+        }
+
+        private sealed class NonNullableIntDto
+        {
+            public int count { get; set; } = 7;
+        }
+
+        [TestMethod]
+        public void applyTo_EmptyStringForNullableValueTypeSetsNull()
+        {
+            var dto = new NullableIntDto();
+
+            new FwDict { ["optional_int"] = "" }.applyTo(dto);
+
+            Assert.IsNull(dto.optional_int);
+        }
+
+        [TestMethod]
+        public void applyTo_WhitespaceForNullableValueTypeIsNotEmptyStringMarker()
+        {
+            var dto = new NullableIntDto();
+
+            Assert.ThrowsExactly<FormatException>(() => new FwDict { ["optional_int"] = "   " }.applyTo(dto));
+            Assert.AreEqual(5, dto.optional_int);
+        }
+
+        [TestMethod]
+        public void applyTo_DBNullForNonNullableValueTypePreservesExistingValue()
+        {
+            var dto = new NonNullableIntDto();
+
+            new FwDict { ["count"] = DBNull.Value }.applyTo(dto);
+
+            Assert.AreEqual(7, dto.count);
+        }
+
+        #endregion
     }
 }

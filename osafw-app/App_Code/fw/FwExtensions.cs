@@ -46,9 +46,28 @@ public static class FwExtensions
 
     internal static void clearWritablePropertiesCache() => WritablePropertiesCache.Clear();
 
+    private static bool isNonNullableValueType(PropertyInfo property)
+    {
+        return property.PropertyType.IsValueType && Nullable.GetUnderlyingType(property.PropertyType) == null;
+    }
+
+    private static bool isNullableValueType(PropertyInfo property)
+    {
+        return Nullable.GetUnderlyingType(property.PropertyType) != null;
+    }
+
     private static void setPropertyValue<T>(this T obj, PropertyInfo property, object value)
     {
         if (value is null || value is DBNull)
+        {
+            if (isNonNullableValueType(property))
+                return;
+
+            property.SetValue(obj, null);
+            return;
+        }
+
+        if (value is string emptyValue && emptyValue.Length == 0 && isNullableValueType(property))
         {
             property.SetValue(obj, null);
             return;
@@ -103,9 +122,9 @@ public static class FwExtensions
     {
         if (props.TryGetValue(field, out var property))
         {
-            if (value == null)
+            if (value == null || value == DBNull.Value)
             {
-                if (property.PropertyType.IsValueType && Nullable.GetUnderlyingType(property.PropertyType) == null)
+                if (isNonNullableValueType(property))
                     return; // cannot assign null to non-nullable value type
 
                 property.SetValue(obj, null);
@@ -489,8 +508,8 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts an object to a <see cref="decimal"/>.  
-    /// If the object is already a <see cref="decimal"/>, it is returned directly.  
+    /// Converts an object to a <see cref="decimal"/>.
+    /// If the object is already a <see cref="decimal"/>, it is returned directly.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="o">The object to convert.</param>
@@ -510,7 +529,7 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts a string to a <see cref="decimal"/>.  
+    /// Converts a string to a <see cref="decimal"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="s">The string to convert.</param>
@@ -530,8 +549,8 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts an object to a <see cref="double"/>.  
-    /// If the object is already a <see cref="double"/>, it is returned directly.  
+    /// Converts an object to a <see cref="double"/>.
+    /// If the object is already a <see cref="double"/>, it is returned directly.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="o">The object to convert.</param>
@@ -551,7 +570,7 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts a string to a <see cref="double"/>.  
+    /// Converts a string to a <see cref="double"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="s">The string to convert.</param>
@@ -571,8 +590,8 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts an object to a <see cref="float"/>.  
-    /// If the object is already a <see cref="float"/>, it is returned directly.  
+    /// Converts an object to a <see cref="float"/>.
+    /// If the object is already a <see cref="float"/>, it is returned directly.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="o">The object to convert.</param>
@@ -592,7 +611,7 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts a string to a <see cref="float"/>.  
+    /// Converts a string to a <see cref="float"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="s">The string to convert.</param>
@@ -612,8 +631,8 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts an object to an <see cref="int"/>.  
-    /// If the object is already an <see cref="int"/>, it is returned directly.  
+    /// Converts an object to an <see cref="int"/>.
+    /// If the object is already an <see cref="int"/>, it is returned directly.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/> (default is 0).
     /// </summary>
     /// <param name="o">The object to convert.</param>
@@ -637,7 +656,7 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts a string to an <see cref="int"/>.  
+    /// Converts a string to an <see cref="int"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/> (default is 0).
     /// </summary>
     /// <param name="s">The string to convert.</param>
@@ -657,8 +676,8 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts an object to a <see cref="long"/>.  
-    /// If the object is already a <see cref="long"/>, it is returned directly.  
+    /// Converts an object to a <see cref="long"/>.
+    /// If the object is already a <see cref="long"/>, it is returned directly.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="o">The object to convert.</param>
@@ -678,7 +697,7 @@ public static class FwExtensions
     }
 
     /// <summary>
-    /// Converts a string to a <see cref="long"/>.  
+    /// Converts a string to a <see cref="long"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
     /// <param name="s">The string to convert.</param>
