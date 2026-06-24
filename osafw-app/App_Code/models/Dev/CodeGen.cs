@@ -887,10 +887,11 @@ END" + Environment.NewLine;
             {
                 if (maxlen <= 0 || fld_name == "idesc")
                 {
-                    sf["type"] = "markdown";
+                    var isJsonField = fld_name.EndsWith("_json", StringComparison.OrdinalIgnoreCase);
+                    sf["type"] = isJsonField ? "plaintext_json" : "markdown";
                     sff["type"] = "textarea";
-                    sff["rows"] = 5;
-                    sff["class_control"] = "markdown autoresize"; // or fw-html-editor or fw-html-editor-short
+                    sff["rows"] = isJsonField ? 8 : 5;
+                    sff["class_control"] = isJsonField ? "font-monospace autoresize" : "markdown autoresize"; // or fw-html-editor or fw-html-editor-short
                 }
                 else
                 {

@@ -76,4 +76,41 @@ public class FwDynamicControllerTests
         Assert.AreEqual(5, result["id"]);
         Assert.AreEqual("/dynamic/5/edit", result["_redirect"]);
     }
+
+    [TestMethod]
+    public void PrepareFields_PrettyPrintsPlaintextJsonAndKeepsInvalidText()
+    {
+        var fw = TestHelpers.CreateFw();
+        var controller = new TestDynamicController(new StrList());
+        controller.init(fw);
+        controller.loadControllerConfig(new FwDict
+        {
+            ["show_fields"] = new FwList
+            {
+                new FwDict { ["field"] = "metadata_json", ["type"] = "plaintext_json" },
+                new FwDict { ["field"] = "bad_json", ["type"] = "plaintext_json" }
+            },
+            ["showform_fields"] = new FwList
+            {
+                new FwDict { ["field"] = "metadata_json", ["type"] = "plaintext_json" },
+                new FwDict { ["field"] = "bad_json", ["type"] = "plaintext_json" }
+            }
+        });
+        var item = new FwDict
+        {
+            ["id"] = 1,
+            ["metadata_json"] = "{\"b\":2,\"a\":[1]}",
+            ["bad_json"] = "{bad"
+        };
+
+        var showFields = controller.prepareShowFields(item, []);
+        var showFormFields = controller.prepareShowFormFields(item, []);
+
+        StringAssert.Contains(((FwDict)showFields[0])["value"].toStr(), "\n");
+        StringAssert.Contains(((FwDict)showFields[0])["value"].toStr(), "\"b\": 2");
+        StringAssert.Contains(((FwDict)showFields[0])["value"].toStr(), "\"a\": [");
+        Assert.AreEqual("{bad", ((FwDict)showFields[1])["value"]);
+        StringAssert.Contains(((FwDict)showFormFields[0])["value"].toStr(), "\"b\": 2");
+        Assert.AreEqual("{bad", ((FwDict)showFormFields[1])["value"]);
+    }
 }

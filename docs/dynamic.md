@@ -206,7 +206,7 @@ Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-
 
 **Layout helpers**: [row](#type-row) · [col](#type-col) · [col_end](#type-col_end) · [row_end](#type-row_end) · [header](#type-header)
 
-**Show & ShowForm display**: [plaintext](#type-plaintext) · [plaintext_link](#type-plaintext_link) · [plaintext_autocomplete](#type-plaintext_autocomplete) · [plaintext_yesno](#type-plaintext_yesno) · [plaintext_currency](#type-plaintext_currency) · [markdown](#type-markdown) · [noescape](#type-noescape) · [float](#type-float) · [range](#type-range) · [checkbox](#type-checkbox) · [switch](#type-switch) · [date](#type-date) · [date_long](#type-date_long) · [multi](#type-multi) · [multi_prio](#type-multi_prio) · [att](#type-att) · [att_links](#type-att_links) · [att_files](#type-att_files) · [subtable](#type-subtable) · [added](#type-added) · [updated](#type-updated)
+**Show & ShowForm display**: [plaintext](#type-plaintext) · [plaintext_json](#type-plaintext_json) · [plaintext_link](#type-plaintext_link) · [plaintext_autocomplete](#type-plaintext_autocomplete) · [plaintext_yesno](#type-plaintext_yesno) · [plaintext_currency](#type-plaintext_currency) · [markdown](#type-markdown) · [noescape](#type-noescape) · [float](#type-float) · [range](#type-range) · [checkbox](#type-checkbox) · [switch](#type-switch) · [date](#type-date) · [date_long](#type-date_long) · [multi](#type-multi) · [multi_prio](#type-multi_prio) · [att](#type-att) · [att_links](#type-att_links) · [att_files](#type-att_files) · [subtable](#type-subtable) · [added](#type-added) · [updated](#type-updated)
 
 **ShowForm inputs only**: [group_id](#type-group_id) · [group_id_addnew](#type-group_id_addnew) · [select](#type-select) · [input](#type-input) · [textarea](#type-textarea) · [email](#type-email) · [number](#type-number) · [range](#type-range) · [password](#type-password) · [currency](#type-currency) · [autocomplete](#type-autocomplete) · [multicb](#type-multicb) · [multicb_prio](#type-multicb_prio) · [radio](#type-radio) · [yesno](#type-yesno) · [cb](#type-cb) · [switch](#type-switch) · [date_popup](#type-date_popup) · [date_combo](#type-date_combo) · [datetime_popup](#type-datetime_popup) · [datetime_local](#type-datetime_local) · [time](#type-time) · [att_edit](#type-att_edit) · [att_links_edit](#type-att_links_edit) · [att_files_edit](#type-att_files_edit) · [subtable_edit](#type-subtable_edit)
 
@@ -333,6 +333,29 @@ Dynamic and Vue button configs still use icon CSS class strings such as `"bi bi-
   "class_label": "col-md-2",
   "class_contents": "col-md-10",
   "help_text": "Resolved via DemoDicts lookup"
+}
+```
+
+#### type: plaintext_json
+- Template: `/common/form/show/plaintext_json.html`.
+- Options: inherits common layout keys. Valid JSON is pretty-printed for Dynamic and Vue Show/ShowForm display; invalid or blank text is shown unchanged and escaped as text.
+- Common sample:
+```json
+{
+  "type": "plaintext_json",
+  "field": "metadata_json",
+  "label": "Metadata"
+}
+```
+- Full sample with custom layout:
+```json
+{
+  "type": "plaintext_json",
+  "field": "payload_json",
+  "label": "Payload",
+  "class_label": "col-md-2",
+  "class_contents": "col-md-10",
+  "help_text": "Stored JSON rendered as read-only formatted text"
 }
 ```
 

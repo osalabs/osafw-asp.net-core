@@ -9,6 +9,7 @@
     <p v-else-if="def.type=='plaintext'" class="form-control-plaintext" style="white-space: pre-line">
         {{plaintextValue}}
     </p>
+    <pre v-else-if="def.type=='plaintext_json'" class="form-control-plaintext mb-0 font-monospace small" style="white-space: pre-wrap; overflow: auto">{{jsonPlaintextValue}}</pre>
     <p v-else-if="def.type=='plaintext_link'" class="form-control-plaintext">
         <a :href="(def.admin_url ? def.admin_url : '/Admin/'+def.lookup_model)+'/'+value">
             {{lookupValue}}
@@ -573,6 +574,15 @@
                 if (this.def.lookup_model) return this.lookupValue;
                 if (this.def.conv === 'time_from_seconds') return AppUtils.formatTime(this.value);
                 return this.value;
+            },
+            jsonPlaintextValue() {
+                const raw = this.value == null ? '' : String(this.value);
+                if (!raw.trim()) return raw;
+                try {
+                    return JSON.stringify(JSON.parse(raw), null, 2);
+                } catch (e) {
+                    return raw;
+                }
             },
             currencySymbol() {
                 // Use def.currency_symbol if provided, else default to "$"

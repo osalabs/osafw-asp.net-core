@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace osafw;
@@ -989,6 +990,9 @@ public partial class FwDynamicController : FwController
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
 
+                if (dtype == "plaintext_json")
+                    def["value"] = formatPlaintextJson(def["value"]);
+
                 // special handling for date combo: prepare select defaults
                 if (dtype == "date_combo")
                 {
@@ -1214,10 +1218,33 @@ public partial class FwDynamicController : FwController
                     if (def["conv"].toStr() == "time_from_seconds")
                         def["value"] = FormUtils.intToTimeStr(def["value"].toInt());
                 }
+
+                if (dtype == "plaintext_json")
+                    def["value"] = formatPlaintextJson(def["value"]);
             }
 
         }
         return fields;
+    }
+
+    /// <summary>
+    /// Pretty-prints valid JSON values for read-only Dynamic fields while leaving invalid text unchanged.
+    /// </summary>
+    protected virtual string formatPlaintextJson(object? value)
+    {
+        var raw = value.toStr();
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        try
+        {
+            using var parsed = JsonDocument.Parse(raw);
+            return JsonSerializer.Serialize(parsed.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (JsonException)
+        {
+            return raw;
+        }
     }
 
     /// <summary>

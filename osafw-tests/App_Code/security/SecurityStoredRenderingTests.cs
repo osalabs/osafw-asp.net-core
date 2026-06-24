@@ -82,6 +82,22 @@ public class SecurityStoredRenderingTests
     }
 
     [TestMethod]
+    public void ClassicDynamicPlaintextJson_EscapesHtmlAndIsSelectable()
+    {
+        var template = readRepoFile("osafw-app", "App_Data", "template", "common", "form", "show", "plaintext_json.html");
+        var selector = readRepoFile("osafw-app", "App_Data", "template", "common", "form", "show", "one_fieldsel.html");
+        var parser = new ParsePage(null!);
+        var html = parser.parse_string(template, new FwDict
+        {
+            ["value"] = "{\n  \"html\": \"<script>alert(1)</script>\"\n}"
+        });
+
+        Assert.IsFalse(html.Contains("<script>", StringComparison.OrdinalIgnoreCase));
+        StringAssert.Contains(html, "&lt;script&gt;alert(1)&lt;/script&gt;");
+        StringAssert.Contains(selector, "plaintext_json");
+    }
+
+    [TestMethod]
     public void ServerControlledMarkdownTemplates_UseTrustedOptIn()
     {
         var markdownHelp = readRepoFile("osafw-app", "App_Data", "template", "home", "markdownhelp", "main.html");
@@ -144,6 +160,8 @@ public class SecurityStoredRenderingTests
         var activityTemplate = readRepoFile("osafw-app", "App_Data", "template", "common", "vue", "activity-logs.html");
 
         StringAssert.Contains(formTemplate, "renderMarkdown(value, isTrustedMarkdown)");
+        StringAssert.Contains(formTemplate, "def.type=='plaintext_json'");
+        StringAssert.Contains(formTemplate, "JSON.stringify(JSON.parse(raw), null, 2)");
         StringAssert.Contains(formTemplate, "def.type=='noescape'\" class=\"form-control-plaintext\" v-html=\"value\"");
         StringAssert.Contains(formTemplate, "this.def.trusted === true");
         StringAssert.Contains(formTemplate, "html: isTrustedMarkdown");

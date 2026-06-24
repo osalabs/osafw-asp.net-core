@@ -35,7 +35,7 @@ Use this file to find the right document quickly instead of searching the whole 
 - [agents/mcp.md](agents/mcp.md): MCP usage and troubleshooting notes.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history index to search before opening full task summaries.
 - [agents/tools/](agents/tools/): reusable helper scripts for scoped repo search and text normalization.
-- [prompts/](prompts/): reusable prompts for recurring development workflows such as framework upgrades, PR reviews, agent reflection, security hardening, docs consistency, and test stabilization.
+- [prompts/](prompts/): reusable prompts for recurring development workflows such as orchestration, framework upgrades, PR reviews, agent reflection, security hardening, docs consistency, and test stabilization.
 
 ## Which Doc to Use
 

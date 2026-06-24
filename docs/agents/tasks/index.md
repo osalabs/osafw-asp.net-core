@@ -141,3 +141,5 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-23-assistant-composer-tab-order.md` - Reordered Assistant composer controls so Tab from the prompt focuses Send before Files while keeping file upload available.
 - `summary-2026-06-23-pr273-release-fixes.md` - Addressed PR #273 release fixes for Assistant contact output, Assistant message access, readonly Site Settings saves, duplicate timeout sweeps, and test stability.
 - `summary-2026-06-23-pr273-merge-readiness.md` - Review/fix loops for PR #273 merge readiness; added Assistant duplicate-run guarding and worker-loop logging, then passed full tests and final PR review.
+- `summary-2026-06-24-port-best-practices.md` - In progress: porting selected reusable workflow and Dynamic/Vue JSON display improvements from downstream-app review.
+- `summary-2026-06-24-code-reviewer-simplicity.md` - Tightened code reviewer simplicity checks to cover solution-level structure and local code simplification without encouraging broad rewrites.

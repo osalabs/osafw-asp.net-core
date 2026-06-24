@@ -123,6 +123,48 @@ public class DevCodeGenTests
     }
 
     [TestMethod]
+    public void UpdateControllerConfig_UsesPlaintextJsonForLongJsonFields()
+    {
+        var fw = TestHelpers.CreateFw();
+        var config = new FwDict
+        {
+            ["form_tabs"] = new FwList
+            {
+                new FwDict { ["tab"] = "", ["label"] = "Main" }
+            }
+        };
+        var entity = new FwDict
+        {
+            ["model_name"] = "GeneratedEvents",
+            ["table"] = "generated_events",
+            ["is_fw"] = true,
+            ["controller"] = new FwDict
+            {
+                ["url"] = "/Admin/GeneratedEvents",
+                ["title"] = "Generated Events",
+                ["type"] = "dynamic"
+            },
+            ["fields"] = new FwList
+            {
+                Field("id", "int", 0, isNullable: false, isIdentity: true, defaultValue: null),
+                Field("iname", "varchar", 80, isNullable: false),
+                Field("metadata_json", "varchar", 0, isNullable: true),
+                Field("status", "int", 0, isNullable: false, defaultValue: "0")
+            },
+            ["foreign_keys"] = new FwList()
+        };
+
+        InvokeUpdateControllerConfig(fw, entity, config);
+
+        var showField = FindField((FwList)config["show_fields"]!, "metadata_json");
+        var showFormField = FindField((FwList)config["showform_fields"]!, "metadata_json");
+        Assert.AreEqual("plaintext_json", showField["type"]);
+        Assert.AreEqual("textarea", showFormField["type"]);
+        Assert.AreEqual(8, showFormField["rows"]);
+        Assert.AreEqual("font-monospace autoresize", showFormField["class_control"]);
+    }
+
+    [TestMethod]
     public void BuildLookupInsertSql_ChecksForExistingIcode()
     {
         var fw = TestHelpers.CreateFw();
@@ -412,6 +454,17 @@ public class DevCodeGenTests
             ?? throw new InvalidOperationException("DevCodeGen.makeLayoutForFields was not found.");
 
         return (FwList)(method.Invoke(null, new object?[] { fieldsCols }) ?? new FwList());
+    }
+
+    private static FwDict FindField(FwList fields, string fieldName)
+    {
+        foreach (FwDict field in fields)
+        {
+            if (field["field"].toStr() == fieldName)
+                return field;
+        }
+
+        throw new InvalidOperationException($"Field '{fieldName}' was not found.");
     }
 
     private static object CreateCodeGen(FW fw)
