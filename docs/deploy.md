@@ -11,6 +11,10 @@ Deploy scripts live in the repo under `scripts\`; do not copy them to `C:\inetpu
 - The deploy account has Git credentials and Modify rights to the repo, temp folder, publish target, and `osafw-app\App_Data\logs`.
 - Use a dedicated deploy account when possible. Use `SYSTEM` only if Git credentials are configured for LocalSystem.
 
+## IIS Header Hardening
+
+The framework publishes `osafw-app\web.config` with an IIS baseline that suppresses the IIS `Server` header through `requestFiltering removeServerHeader="true"` and removes the default `X-Powered-By` response header. If IIS configuration sections are locked, or the server is older than IIS 10 on Windows Server/Windows 10 version 1709, apply equivalent hardening at the IIS server or site level during instance setup.
+
 ## Configure Profiles
 
 Edit and commit the profile scripts for the real app:
