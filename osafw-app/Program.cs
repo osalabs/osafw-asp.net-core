@@ -122,7 +122,8 @@ public static class Program
         builder.Services.AddMemoryCache();
 
 #if isFwCronService
-        builder.Services.AddHostedService<FwCronService>();
+        if (settings["is_cron_enabled"].toBool())
+            builder.Services.AddHostedService<FwCronService>();
 #endif
         if (settings["ASSISTANT_WORKER_ENABLED"].toBool())
             builder.Services.AddHostedService<AssistantRunWorkerService>();

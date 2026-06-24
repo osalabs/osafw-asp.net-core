@@ -9,18 +9,16 @@
                     <a class="page-link" href="#" @click.prevent="pageClick(0)">`First`</a>
                 </li>
                 <li class="page-item" title="`Previous Page`" v-if="page.is_show_prev">
-                    <a class="page-link text-center" href="#" @click.prevent="pageClick(page.pagenum_prev)"
-                       style="width:80px;">&laquo;</a>
+                    <a class="page-link px-4" href="#" @click.prevent="pageClick(page.pagenum_prev)">&laquo;</a>
                 </li>
                 <li :class="'page-item'+(page.is_cur_page?' active':'')">
                     <a class="page-link" href="#" @click.prevent="pageClick(page.pagenum)">{{page.pagenum_show}}</a>
                 </li>
                 <li class="page-item" title="`Next Page`" v-if="page.is_show_next">
-                    <a class="page-link text-center" href="#" @click.prevent="pageClick(page.pagenum_next)"
-                       style="width:80px;">&raquo;</a>
+                    <a class="page-link px-4" href="#" @click.prevent="pageClick(page.pagenum_next)">&raquo;</a>
                 </li>
             </template>
-            <li class="page-item" title="`Page Size`">
+            <li class="page-item-pagesize ps-2" title="`Page Size`">
                 <select class="d-inline-block w-auto align-top form-select"
                         v-model="pagesize_selected">
                     <option v-for="psize in pagesize_options" :key="psize" :value="psize">{{psize}}</option>

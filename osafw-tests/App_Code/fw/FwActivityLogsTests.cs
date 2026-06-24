@@ -40,7 +40,7 @@ public class FwActivityLogsTests
             return 77;
         }
 
-        public override DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
+        public override DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null, int offset = 0, int limit = -1)
         {
             return StubRows;
         }

@@ -941,4 +941,3 @@
       submitHtmlForm(modal, form, e.submitter || null);
     });
   })();
-

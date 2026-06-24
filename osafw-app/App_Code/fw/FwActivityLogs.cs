@@ -56,6 +56,15 @@ public class FwActivityLogs : FwModel
         return add(fields);
     }
 
+    public bool appendIdesc(int id, string idesc_append, string delim = "\r\n\r\n")
+    {
+        var item = one(id);
+
+        if (!Utils.isEmpty(item["idesc"]))
+            idesc_append = item["idesc"] + delim + idesc_append;
+
+        return update(id, DB.h("idesc", idesc_append));
+    }
 
     /// <summary>
     /// Lists activity rows for a specific entity record.
@@ -63,14 +72,19 @@ public class FwActivityLogs : FwModel
     /// <param name="entity_icode">entity table name</param>
     /// <param name="id">entity item id</param>
     /// <param name="log_types_icodes">optional list of log types(by icode) to filter on</param>
-    public virtual DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null)
+    /// <param name="offset">number of ordered rows to skip before returning activity rows</param>
+    /// <param name="limit">maximum rows to return, or -1 for all rows</param>
+    public virtual DBList listByEntity(string entity_icode, int id, IList? log_types_icodes = null, int offset = 0, int limit = -1)
     {
         var fwentities_id = fw.model<FwEntities>().idByIcodeOrAdd(entity_icode);
-        var where = new FwDict
+
+        var where = "fwentities_id = @fwentities_id AND item_id = @item_id";
+        var where_params = new FwDict
         {
-            {"fwentities_id", fwentities_id },
-            {"item_id", id }
+            {"@fwentities_id", fwentities_id },
+            {"@item_id", id }
         };
+
         if (log_types_icodes != null && log_types_icodes.Count > 0)
         {
             StrList log_types_ids = [];
@@ -79,17 +93,26 @@ public class FwActivityLogs : FwModel
                 var log_type = fw.model<FwLogTypes>().oneByIcode(icode);
                 log_types_ids.Add(log_type["id"]);
             }
-            where["log_types_id"] = db.opIN(log_types_ids);
+            where += " AND log_types_id " + db.insqli(log_types_ids);
         }
 
-        return db.array(table_name, where, "idate desc, id desc");
+        var orderby = "idate desc, id desc";
+
+        return db.selectRaw("*", table_name, where, where_params, orderby, offset, limit);
     }
 
     /// <summary>
     /// Lists activity rows shaped for the UI activity tab.
     /// </summary>
+    /// <remarks>
+    /// System fields are not merged when pagination is used because prior pages may contain related field changes.
+    /// </remarks>
+    /// <param name="entity_icode"></param>
+    /// <param name="id"></param>
     /// <param name="tab">"all", "comments" or "history"</param>
-    public FwList listByEntityForUI(string entity_icode, int id, string tab = "")
+    /// <param name="offset">number of ordered rows to skip before returning activity rows</param>
+    /// <param name="limit">maximum rows to return, or -1 for all rows</param>
+    public FwList listByEntityForUI(string entity_icode, int id, string tab = "", int offset = 0, int limit = -1)
     {
         // convert tab to log_types_icodes
         StrList log_types_icodes = [];
@@ -113,7 +136,7 @@ public class FwActivityLogs : FwModel
         var last_log_types_id = -1;
 
         var result = new FwList();
-        var rows = listByEntity(entity_icode, id, log_types_icodes);
+        var rows = listByEntity(entity_icode, id, log_types_icodes, offset, limit);
         foreach (DBRow row in rows)
         {
             var add_time = row["add_time"].toDate();
@@ -125,7 +148,8 @@ public class FwActivityLogs : FwModel
             var is_merged = false;
             if (log_type["itype"].toInt() == FwLogTypes.ITYPE_SYSTEM)
             {
-                if (last_fields != null
+                if (limit == -1 // merge only if no pagination
+                    && last_fields != null
                     && last_log_types_id == log_types_id
                     && last_users_id == users_id
                     && last_add_time.Subtract(add_time).TotalMinutes < 10
@@ -179,6 +203,11 @@ public class FwActivityLogs : FwModel
             new_row["tab"] = tab;
             new_row["log_type"] = log_type;
             var user = fw.model<Users>().one(users_id);
+            if (users_id == 0)
+            {
+                user["iname"] = Users.SYS_USER_NAME;
+                user["fname"] = Users.SYS_USER_NAME;
+            }
             new_row["user"] = user;
             if (user["att_id"].toInt() > 0)
                 new_row["avatar_link"] = fw.model<Att>().getUrl(user["att_id"].toInt(), "s");
