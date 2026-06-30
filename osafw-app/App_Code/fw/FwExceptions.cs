@@ -25,6 +25,7 @@ public class ValidationException : UserException
 {
     // specificially for validation forms
     public ValidationException() : base("Please review and update your input") { }
+    public ValidationException(string message) : base(message) { }
 }
 
 [Serializable]
