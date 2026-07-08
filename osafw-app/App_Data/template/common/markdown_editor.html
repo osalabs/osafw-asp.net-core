@@ -237,6 +237,8 @@
               //data = toMarkdown(data, { converters: aconverters });
 
               fw.field_insert_at_cursor(this, data);
+              var markdown = $field.data('markdown');
+              if (markdown && typeof markdown.change === 'function') markdown.change();
               e.preventDefault();
             }
           })
