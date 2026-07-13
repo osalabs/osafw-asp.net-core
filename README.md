@@ -47,14 +47,14 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 7. modify templates in `/osafw-app/App_Data/template`
 
 ### Deployment
-All the details can be found in the [Microsoft docs](https://learn.microsoft.com/aspnet/core/host-and-deploy/iis/?view=aspnetcore-8.0)
+All the details can be found in the [Microsoft docs](https://learn.microsoft.com/aspnet/core/host-and-deploy/iis/?view=aspnetcore-10.0)
 Short summary how to deploy without VS publish (from clone git repo):
 1. on the server - install IIS and .NET Core Hosting Bundle
-2. install latest .NET 8 SDK to have `dotnet` CLI
+2. install latest .NET 10 SDK to have `dotnet` CLI
 4. create website directory
   - make `git clone` from repo to website directory
   - make `dotnet publish --configuration Release` in the directory
-5. create website in IIS with root directory to `/bin/Release/net8.0/publish`
+5. create website in IIS with root directory to `/osafw-app/bin/Release/net10.0/publish`
 6. set website's app pool to "No managed code" (so pool works like a proxy to app core)
 7. open your website address in browser
 8. create database and apply sql files in order:

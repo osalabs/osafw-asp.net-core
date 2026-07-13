@@ -8,12 +8,14 @@
 - Corrected stable access-level facts, pruned duplicated/stale heuristics, and moved the ParsePage JavaScript-backtick warning to `docs/templates.md`.
 - Hardened `Search-Repo.ps1` so broad searches respect ignores and opt into only the requested draft/vendor trees. Hardened `Normalize-TextFiles.ps1` for strict UTF-8, UTF-16/32 BOM rejection, safe refusal, write failures, and explicit validity output.
 - Reconciled and sorted the tracked task-summary index, removed its dead private-summary reference, and added this task.
+- Follow-up: updated active root-README deployment references from .NET 8 to .NET 10 and corrected `scripts/deploy_sample.bat` so its project root is the cloned repo's `osafw-app` directory and its publish target is `net10.0`.
 
 ## Scope reviewed
 
 - Active instructions and mirrors: `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, `docs/agents/mcp.md`, `docs/README.md`, `docs/prompts/README.md`, and the affected reusable workflow prompts.
 - Machine-local guidance, active knowledge files, validation helpers, the task-summary index, and the relevant 2026 agent-workflow summaries selected through that index.
 - Targeted project/source/schema/test evidence for framework, provider, security, template, and verification claims. No application code or schema was changed.
+- Follow-up scope covered the root README deployment section, `scripts/deploy_sample.bat`, `docs/deploy.md`, and `osafw-app/osafw-app.csproj`; historical task summaries remained unchanged.
 - Large-file whole reads were not used. The inspected instruction, knowledge, helper, source, schema, and test files were all below 1 MB or read through targeted searches/ranges.
 
 ### Pre-edit `AGENTS.md` disposition
@@ -54,14 +56,16 @@
 - Final validation after the first review fix passed: strict UTF-8/CRLF check over all scoped files; byte-identical mirror SHA-256 `AC09E3866D916F050A13CBF932FC6EB84A83EF6728BE51BD4670822200A73A3C`; `git diff --check`; trailing-whitespace and stale-term scans; local-link and explicit-path checks; 169-entry tracked/current task-index integrity; and PowerShell parsing for both helpers.
 - The first independent review found one Medium closeout issue in this summary (mixed line endings, pending evidence, and a missing changelog rationale). The issue was fixed and the scoped validation was rerun before follow-up review.
 - Follow-up independent review covered all 19 tracked changes plus the new upgrade prompt and task summary, returned no blocking findings or Low observations, and stopped the review loop.
+- Follow-up .NET/deploy checks: tracked active-source search found no remaining `.NET 8`, `net8.0`, or `aspnetcore-8.0` references; the Microsoft ASP.NET Core 10 IIS link resolved on the official site; strict UTF-8/CRLF checks passed; and a non-mutating settings expansion confirmed `PROJECT_ROOT`, `PROJECT_FILE`, and `TARGET_FOLDER` resolve to the expected `osafw-app`/`net10.0` paths.
+- Deliberate local review against `docs/agents/code_reviewer.md` found no blocking or Low findings in the follow-up diff. The review confirmed the sample's working directory, project file, target framework, and publish destination form one consistent path contract; the deployment script itself was not executed.
 
 ## Decisions - why
 
 - `AGENTS.md` will be the only policy authority; the Copilot file is a generated mirror, reviewer guidance is procedural, the docs map is navigational, prompts are optional/subordinate, and task summaries are evidence.
 - MySQL compile/runtime branches exist, but the current MySQL fresh schema is missing runtime-required tables and retains obsolete ones. This task will remove unsafe turnkey wording and document the limitation, but schema repair is outside this instruction-upgrade scope.
 - The default bare test run does not compile `#if isSQLite` tests, so provider-specific work must enable the relevant compile constant.
-- The root `README.md` still contains older deployment/provider wording. It is not an agent-policy owner; any remaining contradiction will be disclosed rather than broadening this task into a public-documentation/schema repair.
-- No `docs/CHANGELOG.md` entry is needed because this task changes development-agent instructions, supporting documentation, and agent-only helpers without changing an end-user application/runtime contract.
+- The user explicitly brought the root README's .NET version and legacy deployment sample into follow-up scope; only those stale deployment contracts were corrected. Broader MySQL documentation/schema repair remains separate.
+- No `docs/CHANGELOG.md` entry is needed because the changes are non-breaking corrections to development-agent instructions, supporting documentation, agent-only helpers, and a legacy deployment sample; no framework/runtime contract changed.
 
 ### Contradictions and disposition
 
@@ -84,7 +88,8 @@
 | Text normalization used permissive UTF-8 and did not fail reliably on write denial. | Fixed | Strict decoding/BOM rejection, refusal to rewrite invalid input, validity output, and terminating write errors were added and exercised. |
 | The task index referenced a missing private summary and omitted tracked summaries. | Fixed | Removed the dead reference, added missing tracked entries, added this task, and sorted the index. The unrelated untracked UAT summary was intentionally not adopted/indexed. |
 | “Universal” header and unlabeled PowerShell-only command conflicted with the Windows-specific repository. | Fixed | Removed the universal/version branding and kept only portable baseline commands plus explicit repo-specific Windows constraints. |
-| Root `README.md` still advertises older .NET 8 deployment text and broadly describes optional MySQL. | Out of scope | `docs/deploy.md`, project files, and `docs/db.md` are the surviving agent-facing owners; public README cleanup/schema repair needs a separate task. |
+| Root `README.md` still advertised .NET 8 deployment text while the project targets .NET 10. | Fixed | The IIS link, SDK prerequisite, and publish path now use ASP.NET Core/.NET 10 and `osafw-app/bin/Release/net10.0/publish`. |
+| Root `README.md` still broadly describes optional MySQL despite incomplete fresh-schema parity. | Out of scope | Current provider limitations remain explicit in `docs/db.md`; public MySQL wording and schema parity need a separate task. |
 | Security, performance, changelog, schema, and behavior-level verification rules appear in multiple audiences. | Intentionally retained | Always-on obligations remain in `AGENTS.md`; reviewer and specialist docs now apply/link them rather than copying full checklists. |
 
 ## Pitfalls - fixes
@@ -96,7 +101,6 @@
 ## Risks / follow-ups
 
 - MySQL provider/schema parity is a separate high-priority repository issue; do not treat the current MySQL fresh-install scripts as turnkey.
-- Public root-README deployment text still references .NET 8 while the project and deployment guide use .NET 10; this is outside the active instruction-stack change unless needed for a surviving link.
 
 ## Heuristics (keep terse)
 
@@ -104,10 +108,11 @@
 
 ## Testing instructions
 
-N/A - docs/instructions and agent-helper changes only. Use the final static/helper commands recorded above; no application runtime behavior changed.
+Static validation only: rerun the strict-text/stale-reference checks and the non-mutating deployment-settings expansion recorded above. Do not execute the sample against IIS as repository validation. No application runtime behavior changed.
 
 ## Reflection
 
 - Targeted delegation was effective: separate instruction, repository-claim, and history/helper audits found distinct issues (authority drift, MySQL schema parity, stale domain facts, and ignored-file/encoding helper defects) while the main agent retained integration.
 - The most avoidable cost was copied behavior in general guidance. Future upgrades should compare active rules to canonical owners first, then inspect source only where the owner is missing or contradicted.
 - The search and strict-text helpers now make the recurring privacy/encoding checks reusable. No ADR was warranted. One stable domain fact was corrected; the heuristic set was deliberately reduced rather than expanded.
+- The follow-up closed the previously disclosed public .NET 8 documentation risk. Expanding batch settings without executing the deployment script verified its path contract safely; no new stable fact, heuristic, or ADR was needed.

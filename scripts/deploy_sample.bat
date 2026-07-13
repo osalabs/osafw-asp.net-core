@@ -3,9 +3,10 @@ REM --- BEGIN PROJECT-SPECIFIC SETTINGS
 set "APP_POOL_NAME=sitename.sample.com"
 set "PROJECT_FILE=osafw-app.csproj"
 set "ENVIRONMENT_NAME=Beta"
-set "PROJECT_ROOT=C:\inetpub\sitename.sample.com"
+REM Project directory inside the cloned repository:
+set "PROJECT_ROOT=C:\inetpub\sitename.sample.com\osafw-app"
 REM Where the final published files actually run under IIS:
-set "TARGET_FOLDER=%PROJECT_ROOT%\bin\Release\net8.0\publish"
+set "TARGET_FOLDER=%PROJECT_ROOT%\bin\Release\net10.0\publish"
 REM We'll create a subfolder in %TEMP% for the build artifacts:
 set "PUBLISH_FOLDER=%TEMP%\sitename-publish"
 
