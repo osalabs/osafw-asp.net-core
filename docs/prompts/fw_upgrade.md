@@ -27,12 +27,11 @@ Do a framework upgrade, not a blind overwrite.
 
 ## Verification
 
-- Build with Visual Studio MCP where available: solution/project info, build, build status, and Error List.
-- If Visual Studio MCP is unavailable or unnecessary, run the repo's focused `dotnet build` or `dotnet test` command.
+- Follow the target repository's optional-tool policy. Use an available solution/IDE capability when it materially helps; otherwise run the focused `dotnet build` or `dotnet test` command without blocking on optional tooling.
 - If the app is running or can be safely started, apply hot reload/restart as needed and run focused smoke checks for affected flows.
 - Check `<APP_LOG_PATH>` for new errors/warnings after build/runtime smoke when the log path exists.
 - Run a review pass focused on lost app customizations, schema/update gaps, package/version issues, runtime behavior, and file/line-ending hygiene.
-- Fix review findings and repeat until no material issues remain.
+- Fix Blocker, High, and Medium findings and repeat until none remain. Treat Low observations as non-blocking.
 
 ## Closeout
 

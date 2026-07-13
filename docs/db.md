@@ -47,9 +47,27 @@ To enable SQLite:
 
 4. Initialize with the scripts from `osafw-app/App_Data/sql/sqlite/` in this order: `fwdatabase.sql`, `database.sql`, `lookups.sql`, `views.sql`, then optional `roles.sql` and `demo.sql`.
 
-When the app is compiled with `isSQLite` and `type` is `SQLite`, `FwSessionCache` stores sessions in the SQLite `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server/MySQL or an external distributed cache instead of SQLite.
+When the app is compiled with `isSQLite` and `type` is `SQLite`, `FwSessionCache` stores sessions in the SQLite `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server or another verified distributed provider/cache instead of SQLite.
 
 Data Protection key XML stored in `fwkeys` is protected with Windows DPAPI before it is written to the database. Non-Windows deployments fail closed by default; for local/dev-only environments that intentionally accept plaintext key XML, change the `ALLOW_PLAINTEXT_DP_KEYS` constant in `Program.cs` to `true`.
+
+### Provider status, fresh schemas, and updates
+
+SQL Server is the default provider and owns the primary schema/update history under `osafw-app/App_Data/sql/`. SQLite is the verified optional provider for durable single-node deployments and has matching fresh-install scripts and compile-gated integration tests under `osafw-app/App_Data/sql/sqlite/`.
+
+The MySQL compile/runtime adapter remains available, but the bundled MySQL fresh-install schema is not currently at parity with the SQL Server/SQLite core schema. In particular, do not treat `osafw-app/App_Data/sql/mysql/fwdatabase.sql` and `lookups.sql` as a turnkey new-database setup until their required framework-table parity has been verified or repaired for the target deployment.
+
+Fresh schema files are destructive initialization inputs, not upgrade scripts: the `fwdatabase.sql` variants drop and recreate framework tables. Use them only for a new or disposable database. Existing deployments use additive scripts through `FwUpdates`:
+
+- SQL Server scans `osafw-app/App_Data/sql/updates/`.
+- SQLite scans only `osafw-app/App_Data/sql/sqlite/updates/` and does not replay SQL Server updates.
+- MySQL scans the SQL Server/root update folder first, then `osafw-app/App_Data/sql/mysql/updates/`; a same-named MySQL file overrides the root file.
+
+When a schema change applies to a provider, update its fresh-install schema and add the provider-appropriate additive script. Verify the exact runtime/provider path rather than assuming SQL syntax or schema parity. The default test run does not compile SQLite-only tests; for SQLite changes, run a focused variant such as:
+
+```powershell
+dotnet test osafw-tests/osafw-tests.csproj -p:DefineConstants=isSQLite
+```
 
 ## API summary
 

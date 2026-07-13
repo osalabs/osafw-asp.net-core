@@ -30,7 +30,7 @@ Goal: inspect recent task summaries and shared agent instructions, then make onl
 - Run focused text checks for the changed instructions.
 - Check line endings and UTF-8 no-BOM status for edited markdown files.
 - For docs-only changes, set task-summary testing to `N/A - docs/instructions only` unless a stronger check was run.
-- Run a self-review against `docs/agents/code_reviewer.md` if the instruction change affects agent workflow.
+- Review against `docs/agents/code_reviewer.md` when the instruction change affects agent workflow; use an independent reviewer when available, otherwise disclose a deliberate local review.
 
 ## Closeout
 

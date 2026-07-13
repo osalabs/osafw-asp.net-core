@@ -1,51 +1,58 @@
 # Documentation Map
 
-Use this file to find the right document quickly instead of searching the whole `docs/` tree every time.
+`AGENTS.md` is the sole repository development-agent workflow authority. This file routes readers to the canonical topic owner; it does not duplicate workflow policy.
 
 ## Start Here
 
-- Read [../AGENTS.md](../AGENTS.md) first for workflow, repo expectations, and task-summary rules.
-- Read [templates.md](templates.md) when touching ParsePage templates, shared UI fragments, or template engine behavior.
-- Read [dynamic.md](dynamic.md) when the task involves `FwDynamicController`, `FwVueController`, or `config.json`.
-- Read [crud.md](crud.md) and [db.md](db.md) when the task is mostly model/data-access work.
+- Read `AGENTS.md` once for repository workflow and cross-task guardrails.
+- Before implementation, read ignored `docs/agents/local_instructions.md` when it exists; never commit or expose it.
+- From this map, open only the documentation needed for the task.
 
 ## Framework Docs
 
-- [templates.md](templates.md): ParsePage templates, shared partials, dynamic-controller template conventions, and parser rules that matter during implementation.
-- [dynamic.md](dynamic.md): `config.json` reference for dynamic and Vue controllers.
-- [crud.md](crud.md): `FwModel` CRUD workflows using `FwDict`/`FwList` or typed DTOs.
-- [db.md](db.md): low-level `DB` helper usage, raw SQL helpers, and SQL Server/SQLite/MySQL provider setup.
-- [settings.md](settings.md): database-backed Site Settings schema, runtime API, admin module behavior, and seeding guidance.
-- [naming.md](naming.md): standard framework naming conventions for methods, casing, result-shape prefixes, and side-effect prefixes.
-- [design_system.html](design_system.html): visual design system for the Bootstrap-based framework UI, active themes, tokens, and component examples.
+- [templates.md](templates.md): ParsePage syntax, template composition, shared fragments, parser rules, and frontend component conventions.
+- [dynamic.md](dynamic.md): `config.json` reference for Dynamic and Vue controllers.
+- [crud.md](crud.md): `FwModel` CRUD workflows using framework collections or typed DTOs.
+- [db.md](db.md): `DB` helpers, SQL patterns, provider status/setup, schemas, additive updates, and provider-specific verification.
+- [settings.md](settings.md): database-backed Site Settings schema, runtime API, admin behavior, and seeding.
+- [naming.md](naming.md): framework naming, result-shape, side-effect, and empty/null conventions.
+- [design_system.html](design_system.html): Bootstrap-based UI conventions, themes, tokens, and components.
 - [layout.md](layout.md): shared layout structure, CRUD headers, and theming extension points.
-- [dashboard.md](dashboard.md): dashboard pane types and how to add custom ones.
-- [assistant.md](assistant.md): optional read-only RAG assistant, LLM configuration, KB indexing, and vector backends.
-- [deploy.md](deploy.md): Windows/IIS deployment setup for production, staging, and develop instances.
-- [reports.md](reports.md): hardcoded report development and Site Admin-managed custom SQL reports.
-- [datetime.md](datetime.md): per-user date/time formatting, timezone conversion, and save-path normalization.
-- [feature_modules.md](feature_modules.md): module scaffolding from `/Dev/Manage` or manual setup.
+- [dashboard.md](dashboard.md): dashboard pane types and extension patterns.
+- [assistant.md](assistant.md): optional read-only RAG assistant, configuration, indexing, retrieval, and vector backends.
+- [deploy.md](deploy.md): Windows/IIS deployment prerequisites, scripts, verification, and recovery.
+- [reports.md](reports.md): hardcoded and Site Admin-managed reports.
+- [datetime.md](datetime.md): per-user date/time formats, timezone conversion, and save normalization.
+- [feature_modules.md](feature_modules.md): module scaffolding through Developer Tools or manual setup.
+- [CHANGELOG.md](CHANGELOG.md): dated breaking upgrade changes for downstream apps.
 
 ## Agent Docs
 
-- [agents/domain.md](agents/domain.md): stable framework/domain facts.
-- [agents/heuristics.md](agents/heuristics.md): terse working heuristics discovered during tasks.
-- [agents/glossary.md](agents/glossary.md): project terms and framework vocabulary.
-- [agents/code_reviewer.md](agents/code_reviewer.md): review loop instructions for code reviewer agents.
-- [agents/mcp.md](agents/mcp.md): MCP usage and troubleshooting notes.
-- [agents/tasks/index.md](agents/tasks/index.md): compact task-history index to search before opening full task summaries.
-- [agents/tools/](agents/tools/): reusable helper scripts for scoped repo search and text normalization.
-- [prompts/](prompts/): reusable prompts for recurring development workflows such as orchestration, framework upgrades, PR reviews, agent reflection, security hardening, docs consistency, and test stabilization.
+- [agents/code_reviewer.md](agents/code_reviewer.md): independent review procedure, severity, report format, and loop stop rule.
+- [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
+- [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
+- [agents/tools/](agents/tools/): scoped repository search and strict UTF-8/CRLF validation helpers.
+- [agents/domain.md](agents/domain.md): verified stable framework/domain facts.
+- [agents/glossary.md](agents/glossary.md): stable project terms.
+- [agents/heuristics.md](agents/heuristics.md): unique reusable working heuristics not already owned by a canonical framework doc or `AGENTS.md`.
+- [prompts/README.md](prompts/README.md): optional recurring workflow prompts, including framework upgrades and development-agent instruction upgrades.
 
-## Which Doc to Use
+## Ownership
 
-- If the task changes visual styling, shared UI components, or theme behavior: start with `design_system.html`, then `layout.md`, then `templates.md` if shared fragments are involved.
-- If the task changes templates or screen composition: start with `templates.md`, then `layout.md`, then `design_system.html`, then `dynamic.md` if a dynamic controller is involved.
-- If the task changes models, queries, or save flows: start with `crud.md`, then `db.md`, then `datetime.md` if date fields are involved.
-- If the task adds or changes database-backed application settings: read `settings.md`, then `db.md` for provider-specific update scripts.
-- If the task changes report classes, report templates, exports, or custom report SQL behavior: read `reports.md`, then `db.md`, then `templates.md` if templates are involved.
-- If the task changes assistant, LLM, knowledge base, embedding, or vector retrieval behavior: read `assistant.md`, then `db.md`, `crud.md`, and `templates.md` as needed.
-- If the task changes Windows/IIS deployment scripts or setup instructions: read `deploy.md`.
-- If the task adds or renames framework methods, variables, constants, or generated module helpers: read `naming.md`.
-- If the task affects repo workflow or agent instructions: read `AGENTS.md`, `agents/code_reviewer.md`, `.github/copilot-instructions.md`, and the active task summary in `docs/agents/tasks/`; search `agents/tasks/index.md` before opening old summaries.
-- If starting a recurring maintenance workflow from a reusable prompt: read `prompts/README.md`, then follow the chosen prompt plus the repo instructions.
+- `AGENTS.md`: workflow authority and always-on cross-task correctness guardrails.
+- `.github/copilot-instructions.md`: generated byte mirror of `AGENTS.md`; never a separate owner.
+- Canonical framework docs above: detailed behavior, commands, and public contracts.
+- `docs/agents/code_reviewer.md`: review procedure only; it applies rather than copies `AGENTS.md` and canonical topic rules.
+- `docs/agents/tasks/summary-*.md`: current-task evidence and decisions, not reusable policy. Historical bodies are immutable.
+- `docs/agents/domain.md`, `glossary.md`, and `heuristics.md`: stable facts, terms, and non-duplicated recurring heuristics respectively.
+- `docs/prompts/`: optional task-specific workflows subordinate to `AGENTS.md`.
+
+## Route by Task
+
+- Templates, shared UI fragments, parser behavior: `templates.md`; add `layout.md` and `design_system.html` for layout/theme work, and `dynamic.md` for Dynamic/Vue screens.
+- Models, queries, schemas, or provider behavior: `crud.md`, then `db.md`; add `datetime.md` for date/time fields and `settings.md` for Site Settings.
+- Assistant, LLM, knowledge base, embedding, or retrieval: `assistant.md`, then only the relevant DB/CRUD/template docs.
+- Deployment or IIS scripts: `deploy.md`.
+- Naming or public method/result conventions: `naming.md`.
+- Agent workflow or reviewer behavior: `AGENTS.md`, then the active task summary and `agents/code_reviewer.md` only when review is in scope.
+- Recurring maintenance workflow: select the narrowest matching prompt from `prompts/README.md`; prompts never override `AGENTS.md`.

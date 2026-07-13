@@ -20,7 +20,7 @@ Goal: find exploitable or support-heavy risks, fix confirmed issues with minimal
 3. Trace each candidate issue from reachable entry point to sink before fixing.
 4. Fix the smallest contract that removes the risk while preserving intended product behavior.
 5. Update templates/forms/tests/docs when a server-side security contract changes.
-6. Run the review-fix loop until no material issues remain.
+6. Run the review-fix loop until no Blocker, High, or Medium findings remain; keep Low observations non-blocking.
 
 ## Verification
 

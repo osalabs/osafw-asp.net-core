@@ -98,8 +98,9 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-05-26-js-components-docs.md` - Added concise `fw.initComponent()` / `fw.registerComponent()` guidance to `docs/templates.md` near the common JavaScript component includes.
 - `summary-2026-05-26-lookups-navigation.md` - Fixed shared Vue history handling so initial screen state uses `replaceState`, normal in-app navigation uses `pushState`, and `popstate` updates the current screen without addin...
 - `summary-2026-05-26-modal-component-refactor.md` - Moved inline `common/modal.html` JavaScript to cacheable `wwwroot/assets/js/fw-modal.js`.
+- `summary-2026-05-27-column-filters.md` - Created a draft implementation plan for optional typed column filters on Dynamic/Vue list screens.
 - `summary-2026-05-27-static-icon-partials.md` - Migrated static Bootstrap icon tags in ParsePage templates to `common/icons/*` includes.
-- `summary-2026-06-01-deep-security-scan.md` - Completed a private repository-wide security assessment and kept detailed findings in ignored/private artifacts.
+- `summary-2026-06-01-column-filters-phase1.md` - Added opt-in typed column filters for Dynamic/Vue list screens behind `list_column_filters.enabled`.
 - `summary-2026-06-03-custom-reports.md` - Added Site Admin-managed custom reports on top of the existing `/Admin/Reports` module.
 - `summary-2026-06-03-security-agent-instruction-updates.md` - Added concise recurring security guardrails to shared agent and reviewer instructions.
 - `summary-2026-06-03-security-post-token-small-actions.md` - Added request-method and token checks to custom mutating actions.
@@ -114,34 +115,59 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-06-breaking-changelog.md` - Rebuilt `docs/CHANGELOG.md` into dated breaking-upgrade sections covering commits since 2025-06-01.
 - `summary-2026-06-06-method-comment-cleanup.md` - Reviewed 2,260 C# method-like declarations under `osafw-app/` and `osafw-tests/` using a Roslyn inventory, excluding `bin/`, `obj/`, and `osafw-app/App_Data/db/`.
 - `summary-2026-06-06-method-comments.md` - Updated agent coding-style guidance to prefer concise, contract-focused XML method docs instead of full param/return comments for obvious signatures.
+- `summary-2026-06-06-run-all-tests.md` - Ran the full default and SQLite test variants, fixed their failures, and verified the repaired suite.
 - `summary-2026-06-06-search-repo-improvements.md` - Reverted the throwaway byte-size helper test-session feature files and improved `Search-Repo.ps1` for multi-path searches and lower-noise defaults.
 - `summary-2026-06-06-token-efficient-workflow.md` - Added reusable agent helper scripts for scoped repo search and CRLF/UTF-8 no-BOM normalization.
-- `summary-2026-06-07-s3-att-compat-pdf-inline.md` - Added S3 attachment key compatibility and trusted PDF inline serving while preserving attachment authorization.
 - `summary-2026-06-07-modal-validation-comments.md` - Updated `fw-modal.js` modal AJAX submits to honor browser form validation and added concise comments around modal helper methods.
-- `summary-2026-06-23-on-refresh-save.md` - Added `.on-refresh-save` support for classic forms so refresh-triggering controls can validate/save before reloading ShowForm.
+- `summary-2026-06-07-report-db-config.md` - Added named `db_config` support to `FwReportsBase`.
+- `summary-2026-06-07-s3-att-compat-pdf-inline.md` - Added S3 attachment key compatibility and trusted PDF inline serving while preserving attachment authorization.
+- `summary-2026-06-07-security-group-9a.md` - Hardened routing consistency, virtual-controller cache invalidation, logging defaults, telemetry defaults, and dashboard docs.
 - `summary-2026-06-07-security-group-9b.md` - Added central privileged user-management checks, activity-log comment handling, and Data Protection setup.
-- `summary-2026-06-08-fwupdates-post-flow.md` - Split developer update discovery from authenticated update execution.
-- `summary-2026-06-08-dev-login-local-gating.md` - Restricted developer convenience login to local development conditions.
-- `summary-2026-06-08-agent-testing-balance.md` - Added behavior-level testing guidance and production-code simplicity checks to agent and reviewer instructions.
+- `summary-2026-06-07-test-email-priority.md` - Made configured `appSettings.test_email` take priority over the current session login in test mode.
 - `summary-2026-06-08-agent-performance-review.md` - Added concise performance guardrails and reviewer checks for repeated expensive work, unbounded data, blocking I/O, and invasive optimizations.
-- `summary-2026-06-09-markdown-modal-escape.md` - Added modal-aware Escape handling so Bootstrap Markdown fullscreen exits before Escape closes the containing Bootstrap modal.
-- `summary-2026-06-09-devmanage-write-guards.md` - Added DevManage request-method and token guards before generator, schema, and file-write side effects.
-- `summary-2026-06-09-security-remediation-review.md` - Created a private remediation-status review and public-safety audit of June security task summaries.
-- `summary-2026-06-09-sanitize-security-summaries.md` - Sanitized June security task summaries and moved detailed reconciliation notes to ignored/private artifacts.
-- `summary-2026-06-09-sync-master-conflicts.md` - Resolved master merge conflicts in customizable list filters by combining typed filter restore with saved-filter authorization and dynamic permission hooks.
+- `summary-2026-06-08-agent-testing-balance.md` - Added behavior-level testing guidance and production-code simplicity checks to agent and reviewer instructions.
+- `summary-2026-06-08-dev-login-local-gating.md` - Restricted developer convenience login to local development conditions.
+- `summary-2026-06-08-fwupdates-post-flow.md` - Split developer update discovery from authenticated update execution.
+- `summary-2026-06-08-security-group-1-devconfigure-origin.md` - Hardened trusted-origin handling for development/bootstrap flows and host-derived framework URLs.
 - `summary-2026-06-09-deploy-script.md` - Added repo-contained PowerShell deploy profiles/core plus a Task Scheduler setup helper with temp worktree publishing, app_offline deployment, logging, locking, status files, webhook notification, and runtime-folder preservation notes.
+- `summary-2026-06-09-devmanage-write-guards.md` - Added DevManage request-method and token guards before generator, schema, and file-write side effects.
+- `summary-2026-06-09-markdown-modal-escape.md` - Added modal-aware Escape handling so Bootstrap Markdown fullscreen exits before Escape closes the containing Bootstrap modal.
+- `summary-2026-06-09-sanitize-security-summaries.md` - Sanitized June security task summaries and moved detailed reconciliation notes to ignored/private artifacts.
+- `summary-2026-06-09-security-remediation-review.md` - Created a private remediation-status review and public-safety audit of June security task summaries.
+- `summary-2026-06-09-sync-master-conflicts.md` - Resolved master merge conflicts in customizable list filters by combining typed filter restore with saved-filter authorization and dynamic permission hooks.
+- `summary-2026-06-10-column-filter-engine.md` - Moved typed list column filters into `FwDynamicController.ColumnFilters.cs` for Dynamic/Vue reuse.
 - `summary-2026-06-10-pr270-review-fixes.md` - Fixed PR #270 review findings for Vue search persistence, duplicate Vue form-field collection, column-filter inference work, and lookup option caching.
+- `summary-2026-06-11-list-search-placeholder.md` - Added the default list-search placeholder from configured `search_fields`.
+- `summary-2026-06-11-sidebar-version-stamp.md` - Added a muted logged-in sidebar version stamp.
 - `summary-2026-06-12-assistant-port.md` - Ported the optional Assistant/LLM/Knowledge Base feature as a generic read-only RAG assistant with SQL-backed KB/document chunks, admin screens, migrations, docs, and focused tests.
 - `summary-2026-06-12-assistant-premerge.md` - In progress: implementing pre-merge Assistant/Knowledge Base source, queue, retrieval, dashboard, schema, docs, and test changes from the assistant review.
+- `summary-2026-06-12-assistant-review.md` - Created a critical architecture review of the Assistant/Knowledge Base implementation.
+- `summary-2026-06-16-site-settings-docs.md` - Added the Site Settings developer guide.
+- `summary-2026-06-17-assistant-chat-ui.md` - Fixed Assistant chat layout, duplicate user messages, and worker-disabled queue behavior.
+- `summary-2026-06-17-main-access-level.md` - Aligned the default `/Main` route rule with member-only controller access.
 - `summary-2026-06-17-prompts-folder.md` - Moved reusable development prompts into `docs/prompts/`, added PR review, agent reflection, security, docs-consistency, and test-stabilization prompts, and linked the folder from `docs/README.md`.
-- `summary-2026-06-23-assistant-navigation.md` - Added catalog-driven AI Assistant navigation support with a read-only navigation tool, validated response links, prompt relocation, docs, and focused tests.
-- `summary-2026-06-23-assistant-ui-followup.md` - Fixed Assistant follow-up history, active-run spinner/scroll feedback, and personal Change Password navigation to `/My/Password`.
-- `summary-2026-06-23-assistant-memory-hardening.md` - Simplified Assistant memory to one sanitized per-user summary, removed terminology/preferences JSON fields from unreleased schemas, and patched the local dev DB directly.
-- `summary-2026-06-23-assistant-prompt-templates.md` - Moved remaining Assistant memory/user-message prompt prose from C# into ParsePage prompt templates and updated focused tests/docs.
+- `summary-2026-06-17-site-settings-input-controls.md` - Added Site Settings constants for the supported admin input controls.
+- `summary-2026-06-22-address-review-findings.md` - Fixed Assistant citation, schema parity, stale-source recovery, and KB attachment review findings.
+- `summary-2026-06-22-assistant-operational-hardening.md` - Hardened Assistant/RAG queue operations.
+- `summary-2026-06-22-assistant-rag-cleanup.md` - Renamed `AdminVectorSearchLimit` to `ADMIN_VECTOR_SEARCH_LIMIT`.
+- `summary-2026-06-22-kb-assistant-uat.md` - Switched RAG chunk search to vector retrieval and standard filters.
+- `summary-2026-06-22-pr273-findings-fixes.md` - Fixed Assistant queue, recovery, sharing, feedback, and share-code review findings.
 - `summary-2026-06-23-assistant-composer-tab-order.md` - Reordered Assistant composer controls so Tab from the prompt focuses Send before Files while keeping file upload available.
-- `summary-2026-06-23-pr273-release-fixes.md` - Addressed PR #273 release fixes for Assistant contact output, Assistant message access, readonly Site Settings saves, duplicate timeout sweeps, and test stability.
+- `summary-2026-06-23-assistant-memory-hardening.md` - Simplified Assistant memory to one sanitized per-user summary, removed terminology/preferences JSON fields from unreleased schemas, and patched the local dev DB directly.
+- `summary-2026-06-23-assistant-navigation.md` - Added catalog-driven AI Assistant navigation support with a read-only navigation tool, validated response links, prompt relocation, docs, and focused tests.
+- `summary-2026-06-23-assistant-prompt-templates.md` - Moved remaining Assistant memory/user-message prompt prose from C# into ParsePage prompt templates and updated focused tests/docs.
+- `summary-2026-06-23-assistant-ui-followup.md` - Fixed Assistant follow-up history, active-run spinner/scroll feedback, and personal Change Password navigation to `/My/Password`.
+- `summary-2026-06-23-codegen-model-config.md` - Made generated models omit `field_icode` when the table has no `icode` field.
+- `summary-2026-06-23-modal-focus.md` - Added remote modal autofocus support.
+- `summary-2026-06-23-on-refresh-save.md` - Added `.on-refresh-save` support for classic forms so refresh-triggering controls can validate/save before reloading ShowForm.
 - `summary-2026-06-23-pr273-merge-readiness.md` - Review/fix loops for PR #273 merge readiness; added Assistant duplicate-run guarding and worker-loop logging, then passed full tests and final PR review.
-- `summary-2026-06-24-port-best-practices.md` - In progress: porting selected reusable workflow and Dynamic/Vue JSON display improvements from downstream-app review.
+- `summary-2026-06-23-pr273-release-fixes.md` - Addressed PR #273 release fixes for Assistant contact output, Assistant message access, readonly Site Settings saves, duplicate timeout sweeps, and test stability.
+- `summary-2026-06-23-production-error-sanitization.md` - Masked detailed framework/server errors when `IS_DEV` is false.
 - `summary-2026-06-24-code-reviewer-simplicity.md` - Tightened code reviewer simplicity checks to cover solution-level structure and local code simplification without encouraging broad rewrites.
-- `summary-2026-06-24-uat-fixes.md` - Fixed selected UAT findings for Vue delete confirmation, Assistant uploads navigation, feedback modal defaults, icon-only titles/shared title-aria partials, stale backup templates, and minor UI copy/title issues.
+- `summary-2026-06-24-iis-header-hardening.md` - Added IIS publish/header hardening and deployment guidance.
+- `summary-2026-06-24-issue253-nullable-int-empty.md` - Implemented nullable-int empty-input handling for issue #253.
+- `summary-2026-06-24-port-best-practices.md` - In progress: porting selected reusable workflow and Dynamic/Vue JSON display improvements from downstream-app review.
 - `summary-2026-06-24-test-suite-cleanup.md` - Simplified framework tests with tracked internal seams, shared test context/session helpers, deleted private-helper-only coverage, and downstream app test cleanup guidance.
+- `summary-2026-06-24-uat-fixes.md` - Fixed selected UAT findings for Vue delete confirmation, Assistant uploads navigation, feedback modal defaults, icon-only titles/shared title-aria partials, stale backup templates, and minor UI copy/title issues.
+- `summary-2026-07-08-markdown-paste-autosave.md` - Fixed rich HTML paste handling in the shared markdown editor.
+- `summary-2026-07-13-agent-instructions-upgrade.md` - Consolidated development-agent guidance, corrected stale contracts, and hardened instruction validation helpers.

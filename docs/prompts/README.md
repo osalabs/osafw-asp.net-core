@@ -7,6 +7,7 @@ Use these as starting points, then fill the placeholders and remove anything tha
 ## Prompt Catalog
 
 - `fw_upgrade.md` - upgrade a downstream app from an older framework snapshot while preserving app-specific behavior.
+- `agent_upgrade.md` - audit and modernize this repository's development-agent instruction stack after a meaningful agent/runtime release or accumulated guidance drift.
 - `app_test_bootstrap_cleanup.md` - remove inherited framework implementation tests from a downstream app while keeping app smoke and app-specific coverage.
 - `orchestrator.md` - coordinate a large or risky task with planning, bounded delegation, implementation packets, verification, review, and closeout.
 - `pr_code_review.md` - review a GitHub PR, fix confirmed issues, verify, and repeat until ready for rereview.

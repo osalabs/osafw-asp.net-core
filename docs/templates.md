@@ -647,7 +647,7 @@ You need to create these files and fill with replacements in this format:
 ```
 Default lanugage is English, so en.txt doesn't need be created.
 
-Note that `.js` template files are not parsed for backtick language strings automatically.
+Note that `.js` template files are not parsed for backtick language strings automatically. Inline scripts inside parsed HTML templates are parsed, so do not use JavaScript template literals there: their backticks are translation markers. Prefer quoted strings/concatenation or move the script to a `.js` asset.
 
 For example, you have a template:
 ```

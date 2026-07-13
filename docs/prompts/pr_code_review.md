@@ -14,14 +14,14 @@ Goal: find material issues, fix confirmed issues, verify the fixes, and repeat u
 
 ## Fix Loop
 
-For each confirmed material issue:
+For each confirmed Blocker, High, or Medium issue:
 
 1. Define the smallest fix that addresses the actual risk.
 2. Launch a bounded sub-agent to implement the fix when sub-agents are available and the file scope is independent. Give it exact files/modules, constraints, and verification expectations.
 3. Keep tightly coupled, risky, shared-contract, or security-sensitive fixes in the main workspace if delegation would add merge risk.
 4. Inspect any sub-agent changes before relying on them. The main agent owns integration.
 5. Run the smallest verification that can falsify the fix quickly. Add or update tests when the risk justifies it.
-6. Re-review the changed diff. Continue until no material review findings remain.
+6. Re-review the changed diff. Continue until no Blocker, High, or Medium findings remain; report Low observations without blocking the loop.
 
 ## Verification
 

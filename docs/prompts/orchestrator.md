@@ -83,7 +83,7 @@ For the review:
 
 - Findings must be concrete and path/line grounded.
 - Fix real issues in the main workspace.
-- Repeat only while the next loop is likely to improve the result.
+- Repeat while Blocker, High, or Medium findings remain. Low observations do not keep the loop open.
 
 ## Phase 6 - Closeout
 

@@ -1,48 +1,18 @@
 # Heuristics for osafw-asp.net-core
 
-Updated: 2026-06-12
+Reviewed: 2026-07-13
 
-- Prefer adding features via controllers/models over modifying core `fw` unless it’s a cross-cutting concern.
-- For CRUD screens, first try `FwDynamicController` or `FwVueController` with `config.json` before writing bespoke UI.
-- Keep controller actions thin: parse input, call model, prepare `ps`, set `ps["_json"]` when returning JSON.
-- For framework method names, follow `docs/naming.md`: prefer result-shape or side-effect prefixes like `list*`, `one*`, `count*`, `add*`, `update*`, and `save*`.
-- Use `FormUtils.filter` and `filterCheckboxes` for whitelisting fields and handling checkboxes; avoid manual parsing.
-- Use `Fw.model<T>()` singletons; don’t new models directly except through `fw.model("Name")`.
-- When returning files, use `fw.fileResponse` to set headers correctly.
-- Use `fw.routeRedirect` to chain actions to avoid duplicate logic and keep responses consistent.
-- For templates, place overrides under `/osafw-app/App_Data/template/<controller>/<action>`; keep common bits in `/common`.
-- 2026-05-19: Before adding custom UI CSS, check `docs/design_system.html` and prefer Bootstrap utilities, shared fragments, and framework/theme tokens.
-- 2026-05-19: Modal content that enables ID namespacing should use scoped selectors via `fw.scopeFromScript()` instead of global `#id` selectors.
-- Respect access control: set controller `access_level` and add route rules in `FwConfig.access_levels` when needed.
-- 2026-06-03: For custom mutating controller actions, call `enforcePost()` before side effects; update calling templates/forms so valid UI submissions use POST and carry the token.
-- 2026-06-03: Direct id loads, saves, deletes, attachment links, and dynamic child writes need authorization predicates at the target row boundary, not only list filtering.
-- 2026-06-03: Treat app-local redirects, raw HTML/markdown/`v-html`, attachment serving/S3 redirects, and active uploaded content as security review triggers.
-- 2026-06-03: Dev/admin tools, generated SQL, assistant tools, file/schema generators, and request/session telemetry need explicit exposure gates, allowlists, resource checks, and redaction.
-- For DB code, always parameterize via `DB` helper; avoid string concatenation.
-- Use `FwCache` for expensive lookups; cache keys should be namespaced and include input parameters.
-- Prefer `DateUtils` helpers for formatting and parsing with user timezone (`fw.userTimezone`).
-- When adding routes or prefixes, update `FwConfig.route_prefixes` and test `FW.getRoute()`.
-- For migrations, add SQL scripts under the active provider update folder and register via `fwupdates` flow (`App_Data/sql/updates` for SQL Server, `App_Data/sql/mysql/updates` for MySQL provider overrides, `App_Data/sql/sqlite/updates` for SQLite).
-- Log at appropriate level; avoid verbose logs on production (`log_level` INFO).
-- In Vue templates, bind disabled states to buttons (not anchors) to avoid `disabled="false"` being rendered and to honor read-only flags.
-- 2026-01-17: For Vue form tabs, sync the active tab with the URL query string to keep deep links stable.
-- 2026-02-25: Keep OpenAI model constants in canonical provider format (for example `gpt-5-mini`) and avoid alias normalization layers in runtime code.
-- 2026-02-25: OpenAI .NET embeddings API (`GenerateEmbedding`) returns `ClientResult<OpenAIEmbedding>`; read `.Value` before converting vector data.
-- 2026-04-13: In ParsePage, do not timezone-convert date-only values; only shift real datetimes.
-- 2026-04-13: Avoid culture-dependent `DateTime.TryParse` for user-facing dates; use SQL or explicit user format parsing, and rebuild the session when date/time/timezone preferences change.
-- 2026-05-11: Keep ParsePage route literal templates such as `App_Data/template/**/url.html` single-line with no trailing newline byte.
-- 2026-05-11: If normal build output is locked, build into repo-root `artifacts/` with `-p:OutDir=artifacts/assistant_build/`.
-- 2026-05-11: When agent workflow changes, keep `AGENTS.md`, `.github/copilot-instructions.md`, `docs/agents/code_reviewer.md`, and task-summary expectations aligned.
-- 2026-05-11: Keep dictionary single-row reads empty-row based, but use `null` for typed single-row reads so missing records cannot masquerade as default DTOs.
-- 2026-05-11: For ParsePage recursion protection, prefer a file-include depth limit over cycle detection so legitimate recursive tree templates can render.
-- 2026-06-12: Avoid JavaScript template literals inside ParsePage templates; backticks are translation markers and can corrupt rendered inline scripts.
-- 2026-05-12: When reading `appSettings`, load its direct children into `FwConfig` settings; do not introduce an `appSettings` key inside the runtime settings dictionary.
-- 2026-05-14: For runtime SQL shared by providers, prefer `DB` expression helpers over raw provider functions like `GETDATE`, `DATEADD`, `CONCAT`, or `CAST(... AS date)`.
-- 2026-05-18: With SQL-backed ASP.NET Core session, avoid writing session on every request; unnecessary writes can race and overwrite newer login state.
-- 2026-05-15: Do not lowercase or otherwise normalize complete encoded URLs; preserve case-sensitive path/query data and add mixed-case URL/token regression tests for URL helpers.
-- 2026-05-20: For files over 1 MB or known large drafts/logs/generated outputs, do not run whole-file reads; use `rg` for headings/section IDs or read targeted ranges.
-- 2026-05-20: Use bounded sub-agents early for independent research, schema parity checks, test triage, and review; ask for concise findings with paths, not broad summaries.
-- 2026-05-20: For tasks touching independent file groups, consider one worker for a disjoint group early; keep shared contracts and final integration in the main workspace.
-- 2026-05-20: For MCP-dependent workflows, validate the requested MCP once and retry once; if still blocked, ask whether to fix MCP or use a fallback instead of spending time on tooling recovery.
-- 2026-05-20: For isolated app builds, use repo-root `OutDir` only; do not set `BaseIntermediateOutputPath` for `osafw-app`.
-- 2026-05-20: Use task-summary `Reflection` for reusable process lessons and candidate instruction updates; avoid task recaps there.
+Keep this file for recurring working heuristics that are not already contracts in `AGENTS.md` or a canonical topic doc. Framework facts belong in `docs/agents/domain.md`; task-specific lessons belong in the active summary.
+
+- Prefer adding app/example behavior through controllers, persistence models, templates, or config; modify `App_Code/fw` only for a reusable cross-cutting framework concern or contract bug.
+- For standard CRUD screens, try `FwDynamicController` or `FwVueController` with `config.json` before building bespoke UI.
+- Use `FormUtils.filter` and `filterCheckboxes` to whitelist form fields and normalize checkboxes instead of open-ended manual request parsing.
+- Reuse models through the current `FW` instance (`fw.model<T>()` or `fw.model(name)`); do not construct persistence models directly unless a non-framework test or isolated tool genuinely requires it.
+- Return files through `fw.fileResponse` so content type, disposition, and response completion stay consistent.
+- Use `fw.routeRedirect` when one action intentionally reuses another action's flow rather than duplicating controller logic.
+- Before custom UI CSS, check `docs/design_system.html` and prefer Bootstrap utilities, shared fragments, and framework/theme tokens.
+- Use `FwCache` only for meaningfully expensive/repeated work; namespace keys and include every input that changes the cached result.
+- When adding route prefixes, update `FwConfig.route_prefixes` and exercise the corresponding `FW.getRoute()` behavior.
+- Keep production logging below verbose/debug levels unless a scoped diagnostic period is intentional.
+- With database-backed ASP.NET Core session, avoid writing session state on every request; unnecessary writes can race and overwrite newer login state.
+- Do not lowercase or otherwise normalize a complete encoded URL; preserve case-sensitive path/query data and cover mixed-case values in URL-helper tests.

@@ -1,13 +1,13 @@
 # Domain / Bounded Context
 
-Updated: 2026-06-06
+Updated: 2026-07-13
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
 
 Core Subdomains
 - Users and Access
-  - Users with access levels (0 visitor, 1 user, 80 moderator, 100 admin). Optional roles/resources/permissions.
+  - Users with access levels 0 visitor, 1 member, 50 employee, 80 manager, 90 admin, and 100 Site Admin. Optional roles/resources/permissions.
   - Authentication: password, optional Windows auth; MFA support fields present.
 - Content and Pages
   - Static pages (`spages`) with optional templates, metadata, and publish dates.

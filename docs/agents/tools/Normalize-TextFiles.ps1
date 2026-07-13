@@ -6,7 +6,7 @@ param(
     [switch]$Check
 )
 
-$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false, $true)
 $hadIssue = $false
 
 $expandedPaths = foreach ($entry in $Path) {
@@ -20,7 +20,35 @@ foreach ($inputPath in $expandedPaths) {
         $filePath = $resolved.Path
         $bytes = [System.IO.File]::ReadAllBytes($filePath)
         $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
-        $text = [System.Text.Encoding]::UTF8.GetString($bytes)
+        $hasUnsupportedBom =
+            ($bytes.Length -ge 4 -and $bytes[0] -eq 0x00 -and $bytes[1] -eq 0x00 -and $bytes[2] -eq 0xFE -and $bytes[3] -eq 0xFF) -or
+            ($bytes.Length -ge 4 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE -and $bytes[2] -eq 0x00 -and $bytes[3] -eq 0x00) -or
+            ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) -or
+            ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF)
+
+        try {
+            if ($hasUnsupportedBom) {
+                throw [System.Text.DecoderFallbackException]::new("UTF-16/UTF-32 BOM detected.")
+            }
+            $text = $utf8NoBom.GetString($bytes)
+        }
+        catch [System.Text.DecoderFallbackException] {
+            $hadIssue = $true
+            [pscustomobject]@{
+                File = $filePath
+                Utf8Valid = $false
+                Utf8Bom = $hasBom
+                BareLF = $null
+                CROnly = $null
+                Status = "invalid-encoding"
+            }
+
+            if (-not $Check) {
+                throw "File is not strict UTF-8; refusing to normalize: $filePath"
+            }
+            continue
+        }
+
         if ($hasBom -and $text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) {
             $text = $text.Substring(1)
         }
@@ -31,6 +59,7 @@ foreach ($inputPath in $expandedPaths) {
 
         [pscustomobject]@{
             File = $filePath
+            Utf8Valid = $true
             Utf8Bom = $hasBom
             BareLF = $hasBareLf
             CROnly = $hasCrOnly
@@ -43,7 +72,12 @@ foreach ($inputPath in $expandedPaths) {
             if (-not $Check) {
                 $normalized = $text -replace "`r`n|`r|`n", "`r`n"
                 if ($PSCmdlet.ShouldProcess($filePath, "Normalize to UTF-8 without BOM and CRLF line endings")) {
-                    [System.IO.File]::WriteAllText($filePath, $normalized, $utf8NoBom)
+                    try {
+                        [System.IO.File]::WriteAllText($filePath, $normalized, $utf8NoBom)
+                    }
+                    catch {
+                        throw ("Failed to normalize {0}: {1}" -f $filePath, $_.Exception.Message)
+                    }
                 }
             }
         }
