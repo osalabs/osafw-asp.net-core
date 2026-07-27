@@ -33,7 +33,7 @@ internal static class DevCli
         public bool Help { get; set; }
     }
 
-    private sealed record ControllerPlan(
+    internal sealed record ControllerPlan(
         string Url,
         string Title,
         string Type,
@@ -78,6 +78,12 @@ internal static class DevCli
         {
             writeUsage(output);
             return EXIT_SUCCESS;
+        }
+
+        if (options.ControllerType == "api")
+        {
+            error.WriteLine("Error: API controller scaffolding is not yet available; the option is reserved for future support.");
+            return EXIT_ERROR;
         }
 
         FW? fw = null;
@@ -288,6 +294,7 @@ internal static class DevCli
         writer.WriteLine();
         writer.WriteLine("Scaffolding uses the resolved Development configuration by default and refuses to run unless IS_DEV=true.");
         writer.WriteLine("Existing generated model/controller targets are preserved unless --force is explicit.");
+        writer.WriteLine("The api controller type is reserved for future support and currently exits without generating output.");
     }
 
     private static void scaffoldCrud(FW fw, Options options, TextWriter output)
@@ -417,30 +424,31 @@ internal static class DevCli
         };
     }
 
-    private static void ensureModelTargetAvailable(string modelName, string modelPath, bool force)
+    internal static void ensureModelTargetAvailable(string modelName, string modelPath, bool force)
     {
-        if (File.Exists(modelPath) && !force)
+        var targetExists = File.Exists(modelPath);
+        if (targetExists && !force)
             throw new UserException($"Model source already exists: {modelPath}. Use --force to replace it.");
 
-        var compiledModelExists = DevEntityBuilder.listModels()
-            .Any(name => string.Equals(name, modelName, StringComparison.OrdinalIgnoreCase));
-        if (compiledModelExists && !File.Exists(modelPath))
-            throw new UserException($"Model type '{modelName}' already exists in another source file.");
+        if (!targetExists && hasCompiledTopLevelType(modelName))
+            throw new UserException($"A compiled type named '{modelName}' already exists in the application.");
     }
 
-    private static void ensureControllerTargetsAvailable(ControllerPlan plan, bool force)
+    internal static void ensureControllerTargetsAvailable(ControllerPlan plan, bool force)
     {
+        var compiledControllerExists = DevEntityBuilder.listControllers()
+            .Any(name => string.Equals(name, plan.ClassName + "Controller", StringComparison.OrdinalIgnoreCase));
+        if (compiledControllerExists && plan.IsLookup)
+            throw new UserException($"Controller type '{plan.ClassName}Controller' already occupies route '{plan.Url}'; lookup registration would be shadowed.");
+        if (compiledControllerExists && !File.Exists(plan.SourcePath))
+            throw new UserException($"Controller type '{plan.ClassName}Controller' already exists in another source file.");
+
         if (plan.IsLookup)
             return;
         if (File.Exists(plan.SourcePath) && !force)
             throw new UserException($"Controller source already exists: {plan.SourcePath}. Use --force to replace it.");
         if (Directory.Exists(plan.TemplatePath) && !force)
             throw new UserException($"Controller template directory already exists: {plan.TemplatePath}. Use --force to replace it.");
-
-        var compiledControllerExists = DevEntityBuilder.listControllers()
-            .Any(name => string.Equals(name, plan.ClassName + "Controller", StringComparison.OrdinalIgnoreCase));
-        if (compiledControllerExists && !File.Exists(plan.SourcePath))
-            throw new UserException($"Controller type '{plan.ClassName}Controller' already exists in another source file.");
     }
 
     private static void writeControllerResult(TextWriter output, ControllerPlan plan, bool created)
@@ -485,6 +493,12 @@ internal static class DevCli
     private static bool isValidReportCode(string value)
     {
         return value.Length <= 128 && ReportCodeRegex.IsMatch(value);
+    }
+
+    private static bool hasCompiledTopLevelType(string typeName)
+    {
+        return typeof(FwModel).Assembly.GetTypes()
+            .Any(type => !type.IsNested && string.Equals(type.Name, typeName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool tryNormalizeControllerType(string value, out string normalized)

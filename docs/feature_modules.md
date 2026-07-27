@@ -25,7 +25,7 @@ dotnet run --project osafw-app -- scaffold report sales-summary
 dotnet run --project osafw-app -- scaffold --help
 ```
 
-The controller command requires the model to be compiled. A normal second `dotnet run` rebuilds automatically after a separate model command; build first only when using `--no-build`. Supported controller types match Developer Tools: `dynamic`, `vue`, `lookup`, and `api`.
+The controller command requires the model to be compiled. A normal second `dotnet run` rebuilds automatically after a separate model command; build first only when using `--no-build`. Controller type options are `dynamic`, `vue`, `lookup`, and `api`. The `api` option is reserved for future support; until an API-specific template exists, selecting it reports that it is not yet available and exits before generating files or database rows.
 
 The command defaults `ASPNETCORE_ENVIRONMENT` to `Development` only when neither ASP.NET Core nor .NET environment is already selected, and it refuses to run unless the resolved application settings have `IS_DEV=true`. Existing generated model/controller source or controller template directories are preserved unless `--force` is explicit. Report targets are always preserved when they already exist.
 
@@ -36,7 +36,7 @@ After generation, inspect the generated diff, customize the controller and `conf
 ## Browser alternative: Developer Tools at `/Dev/Manage`
 1. **Add the table** to your schema: mirror the demo tables in `osafw-app/App_Data/sql/demo.sql`, then append the `CREATE TABLE` to `osafw-app/App_Data/sql/database.sql` and create a dated script under `osafw-app/App_Data/sql/updates/` for deployments. MySQL provider-specific overrides can use `osafw-app/App_Data/sql/mysql/updates/`. SQLite projects use the matching files under `osafw-app/App_Data/sql/sqlite/` and put SQLite updates under `osafw-app/App_Data/sql/sqlite/updates/`.
 2. **Open Developer Tools** at `/Dev/Manage` and use the *Create Model* form. Pick your table and optional model name; the action reads the schema and generates the model file for you.
-3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or API). The generator copies demo templates, rewrites URLs/titles, configures `config.json`, writes the controller class, and adds a menu item.
+3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or the reserved API option). API scaffolding is not yet available; the other choices generate or register the selected controller type.
 4. **Restart the project or apply hot reload**, then navigate to the new controller URL.
 5. **Review and tweak `config.json`** in the generated template folder (see [dynamic controller config](dynamic.md)).
 6. **Review UI fit** against the [design system](design_system.html) before adding custom CSS; generated screens should usually rely on shared fragments and theme tokens.
@@ -46,7 +46,7 @@ In local development, Home can automatically redirect to a pending FwUpdates not
 
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.
-- `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`.
+- `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`; lookup scaffolding registers `fwcontrollers` metadata instead of writing a controller class.
 - The built-in `scaffold` command initializes `FW` in offline mode and calls the same entity-builder and code-generator layer without constructing an HTTP request or bypassing the browser actions' POST/XSS protections.
 
 ## Manual creation from the demo module

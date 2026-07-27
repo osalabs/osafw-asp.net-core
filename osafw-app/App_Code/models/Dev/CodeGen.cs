@@ -602,7 +602,7 @@ END" + Environment.NewLine;
         var controller_options = entity["controller"] as FwDict ?? [];
         string controller_url = controller_options["url"].toStr();
         string controller_title = controller_options["title"].toStr();
-        string controller_type = controller_options["type"].toStr(); // ""(dynamic), "vue", "lookup", "api"
+        string controller_type = controller_options["type"].toStr();
 
         if (controller_url == "")
         {
@@ -611,6 +611,18 @@ END" + Environment.NewLine;
         }
         //if controller url is not defined - default to admin model
         controller_url ??= "/Admin/" + model_name;
+
+        controller_type = controller_type.Trim().ToLowerInvariant();
+        if (controller_type == "dynamic")
+            controller_type = "";
+        if (controller_type == "api")
+        {
+            // TODO: Implement API-specific controller and template generation.
+            throw new UserException("API controller scaffolding is not yet available; the option is reserved for future support.");
+        }
+        if (controller_type is not ("" or "vue" or "lookup"))
+            throw new UserException($"Controller type '{controller_type}' is not supported by scaffolding.");
+        controller_options["type"] = controller_type;
 
         var controller_name = controller_url.toStr().Replace("/", "");
         if (controller_title == "")

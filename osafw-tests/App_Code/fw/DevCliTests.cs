@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -32,6 +33,18 @@ public class DevCliTests
         Assert.AreEqual("Sales Orders", options.ControllerTitle);
         Assert.AreEqual(string.Empty, options.ControllerType);
         Assert.IsTrue(options.Force);
+    }
+
+    [TestMethod]
+    public void TryParse_AcceptsReservedApiControllerType()
+    {
+        var parsed = DevCli.tryParse(
+            ["scaffold", "controller", "SalesOrders", "--type", "api"],
+            out var options,
+            out var error);
+
+        Assert.IsTrue(parsed, error);
+        Assert.AreEqual("api", options.ControllerType);
     }
 
     [TestMethod]
@@ -83,6 +96,41 @@ public class DevCliTests
     }
 
     [TestMethod]
+    [DataRow("FW")]
+    [DataRow("DevCli")]
+    public void EnsureModelTargetAvailable_RejectsExistingTopLevelType(string typeName)
+    {
+        var missingPath = Path.Combine(
+            Path.GetTempPath(),
+            "osafw-missing-" + Guid.NewGuid().ToString("N"),
+            typeName + ".cs");
+
+        var ex = Assert.ThrowsExactly<UserException>(
+            () => DevCli.ensureModelTargetAvailable(typeName, missingPath, force: false));
+
+        StringAssert.Contains(ex.Message, $"type named '{typeName}'");
+    }
+
+    [TestMethod]
+    public void EnsureControllerTargetsAvailable_LookupRejectsKnownCompiledRoute()
+    {
+        var existingSourcePath = typeof(AdminUsersController).Assembly.Location;
+        var plan = new DevCli.ControllerPlan(
+            Url: "/Admin/Users",
+            Title: "Users",
+            Type: "lookup",
+            ClassName: "AdminUsers",
+            SourcePath: existingSourcePath,
+            TemplatePath: Path.GetDirectoryName(existingSourcePath)!,
+            IsLookup: true);
+
+        var ex = Assert.ThrowsExactly<UserException>(
+            () => DevCli.ensureControllerTargetsAvailable(plan, force: true));
+
+        StringAssert.Contains(ex.Message, "AdminUsersController");
+    }
+
+    [TestMethod]
     public void Run_HelpDoesNotRequireApplicationConfiguration()
     {
         var output = new StringWriter();
@@ -96,7 +144,26 @@ public class DevCliTests
 
         Assert.AreEqual(DevCli.EXIT_SUCCESS, exitCode);
         StringAssert.Contains(output.ToString(), "scaffold crud <table>");
+        StringAssert.Contains(output.ToString(), "dynamic|vue|lookup|api");
+        StringAssert.Contains(output.ToString(), "reserved for future support");
         Assert.AreEqual(string.Empty, error.ToString());
+    }
+
+    [TestMethod]
+    public void Run_ReservedApiFailsBeforeApplicationConfiguration()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        var exitCode = DevCli.run(
+            ["scaffold", "controller", "SalesOrders", "--type", "api"],
+            new ConfigurationBuilder().Build(),
+            output,
+            error);
+
+        Assert.AreEqual(DevCli.EXIT_ERROR, exitCode);
+        Assert.AreEqual(string.Empty, output.ToString());
+        StringAssert.Contains(error.ToString(), "not yet available");
     }
 
     [TestMethod]
