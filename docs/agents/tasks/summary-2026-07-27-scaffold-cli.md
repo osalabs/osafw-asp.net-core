@@ -3,7 +3,7 @@
 - Added a generic built-in `DevCli` entry point to the existing web executable, with the initial `scaffold` command supporting CRUD, model, controller, and report generation.
 - Reused `FW.initOffline`, `DevEntityBuilder`, and `DevCodeGen`; the command exits before the web host and hosted services start.
 - Added development-environment enforcement, bounded CLI input validation, non-overwrite defaults, explicit model/controller `--force`, deterministic output, and exit codes.
-- Kept API as a recognized option reserved for future support while refusing it before generation, blocked lookup registrations that collide with compiled controller routes, and rejected generated model names that collide with any compiled top-level application type.
+- Kept API as a recognized option reserved for future support while refusing it before generation, blocked lookup registrations that collide with compiled controller routes, and rejected generated model names that collide with compiled top-level types in the generated `osafw` namespace.
 - Documented developer usage and taught repository agents to prefer the command after applying a new table to the intended development database.
 
 ## Scope reviewed
@@ -16,8 +16,8 @@
 
 ## Commands used / verification
 
-- `dotnet test osafw-tests\osafw-tests.csproj --filter "FullyQualifiedName~DevCodeGenTests|FullyQualifiedName~DevCliTests" -p:OutDir=...` passed 28 generator/CLI tests.
-- `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=...` passed all 714 tests.
+- `dotnet test osafw-tests\osafw-tests.csproj --filter "FullyQualifiedName~DevCodeGenTests|FullyQualifiedName~DevCliTests" -p:OutDir=...` passed 29 generator/CLI tests.
+- `dotnet test osafw-tests\osafw-tests.csproj -p:OutDir=...` passed all 715 tests.
 - Executed the built CLI help path and verified it exits successfully without application configuration.
 - Executed non-writing CLI probes and observed exit code `1` for the reserved API type, `2` for an unsafe controller URL, and `3` for a configuration without `IS_DEV=true`.
 - Ran the repository text-normalization check, `git diff --check`, and SHA-256 comparison of `AGENTS.md` with `.github/copilot-instructions.md`.
@@ -45,6 +45,7 @@
 
 - The first focused build caught a local variable shadowing the controller-plan helper; renaming the local restored compilation before broader verification.
 - Review found silent API-to-Dynamic fallback plus incomplete model and lookup collision checks; an explicit reserved-API guard and focused regression tests now cover those boundaries.
+- Follow-up review found the model check crossed namespace boundaries; collision matching now scopes to `osafw`, with `osafw.Parsers.HtmlParser` as the regression case.
 
 ## Testing instructions
 

@@ -430,8 +430,8 @@ internal static class DevCli
         if (targetExists && !force)
             throw new UserException($"Model source already exists: {modelPath}. Use --force to replace it.");
 
-        if (!targetExists && hasCompiledTopLevelType(modelName))
-            throw new UserException($"A compiled type named '{modelName}' already exists in the application.");
+        if (!targetExists && hasCompiledModelNamespaceType(modelName))
+            throw new UserException($"A compiled type named '{modelName}' already exists in namespace '{typeof(FwModel).Namespace}'.");
     }
 
     internal static void ensureControllerTargetsAvailable(ControllerPlan plan, bool force)
@@ -495,10 +495,14 @@ internal static class DevCli
         return value.Length <= 128 && ReportCodeRegex.IsMatch(value);
     }
 
-    private static bool hasCompiledTopLevelType(string typeName)
+    private static bool hasCompiledModelNamespaceType(string typeName)
     {
+        var modelNamespace = typeof(FwModel).Namespace;
         return typeof(FwModel).Assembly.GetTypes()
-            .Any(type => !type.IsNested && string.Equals(type.Name, typeName, StringComparison.OrdinalIgnoreCase));
+            .Any(type =>
+                !type.IsNested &&
+                string.Equals(type.Namespace, modelNamespace, StringComparison.Ordinal) &&
+                string.Equals(type.Name, typeName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool tryNormalizeControllerType(string value, out string normalized)

@@ -98,7 +98,7 @@ public class DevCliTests
     [TestMethod]
     [DataRow("FW")]
     [DataRow("DevCli")]
-    public void EnsureModelTargetAvailable_RejectsExistingTopLevelType(string typeName)
+    public void EnsureModelTargetAvailable_RejectsExistingTypeInGeneratedNamespace(string typeName)
     {
         var missingPath = Path.Combine(
             Path.GetTempPath(),
@@ -109,6 +109,18 @@ public class DevCliTests
             () => DevCli.ensureModelTargetAvailable(typeName, missingPath, force: false));
 
         StringAssert.Contains(ex.Message, $"type named '{typeName}'");
+    }
+
+    [TestMethod]
+    public void EnsureModelTargetAvailable_AllowsSameTypeNameFromAnotherNamespace()
+    {
+        Assert.AreEqual("osafw.Parsers", typeof(global::osafw.Parsers.HtmlParser).Namespace);
+        var missingPath = Path.Combine(
+            Path.GetTempPath(),
+            "osafw-missing-" + Guid.NewGuid().ToString("N"),
+            "HtmlParser.cs");
+
+        DevCli.ensureModelTargetAvailable("HtmlParser", missingPath, force: false);
     }
 
     [TestMethod]
