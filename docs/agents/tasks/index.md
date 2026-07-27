@@ -171,3 +171,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-24-uat-fixes.md` - Fixed selected UAT findings for Vue delete confirmation, Assistant uploads navigation, feedback modal defaults, icon-only titles/shared title-aria partials, stale backup templates, and minor UI copy/title issues.
 - `summary-2026-07-08-markdown-paste-autosave.md` - Fixed rich HTML paste handling in the shared markdown editor.
 - `summary-2026-07-13-agent-instructions-upgrade.md` - Consolidated development-agent guidance, corrected stale contracts, and hardened instruction validation helpers.
+- `summary-2026-07-27-scaffold-cli.md` - Added a development-only built-in CLI for safe model, controller, CRUD, and report scaffolding, with docs and agent workflow guidance.

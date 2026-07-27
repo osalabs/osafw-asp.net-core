@@ -48,6 +48,7 @@
 - Controllers end in `Controller`; public actions end in `Action`. Template-rendering actions conventionally return `FwDict`, while actions may also handle the response directly. Keep controllers focused on request/response orchestration.
 - Persistence/table models generally inherit `FwModel` and are obtained through the current `FW` instance (`fw.model<T>()` or `fw.model(name)`). Prefer model-owned business/data access when it keeps the boundary clearer; keep any controller-owned query narrow and parameterized.
 - Prefer `FwDynamicController` or `FwVueController` plus `config.json` for standard CRUD before adding bespoke UI. Compose views under `osafw-app/App_Data/template`.
+- After applying a new table to the intended development database, prefer the built-in CLI documented in `docs/feature_modules.md` for standard scaffolding. Inspect and customize generated output, and replace existing generated targets only when that is intentional.
 - Follow nearby style and the canonical topic docs: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, and `datetime.md`. Those docs own detailed naming, result-shape, provider, parser, and date/time contracts.
 - Add concise XML docs only for non-obvious framework intent, loose shapes, security/access expectations, side effects, exceptions, or null/empty behavior. Do not restate signatures or add comments for obvious code.
 - Avoid one-use wrappers and test-only production entry points unless they clarify a real contract, reduce meaningful duplication, or isolate genuinely complex logic.
