@@ -11,6 +11,27 @@ namespace osafw.Tests;
 public class DevCodeGenTests
 {
     [TestMethod]
+    public void CreateController_RejectsReservedApiTypeBeforeGeneration()
+    {
+        var fw = TestHelpers.CreateFw();
+        var entity = new FwDict
+        {
+            ["model_name"] = "DemoDicts",
+            ["controller"] = new FwDict
+            {
+                ["url"] = "/Admin/GeneratedApi",
+                ["title"] = "Generated API",
+                ["type"] = "api",
+            },
+        };
+
+        var ex = Assert.ThrowsExactly<UserException>(
+            () => CreateCodeGen(fw).createController(entity, []));
+
+        StringAssert.Contains(ex.Message, "not yet available");
+    }
+
+    [TestMethod]
     public void CreateModel_ClearsFieldIcodeWhenTableHasNoIcode()
     {
         var tempRoot = Path.Combine(Path.GetTempPath(), "osafw-codegen-" + Guid.NewGuid().ToString("N"));

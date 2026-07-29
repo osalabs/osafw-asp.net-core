@@ -27,8 +27,18 @@ public static class Program
 
     public static void Main(string[] args)
     {
+        var isCliCommand = DevCli.isCommand(args);
+        if (isCliCommand)
+            DevCli.useDefaultDevelopmentEnvironment();
+
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateBuilder(isCliCommand ? [] : args);
+
+        if (isCliCommand)
+        {
+            Environment.ExitCode = DevCli.run(args, builder.Configuration);
+            return;
+        }
 
 #if isSentry
         builder.WebHost.UseSentry();

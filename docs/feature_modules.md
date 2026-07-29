@@ -1,11 +1,44 @@
 # Creating Feature Modules
 
-Feature modules bundle a database table, its model, controller, and templates. You can scaffold them automatically from **Developer Tools** or build them manually by copying demo assets.
+Feature modules bundle a database table, its model, controller, and templates. You can scaffold them from the command line, use **Developer Tools** in the browser, or build them manually by copying demo assets.
 
-## Quick path: Developer Tools at `/Dev/Manage`
+## Quick path: built-in CLI
+
+For agent-driven module creation, prepare the fresh-install and additive schema files first. If the table is not present in the configured development database, request approval before applying it. Once approved, apply the schema and run `scaffold crud`. Use manual generation only when database approval is declined, the development database is unavailable, or the scaffolder fails; record the reason in the task summary.
+
+After the table exists in the intended development database, run the scaffolder from the repository root:
+
+```powershell
+dotnet run --project osafw-app -- scaffold crud orders
+```
+
+`crud` reads the live table schema and generates the model, controller, templates, `config.json`, and menu item in one process. Names default from the table and can be overridden:
+
+```powershell
+dotnet run --project osafw-app -- scaffold crud sales_orders --model SalesOrders --url /Admin/SalesOrders --title "Sales Orders" --type vue
+```
+
+The focused commands use the same generators:
+
+```powershell
+dotnet run --project osafw-app -- scaffold model orders --name Orders
+dotnet run --project osafw-app -- scaffold controller Orders --url /Admin/Orders --type dynamic
+dotnet run --project osafw-app -- scaffold report sales-summary
+dotnet run --project osafw-app -- scaffold --help
+```
+
+The controller command requires the model to be compiled. A normal second `dotnet run` rebuilds automatically after a separate model command; build first only when using `--no-build`. Controller type options are `dynamic`, `vue`, `lookup`, and `api`. The `api` option is reserved for future support; until an API-specific template exists, selecting it reports that it is not yet available and exits before generating files or database rows.
+
+The command defaults `ASPNETCORE_ENVIRONMENT` to `Development` only when neither ASP.NET Core nor .NET environment is already selected, and it refuses to run unless the resolved application settings have `IS_DEV=true`. Existing generated model/controller source or controller template directories are preserved unless `--force` is explicit. Report targets are always preserved when they already exist.
+
+Exit code `0` means success or help, `1` means generation/runtime failure, `2` means invalid command usage, and `3` means the resolved environment is not allowed to scaffold.
+
+After generation, inspect the generated diff, customize the controller and `config.json`, prune unused template partials, and build the app. Controller generation also inserts or updates its development-database `menu_items` row, matching `/Dev/Manage` behavior.
+
+## Browser alternative: Developer Tools at `/Dev/Manage`
 1. **Add the table** to your schema: mirror the demo tables in `osafw-app/App_Data/sql/demo.sql`, then append the `CREATE TABLE` to `osafw-app/App_Data/sql/database.sql` and create a dated script under `osafw-app/App_Data/sql/updates/` for deployments. MySQL provider-specific overrides can use `osafw-app/App_Data/sql/mysql/updates/`. SQLite projects use the matching files under `osafw-app/App_Data/sql/sqlite/` and put SQLite updates under `osafw-app/App_Data/sql/sqlite/updates/`.
 2. **Open Developer Tools** at `/Dev/Manage` and use the *Create Model* form. Pick your table and optional model name; the action reads the schema and generates the model file for you.
-3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or API). The generator copies demo templates, rewrites URLs/titles, configures `config.json`, writes the controller class, and adds a menu item.
+3. **Create the controller** from the same screen. Select the model, provide a target URL/title, and choose controller type (dynamic, Vue, lookup, or the reserved API option). API scaffolding is not yet available; the other choices generate or register the selected controller type.
 4. **Restart the project or apply hot reload**, then navigate to the new controller URL.
 5. **Review and tweak `config.json`** in the generated template folder (see [dynamic controller config](dynamic.md)).
 6. **Review UI fit** against the [design system](design_system.html) before adding custom CSS; generated screens should usually rely on shared fragments and theme tokens.
@@ -15,10 +48,11 @@ In local development, Home can automatically redirect to a pending FwUpdates not
 
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.
-- `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`.
+- `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`; lookup scaffolding registers `fwcontrollers` metadata instead of writing a controller class.
+- The built-in `scaffold` command initializes `FW` in offline mode and calls the same entity-builder and code-generator layer without constructing an HTTP request or bypassing the browser actions' POST/XSS protections.
 
 ## Manual creation from the demo module
-If you need full control, replicate what the generators do:
+Use this fallback only under the conditions above; otherwise use the built-in CLI. To proceed manually, replicate what the generators do:
 
 1. **Database table**
    - Define the table in `osafw-app/App_Data/sql/database.sql` and add a migration under `osafw-app/App_Data/sql/updates/` for environments that need incremental updates. MySQL deployments can override same-named scripts under `osafw-app/App_Data/sql/mysql/updates/`; SQLite deployments use `osafw-app/App_Data/sql/sqlite/database.sql` and `osafw-app/App_Data/sql/sqlite/updates/`.
