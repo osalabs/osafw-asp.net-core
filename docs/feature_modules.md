@@ -4,6 +4,8 @@ Feature modules bundle a database table, its model, controller, and templates. Y
 
 ## Quick path: built-in CLI
 
+For agent-driven module creation, prepare the fresh-install and additive schema files first. If the table is not present in the configured development database, request approval before applying it. Once approved, apply the schema and run `scaffold crud`. Use manual generation only when database approval is declined, the development database is unavailable, or the scaffolder fails; record the reason in the task summary.
+
 After the table exists in the intended development database, run the scaffolder from the repository root:
 
 ```powershell
@@ -50,7 +52,7 @@ In local development, Home can automatically redirect to a pending FwUpdates not
 - The built-in `scaffold` command initializes `FW` in offline mode and calls the same entity-builder and code-generator layer without constructing an HTTP request or bypassing the browser actions' POST/XSS protections.
 
 ## Manual creation from the demo module
-If you need full control, replicate what the generators do:
+Use this fallback only under the conditions above; otherwise use the built-in CLI. To proceed manually, replicate what the generators do:
 
 1. **Database table**
    - Define the table in `osafw-app/App_Data/sql/database.sql` and add a migration under `osafw-app/App_Data/sql/updates/` for environments that need incremental updates. MySQL deployments can override same-named scripts under `osafw-app/App_Data/sql/mysql/updates/`; SQLite deployments use `osafw-app/App_Data/sql/sqlite/database.sql` and `osafw-app/App_Data/sql/sqlite/updates/`.
