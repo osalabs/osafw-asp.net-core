@@ -1,0 +1,22 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><i class="bi bi-arrow-left-circle"></i></a> <~title></h4>
+
+<form method="get" action="<~../url>/(ConfigEditor)" class="row row-cols-auto g-2 mb-3">
+  <div class="col">
+    <select name="controller" class="form-select" onchange="this.form.submit()">
+      <option value="">- select controller -</option>
+      <~select_controllers select="controller_name">
+    </select>
+  </div>
+</form>
+
+<div id="fw-app"
+  data-base_url="<~../url>"
+  data-controller="<~controller_name>"
+  data-xss="<~session[XSS]>"
+  data-config="<~config_json htmlattr>"
+>
+</div>
+
+<~/dev/manage/configeditor/app.js>
