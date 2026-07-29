@@ -174,6 +174,9 @@ IF LEN(@sql) > 0
             }
         }
 
+        // This bootstrap request may have cached tables as missing before the DDL scripts created them.
+        db.clearSchemaCache();
+
         logger("Executed SQL count:", sql_ctr);
         if (sql_ctr > 0)
         {
