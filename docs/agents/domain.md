@@ -1,9 +1,15 @@
 # Domain / Bounded Context
 
-Updated: 2026-07-13
+Updated: 2026-08-09
 
 Purpose
 - Provide a reusable admin/back-office web framework for CRUD-heavy business apps on ASP.NET Core.
+
+Repository / Product Modes
+- The public framework repository is the canonical upstream source/template. Real application repositories begin by copying the framework tree, then own application-specific code, templates, schema history, configuration, deployment, and selected framework customizations.
+- A change in the framework repository must account for copied downstream applications. A change in an application repository must preserve intentional app divergence and does not inherit the upstream repository's branch or release policy automatically.
+- The framework is distributed as source and has no framework NuGet package. The app and test project files target `net10.0`; project files define target frameworks, package references, and optional compile symbols.
+- Windows with IIS is the primary verified real-application deployment model. Kestrel is useful for local execution. Non-Windows/container deployment is optional; Data Protection fails closed without a deliberate non-Windows protection/fallback choice.
 
 Core Subdomains
 - Users and Access
@@ -31,7 +37,7 @@ Core Subdomains
 
 Boundaries
 - DB access encapsulated by `DB` helper and models.
-- Database providers are a bounded runtime concern: SQL Server is the default, SQLite is optional for durable single-node deployments, and provider-specific scripts live under `App_Data/sql/<provider>/` when the provider needs divergent SQL.
+- Database providers are a bounded runtime concern. SQL Server is the production-primary provider and primary schema/update authority. SQLite is optional for embedded single-node applications and preferred for disposable provider-neutral local tests/worktree isolation. MySQL is optional and its fresh schema is not assumed to have parity. OLE/ODBC/MS Access behavior is mainly a compatibility/import surface. Provider-specific scripts live under `App_Data/sql/<provider>/` when SQL diverges.
 - Optional compile-time framework features are enabled from `osafw-app/osafw-app.csproj` with project constants: `isSQLite`, `isMySQL`, `isS3`, `isRoles`, `isWindowsAuth`, `isFwCronService`, `isSentry`, and `isExcelDataReader`.
 - Datetime boundaries: SQL `date` is calendar-only, ordinary `datetime`/`datetime2` is DB-timezone-normalized to UTC, `_utc` fields are already UTC, and SQL Server `datetimeoffset` is offset-aware instant storage.
 - Dynamic/Vue `datetime_local` fields submit browser-native `YYYY-MM-DDTHH:mm` values that the backend parses as user-local datetimes before UTC save conversion.

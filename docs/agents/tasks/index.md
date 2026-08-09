@@ -173,3 +173,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-07-13-agent-instructions-upgrade.md` - Consolidated development-agent guidance, corrected stale contracts, and hardened instruction validation helpers.
 - `summary-2026-07-27-scaffold-cli.md` - Added a development-only built-in CLI for safe model, controller, CRUD, and report scaffolding, with docs and agent workflow guidance.
 - `summary-2026-07-29-scaffold-cli-workflow.md` - Made the built-in CLI the required default for standard CRUD modules and added an explicit approval step before applying schema to the configured development database.
+- `summary-2026-08-09-agentic-instructions-upgrade.md` - Upgraded dual-mode agent routing, verification/isolation, adaptive review overlays, prompts, validation, and ignored local FPF refresh handling.

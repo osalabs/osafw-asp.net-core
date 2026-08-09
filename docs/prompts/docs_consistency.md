@@ -11,7 +11,7 @@ Goal: keep the documentation set accurate and easy to navigate without duplicati
 3. Identify the canonical doc for the topic and update that first.
 4. Update `docs/README.md` when navigation or recommended reading order changes.
 5. Update `docs/CHANGELOG.md` for breaking end-user-app upgrade changes.
-6. When agent workflow changes, update the authoritative `AGENTS.md` rule first, regenerate its byte mirror, and update reviewer/navigation/summary docs only when their narrower contract changed.
+6. When agent workflow changes, update only the canonical owner and any routes that point to it; do not repeat the same rule across files.
 7. Prefer links and concise cross-references over repeating the same detailed guidance in several docs.
 8. Do not copy machine-local instructions, secrets, private scan details, bulky logs, or drafts into shared docs.
 

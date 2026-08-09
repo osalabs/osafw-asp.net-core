@@ -233,7 +233,7 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
 - use `fw.routeRedirect()` if you got request to one Controller.Action, but need to continue processing in another Controller.Action
   - for example, if for a logged user you need to show detailed data and always skip list view - in the `IndexAction()` just use `fw.routeRedirect("ShowForm")`
 - uploads
-  - save all public-readable uploads under `/osafw-app/wwwroot/upload` (default, see `UPLOAD_DIR` in `appsettings.json`)
+  - save all public-readable uploads under `/osafw-app/upload` (default, see `UPLOAD_DIR` in `appsettings.json`)
   - for non-public uploads use `/upload`
   - or `S3` model and upload to the cloud
 - put all validation code into controller's `Validate()`. See usage example in `AdminDemosController`

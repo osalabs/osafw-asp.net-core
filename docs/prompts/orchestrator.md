@@ -1,6 +1,6 @@
 # Large Task Orchestrator Prompt
 
-Use this prompt when a task is too large, risky, or cross-cutting for a single linear implementation pass. It is an optional workflow prompt; repository instructions, security guardrails, task-summary rules, and user direction remain authoritative.
+Use this optional workflow when a task is too large, risky, or cross-cutting for a single linear implementation pass. Follow repository instructions, security guardrails, task-summary rules, and user direction throughout.
 
 ## Objective
 
@@ -14,10 +14,11 @@ Coordinate this task end to end:
 ## Operating Rules
 
 - Keep the main agent responsible for integration, user communication, final decisions, and verification.
+- Delegation is capability-conditional. When unavailable, keep the same bounded stages and checks in the main task rather than blocking.
 - Delegate only bounded work with clear inputs, owned paths, output format, and stop conditions.
 - Do not let sub-agents make broad repo-wide changes or resolve shared contracts without main-agent review.
 - Preserve user changes and unrelated dirty worktree state.
-- Pause for user approval before implementation only when the user requested approval, the plan changes a public contract materially, or the next step is risky/destructive.
+- Pause for user direction only when requested, when implementation would materially expand beyond the stated outcome, or when a risky/destructive/shared-state step lacks authority.
 - Record important decisions, commands, risks, and follow-ups in the task summary as the work evolves.
 
 ## Phase 1 - Intake And Map
@@ -28,7 +29,7 @@ Read the fast entry docs and task-specific entry points. Then produce a compact 
 - Safe parallel work: `<independent research/checks/tests>`
 - Tightly coupled work: `<keep with main agent>`
 - Verification strategy: `<smallest checks that can falsify the change>`
-- Review strategy: `<self-review or reviewer sub-agent>`
+- Review strategy: `<integrator plus triggered overlay(s); independent reviewer or local fallback>`
 - Stop/replan triggers: `<conditions that require a plan change>`
 
 ## Phase 2 - Delegation Packets
@@ -77,7 +78,7 @@ If a check fails, classify whether it is caused by this task, pre-existing, or e
 
 ## Phase 5 - Review Loop
 
-Review the final diff using `docs/agents/code_reviewer.md` when the task affects runtime behavior, schemas, templates, scripts, tests, configuration, or risky workflow docs.
+Route the final diff through `docs/agents/review-routing.md`, then use `docs/agents/code_reviewer.md` for the one adjudicated verdict when the task affects runtime behavior, schemas, templates, scripts, tests, configuration, or risky workflow docs.
 
 For the review:
 

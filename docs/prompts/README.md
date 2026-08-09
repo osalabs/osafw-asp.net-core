@@ -21,4 +21,4 @@ Use these as starting points, then fill the placeholders and remove anything tha
 
 Task-summary history shows repeated work in PR review/fix loops, security hardening, framework upgrades, downstream app test cleanup, docs and agent-instruction hygiene, test stabilization, focused feature work, and occasional large multi-step efforts. Prefer one of those specific prompts over a broad generic request when starting that workflow.
 
-Do not let prompts override repo instructions. The local `AGENTS.md`, task summary rules, security guardrails, documentation sync rules, and testing guidance remain authoritative.
+Prompts are optional task workflows. Use them within the repository instructions, task-summary rules, security guardrails, documentation sync rules, and testing guidance.

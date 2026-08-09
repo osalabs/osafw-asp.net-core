@@ -1,38 +1,31 @@
 # Pull Request Code Review Prompt
 
-Perform a proper code review for PR `<PR_URL>`.
+Perform an evidence-based code review for PR `<PR_URL>`, fix confirmed blocking issues in the local worktree, verify them, and repeat until ready for another human review.
 
-Goal: find material issues, fix confirmed issues, verify the fixes, and repeat until the PR is ready for another human review.
+This prompt authorizes scoped local fixes. Do not commit, push, post comments/reviews, resolve threads, merge, release, or deploy unless the invocation explicitly authorizes those external/Git actions.
 
 ## Review
 
-1. Read the repo instructions and the active task summary rules.
-2. Fetch PR metadata, changed files, commits, review comments, and check status.
-3. Review the diff as a skeptical senior engineer. Prioritize correctness, contracts, security/privacy, data integrity, performance, project fit, simplicity, tests, and documentation sync.
-4. Keep findings concrete: severity, file/line, problem, impact, and fix direction.
-5. Do not report style preferences unless they hide real maintenance or correctness risk.
+1. Read repository instructions, the active summary rules, `docs/agents/review-routing.md`, and `docs/agents/code_reviewer.md`.
+2. Inspect PR metadata, base/head/diff, changed files/commits, unresolved review context, and check status using available read-only capabilities. Do not assume CI, connectors, or subagents exist.
+3. Run applicable deterministic checks first. Use the integrating reviewer for the broad diff and select at most the triggered specialist overlay(s); avoid a fixed panel.
+4. If an independent reviewer/subagent is available and useful, use one bounded pass for an independent integration or triggered specialist risk. Do not launch one worker per file or suspected issue. When unavailable, perform and disclose the local review fallback.
+5. Adjudicate one final verdict. Deduplicate root defects and keep findings concrete: severity, tight file/line/control flow, evidence, impact, and smallest useful fix direction. Do not report style preferences or checklist questions as defects.
 
-## Fix Loop
+## Fix loop
 
-For each confirmed Blocker, High, or Medium issue:
+For each adjudicated Blocker, High, or Medium issue:
 
-1. Define the smallest fix that addresses the actual risk.
-2. Launch a bounded sub-agent to implement the fix when sub-agents are available and the file scope is independent. Give it exact files/modules, constraints, and verification expectations.
-3. Keep tightly coupled, risky, shared-contract, or security-sensitive fixes in the main workspace if delegation would add merge risk.
-4. Inspect any sub-agent changes before relying on them. The main agent owns integration.
-5. Run the smallest verification that can falsify the fix quickly. Add or update tests when the risk justifies it.
-6. Re-review the changed diff. Continue until no Blocker, High, or Medium findings remain; report Low observations without blocking the loop.
+1. Define the smallest fix that addresses the actual risk and preserves nearby/public contracts.
+2. Implement tightly coupled, shared-contract, security, and state-integrity fixes in the main workspace. Delegate only bounded independent file scopes when it clearly reduces time/risk and the capability exists.
+3. Inspect all delegated or generated changes before relying on them; the primary agent owns integration.
+4. Run the nearest falsifying behavior-level check, then any required provider/compile/manual variant.
+5. Re-review the integrated diff and continue only while a Blocker, High, or Medium finding remains. Low observations are non-blocking.
 
-## Verification
+## Verification and closeout
 
-- Run focused builds/tests/checks for the affected area.
-- Check PR CI status if available.
-- If broad tests are impractical, record the targeted checks run and the highest-risk checks not run.
-- Do not hide unrelated existing failures; identify them as unrelated only when evidence supports that.
+- Use focused builds/tests/checks for affected surfaces; inspect PR checks when available. Separate pre-existing/unrelated failures only when evidence proves the distinction.
+- Record material checks not run, provider/platform limits, external publication still needed, and residual risk.
+- Summarize original adjudicated issues, fixes, verification, final verdict, and any comments/checks still needing human attention.
 
-## Closeout
-
-Summarize the original issues, fixes applied, verification run, residual risks, and any PR comments or CI failures still needing attention.
-
-Placeholder:
-- `<PR_URL>`: GitHub pull request URL, for example `https://github.com/osalabs/osafw-asp.net-core/pull/XXX`
+Placeholder: `<PR_URL>` is the GitHub pull request URL, for example `https://github.com/osalabs/osafw-asp.net-core/pull/XXX`.

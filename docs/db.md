@@ -27,7 +27,7 @@ var db = new DB("Server=(local);Database=demo;Trusted_Connection=True;", DB.DBTY
 You rarely call `connect()`/`disconnect()` yourself – the first query opens the connection automatically.
 
 ### SQLite provider
-SQLite is optional and intended for durable single-node deployments. SQL Server remains the default provider.
+SQLite is optional and intended for embedded single-node deployments or disposable provider-neutral local/integration tests. It is the preferred database for parallel worktree isolation when the task does not depend on SQL Server-specific SQL, types, locking, or deployment behavior. SQL Server is the production-primary provider.
 
 To enable SQLite:
 
@@ -53,9 +53,9 @@ Data Protection key XML stored in `fwkeys` is protected with Windows DPAPI befor
 
 ### Provider status, fresh schemas, and updates
 
-SQL Server is the default provider and owns the primary schema/update history under `osafw-app/App_Data/sql/`. SQLite is the verified optional provider for durable single-node deployments and has matching fresh-install scripts and compile-gated integration tests under `osafw-app/App_Data/sql/sqlite/`.
+SQL Server is the production-primary provider and owns the primary schema/update history under `osafw-app/App_Data/sql/`. SQLite is the verified optional provider for embedded single-node deployments and disposable provider-neutral tests; it has matching fresh-install scripts and compile-gated integration tests under `osafw-app/App_Data/sql/sqlite/`.
 
-The MySQL compile/runtime adapter remains available, but the bundled MySQL fresh-install schema is not currently at parity with the SQL Server/SQLite core schema. In particular, do not treat `osafw-app/App_Data/sql/mysql/fwdatabase.sql` and `lookups.sql` as a turnkey new-database setup until their required framework-table parity has been verified or repaired for the target deployment.
+The MySQL compile/runtime adapter is available, but the bundled MySQL fresh-install schema is not at parity with the SQL Server/SQLite core schema. Do not treat `osafw-app/App_Data/sql/mysql/fwdatabase.sql` and `lookups.sql` as a turnkey new-database setup until their required framework-table parity has been verified or repaired for the target deployment.
 
 Fresh schema files are destructive initialization inputs, not upgrade scripts: the `fwdatabase.sql` variants drop and recreate framework tables. Use them only for a new or disposable database. Existing deployments use additive scripts through `FwUpdates`:
 

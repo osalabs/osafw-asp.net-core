@@ -1,34 +1,41 @@
-# Code Review Procedure
+# Integrating Code Review Procedure
 
-Use this procedure for final review of runtime source, schema, templates, scripts, tests, runtime-affecting configuration, or risky shared developer/agent workflow changes.
+Use this as the broad final review for runtime source, schema, templates, scripts, tests, runtime-affecting configuration, or risky shared developer/agent workflow changes. `review-routing.md` decides whether specialist overlays also apply.
 
-The reviewer is an independent quality gate. Review the requested outcome and final changed work as a skeptical senior engineer. Do not rewrite the implementation unless the caller explicitly asks for fixes.
+Treat review as an independent-intent quality gate: use a separate reviewer when available, otherwise perform the documented local second pass. Review the requested outcome and final changed work as a skeptical senior engineer. Do not edit unless the caller explicitly asks for fixes. Produce the repository's one adjudicated verdict.
 
 ## Inputs
 
-- Read `AGENTS.md` as the sole repository workflow and cross-task guardrail authority.
-- Read `docs/agents/local_instructions.md` when present, but never expose or commit its contents.
-- Read the active task summary when one is required or supplied. Search `docs/agents/tasks/index.md` before opening other historical summaries.
-- Inspect `git status --short`, the relevant diff/stat, and untracked task files in scope. Preserve unrelated worktree changes.
-- Read only the nearby implementation, tests, schema, templates, and canonical topic docs needed to understand the changed contract. Use `docs/agents/tools/Search-Repo.ps1` for a justified broad search.
+- Read `AGENTS.md`, `review-routing.md`, and only the selected specialist overlay(s). Read ignored local instructions when present but never expose or commit them.
+- Read the active task summary when required/supplied. Search `tasks/index.md` before opening any other historical summary and reverify historical claims.
+- Inspect `git status --short`, diff/stat, and untracked files in task scope. Preserve and distinguish unrelated work.
+- Read only nearby implementation, tests, schema, templates, and canonical topic docs needed to understand the changed contract. Run applicable deterministic checks before treating their results as review judgment.
+- If specialists supplied candidate findings, validate each against current code, deduplicate the underlying defect, and resolve contradictory advice from evidence or an explicit developer decision.
 
-## Review Priorities
+## Review priorities
 
-Check in this order, focusing depth where failure would matter:
+Check in this order, focusing depth where failure matters:
 
-1. Requirements and correctness: does the real control flow and data shape implement the requested behavior, including important error and empty cases?
-2. Contracts: are routes, controller/action behavior, template/page-state shapes, JSON payloads, public APIs, labels/statuses, and compatibility expectations preserved or deliberately changed?
-3. Data integrity and schema: are writes, predicates, transactions, defaults, nullable values, linked records, date/time handling, fresh schemas, and additive updates safe for every affected provider?
-4. Security and privacy: apply all relevant `AGENTS.md` security/data-integrity guardrails at the actual read/write/render/serve boundary.
-5. Performance and resource use: apply the `AGENTS.md` hot-path guardrails without proposing speculative or invasive optimization.
-6. Project fit: does the change follow nearby osafw controller/model/template/config patterns and the canonical topic docs?
-7. Simplicity: could the same behavior use fewer moving parts, less state, a narrower public/config surface, or an existing pattern? Flag shallow wrappers, test-only seams, duplicated branches, unjustified defaults/casts, and comments/docs that restate code only when they create real maintenance cost.
-8. Tests and verification: can the recorded checks falsify the changed behavior at the nearest practical boundary? Are meaningful compile/provider/manual variants missing?
-9. Documentation and upgrade impact: are affected canonical docs, provider paths, and `docs/CHANGELOG.md` updated, or is the no-update decision supported in the task summary?
+1. **Requirements/correctness:** Does real control flow and data shape implement the desired outcome, including important error, empty, retry, and concurrency cases?
+2. **Consumer contracts:** Are public APIs, routes/actions, templates/page-state/JSON, generated output, config/defaults, schema/provider, storage/frontend/email, and copied-app expectations preserved or deliberately migrated?
+3. **Data/state integrity:** Are writes, predicates, transactions, defaults/nulls, related records, date/time, fresh schemas, additive updates, jobs/retries, and cleanup safe for each claimed provider?
+4. **Security/privacy:** Apply `AGENTS.md` and any security overlay at the actual read/write/render/serve/tool boundary.
+5. **Performance/resources:** Apply the performance overlay only to plausible repeated/hot paths; avoid speculative rewrites.
+6. **Project fit/simplicity:** Does the change follow nearby osafw controller/model/template/config patterns and canonical docs with the fewest justified moving parts? Flag wrappers, test-only seams, duplicate branches, new defaults/casts, or restating comments only when they create real cost/risk.
+7. **Tests/evidence:** Can recorded checks falsify behavior at the nearest practical public boundary? Are important compile/provider/manual variants or clean-state checks missing?
+8. **Docs/upgrade/release:** Are canonical docs, examples, provider paths, migration guidance, and `docs/CHANGELOG.md` aligned, or is the no-update decision evidenced?
 
-For specialist contracts, consult the canonical document rather than copying its rules here: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, `datetime.md`, `deploy.md`, and `assistant.md` where relevant.
+Consult the canonical specialist document rather than copying its rules: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, `datetime.md`, `deploy.md`, and `assistant.md` as relevant.
 
-## Report Format
+## Adjudication
+
+- Report one root defect once at the highest-impact location; summarize dependent effects.
+- Require a tight location/control flow, evidence-based problem, impact, and smallest behavior-preserving fix direction. A checklist question, unsupported suspicion, or pure style preference is not a finding.
+- Do not inflate severity to force optional cleanup. Keep product/business judgment questions separate rather than inventing policy.
+- Do not repeat fixed findings unless the fix is incomplete.
+- When no independent reviewer capability exists, perform the routed overlays as a deliberate local second pass and disclose that fact. The verdict format remains the same.
+
+## Report format
 
 Start with one verdict:
 
@@ -56,26 +63,19 @@ Then use these sections as applicable:
 ## Verification Reviewed
 
 - Diff/files reviewed: ...
-- Tests reviewed or run: ...
+- Deterministic checks/tests reviewed or run: ...
+- Specialist overlays consulted: ...
+- Review execution: independent or local fallback
 - Residual risk: ...
 ```
 
-Every finding must identify severity, a tight location, the evidence-based problem, impact, and the smallest useful fix direction. If there are no findings, still include `Verification Reviewed`.
+Every finding identifies severity, a tight location, evidence, impact, and smallest useful fix direction. Include `Verification Reviewed` even with no findings.
 
-## Severity and Loop Rules
+## Severity and loop rules
 
 - `Blocker`: likely security/privacy exposure, data corruption, deploy breakage, irreversible schema/update risk, or a core flow cannot work.
 - `High`: likely production bug in an important flow, broken public/admin/template/data contract, missed authorization, or missing required migration.
 - `Medium`: edge-case correctness bug, meaningful verification gap, documentation/compatibility drift, or avoidable maintenance risk that should be fixed before closeout.
 - `Low`: optional cleanup, naming, or clarity improvement with no material correctness, security, compatibility, or maintenance risk.
 
-Blocker, High, and Medium findings are blocking and require another review/fix loop. Low observations are non-blocking; do not continue the loop solely for them.
-
-## Operating Rules
-
-- Be specific and evidence-based. State assumptions and how to verify them.
-- Prefer fewer high-signal findings over checklist recital. Do not report pure style preference.
-- Name the smallest behavior-preserving fix and the contract it keeps. Do not request broad rewrites, speculative architecture, or deduplication that hides intentional differences or weakens security.
-- Keep business/product judgment questions separate from findings rather than inventing policy.
-- Do not repeat fixed findings unless the fix is incomplete.
-- Finish with exactly `Review loop should continue.` when blocking findings remain, otherwise `Review loop can stop.`
+Blocker, High, and Medium findings require another review/fix loop. Low observations do not. Finish with exactly `Review loop should continue.` when blocking findings remain, otherwise `Review loop can stop.`

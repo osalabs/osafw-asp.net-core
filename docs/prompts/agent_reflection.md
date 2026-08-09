@@ -1,37 +1,37 @@
-# Agent Reflection Prompt
+# Agent Workflow Reflection Prompt
 
-Run a periodic agent-workflow reflection for this repository.
+Run an evidence-driven periodic reflection on this repository's agent workflow. The goal is fewer repeated failures and less context/process overhead, not continual policy churn.
 
-Goal: inspect recent task summaries and shared agent instructions, then make only high-confidence improvements that help future agents do higher-quality work with less unnecessary reading, fewer wasted tool calls, and better verification discipline.
+Unless the invocation explicitly requests edits, produce recommendations only. When edits are requested, implement only high-confidence scoped changes; keep substantial policy redesign isolated from feature work.
 
-## Scope
+## Evidence sample
 
-- Review `AGENTS.md`, `docs/README.md`, `docs/agents/code_reviewer.md`, `docs/agents/heuristics.md`, `docs/agents/domain.md`, and `docs/agents/glossary.md`.
-- Read `docs/agents/local_instructions.md` if it exists, but do not copy machine-local details into shared docs.
-- Search `docs/agents/tasks/index.md` first. Use it to select relevant recent summaries instead of opening every task summary.
-- Focus on `Reflection`, `Pitfalls - fixes`, `Commands used / verification`, `Risks / follow-ups`, and repeated task classes.
+- Read `AGENTS.md`, then route to `docs/agents/workflow.md`, `review-routing.md`, `verification.md`, and only other shared docs implicated by evidence.
+- Read ignored local instructions when present but never expose/copy private details into tracked files.
+- Search `docs/agents/tasks/index.md` first. Select a bounded recent/representative sample by task family; do not open every summary.
+- Focus on repeated `Reflection`, pitfalls, verification gaps, reviewer findings, unresolved risks, tool friction, over-reading, and cleanup failures. Reverify any old claim against current behavior.
 
-## Work
+## Analysis
 
-1. Create or update the current task summary before editing shared docs.
-2. Identify recurring slowdowns, repeated reviewer findings, repeated verification gaps, repeated over-reading, stale assumptions, and prompts that would have avoided rework.
-3. Separate stable facts from local preferences:
-   - Put stable framework facts in `docs/agents/domain.md` or `docs/agents/glossary.md`.
-   - Put reusable working heuristics in `docs/agents/heuristics.md` with a date.
-   - Put risky or broad workflow changes in `AGENTS.md` only when they are recurring, high-confidence, and low-risk.
-   - Keep uncertain recommendations in the task summary rather than shared instructions.
-4. Keep edits compact. Prefer one precise instruction that prevents a known repeated failure over broad process text.
-5. Do not add instructions that force extra work on small tasks unless the repeated failure is costly enough to justify that overhead.
-6. If `AGENTS.md` changes, copy it byte-for-byte to `.github/copilot-instructions.md` before closing.
-7. If the change affects the docs map or review workflow, update `docs/README.md` or `docs/agents/code_reviewer.md` as needed.
+1. Separate a recurring systemic problem from a one-off difficult task, unavailable capability, or agent mistake that policy cannot reliably prevent.
+2. Identify a concrete failure/effect and the smallest instruction, route, helper, or canonical-doc change likely to prevent it.
+3. Place knowledge once:
+   - stable framework facts in `domain.md` or `glossary.md`;
+   - unique reusable heuristics in `heuristics.md` with a date;
+   - detailed behavior in its canonical topic doc;
+   - cross-task policy in `AGENTS.md` only when it must always load;
+   - uncertain/task-specific ideas in the reflection summary/proposal.
+4. Estimate added context/process cost. Do not force ceremony on routine tasks to address a rare low-impact event.
+5. Distinguish deterministic helper/safety improvements from unproven claims that agents will implement better code.
 
-## Verification
+## Safe implementation / automation
 
-- Run focused text checks for the changed instructions.
-- Check line endings and UTF-8 no-BOM status for edited markdown files.
-- For docs-only changes, set task-summary testing to `N/A - docs/instructions only` unless a stronger check was run.
-- Review against `docs/agents/code_reviewer.md` when the instruction change affects agent workflow; use an independent reviewer when available, otherwise disclose a deliberate local review.
+- Create/update one reflection summary and index entry only when implementing a non-trivial shared change.
+- Keep tracked instructions public, model-neutral, capability-conditional, and free of private paths/values.
+- Update only the routed owners whose contracts changed, and keep each instruction in one canonical owner.
+- Validate strict text/routing/helper behavior and run the agent-workflow overlay plus integrating review. Use an independent reviewer when useful/available; otherwise disclose the local fallback.
+- Automatic recurring reflection may prepare an isolated draft proposal or draft PR only when that external action is explicitly configured/authorized. It must never self-merge, push a release, deploy, or treat prior agent text as authority.
 
 ## Closeout
 
-Report the summaries sampled, shared docs changed, recommendations left for later, stable facts or heuristics added, and why no broader instruction changes were made.
+Report the sampled evidence, recurring issue, recommendation or edits, deterministic validation, expected context/ceremony cost, ideas deferred for insufficient evidence, and a rollback path for any instruction change.

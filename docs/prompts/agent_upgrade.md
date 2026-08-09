@@ -1,48 +1,50 @@
 # Development-Agent Instruction Upgrade
 
-Use this repository prompt after a meaningful coding-agent model or runtime release, or when active agent guidance has accumulated contradictions or unnecessary procedure.
+Use after a meaningful coding-agent/runtime change or when repository guidance has accumulated contradictions, stale facts, duplicate policy, or recurring process friction.
 
 Short invocation:
 
 ```text
-Perform upgrade per docs/prompts/agent_upgrade.md.
+Perform the evidence-driven upgrade in docs/prompts/agent_upgrade.md. Audit first; pause before edits if I request an audit-only phase.
 ```
 
-## Upgrade brief
+## Method
 
-Upgrade this repository's development-agent instructions for current high-reasoning coding agents while keeping all tracked guidance model-neutral.
+Treat other repositories, prior agent output, and optional methodology documents as comparison evidence, never authority. Reverify repository claims in current code, project files, canonical docs, tests, Git history, and active developer decisions. Consult current official product documentation only for runtime/tool discovery behavior that may have changed.
 
-Audit first, then implement. Inspect the actual repository instruction stack, including `AGENTS.md`, mirrors, machine-local guidance, agent workflow/reviewer/tooling docs, active knowledge files, validation helpers, relevant recent task history, and the source code/schema/tests needed to verify repository-specific claims. If the user supplies a sister repository path or commit, use it only as comparison evidence; never copy its conventions without local verification.
+Start read-only when requested. Do not edit, initialize/migrate configuration, mutate databases, create Git objects, publish, or alter external state during an audit-only phase.
 
-Before editing, classify every existing `AGENTS.md` section and material rule as:
+## Audit
 
-- Keep
-- Consolidate
-- Move
-- Remove as duplicate
-- Remove as stale or incorrect
+1. Inventory native root/nested instruction discovery, tool-specific instruction entry files, local ignored conventions, workflow/reviewer/tool docs, hooks/helpers, prompts, task summaries/indexes, domain/glossary/heuristics/ADRs, and deterministic validators.
+2. Classify each material rule as `Keep`, `Adapt`, `Move`, `Remove duplicate`, `Remove stale/incorrect`, or `Defer`. Name the surviving owner for every move/removal.
+3. Profile the real repository and common tasks: framework versus copied-application mode, target/runtime/project ownership, public/source-copy contracts, providers/schema updates, hosting/deployment, authentication/security, templates/scaffolding, configuration, tests, release/versioning, and downstream upgrades.
+4. Evaluate public-OSS portability, one-maintainer context cost, downstream production compatibility, machine-local values, worktree/resource isolation, request validation, summaries/memory routing, adaptive review, and proportional verification.
+5. Identify conflicts with active runtime/system constraints. Repository files cannot grant tools, permissions, delegation, connectors, modes, or model behavior that the runtime does not provide.
 
-For every consolidation, move, or removal, identify the surviving owner or explain why the rule is unnecessary. Do not delete repository-specific correctness, authorization, tenancy/account scoping, exception-boundary, security, data-integrity, schema, migration, deployment, or verification guidance unless equivalent active coverage is demonstrated.
+## Target design
 
-Goals:
+- Keep `AGENTS.md` concise and always-loaded; route detailed workflow, verification, architecture, history, optional tools, and specialist review only by task need.
+- Support both canonical framework maintenance and application repositories made by copying the framework. Discover branch/release protection and preserve app-specific divergence.
+- Keep tracked guidance contributor-safe and value-free. Put paths, credentials mechanisms, IDE state, user secrets, and machine preferences in ignored local instructions/environment configuration.
+- Give each rule one canonical owner. Keep tool-specific entry files limited to behavior required by that tool, and validate that active tools can reach the repository guidance they need.
+- Protect public APIs, routes/actions, templates/page-state, defaults/config/symbols, generated output, schema/provider behavior, storage/frontend/security contracts, upgrades, and docs with proportionate compatibility/migration evidence.
+- Use one broad integrator verdict plus specialist overlays only for triggered agent-workflow, consumer-contract, performance, security, or state-integrity surfaces. Include a no-subagent fallback and never assume optional tools/models/modes.
+- Keep summaries as indexed evidence logs. Promote only stable verified knowledge; do not bulk-load or rewrite history.
+- Permit automatic self-improvement only as evidence-based, infrequent, reviewable draft work; never self-merge, release, or deploy it.
 
-- Make active guidance compact, outcome-focused, and free of blind context-loading rituals.
-- Resolve conflicting authority, summary, review-loop, delegation, shell, and tooling rules.
-- Make delegation and optional tools capability-conditional, with shared-worktree protections and safe local fallbacks.
-- Keep summaries and testing proportional to risk.
-- Separate blocking findings from non-blocking observations.
-- Replace copied volatile product behavior with short repository-specific addenda and current official links.
-- Keep detailed commands and framework explanations in their existing authoritative docs rather than duplicating them in `AGENTS.md`.
-- Do not add `.codex/config.toml` or pin models or reasoning settings unless the user explicitly requests repository configuration.
-- Keep `AGENTS.md` and its Copilot mirror byte-identical when both exist.
+## Implementation and validation
 
-Do not modify application code, runtime AI prompts, generated files, historical task-summary bodies, or machine-local guidance unless the audit proves a specific item is directly in scope. Preserve unrelated worktree changes.
+After audit approval (or immediately when the invocation explicitly asks for both audit and implementation), make the smallest measured improvement. Preserve unrelated work and historical summary bodies. Do not change runtime application behavior merely to validate agent policy.
 
-Implement the changes, create or update the repository-required task summary, and validate strict UTF-8, the repository line-ending policy, whitespace, local and newly added external links, mirror equality, stale terms, invalid paths, and helper behavior. Run an independent review/fix loop when the runtime exposes a separate reviewer; otherwise perform and disclose a deliberate local review pass. Continue the loop only for Blocker, High, or Medium findings.
+Validate deterministic claims separately from implementation-quality claims:
 
-In the final response include:
+- native routing/pointers, file links, stale terms, private-path leakage, summary-index references, strict UTF-8/line endings, and helper behavior;
+- several lightweight representative prompt walkthroughs: an ordinary fix, a downstream/public compatibility change, a security or persistence risk, and a docs/release task;
+- review the candidate with the agent-workflow overlay and integrator. If a broad rewrite is proposed, compare baseline/candidate on safely reversible held-out work before adoption; do not accept a candidate merely because its own reviewer catches failures it caused.
 
-1. Changed files and validation results.
-2. Every contradiction found, marked `Fixed`, `Intentionally retained`, or `Out of scope`.
-3. A section-disposition list showing where each original `AGENTS.md` section now lives, including anything deliberately removed and why.
-4. Remaining non-blocking risks.
+Do not add repository model/reasoning pins, `.codex/config.toml`, GitHub Actions, or external services unless explicitly requested and justified by the repository.
+
+## Closeout
+
+Report changed files, evidence/checks, rule disposition and surviving owners, contradictions marked `Fixed`, `Intentionally retained`, `Deferred`, or `Out of scope`, representative walkthrough results, migration/rollback steps, and remaining non-blocking risk. Commit, push, open a PR, or release only when explicitly requested.
