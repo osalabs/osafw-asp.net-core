@@ -45,6 +45,7 @@ Create or update one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` when 
 
 Use only relevant headings:
 
+- `Objective / acceptance`: observable end state, material exclusions, and evidence sufficient to declare completion. Keep implementation choices separate.
 - `What changed`: outcome, not a file-by-file diary.
 - `Scope reviewed`: important code/contracts and any bounded large-file sections used.
 - `Requirements / decisions`: material requirements, inferred choices, and why.

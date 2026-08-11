@@ -7,6 +7,7 @@ Use this optional workflow when a task is too large, risky, or cross-cutting for
 Coordinate this task end to end:
 
 - Goal: `<clear end state>`
+- Acceptance: `<observable result and evidence sufficient to declare completion>`
 - Scope: `<paths, features, docs, schemas, tests, or PR/issue links>`
 - Out of scope: `<explicit exclusions>`
 - Risk level: `<why this needs orchestration>`
