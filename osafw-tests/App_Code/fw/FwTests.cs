@@ -27,6 +27,39 @@ namespace osafw.Tests
             });
         }
 
+        public sealed class RuntimeTypeModel : FwModel
+        {
+            public int InitCalls { get; private set; }
+
+            public override void init(FW fw)
+            {
+                base.init(fw);
+                InitCalls++;
+            }
+        }
+
+        [TestMethod]
+        public void Model_ByRuntimeTypeInitializesAndSharesRequestCache()
+        {
+            var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build());
+
+            var byRuntimeType = (RuntimeTypeModel)fw.model(typeof(RuntimeTypeModel));
+            var byGenericType = fw.model<RuntimeTypeModel>();
+
+            Assert.AreSame(byRuntimeType, byGenericType);
+            Assert.AreEqual(1, byRuntimeType.InitCalls);
+        }
+
+        [TestMethod]
+        public void Model_ByRuntimeTypeRejectsNonModelType()
+        {
+            var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build());
+
+            var exception = Assert.ThrowsExactly<System.ArgumentException>(() => fw.model(typeof(string)));
+
+            Assert.AreEqual("modelType", exception.ParamName);
+        }
+
         [TestMethod]
         public void FormatUserDateTime_FormatsIsoAndLocal()
         {

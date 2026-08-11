@@ -177,3 +177,14 @@ List<Users.Row> typed = rows.toList<Users.Row>();
 ```
 
 Use whichever approach suits each feature. Many teams keep FwDict for quick admin tools while adopting typed rows for core business entities.
+
+## Resolving models from runtime types
+
+When configuration or reflection supplies a model `Type`, use the runtime overload instead of constructing the model directly:
+
+```csharp
+Type modelType = typeof(Users);
+FwModel model = fw.model(modelType);
+```
+
+The type must be a concrete `FwModel`. The overload initializes the model through the current `FW` instance and shares the same per-instance cache used by `fw.model<T>()` and class-name lookups.

@@ -1709,6 +1709,38 @@ public class FW : IDisposable
     }
 
     /// <summary>
+    /// Returns the cached model instance for a model type known only at runtime.
+    /// </summary>
+    /// <param name="modelType">Concrete type derived from <see cref="FwModel"/>.</param>
+    /// <returns>The initialized model instance shared with the other model lookup overloads.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="modelType"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="modelType"/> is not a concrete <see cref="FwModel"/> type.</exception>
+    /// <exception cref="InvalidOperationException">The cache contains an incompatible entry for the model class name.</exception>
+    public FwModel model(Type modelType)
+    {
+        ArgumentNullException.ThrowIfNull(modelType);
+
+        if (!typeof(FwModel).IsAssignableFrom(modelType) || modelType.IsAbstract)
+            throw new ArgumentException($"Model type {modelType.FullName} must be a concrete {nameof(FwModel)} type.", nameof(modelType));
+
+        string cacheKey = modelType.Name;
+        if (!models.TryGetValue(cacheKey, out object? value))
+        {
+            if (Activator.CreateInstance(modelType) is not FwModel modelInstance)
+                throw new InvalidOperationException($"Could not create model instance for {modelType.FullName}.");
+
+            modelInstance.init(this);
+            value = modelInstance;
+            models[cacheKey] = value;
+        }
+
+        if (value is FwModel result && modelType.IsInstanceOfType(result))
+            return result;
+
+        throw new InvalidOperationException($"Model cache entry for {cacheKey} is not of expected type {modelType.FullName}.");
+    }
+
+    /// <summary>
     /// Seeds the current request model cache for tests that need controlled model collaborators.
     /// </summary>
     internal void registerModelForTesting<T>(T model) where T : class
