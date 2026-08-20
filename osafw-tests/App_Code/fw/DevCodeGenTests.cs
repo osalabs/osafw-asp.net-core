@@ -182,6 +182,59 @@ public class DevCodeGenTests
     }
 
     [TestMethod]
+    public void UpdateControllerConfig_MakesComputedFieldsReadonlyAndExcludesThemFromSaves()
+    {
+        var fw = TestHelpers.CreateFw();
+        var computedName = Field("iname", "varchar", 80, isNullable: false, isComputed: true);
+        computedName["ui"] = new FwDict
+        {
+            ["required"] = true,
+            ["validate"] = "exists"
+        };
+        var config = new FwDict();
+        var entity = new FwDict
+        {
+            ["model_name"] = "GeneratedPeople",
+            ["table"] = "generated_people",
+            ["is_fw"] = true,
+            ["controller"] = new FwDict
+            {
+                ["url"] = "/Admin/GeneratedPeople",
+                ["title"] = "Generated People",
+                ["type"] = "vue",
+                ["is_dynamic_index_edit"] = true
+            },
+            ["fields"] = new FwList
+            {
+                Field("id", "int", 0, isNullable: false, isIdentity: true),
+                computedName,
+                Field("fname", "varchar", 32, isNullable: false),
+                Field("lname", "varchar", 32, isNullable: false),
+                Field("status", "int", 0, isNullable: false, defaultValue: "0")
+            },
+            ["foreign_keys"] = new FwList()
+        };
+
+        InvokeUpdateControllerConfig(fw, entity, config);
+
+        var showField = FindField((FwList)config["show_fields"]!, "iname");
+        var showFormField = FindField((FwList)config["showform_fields"]!, "iname");
+        Assert.AreEqual("plaintext", showField["type"]);
+        Assert.AreEqual("plaintext", showFormField["type"]);
+        Assert.IsFalse(showFormField.ContainsKey("required"));
+        Assert.IsFalse(showFormField.ContainsKey("validate"));
+
+        var saveFields = (System.Collections.ICollection)config["save_fields"]!;
+        CollectionAssert.DoesNotContain(saveFields, "iname");
+        CollectionAssert.Contains(saveFields, "fname");
+        CollectionAssert.Contains(saveFields, "lname");
+        CollectionAssert.Contains(saveFields, "status");
+
+        Assert.IsTrue(Utils.qh(config["edit_list_defaults"].toStr()).ContainsKey("iname"));
+        Assert.IsTrue(((FwDict)config["edit_list_map"]!).ContainsKey("iname"));
+    }
+
+    [TestMethod]
     public void BuildLookupInsertSql_ChecksForExistingIcode()
     {
         var fw = TestHelpers.CreateFw();
@@ -490,6 +543,7 @@ public class DevCodeGenTests
         int maxlen,
         bool isNullable,
         bool isIdentity = false,
+        bool isComputed = false,
         object? defaultValue = null)
     {
         return new FwDict
@@ -502,7 +556,8 @@ public class DevCodeGenTests
             ["default"] = defaultValue,
             ["maxlen"] = maxlen,
             ["is_nullable"] = isNullable,
-            ["is_identity"] = isIdentity
+            ["is_identity"] = isIdentity,
+            ["is_computed"] = isComputed
         };
     }
 }

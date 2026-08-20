@@ -118,6 +118,8 @@ dotnet test osafw-tests/osafw-tests.csproj -p:DefineConstants=isSQLite
 - `schemaField(table, field)`
 - `listForeignKeys([table])`
 
+`loadTableSchemaFull(table)` and `tableSchemaFull(table)` expose provider-normalized `is_computed` metadata for SQL Server computed columns, SQLite stored/virtual generated columns, and MySQL generated columns. The value is `1` for a computed/generated column and `0` otherwise.
+
 ### Typed operations
 All major methods have `T` versions returning your own classes. Map property names with `[DBName("field")]` when they differ.
 Typed single-row reads return `null` when no record is found. The non-generic `row`/`rowp` methods still return an empty `DBRow`, so dictionary callers can keep using `Count` checks.

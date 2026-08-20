@@ -55,6 +55,24 @@ public class SQLiteDBTests
         var userSchema = db.tableSchemaFull("users");
         Assert.IsTrue(userSchema.ContainsKey("iname"));
         Assert.AreEqual("varchar", ((FwDict)userSchema["iname"]!)["fw_type"]);
+        Assert.AreEqual(1, ((FwDict)userSchema["iname"]!)["is_computed"].toInt());
+        Assert.AreEqual(0, ((FwDict)userSchema["fname"]!)["is_computed"].toInt());
+    }
+
+    [TestMethod]
+    public void SQLiteSchemaMetadata_DetectsStoredAndVirtualGeneratedColumns()
+    {
+        db.exec(@"CREATE TABLE generated_values (
+  base_value INTEGER NOT NULL,
+  virtual_value INTEGER GENERATED ALWAYS AS (base_value * 2) VIRTUAL,
+  stored_value INTEGER GENERATED ALWAYS AS (base_value * 3) STORED
+)");
+
+        var schema = db.tableSchemaFull("generated_values");
+
+        Assert.AreEqual(0, ((FwDict)schema["base_value"]!)["is_computed"].toInt());
+        Assert.AreEqual(1, ((FwDict)schema["virtual_value"]!)["is_computed"].toInt());
+        Assert.AreEqual(1, ((FwDict)schema["stored_value"]!)["is_computed"].toInt());
     }
 
     [TestMethod]

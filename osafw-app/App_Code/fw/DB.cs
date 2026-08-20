@@ -3166,7 +3166,8 @@ public class DB : IDisposable
                       c.character_set_name as 'charset',
                       c.collation_name as 'collation',
                       c.ORDINAL_POSITION as 'pos',
-                      COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity
+                      COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity,
+                      COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsComputed') as is_computed
                       FROM INFORMATION_SCHEMA.TABLES t,
                         INFORMATION_SCHEMA.COLUMNS c
                       WHERE t.table_name = c.table_name
@@ -3192,7 +3193,8 @@ public class DB : IDisposable
                       c.character_set_name as charset,
                       c.collation_name as collation,
                       c.ORDINAL_POSITION as pos,
-                      LOCATE('auto_increment',EXTRA)>0 as is_identity
+                      LOCATE('auto_increment',EXTRA)>0 as is_identity,
+                      CASE WHEN COALESCE(c.GENERATION_EXPRESSION, '') <> '' THEN 1 ELSE 0 END as is_computed
                       FROM INFORMATION_SCHEMA.TABLES t,
                            INFORMATION_SCHEMA.COLUMNS c
                       WHERE t.table_name = c.table_name
@@ -3235,6 +3237,7 @@ public class DB : IDisposable
                 row["collation"] = "";
                 row["pos"] = row["cid"].toInt() + 1;
                 row["is_identity"] = row["name"].toStr() == identityColumn && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                row["is_computed"] = row["hidden"].toInt() is 2 or 3 ? 1 : 0;
                 result.Add(row);
             }
         }
