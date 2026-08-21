@@ -8,7 +8,9 @@
         <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
             <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
             <th data-sort="demo_dicts_id">`DemoDicts`</th>
+            <th data-sort="icode">`Code`</th>
             <th data-sort="iname">`Title`</th>
+            <th data-sort="display_name">`Display name`</th>
             <th data-sort="email">`Email`</th>
             <th data-sort="fdatetime_utc">`UTC datetime`</th>
             <th data-sort="fdatetime_local">`Browser local`</th>
@@ -22,7 +24,9 @@
         <tr data-url="<~row_click_url>">
             <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
             <td><~demo_dicts[iname]></td>
+            <td><~icode></td>
             <td><a href="<~../url>/<~id><~/common/list/urlq>"><~iname></a></td>
+            <td><~display_name></td>
             <td><~email></td>
             <td><~fdatetime_utc date="short"></td>
             <td><~fdatetime_local date="short"></td>

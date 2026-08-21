@@ -1,12 +1,13 @@
 {
     "model": "Demos",
     "required_fields": "",
-    "###save_fields": "parent_id demo_dicts_id iname idesc email fint ffloat frange fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
+    "###save_fields": "parent_id demo_dicts_id icode iname idesc email fint ffloat frange fcombo fradio fyesno fdate_pop fdatetime fdatetime_utc fdatetime_offset fdatetime_local ftime att_id status dict_link_auto_id dict_link_multi fdate_combo",
     "###save_fields_checkboxes": "is_checkbox|0 is_switch|0",
 
     "save_fields": [
         "parent_id",
         "demo_dicts_id",
+        "icode",
         "iname",
         "idesc",
         "email",
@@ -34,25 +35,28 @@
     },
 
     "form_new_defaults": {
+        "icode": "",
         "iname": "",
         "frange": 50
     },
 
-    "search_fields": "!id iname idesc",
+    "search_fields": "!id icode iname display_name idesc",
     "list_sortdef": "iname asc",
-    "#list_sortmap": "id|id iname|iname add_time|add_time demo_dicts_id|demo_dicts_id email|email status|status",
+    "#list_sortmap": "id|id icode|icode iname|iname display_name|display_name add_time|add_time demo_dicts_id|demo_dicts_id email|email status|status",
 
     "related_field_name": "demo_dicts_id",
 
     "is_dynamic_index": true,
     "list_view": "(select d.*, dp.iname as parent_iname, dd.iname as demo_dicts_iname, da.iname as dict_link_auto_iname, FORMAT(d.fdate_pop, 'MM/dd/yyyy') as fdate_pop_str from demos d LEFT OUTER JOIN demos dp ON dp.id=d.parent_id LEFT OUTER JOIN demo_dicts dd ON dd.id=d.demo_dicts_id LEFT OUTER JOIN demo_dicts da ON da.id=d.dict_link_auto_id) t",
-    "view_list_defaults": "demo_dicts_iname dict_link_auto_iname iname email fdate_pop_str fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat status",
+    "view_list_defaults": "demo_dicts_iname dict_link_auto_iname icode iname display_name email fdate_pop_str fdatetime_utc fdatetime_local is_checkbox fyesno fradio fint ffloat status",
     "###view_list_map": "demo_dicts_iname|DemoDicts iname|Title email|Email add_time|Added&nbsp;on status|Status id|id",
     "view_list_map": {
         "id": "id",
         "parent_iname": "Parent",
         "demo_dicts_iname": "DemoDicts",
+        "icode": "Code",
         "iname": "Title",
+        "display_name": "Display name",
         "idesc": "Description",
         "email": "Email",
         "fint": "Integer",
@@ -101,7 +105,13 @@
                 "field_storage_type": "int",
                 "autocomplete_url": "/Admin/DemosDynamic/(Autocomplete)?model=DemoDicts&q="
             },
+            "icode": {
+                "type": "text"
+            },
             "iname": {
+                "type": "text"
+            },
+            "display_name": {
                 "type": "text"
             },
             "email": {
@@ -193,8 +203,18 @@
             "type": "plaintext"
         },
         {
+            "field": "icode",
+            "label": "Code",
+            "type": "plaintext"
+        },
+        {
             "field": "iname",
             "label": "Title",
+            "type": "plaintext"
+        },
+        {
+            "field": "display_name",
+            "label": "Display name",
             "type": "plaintext"
         },
         {
@@ -537,11 +557,23 @@
             ]
         },
         {
+            "field": "icode",
+            "label": "Code",
+            "type": "input",
+            "maxlength": 32
+        },
+        {
             "field": "iname",
             "label": "Title",
             "type": "input",
             "required": true,
             "maxlength": 64
+        },
+        {
+            "field": "display_name",
+            "label": "Display name",
+            "type": "plaintext",
+            "help_text": "Computed by the database from Code and Title; shown after the next reload."
         },
         {
             "field": "idesc",

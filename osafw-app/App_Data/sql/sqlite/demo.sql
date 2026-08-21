@@ -33,7 +33,9 @@ CREATE TABLE demos (
   parent_id             INTEGER NOT NULL DEFAULT 0,
   demo_dicts_id         INTEGER NULL REFERENCES demo_dicts(id),
 
+  icode                 TEXT NOT NULL DEFAULT '',
   iname                 TEXT NOT NULL DEFAULT '',
+  display_name          TEXT GENERATED ALWAYS AS (icode || CASE WHEN icode <> '' AND iname <> '' THEN ' — ' ELSE '' END || iname) STORED,
   idesc                 TEXT,
 
   email                 TEXT NOT NULL DEFAULT '',
@@ -116,7 +118,7 @@ WITH RECURSIVE nums(n) AS (
   SELECT n + 1 FROM nums WHERE n < 50
 )
 INSERT INTO demos (
-  parent_id, demo_dicts_id, iname, idesc, email, fint, ffloat,
+  parent_id, demo_dicts_id, icode, iname, idesc, email, fint, ffloat,
   frange, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, is_switch,
   fdate_combo, fdate_pop, fdatetime, fdatetime_utc, fdatetime_offset,
   fdatetime_local, ftime, att_id, status, add_time, add_users_id
@@ -124,6 +126,7 @@ INSERT INTO demos (
 SELECT
   abs(random()) % 10,
   abs(random()) % 3 + 1,
+  'DEMO-' || n,
   'Name' || n,
   'Description' || n,
   'email' || n,

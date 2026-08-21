@@ -57,6 +57,15 @@ public class SQLiteDBTests
         Assert.AreEqual("varchar", ((FwDict)userSchema["iname"]!)["fw_type"]);
         Assert.AreEqual(1, ((FwDict)userSchema["iname"]!)["is_computed"].toInt());
         Assert.AreEqual(0, ((FwDict)userSchema["fname"]!)["is_computed"].toInt());
+
+        var demoSchema = db.tableSchemaFull("demos");
+        Assert.AreEqual(0, ((FwDict)demoSchema["icode"]!)["is_computed"].toInt());
+        Assert.AreEqual(1, ((FwDict)demoSchema["display_name"]!)["is_computed"].toInt());
+        Assert.AreEqual("DEMO-1 — Name1", db.value("demos", DB.h("id", 1), "display_name").toStr());
+
+        db.update("demos", DB.h("iname", "Renamed Demo"), DB.h("id", 1));
+
+        Assert.AreEqual("DEMO-1 — Renamed Demo", db.value("demos", DB.h("id", 1), "display_name").toStr());
     }
 
     [TestMethod]
