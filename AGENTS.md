@@ -18,6 +18,7 @@
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
 5. For broad searches prefer `docs/agents/tools/Search-Repo.ps1`. Opt into ignored drafts, large files, vendor content, or task history only when directly relevant. For files over 1 MB, search headings/patterns and read bounded ranges rather than streaming the file.
+6. Route work by `docs/agents/workflow.md`: keep qualifying small/local tasks on the direct path, and automatically use `docs/prompts/orchestrator.md` for non-trivial, high-risk, cross-cutting, ambiguous, or repeatedly failing work. When a matching bounded stage exists and the project profile/capability is available, use `discovery_fast`, `implementation_fast`, `reviewer_high`, or `architect_max` as routed there; otherwise preserve the same stages, ownership, verification, and review locally.
 
 # Work Boundaries
 

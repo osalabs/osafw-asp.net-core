@@ -177,3 +177,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-08-11-objective-acceptance.md` - Added a compact objective/acceptance field to shared task evidence and the large-task orchestrator prompt.
 - `summary-2026-08-20-computed-virtual-fields.md` - Made schema-generated computed fields read-only and excluded them from generated saves across SQL Server, SQLite, and MySQL metadata.
 - `summary-2026-08-20-demo-computed-display-name.md` - Added the Demos kitchen-sink `display_name` computed-column example across provider schemas and classic, Dynamic, and Vue screens.
+- `summary-2026-08-27-codex-agent-workflow.md` - Added explicit adaptive role routing, project custom-agent profiles, and a versioned copied instruction pack; empirical comparison remains pending.

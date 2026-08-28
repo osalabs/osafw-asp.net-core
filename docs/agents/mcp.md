@@ -19,6 +19,12 @@ Use this repository-specific policy with the capabilities exposed by the active 
 
 ## Current Official References
 
+- [Codex custom agents and subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+- [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
+- [Codex developer commands](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
+- [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
+- [Codex sandboxing](https://learn.chatgpt.com/docs/sandboxing)
+- [Codex Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox)
 - [Model Context Protocol documentation](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [Visual Studio MCP documentation](https://learn.microsoft.com/en-us/visualstudio/ide/mcp-servers?view=visualstudio)
 - [Microsoft Playwright MCP repository](https://github.com/microsoft/playwright-mcp)

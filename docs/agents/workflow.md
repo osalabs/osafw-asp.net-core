@@ -23,13 +23,23 @@ Use a focused developer interview only for a broad feature with unresolved choic
 
 ## 3. Size and stage the work
 
-- **Small/routine:** one scoped implementation and focused verification pass.
-- **Non-trivial:** maintain a short plan with one active step, keep tightly coupled integration local, and use checkpoints for independently falsifiable stages.
-- **High-risk/cross-cutting:** define compatibility/security/data gates before editing and consider review checkpoints before the final integrated review.
+- **Direct path:** keep the work in the primary task when the outcome is clear, the change is local and reversible, affected contracts are already known, no shared-state authority is needed, and one scoped implementation plus focused verification can credibly finish it. Do not add orchestration ceremony merely because source code or tests change.
+- **Orchestrated path:** automatically load and follow `docs/prompts/orchestrator.md` when any of these is true: the work has multiple independently falsifiable stages; spans subsystems or provider/schema/generated-output contracts; has meaningful security, data-integrity, public compatibility, release, or shared-workflow risk; contains unresolved architecture/product ambiguity; benefits from independent discovery or implementation in disjoint files; or two focused attempts have failed. Maintain a short plan with one active integration step and checkpoint each independently useful stage.
+- **Escalated path:** use `architect_max` only for a material architecture choice, a high-risk adjudication, unresolved ambiguity that changes the result, or recovery after bounded attempts failed, and only when that profile/capability is available. It is not the default for ordinary non-trivial work; perform the same bounded decision analysis locally when unavailable.
 
 Checkpointed commits can make a long change easier to review or roll back, but a useful commit shape does not authorize committing. Create/switch branches, commit, push, open/merge PRs, release, or deploy only when explicitly requested.
 
-Optional delegation is capability-conditional. Use it only for bounded, independent work with clear expected output and file ownership. In a shared worktree, tell workers to preserve others' changes and report touched paths. The primary agent retains integration, final diff review, verification, and cleanup. If delegation is unavailable, run the same routed checks locally.
+Optional delegation is capability-conditional, but role routing is explicit when a matching bounded stage exists: use `discovery_fast` for read-heavy discovery, `implementation_fast` for routine well-specified implementation in a small disjoint file set, `reviewer_high` only when `review-routing.md` warrants independent review, and `architect_max` only for the escalated path above. Keep tightly coupled decisions and final integration in the primary task. If a named profile or delegation is unavailable, execute that stage locally with the same packet, evidence, and stop conditions. Custom-agent model and reasoning selections live only in `.codex/agents/*.toml`; do not pin or replace the primary task's model in repository guidance.
+
+Every delegation packet must be bounded and contain:
+
+- objective and observable acceptance criteria;
+- relevant evidence/context and explicit exclusions;
+- exclusive writable file ownership plus any read-only paths;
+- required verification and expected output format;
+- stop/escalation conditions, including ambiguity, contract expansion, unsafe state, or repeated failure.
+
+Maintain a file lease list while workers run. Read-only work may overlap; writers may run concurrently only when their writable paths are disjoint. Do not assign two workers overlapping files, and do not edit a leased file in the primary task until its worker returns or the lease is revoked. Workers preserve unrelated changes and report every touched path. The primary agent retains integration, final diff review, verification, and cleanup. If custom agents or delegation are unavailable, execute the same packeted stages sequentially in the primary task and disclose the local fallback.
 
 ## 4. Implement and verify
 

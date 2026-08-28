@@ -63,7 +63,12 @@ $requiredFiles = @(
     "docs/agents/glossary.md",
     "docs/agents/heuristics.md",
     "docs/agents/mcp.md",
-    "docs/agents/tasks/index.md"
+    "docs/agents/tasks/index.md",
+    "docs/agents/instruction-pack.json",
+    ".codex/agents/discovery_fast.toml",
+    ".codex/agents/implementation_fast.toml",
+    ".codex/agents/reviewer_high.toml",
+    ".codex/agents/architect_max.toml"
 )
 
 foreach ($relativePath in $requiredFiles) {
@@ -130,6 +135,24 @@ if ($failures.Count -eq 0) {
     Add-Pass "Root, documentation-map, and reviewer routes are connected."
 }
 
+$roleRoutes = @{
+    discovery_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
+    implementation_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
+    reviewer_high = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
+    architect_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
+}
+foreach ($role in $roleRoutes.Keys) {
+    foreach ($relativePath in $roleRoutes[$role]) {
+        $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+        if ($text.IndexOf($role, [System.StringComparison]::Ordinal) -lt 0) {
+            Add-Failure "Durable role route is missing '$role': $relativePath"
+        }
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Durable role route is missing*' })) {
+    Add-Pass "Durable routing names every project custom-agent role and retains local fallback."
+}
+
 $textFiles = [System.Collections.Generic.List[string]]::new()
 foreach ($relativePath in @("AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/agents/tasks/index.md")) {
     $path = Get-RepoPath $relativePath
@@ -154,6 +177,23 @@ foreach ($directory in @("docs/agents", "docs/agents/reviewers", "docs/agents/to
             }
         }
 }
+foreach ($directory in @(".codex/agents")) {
+    $path = Get-RepoPath $directory
+    if (-not (Test-Path -LiteralPath $path)) {
+        continue
+    }
+    Get-ChildItem -LiteralPath $path -File -Recurse |
+        Where-Object { $_.Extension -in @(".md", ".ps1", ".json", ".toml") } |
+        ForEach-Object {
+            if (-not $textFiles.Contains($_.FullName)) {
+                $textFiles.Add($_.FullName)
+            }
+        }
+}
+$instructionPackPath = Get-RepoPath "docs/agents/instruction-pack.json"
+if ((Test-Path -LiteralPath $instructionPackPath) -and -not $textFiles.Contains($instructionPackPath)) {
+    $textFiles.Add($instructionPackPath)
+}
 
 foreach ($path in $textFiles) {
     try {
@@ -172,6 +212,66 @@ foreach ($path in $textFiles) {
 }
 if (-not ($failures | Where-Object { $_ -match 'UTF-8|BOM|preceded by CR|followed by LF' })) {
     Add-Pass "Active instruction, routing, prompt, and helper text is strict UTF-8 without BOM and CRLF."
+}
+
+$profileFiles = [ordered]@{
+    ".codex/agents/discovery_fast.toml" = "discovery_fast"
+    ".codex/agents/implementation_fast.toml" = "implementation_fast"
+    ".codex/agents/reviewer_high.toml" = "reviewer_high"
+    ".codex/agents/architect_max.toml" = "architect_max"
+}
+foreach ($relativePath in $profileFiles.Keys) {
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    foreach ($key in @("name", "description", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions")) {
+        if ($text -notmatch ("(?m)^" + [regex]::Escape($key) + "\s*=")) {
+            Add-Failure "Custom-agent profile is missing '$key': $relativePath"
+        }
+    }
+    $nameMatch = [regex]::Match($text, '(?m)^name\s*=\s*"(?<name>[^"]+)"\s*$')
+    if (-not $nameMatch.Success -or $nameMatch.Groups['name'].Value -ne $profileFiles[$relativePath]) {
+        Add-Failure "Custom-agent profile name does not match its stable role id: $relativePath"
+    }
+}
+$semanticPolicyFiles = @(
+    "AGENTS.md",
+    "docs/agents/workflow.md",
+    "docs/agents/review-routing.md",
+    "docs/prompts/orchestrator.md",
+    "docs/prompts/agent_upgrade.md"
+)
+foreach ($relativePath in $semanticPolicyFiles) {
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    if ($text -match '(?i)gpt-5\.|model_reasoning_effort\s*=') {
+        Add-Failure "Durable semantic workflow contains a model/reasoning pin: $relativePath"
+    }
+}
+if (Test-Path -LiteralPath (Get-RepoPath ".codex/config.toml")) {
+    Add-Failure "Primary/project-wide model configuration is not allowed in .codex/config.toml."
+}
+if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic workflow|config\.toml' })) {
+    Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and the primary task remain unpinned."
+}
+
+try {
+    $instructionPack = (Read-StrictUtf8 $instructionPackPath) | ConvertFrom-Json
+    if ([int]$instructionPack.schemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string]$instructionPack.packVersion)) {
+        Add-Failure "Instruction-pack metadata has an unsupported schema or missing version."
+    }
+    foreach ($entry in @($instructionPack.files)) {
+        if ([string]::IsNullOrWhiteSpace([string]$entry.path) -or [string]::IsNullOrWhiteSpace([string]$entry.upgradeMode)) {
+            Add-Failure "Instruction-pack entry is missing path or upgradeMode."
+            continue
+        }
+        if (-not (Test-Path -LiteralPath (Get-RepoPath ([string]$entry.path)) -PathType Leaf)) {
+            Add-Failure "Instruction-pack managed path is missing: $($entry.path)"
+        }
+    }
+}
+catch {
+    Add-Failure "Instruction-pack metadata is invalid JSON: $($_.Exception.Message)"
+}
+if (-not ($failures | Where-Object { $_ -match '^Instruction-pack' })) {
+    Add-Pass "Versioned instruction-pack metadata resolves every managed file."
 }
 
 $policyFiles = @(
