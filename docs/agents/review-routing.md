@@ -28,7 +28,7 @@ Examples:
 
 ## Capability-conditional execution
 
-When an independent reviewer/subagent is available and useful, give it the requested outcome, final diff, active summary, selected overlay, file scope, and instruction to return evidence-backed candidate findings without editing. Do not launch one reviewer per file or per suspected issue.
+After implementation, when an independent reviewer/subagent is available, use a fresh separate agent with no access to the implementing agent's conversation history. Provide task context only through an explicit review handoff containing the requested outcome, final diff, active summary, selected overlay, file scope, and instruction to return evidence-backed candidate findings without editing. Do not launch one reviewer per file or per suspected issue.
 
 When no independent capability is available, the implementing agent performs a deliberate second-pass review: set aside implementation intent, read `code_reviewer.md` and the selected overlay(s), inspect the final diff from the requested outcome outward, and disclose that the review was local. Unavailable delegation must not weaken the review criteria or block ordinary work.
 

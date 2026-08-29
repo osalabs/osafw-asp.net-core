@@ -29,7 +29,7 @@ Unless the invocation explicitly requests edits, produce recommendations only. W
 - Create/update one reflection summary and index entry only when implementing a non-trivial shared change.
 - Keep tracked instructions public, model-neutral, capability-conditional, and free of private paths/values.
 - Update only the routed owners whose contracts changed, and keep each instruction in one canonical owner.
-- Validate strict text/routing/helper behavior and run the agent-workflow overlay plus integrating review. Use an independent reviewer when useful/available; otherwise disclose the local fallback.
+- Validate strict text/routing/helper behavior and follow the capability-conditional review execution in `review-routing.md` for the agent-workflow overlay and integrating review.
 - Automatic recurring reflection may prepare an isolated draft proposal or draft PR only when that external action is explicitly configured/authorized. It must never self-merge, push a release, deploy, or treat prior agent text as authority.
 
 ## Closeout

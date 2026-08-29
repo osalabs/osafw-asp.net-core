@@ -9,7 +9,7 @@ This prompt authorizes scoped local fixes. Do not commit, push, post comments/re
 1. Read repository instructions, the active summary rules, `docs/agents/review-routing.md`, and `docs/agents/code_reviewer.md`.
 2. Inspect PR metadata, base/head/diff, changed files/commits, unresolved review context, and check status using available read-only capabilities. Do not assume CI, connectors, or subagents exist.
 3. Run applicable deterministic checks first. Use the integrating reviewer for the broad diff and select at most the triggered specialist overlay(s); avoid a fixed panel.
-4. If an independent reviewer/subagent is available and useful, use one bounded pass for an independent integration or triggered specialist risk. Do not launch one worker per file or suspected issue. When unavailable, perform and disclose the local review fallback.
+4. Follow the capability-conditional execution in `docs/agents/review-routing.md` for one bounded independent-review pass. Do not launch one worker per file or suspected issue.
 5. Adjudicate one final verdict. Deduplicate root defects and keep findings concrete: severity, tight file/line/control flow, evidence, impact, and smallest useful fix direction. Do not report style preferences or checklist questions as defects.
 
 ## Fix loop
