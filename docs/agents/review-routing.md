@@ -5,7 +5,7 @@ Use this router for changes that meet the review gate in `AGENTS.md`. Review dep
 ## Topology
 
 1. Run deterministic formatting, link, compile, test, schema, or generated-output checks that apply. Reviewers should investigate residual judgment risk, not rediscover machine-checkable failures.
-2. Use `code_reviewer.md` as the broad integrator for requirements, correctness, project fit, verification, documentation, and the one final verdict. Make it independent only when the criteria below warrant the added context and cost.
+2. Use `code_reviewer.md` as the broad integrator (independent when available) for requirements, correctness, project fit, verification, documentation, and the one final verdict.
 3. Add a specialist overlay only when its trigger is present. A normal bounded change uses no overlay. Prefer one overlay; use at most two when genuinely cross-cutting risk justifies both.
 4. An overlay produces candidate findings/evidence, not a separate verdict. The integrator validates candidates against current code, removes duplicates, resolves contradictions, and adjudicates severity.
 5. Continue the review/fix loop only while an adjudicated Blocker, High, or Medium finding remains.
@@ -28,9 +28,7 @@ Examples:
 
 ## Capability-conditional execution
 
-Independent review is warranted when the user requests it or the final diff has material security/data-integrity risk, public/copy-consumer compatibility impact, schema/provider or deployment consequences, shared agent-workflow risk, cross-subsystem integration, unresolved reviewer judgment, or a history of failed focused attempts. For a bounded low-risk change with strong deterministic evidence, use the implementing agent's deliberate second pass instead of automatically paying for an independent review.
-
-When an independent reviewer/subagent is warranted and the `reviewer_high` profile/capability is available, give it the requested outcome, final diff, active summary, selected overlay, file scope, deterministic results, and instruction to return evidence-backed candidate findings without editing. Do not launch one reviewer per file or per suspected issue, and do not use `architect_max` as a routine reviewer.
+After implementation, when an independent reviewer/subagent is available, use a fresh separate agent with no access to the implementing agent's conversation history. When the `reviewer_high` profile/capability is available, use it. Provide task context only through an explicit review handoff containing the requested outcome, final diff, active summary, selected overlay, file scope, deterministic results, and instruction to return evidence-backed candidate findings without editing. Do not launch one reviewer per file or per suspected issue, and do not use `architect_max` as a routine reviewer.
 
 When no independent capability is available, the implementing agent performs a deliberate second-pass review: set aside implementation intent, read `code_reviewer.md` and the selected overlay(s), inspect the final diff from the requested outcome outward, and disclose that the review was local. Unavailable delegation must not weaken the review criteria or block ordinary work.
 
