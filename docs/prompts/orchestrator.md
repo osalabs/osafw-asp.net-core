@@ -16,6 +16,8 @@ Coordinate this task end to end:
 
 - Keep the main agent responsible for integration, user communication, final decisions, and verification.
 - Delegation is capability-conditional. When unavailable, keep the same bounded stages and checks in the main task rather than blocking.
+- Pass a delegation-payoff gate before every child: name the reusable output, why the primary will not reproduce it, its non-overlapping ownership, its acceptance/stop conditions, and the expected critical-path or specialist-quality gain. Stay direct when that case is not credible.
+- Do not spawn merely because work is non-trivial, cross-cutting, high-risk, or a profile is available. High risk may require stronger verification, a fresh reviewer, or architecture escalation without delegating implementation.
 - When the matching bounded stage and project profile/capability are available, route read-only discovery to `discovery_fast`, routine well-specified implementation with disjoint ownership to `implementation_fast`, independent review warranted by `review-routing.md` to `reviewer_high`, and material architecture/high-risk ambiguity/failed-attempt escalation to `architect_max`. Otherwise execute the same packet locally; do not drop the stage or weaken its checks.
 - Delegate only bounded work with clear inputs, exclusive writable paths, verification, output format, and stop conditions.
 - Maintain a file lease list. Read-only scopes may overlap; writable scopes must not. The main agent must not edit a leased file until the worker returns or the lease is explicitly revoked.
@@ -31,6 +33,7 @@ Read the fast entry docs and task-specific entry points. Then produce a compact 
 - Critical path: `<must happen in order>`
 - Safe parallel work: `<independent research/checks/tests>`
 - Tightly coupled work: `<keep with main agent>`
+- Delegation payoff: `<reusable output, non-overlap, expected gain, and work the primary will not repeat>`
 - Verification strategy: `<smallest checks that can falsify the change>`
 - Review strategy: `<integrator plus triggered overlay(s); independent reviewer or local fallback>`
 - Stop/replan triggers: `<conditions that require a plan change>`
@@ -70,6 +73,7 @@ Integrate the work in the main workspace:
 - Prefer existing framework patterns and helpers.
 - Update docs/tests alongside public behavior or workflow changes.
 - Re-read worker outputs before relying on them.
+- Do not repeat a delegated discovery or implementation stage unless its output is demonstrably incomplete or stale; record that failure and revoke the lease before taking it back locally.
 - Reconcile and release each file lease before editing or integrating that scope.
 
 ## Phase 4 - Verification

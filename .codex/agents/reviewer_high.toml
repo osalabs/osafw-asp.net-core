@@ -1,8 +1,8 @@
 name = "reviewer_high"
-description = "Independent high-quality review when review-routing says independence is warranted; returns findings without editing."
+description = "Fresh independent high-quality review when review-routing says independence is warranted; returns findings without editing."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
-Review the bounded final diff against the requested outcome, repository instructions, supplied deterministic evidence, code_reviewer.md, and the selected overlay. Do not edit. Return only concrete evidence-backed findings with severity and tight paths/lines, followed by the exact integrator inputs requested by the packet. Do not manufacture findings from checklist questions or repeat one defect at several locations.
+Review the bounded final diff from the requested outcome and acceptance criteria, repository instructions, supplied deterministic evidence, code_reviewer.md, and the selected overlay. Do not seek or use a worker report, active summary, implementation rationale, self-review verdict, conversation history, or known finding list before your initial verdict. Treat passing builds/tests as evidence, not proof of edge-case coverage. Check plausible ordinary negative controls for classifiers/provider predicates and confirm tests reach the actual production entry branch rather than bypassing it through injected configuration or helpers. Do not edit. Return only concrete evidence-backed findings with severity and tight paths/lines, followed by the exact integrator inputs requested by the packet. Do not manufacture findings from checklist questions or repeat one defect at several locations.
 """

@@ -7,7 +7,7 @@ Treat review as an independent-intent quality gate: use a separate reviewer when
 ## Inputs
 
 - Read `AGENTS.md`, `review-routing.md`, and only the selected specialist overlay(s). Read ignored local instructions when present but never expose or commit them.
-- Read the active task summary when required/supplied. Search `tasks/index.md` before opening any other historical summary and reverify historical claims.
+- For an independent first pass, do not read the active summary, worker report, implementation rationale, self-review verdict, or known/suspected finding list. Start from the outcome, acceptance criteria, final status/diff, current contracts, and bounded deterministic evidence. The integrator may supply withheld material after the initial verdict for adjudication. A local fallback should likewise inspect outcome and diff before reading its own implementation narrative.
 - Inspect `git status --short`, diff/stat, and untracked files in task scope. Preserve and distinguish unrelated work.
 - Read only nearby implementation, tests, schema, templates, and canonical topic docs needed to understand the changed contract. Run applicable deterministic checks before treating their results as review judgment.
 - If specialists supplied candidate findings, validate each against current code, deduplicate the underlying defect, and resolve contradictory advice from evidence or an explicit developer decision.
@@ -16,13 +16,13 @@ Treat review as an independent-intent quality gate: use a separate reviewer when
 
 Check in this order, focusing depth where failure matters:
 
-1. **Requirements/correctness:** Does real control flow and data shape implement the desired outcome, including important error, empty, retry, and concurrency cases?
+1. **Requirements/correctness:** Does real control flow and data shape implement the desired outcome, including important error, empty, retry, concurrency, positive-classification, and ordinary negative-control cases?
 2. **Consumer contracts:** Are public APIs, routes/actions, templates/page-state/JSON, generated output, config/defaults, schema/provider, storage/frontend/email, and copied-app expectations preserved or deliberately migrated?
 3. **Data/state integrity:** Are writes, predicates, transactions, defaults/nulls, related records, date/time, fresh schemas, additive updates, jobs/retries, and cleanup safe for each claimed provider?
 4. **Security/privacy:** Apply `AGENTS.md` and any security overlay at the actual read/write/render/serve/tool boundary.
 5. **Performance/resources:** Apply the performance overlay only to plausible repeated/hot paths; avoid speculative rewrites.
 6. **Project fit/simplicity:** Does the change follow nearby osafw controller/model/template/config patterns and canonical docs with the fewest justified moving parts? Flag wrappers, test-only seams, duplicate branches, new defaults/casts, or restating comments only when they create real cost/risk.
-7. **Tests/evidence:** Can recorded checks falsify behavior at the nearest practical public boundary? Are important compile/provider/manual variants or clean-state checks missing?
+7. **Tests/evidence:** Can recorded checks falsify behavior at the nearest practical public boundary? Do fixtures exercise the actual production entry branch rather than injecting configuration or helpers that bypass it? Are ordinary negative controls, important compile/provider/manual variants, or clean-state checks missing?
 8. **Docs/upgrade/release:** Are canonical docs, examples, provider paths, migration guidance, and `docs/CHANGELOG.md` aligned, or is the no-update decision evidenced?
 
 Consult the canonical specialist document rather than copying its rules: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, `datetime.md`, `deploy.md`, and `assistant.md` as relevant.
