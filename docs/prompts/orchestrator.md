@@ -17,8 +17,9 @@ Coordinate this task end to end:
 - Keep the main agent responsible for integration, user communication, final decisions, and verification.
 - Delegation is capability-conditional. When unavailable, keep the same bounded stages and checks in the main task rather than blocking.
 - Pass a delegation-payoff gate before every child: name the reusable output, why the primary will not reproduce it, its non-overlapping ownership, its acceptance/stop conditions, and the expected critical-path or specialist-quality gain. Stay direct when that case is not credible.
+- Use the smallest sufficient route and a stage budget: normally choose at most one pre-implementation delegation stage. Stack discovery, architecture, and implementation roles only when every stage produces a distinct consumed artifact that changes the next decision and justifies its own critical-path cost.
 - Do not spawn merely because work is non-trivial, cross-cutting, high-risk, or a profile is available. High risk may require stronger verification, a fresh reviewer, or architecture escalation without delegating implementation.
-- When the matching bounded stage and project profile/capability are available, route read-only discovery to `discovery_fast`, routine well-specified implementation with disjoint ownership to `implementation_fast`, independent review warranted by `review-routing.md` to `reviewer_high`, and material architecture/high-risk ambiguity/failed-attempt escalation to `architect_max`. Otherwise execute the same packet locally; do not drop the stage or weaken its checks.
+- When the matching bounded stage and project profile/capability are available, route read-only discovery to `discovery_fast`, small low-risk well-specified implementation with a deterministic acceptance check and disjoint ownership to `implementation_fast`, bounded high-risk implementation escalation to `implementation_max`, ordinary independent review to `reviewer_high`, predeclared catastrophic or exceptionally costly failure review to `reviewer_max`, and material architecture/high-risk ambiguity/failed-attempt decision escalation to `architect_max`. Every implementation child requires exclusive ownership and returns to the primary integrator. Otherwise execute the same packet locally; do not drop the stage or weaken its checks.
 - Delegate only bounded work with clear inputs, exclusive writable paths, verification, output format, and stop conditions.
 - Maintain a file lease list. Read-only scopes may overlap; writable scopes must not. The main agent must not edit a leased file until the worker returns or the lease is explicitly revoked.
 - Do not let sub-agents make broad repo-wide changes or resolve shared contracts without main-agent review.
@@ -84,6 +85,8 @@ Run focused checks first, then broader checks only when risk justifies them:
 - Manual/browser checks: `<flows>`
 - Static searches: `<patterns>`
 - Text/line-ending checks: `<files>`
+- Public-contract controls: `<established entry paths and baseline consumers>`
+- Behavior controls: `<ordinary/attacker negatives plus intended-safe/trusted and preserved-compatibility positives>`
 
 If a check fails, classify whether it is caused by this task, pre-existing, or environmental. Fix task-caused failures before closing.
 
@@ -91,7 +94,7 @@ If a check fails, classify whether it is caused by this task, pre-existing, or e
 
 Route the final diff through `docs/agents/review-routing.md`, then use `docs/agents/code_reviewer.md` for the one adjudicated verdict when the task affects runtime behavior, schemas, templates, scripts, tests, configuration, or risky workflow docs.
 
-For the review, use `reviewer_high` when independent review is warranted and that profile/capability is available; otherwise perform the documented local second pass:
+For the review, use the `reviewer_high` or `reviewer_max` route selected before diff inspection by `review-routing.md` when that profile/capability is available; otherwise perform the documented local second pass:
 
 - Findings must be concrete and path/line grounded.
 - Fix real issues in the main workspace.

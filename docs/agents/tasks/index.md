@@ -179,4 +179,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-08-20-demo-computed-display-name.md` - Added the Demos kitchen-sink `display_name` computed-column example across provider schemas and classic, Dynamic, and Vue screens.
 - `summary-2026-08-27-codex-agent-workflow.md` - Added explicit adaptive role routing, project custom-agent profiles, and a versioned copied instruction pack; empirical comparison remains pending.
 - `summary-2026-08-29-fresh-reviewer-context.md` - Required available post-implementation independent reviewers to be fresh separate agents receiving context only through an explicit review handoff.
-- `summary-2026-08-30-adaptive-workflow-benchmark-promotion.md` - Promoted benchmark-supported direct-first routing, delegation-payoff gating, and initially blinded high-risk review into instruction pack 1.1.0.
+- `summary-2026-08-30-adaptive-workflow-benchmark-promotion.md` - Promoted benchmark-backed direct-first routing, a one-stage orchestration budget, bounded Terra Medium implementation, conditional Max implementation/review, and public-entry positive/negative controls in instruction pack 1.3.0.

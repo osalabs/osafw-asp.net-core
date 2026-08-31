@@ -19,8 +19,8 @@ Trace the changed behavior through every affected consumer surface:
 - Can existing copied apps continue working through additive behavior or a small compatibility shim? If not, is the break necessary, explicit, and paired with practical migration steps?
 - Does a security fix deliberately prioritize safety while clearly documenting behavioral impact?
 - Are defaults safe for existing apps, not merely convenient for a fresh framework clone?
-- When code classifies provider metadata, config values, routes, or generated shapes, do tests include both the intended positive form and a plausible ordinary value that must remain unaffected?
-- Do tests reach the real consumer/generation entry path, or does a fixture inject stored configuration, substitute a helper, or otherwise bypass the branch whose contract is claimed?
+- When code classifies provider metadata, config values, routes, generated shapes, or trusted/untrusted content, do tests include attacker or ordinary negative values plus every intended-safe/trusted positive form and preserved baseline consumer?
+- Do tests reach the established public consumer/generation entry path, or does a fixture use only a new wrapper, inject stored configuration, substitute a helper, or otherwise bypass the branch whose contract is claimed?
 - Does framework-mode work avoid depending on private infrastructure? Does application-mode work preserve intentional local divergence rather than overwriting it with upstream?
 - For source-copy distribution, is clean-clone/build and upgrade-diff evidence used instead of claiming nonexistent NuGet/package compatibility?
 - Are generated/scaffolded outputs and canonical examples updated together so new and existing modules do not diverge silently?

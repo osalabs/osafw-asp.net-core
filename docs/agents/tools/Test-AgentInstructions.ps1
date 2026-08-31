@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$RepoRoot
+    [string]$RepoRoot,
+
+    [string[]]$PrivateIdentifier = @()
 )
 
 Set-StrictMode -Version Latest
@@ -67,7 +69,9 @@ $requiredFiles = @(
     "docs/agents/instruction-pack.json",
     ".codex/agents/discovery_fast.toml",
     ".codex/agents/implementation_fast.toml",
+    ".codex/agents/implementation_max.toml",
     ".codex/agents/reviewer_high.toml",
+    ".codex/agents/reviewer_max.toml",
     ".codex/agents/architect_max.toml"
 )
 
@@ -138,7 +142,9 @@ if ($failures.Count -eq 0) {
 $roleRoutes = @{
     discovery_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
     implementation_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
+    implementation_max = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
     reviewer_high = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
+    reviewer_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
     architect_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
 }
 foreach ($role in $roleRoutes.Keys) {
@@ -217,8 +223,18 @@ if (-not ($failures | Where-Object { $_ -match 'UTF-8|BOM|preceded by CR|followe
 $profileFiles = [ordered]@{
     ".codex/agents/discovery_fast.toml" = "discovery_fast"
     ".codex/agents/implementation_fast.toml" = "implementation_fast"
+    ".codex/agents/implementation_max.toml" = "implementation_max"
     ".codex/agents/reviewer_high.toml" = "reviewer_high"
+    ".codex/agents/reviewer_max.toml" = "reviewer_max"
     ".codex/agents/architect_max.toml" = "architect_max"
+}
+$profileSandboxModes = @{
+    discovery_fast = "read-only"
+    implementation_fast = "workspace-write"
+    implementation_max = "workspace-write"
+    reviewer_high = "read-only"
+    reviewer_max = "read-only"
+    architect_max = "read-only"
 }
 foreach ($relativePath in $profileFiles.Keys) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
@@ -230,6 +246,11 @@ foreach ($relativePath in $profileFiles.Keys) {
     $nameMatch = [regex]::Match($text, '(?m)^name\s*=\s*"(?<name>[^"]+)"\s*$')
     if (-not $nameMatch.Success -or $nameMatch.Groups['name'].Value -ne $profileFiles[$relativePath]) {
         Add-Failure "Custom-agent profile name does not match its stable role id: $relativePath"
+    }
+    $sandboxMatch = [regex]::Match($text, '(?m)^sandbox_mode\s*=\s*"(?<mode>[^"]+)"\s*$')
+    $roleName = $profileFiles[$relativePath]
+    if (-not $sandboxMatch.Success -or $sandboxMatch.Groups['mode'].Value -ne $profileSandboxModes[$roleName]) {
+        Add-Failure "Custom-agent profile sandbox does not match its stable role boundary: $relativePath"
     }
 }
 $semanticPolicyFiles = @(
@@ -292,14 +313,33 @@ $policyFiles = @(
     "docs/agents/reviewers/security-boundary.md",
     "docs/agents/reviewers/state-integrity.md"
 )
-foreach ($relativePath in $policyFiles) {
+$portableSharedFiles = @(
+    $policyFiles
+    "docs/agents/instruction-pack.json"
+    "docs/prompts/README.md"
+    "docs/prompts/orchestrator.md"
+    "docs/prompts/agent_upgrade.md"
+    ".codex/agents/discovery_fast.toml"
+    ".codex/agents/implementation_fast.toml"
+    ".codex/agents/implementation_max.toml"
+    ".codex/agents/reviewer_high.toml"
+    ".codex/agents/reviewer_max.toml"
+    ".codex/agents/architect_max.toml"
+) | Select-Object -Unique
+$privateIdentifiers = @($PrivateIdentifier | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+foreach ($relativePath in $portableSharedFiles) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
     if ($text -match '(?i)C:\\Users\\|C:\\DOCS_PROJ\\') {
-        Add-Failure "Tracked policy contains a private machine path: $relativePath"
+        Add-Failure "Tracked shared instruction contains a private machine path: $relativePath"
+    }
+    foreach ($identifier in $privateIdentifiers) {
+        if ($text.IndexOf($identifier, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            Add-Failure "Tracked shared instruction contains a supplied private identifier: $relativePath"
+        }
     }
 }
-if (-not ($failures | Where-Object { $_ -like 'Tracked policy contains a private machine path:*' })) {
-    Add-Pass "Tracked shared policy contains no known private machine paths."
+if (-not ($failures | Where-Object { $_ -match '^Tracked shared instruction contains .*private' })) {
+    Add-Pass "Tracked shared instructions contain no private machine paths or supplied private identifiers."
 }
 
 $linkFiles = $policyFiles | Where-Object { $_ -ne "AGENTS.md" -and $_ -ne "CLAUDE.md" }
