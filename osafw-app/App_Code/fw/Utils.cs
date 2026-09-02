@@ -206,7 +206,8 @@ public class Utils
     /// <returns><c>true</c> for root-relative app paths or absolute URLs under <paramref name="rootDomain"/>; otherwise <c>false</c>.</returns>
     public static bool isAppUrl(string url, string rootDomain)
     {
-        if (string.IsNullOrWhiteSpace(url))
+        // Browsers discard raw tabs/newlines in URLs; never validate a different destination.
+        if (string.IsNullOrWhiteSpace(url) || url.Any(char.IsControl))
             return false;
 
         var raw = url.Trim();
