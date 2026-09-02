@@ -14,6 +14,7 @@
 - Kept fresh independent review initially blinded from worker narrative, self-verdicts, policy identity, known findings, and changed active summaries; after the initial verdict, every changed active summary now receives a mandatory supplemental factual, privacy, and recorded-evidence audit before final adjudication.
 - Bumped the copied instruction pack from `1.1.0` to `1.3.0` for the two new roles and the evidence-backed routing/verification changes.
 - Added the routed `Search-Repo.ps1` helper to the copied pack, derived portability coverage from the pack manifest, and published a PowerShell 7 primary validation path plus a process-scoped Windows PowerShell 5.1 fallback.
+- Allowed explicitly justified, model-neutral `.codex/config.toml` controls such as agent concurrency while retaining deterministic rejection of primary model/reasoning pins and project-wide subagent model defaults. Copied applications now preserve that project-owned configuration file.
 
 ## Benchmark evidence / decisions
 
@@ -32,6 +33,7 @@
 - Review and verification now require established-entry-path negative and intended/preserved positive controls for the failure classes exposed by the benchmark.
 - Review requires a changed-active-summary supplemental audit after the initially blinded verdict; reviewer profiles encode the two-stage contract and deterministic validation guards its required policy surfaces.
 - Copied-pack validation manages every routed helper, scans every manifest-managed file for private identifiers, uses `pwsh` as the primary shell, and provides explicit `powershell.exe -ExecutionPolicy Bypass` commands for the Windows PowerShell 5.1 fallback.
+- Project `.codex/config.toml` is permitted when justified and model-neutral. Validation rejects top-level `model`/`model_reasoning_effort` and `[agents]` default model/effort pins while allowing documented controls such as `max_concurrent_threads_per_session`.
 - Copied applications receive these workflow changes through instruction-pack version `1.3.0`; application-specific instructions and preserved files remain authoritative through the existing three-way-review upgrade policy.
 - No runtime, public API, schema/provider, generated application output, security, or deployment contract changed; no product changelog entry is needed.
 
@@ -43,6 +45,8 @@
 - A scoped private-reference scan returned zero matches, and `git -c core.autocrlf=true diff --check` passed.
 - The benchmark promotion's original fresh, initially blinded `reviewer_max` policy review used the agent-workflow overlay. After one bounded fix/re-review sequence, the final verdict was `No blocking findings.` and `Review loop can stop.`
 - For the PR-review remediation, implementation stayed in the primary task because the manifest, validator, and review-policy contracts were tightly coupled. One independent-review attempt was discarded before adjudication after it self-reported loss of summary blinding. A replacement fresh `reviewer_high` completed a blinded initial pass across all 21 non-summary changed files with the agent-workflow and consumer-contract overlays and returned `No blocking findings.`; the same reviewer then performed the required supplemental audit of both changed summaries before closeout. The runtime exposed no exact child timing, and no implementation-child output was used.
+- For the project-config compatibility remediation, a separate fresh `reviewer_high` remained blinded from both active summaries while reviewing the 21 non-summary PR files. Its bounded fix/re-review loops exposed escaped-key bypasses and an escaped multiline-delimiter false rejection; after semantic key decoding, case-sensitive matching, structure-aware inline-table scanning, and escape-aware multiline handling, its final initial verdict was `No blocking findings.` and `Review loop can stop.` The same reviewer then performed the required supplemental audit of both changed summaries before closeout.
+- Project-config policy cases passed under PowerShell 7 and Windows PowerShell 5.1 for model-neutral table/dotted controls, comments and multiline values (including escaped multiline delimiters), top-level primary pins, `[agents]` table/dotted defaults, case-sensitive and Unicode-escaped quoted keys, and structure-aware inline tables. Temporary real `.codex/config.toml` positive controls for documented concurrency/interruption settings and escaped-delimiter `developer_instructions` passed the full validator under both shells. Top-level and Unicode-escaped primary or project-wide agent pins made both entrypoints exit 1 with the expected focused failures. Every task-owned fixture was then removed.
 - Benchmark implementation and grading commands/results remain in ignored local evidence rather than this public summary.
 
 ## Risks / follow-ups

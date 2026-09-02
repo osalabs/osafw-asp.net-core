@@ -33,6 +33,7 @@
     { "path": ".codex/agents/architect_max.toml", "upgradeMode": "replace-profile" }
   ],
   "preserveInCopiedApplications": [
+    ".codex/config.toml",
     "docs/agents/local_instructions.md",
     "docs/agents/domain.md",
     "docs/agents/glossary.md",

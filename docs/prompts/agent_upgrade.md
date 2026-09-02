@@ -45,7 +45,7 @@ Validate deterministic claims separately from implementation-quality claims:
 - several lightweight representative prompt walkthroughs: an ordinary fix, a downstream/public compatibility change, a security or persistence risk, and a docs/release task;
 - review the candidate with the agent-workflow overlay and integrator. If a broad rewrite is proposed, compare baseline/candidate on safely reversible held-out work before adoption; do not accept a candidate merely because its own reviewer catches failures it caused.
 
-Do not add repository-wide or primary-task model/reasoning pins, `.codex/config.toml`, GitHub Actions, or external services unless explicitly requested and justified by the repository. Project custom-agent profiles may carry role-specific model/reasoning settings when requested; keep those settings out of durable workflow prose.
+Do not add repository-wide or primary-task model/reasoning pins. Add `.codex/config.toml`, GitHub Actions, or external services only when explicitly requested and justified by the repository. Project configuration may contain model-neutral controls such as agent concurrency; project custom-agent profiles may carry role-specific model/reasoning settings when requested. Keep those settings out of durable workflow prose.
 
 ## Closeout
 

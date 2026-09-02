@@ -48,6 +48,299 @@ function Read-StrictUtf8 {
     }
 }
 
+function Remove-TomlLineComment {
+    param([string]$Line)
+
+    $inBasicString = $false
+    $inLiteralString = $false
+    $escaped = $false
+
+    for ($i = 0; $i -lt $Line.Length; $i++) {
+        $character = $Line[$i]
+        if ($inBasicString) {
+            if ($escaped) {
+                $escaped = $false
+                continue
+            }
+            if ($character -eq '\') {
+                $escaped = $true
+                continue
+            }
+            if ($character -eq '"') {
+                $inBasicString = $false
+            }
+            continue
+        }
+        if ($inLiteralString) {
+            if ($character -eq "'") {
+                $inLiteralString = $false
+            }
+            continue
+        }
+        if ($character -eq '#') {
+            return $Line.Substring(0, $i)
+        }
+        if ($character -eq '"') {
+            $inBasicString = $true
+        }
+        elseif ($character -eq "'") {
+            $inLiteralString = $true
+        }
+    }
+
+    return $Line
+}
+
+function Get-TomlSimpleKeyName {
+    param([string]$KeyText)
+
+    $key = $KeyText.Trim()
+    if ($key.Length -ge 2 -and $key[0] -eq '"' -and $key[$key.Length - 1] -eq '"') {
+        $value = $key.Substring(1, $key.Length - 2)
+        $builder = [System.Text.StringBuilder]::new()
+        for ($i = 0; $i -lt $value.Length; $i++) {
+            $character = $value[$i]
+            if ($character -ne '\') {
+                [void]$builder.Append($character)
+                continue
+            }
+            if ($i + 1 -ge $value.Length) {
+                throw "Invalid TOML basic-key escape."
+            }
+            $i++
+            $escape = $value[$i]
+            switch -CaseSensitive ($escape) {
+                'b' { [void]$builder.Append([char]0x0008) }
+                't' { [void]$builder.Append([char]0x0009) }
+                'n' { [void]$builder.Append([char]0x000A) }
+                'f' { [void]$builder.Append([char]0x000C) }
+                'r' { [void]$builder.Append([char]0x000D) }
+                '"' { [void]$builder.Append('"') }
+                '\' { [void]$builder.Append('\') }
+                'u' {
+                    if ($i + 4 -ge $value.Length) {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    $hex = $value.Substring($i + 1, 4)
+                    if ($hex -notmatch '^[0-9A-Fa-f]{4}$') {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    [void]$builder.Append([char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)))
+                    $i += 4
+                }
+                'U' {
+                    if ($i + 8 -ge $value.Length) {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    $hex = $value.Substring($i + 1, 8)
+                    if ($hex -notmatch '^[0-9A-Fa-f]{8}$') {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    [void]$builder.Append([char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)))
+                    $i += 8
+                }
+                default { throw "Invalid TOML basic-key escape." }
+            }
+        }
+        $key = $builder.ToString()
+    }
+    elseif ($key.Length -ge 2 -and $key[0] -eq "'" -and $key[$key.Length - 1] -eq "'") {
+        $key = $key.Substring(1, $key.Length - 2)
+    }
+    return $key
+}
+
+function Get-TomlInlineTableEntries {
+    param([string]$Value)
+
+    $entries = [System.Collections.Generic.List[string]]::new()
+    $entryStart = 1
+    $braceDepth = 1
+    $bracketDepth = 0
+    $inBasicString = $false
+    $inLiteralString = $false
+    $escaped = $false
+
+    for ($i = 1; $i -lt $Value.Length; $i++) {
+        $character = $Value[$i]
+        if ($inBasicString) {
+            if ($escaped) {
+                $escaped = $false
+                continue
+            }
+            if ($character -eq '\') {
+                $escaped = $true
+                continue
+            }
+            if ($character -eq '"') {
+                $inBasicString = $false
+            }
+            continue
+        }
+        if ($inLiteralString) {
+            if ($character -eq "'") {
+                $inLiteralString = $false
+            }
+            continue
+        }
+
+        switch ($character) {
+            '"' { $inBasicString = $true }
+            "'" { $inLiteralString = $true }
+            '{' { $braceDepth++ }
+            '}' {
+                $braceDepth--
+                if ($braceDepth -eq 0) {
+                    $entries.Add($Value.Substring($entryStart, $i - $entryStart))
+                    break
+                }
+            }
+            '[' { $bracketDepth++ }
+            ']' { $bracketDepth-- }
+            ',' {
+                if ($braceDepth -eq 1 -and $bracketDepth -eq 0) {
+                    $entries.Add($Value.Substring($entryStart, $i - $entryStart))
+                    $entryStart = $i + 1
+                }
+            }
+        }
+
+        if ($braceDepth -eq 0) {
+            break
+        }
+    }
+
+    return @($entries)
+}
+
+function Test-TomlHasUnescapedBasicStringDelimiter {
+    param([string]$Text)
+
+    $escaped = $false
+    for ($i = 0; $i -lt $Text.Length; $i++) {
+        $character = $Text[$i]
+        if ($escaped) {
+            $escaped = $false
+            continue
+        }
+        if ($character -eq '\') {
+            $escaped = $true
+            continue
+        }
+        if (
+            $character -eq '"' -and
+            $i + 2 -lt $Text.Length -and
+            $Text[$i + 1] -eq '"' -and
+            $Text[$i + 2] -eq '"'
+        ) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Get-DisallowedCodexProjectConfigPins {
+    param([string]$Text)
+
+    $pins = [System.Collections.Generic.List[string]]::new()
+    $section = "root"
+    $multilineStringDelimiter = $null
+    $simpleKeyPattern = '(?:"(?:\\.|[^"])*"|''[^'']*''|[A-Za-z0-9_-]+)'
+
+    foreach ($rawLine in [regex]::Split($Text, "`r`n|`n|`r")) {
+        if ($null -ne $multilineStringDelimiter) {
+            $hasClosingDelimiter = if ($multilineStringDelimiter -eq '"""') {
+                Test-TomlHasUnescapedBasicStringDelimiter $rawLine
+            }
+            else {
+                $rawLine.IndexOf($multilineStringDelimiter, [System.StringComparison]::Ordinal) -ge 0
+            }
+            if ($hasClosingDelimiter) {
+                $multilineStringDelimiter = $null
+            }
+            continue
+        }
+
+        $code = Remove-TomlLineComment $rawLine
+        $trimmed = $code.Trim()
+        if ($trimmed.Length -eq 0) {
+            continue
+        }
+        $tableHeader = [regex]::Match($trimmed, "^\[\s*(?<table>$simpleKeyPattern)\s*\]\s*$")
+        if ($tableHeader.Success) {
+            $tableName = Get-TomlSimpleKeyName $tableHeader.Groups['table'].Value
+            $section = if ($tableName -ceq "agents") { "agents" } else { "other" }
+            continue
+        }
+        if ($trimmed -match '^\[(?:\[[^\]]+\]\]|[^\]]+\])\s*$') {
+            $section = "other"
+            continue
+        }
+
+        $dottedAssignment = [regex]::Match(
+            $code,
+            "^\s*(?<table>$simpleKeyPattern)\s*\.\s*(?<key>$simpleKeyPattern)\s*="
+        )
+        if ($section -eq "root" -and $dottedAssignment.Success) {
+            $tableName = Get-TomlSimpleKeyName $dottedAssignment.Groups['table'].Value
+            $keyName = Get-TomlSimpleKeyName $dottedAssignment.Groups['key'].Value
+            if ($tableName -ceq "agents" -and @("default_subagent_model", "default_subagent_reasoning_effort") -ccontains $keyName) {
+                $pins.Add("agents.$keyName")
+            }
+        }
+
+        $assignment = [regex]::Match($code, "^\s*(?<key>$simpleKeyPattern)\s*=")
+        $value = $null
+        if ($dottedAssignment.Success -or $assignment.Success) {
+            $equalsIndex = $code.IndexOf('=')
+            $value = $code.Substring($equalsIndex + 1).TrimStart()
+        }
+        if ($assignment.Success) {
+            $keyName = Get-TomlSimpleKeyName $assignment.Groups['key'].Value
+            if ($section -eq "root" -and @("model", "model_reasoning_effort") -ccontains $keyName) {
+                $pins.Add($keyName)
+            }
+            elseif ($section -eq "agents" -and @("default_subagent_model", "default_subagent_reasoning_effort") -ccontains $keyName) {
+                $pins.Add("agents.$keyName")
+            }
+
+            if ($section -eq "root" -and $keyName -ceq "agents" -and $value.StartsWith("{")) {
+                foreach ($inlineEntry in @(Get-TomlInlineTableEntries $value)) {
+                    $inlineKeyMatch = [regex]::Match($inlineEntry, "^\s*(?<key>$simpleKeyPattern)\s*=")
+                    if (-not $inlineKeyMatch.Success) {
+                        continue
+                    }
+                    $inlineKeyName = Get-TomlSimpleKeyName $inlineKeyMatch.Groups['key'].Value
+                    if (@("default_subagent_model", "default_subagent_reasoning_effort") -ccontains $inlineKeyName) {
+                        $pins.Add("agents.$inlineKeyName")
+                    }
+                }
+            }
+
+        }
+        if ($null -ne $value) {
+            foreach ($delimiter in @('"""', "'''")) {
+                if ($value.StartsWith($delimiter)) {
+                    $remainder = $value.Substring($delimiter.Length)
+                    $hasClosingDelimiter = if ($delimiter -eq '"""') {
+                        Test-TomlHasUnescapedBasicStringDelimiter $remainder
+                    }
+                    else {
+                        $remainder.IndexOf($delimiter, [System.StringComparison]::Ordinal) -ge 0
+                    }
+                    if (-not $hasClosingDelimiter) {
+                        $multilineStringDelimiter = $delimiter
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    return @($pins | Select-Object -Unique)
+}
+
 $requiredFiles = @(
     "AGENTS.md",
     "CLAUDE.md",
@@ -203,6 +496,10 @@ $instructionPackPath = Get-RepoPath "docs/agents/instruction-pack.json"
 if ((Test-Path -LiteralPath $instructionPackPath) -and -not $textFiles.Contains($instructionPackPath)) {
     $textFiles.Add($instructionPackPath)
 }
+$codexProjectConfigPath = Get-RepoPath ".codex/config.toml"
+if ((Test-Path -LiteralPath $codexProjectConfigPath) -and -not $textFiles.Contains($codexProjectConfigPath)) {
+    $textFiles.Add($codexProjectConfigPath)
+}
 
 foreach ($path in $textFiles) {
     try {
@@ -269,11 +566,108 @@ foreach ($relativePath in $semanticPolicyFiles) {
         Add-Failure "Durable semantic workflow contains a model/reasoning pin: $relativePath"
     }
 }
-if (Test-Path -LiteralPath (Get-RepoPath ".codex/config.toml")) {
-    Add-Failure "Primary/project-wide model configuration is not allowed in .codex/config.toml."
+
+$configPolicyCases = @(
+    [pscustomobject]@{
+        Name = "model-neutral agents table"
+        Text = "[agents]`r`nmax_concurrent_threads_per_session = 8`r`ninterrupt_message = true`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "model-neutral dotted agents key"
+        Text = "agents.max_concurrent_threads_per_session = 6`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "comments and multiline values"
+        Text = "# model = `"ignored`"`r`nnotes = `"`"`"`r`nmodel = `"also ignored`"`r`n`"`"`"`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "escaped multiline basic-string delimiter"
+        Text = 'developer_instructions = """' + "`r`n" + 'example = \"""' + "`r`n" + 'model = "inside instructions"' + "`r`n" + '"""' + "`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "dotted multiline value then primary pin"
+        Text = "metadata.note = `"`"`"`r`nmodel = `"ignored`"`r`n`"`"`"`r`nmodel = `"pinned`"`r`n"
+        ExpectedPins = @("model")
+    },
+    [pscustomobject]@{
+        Name = "primary model pin"
+        Text = "model = `"pinned`"`r`n"
+        ExpectedPins = @("model")
+    },
+    [pscustomobject]@{
+        Name = "quoted primary reasoning pin"
+        Text = "`"model_reasoning_effort`" = `"high`"`r`n"
+        ExpectedPins = @("model_reasoning_effort")
+    },
+    [pscustomobject]@{
+        Name = "agents table model default"
+        Text = "[agents]`r`ndefault_subagent_model = `"pinned`"`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    },
+    [pscustomobject]@{
+        Name = "dotted agents reasoning default"
+        Text = "agents.default_subagent_reasoning_effort = `"high`"`r`n"
+        ExpectedPins = @("agents.default_subagent_reasoning_effort")
+    },
+    [pscustomobject]@{
+        Name = "inline agents model default"
+        Text = "agents = { max_concurrent_threads_per_session = 4, default_subagent_model = `"pinned`" }`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    },
+    [pscustomobject]@{
+        Name = "inline text and nested values mentioning defaults"
+        Text = "agents = { note = `", default_subagent_model = text only`", values = [{ default_subagent_reasoning_effort = `"nested`" }], max_concurrent_threads_per_session = 4 }`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "case-sensitive unrelated keys"
+        Text = "Model = `"not a Codex model key`"`r`nAgents.default_subagent_model = `"not an agents key`"`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "escaped primary model pin"
+        Text = "`"mo\u0064el`" = `"pinned`"`r`n"
+        ExpectedPins = @("model")
+    },
+    [pscustomobject]@{
+        Name = "escaped agents table model default"
+        Text = "[`"a\u0067ents`"]`r`ndefault_subagent_model = `"pinned`"`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    },
+    [pscustomobject]@{
+        Name = "escaped dotted agents reasoning default"
+        Text = "`"a\u0067ents`".default_subagent_reasoning_effort = `"high`"`r`n"
+        ExpectedPins = @("agents.default_subagent_reasoning_effort")
+    },
+    [pscustomobject]@{
+        Name = "escaped inline agents model default"
+        Text = "agents = { `"default_subagent_\u006dodel`" = `"pinned`" }`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    }
+)
+foreach ($case in $configPolicyCases) {
+    $actualSignature = @(Get-DisallowedCodexProjectConfigPins $case.Text | Sort-Object) -join "|"
+    $expectedSignature = @($case.ExpectedPins | Sort-Object) -join "|"
+    if ($actualSignature -ne $expectedSignature) {
+        Add-Failure "Codex project config policy self-test failed '$($case.Name)': expected '$expectedSignature', got '$actualSignature'."
+    }
 }
-if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic workflow|config\.toml' })) {
-    Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and the primary task remain unpinned."
+if (-not ($failures | Where-Object { $_ -like 'Codex project config policy self-test*' })) {
+    Add-Pass "Codex project config policy accepts model-neutral controls and rejects primary or project-wide agent model pins."
+}
+
+if (Test-Path -LiteralPath $codexProjectConfigPath) {
+    $projectConfigText = Read-StrictUtf8 $codexProjectConfigPath
+    foreach ($pin in @(Get-DisallowedCodexProjectConfigPins $projectConfigText)) {
+        Add-Failure "Codex project config contains a disallowed model/reasoning pin: $pin"
+    }
+}
+if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic workflow|Codex project config' })) {
+    Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and project configuration remain primary-model-neutral."
 }
 
 $supplementalSummaryAuditFiles = @(
