@@ -19,6 +19,7 @@
     { "path": "docs/agents/reviewers/state-integrity.md", "upgradeMode": "merge" },
     { "path": "docs/agents/mcp.md", "upgradeMode": "merge" },
     { "path": "docs/agents/tools/Normalize-TextFiles.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Search-Repo.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Test-AgentInstructions.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/prompts/README.md", "upgradeMode": "merge" },
     { "path": "docs/prompts/orchestrator.md", "upgradeMode": "merge" },
@@ -41,8 +42,12 @@
     "application-specific AGENTS.md additions"
   ],
   "validation": [
-    "powershell -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
-    "powershell -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
+    "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+    "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
     "git diff --check"
+  ],
+  "windowsPowerShell51Fallback": [
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
   ]
 }

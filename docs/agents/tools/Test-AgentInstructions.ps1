@@ -67,6 +67,9 @@ $requiredFiles = @(
     "docs/agents/mcp.md",
     "docs/agents/tasks/index.md",
     "docs/agents/instruction-pack.json",
+    "docs/agents/tools/Normalize-TextFiles.ps1",
+    "docs/agents/tools/Search-Repo.ps1",
+    "docs/agents/tools/Test-AgentInstructions.ps1",
     ".codex/agents/discovery_fast.toml",
     ".codex/agents/implementation_fast.toml",
     ".codex/agents/implementation_max.toml",
@@ -273,9 +276,26 @@ if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic wo
     Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and the primary task remain unpinned."
 }
 
+$supplementalSummaryAuditFiles = @(
+    "docs/agents/code_reviewer.md",
+    "docs/agents/review-routing.md",
+    ".codex/agents/reviewer_high.toml",
+    ".codex/agents/reviewer_max.toml"
+)
+foreach ($relativePath in $supplementalSummaryAuditFiles) {
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    if ($text -notmatch '(?i)initial verdict' -or $text -notmatch '(?i)changed active summar') {
+        Add-Failure "Review policy does not require a post-verdict audit of changed active summaries: $relativePath"
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Review policy does not require*' })) {
+    Add-Pass "Independent-review policy requires changed active summaries to be audited after the initial verdict."
+}
+
+$instructionPack = $null
 try {
     $instructionPack = (Read-StrictUtf8 $instructionPackPath) | ConvertFrom-Json
-    if ([int]$instructionPack.schemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string]$instructionPack.packVersion)) {
+    if ([int]$instructionPack.schemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string]$instructionPack.packVersion) -or @($instructionPack.files).Count -eq 0) {
         Add-Failure "Instruction-pack metadata has an unsupported schema or missing version."
     }
     foreach ($entry in @($instructionPack.files)) {
@@ -285,6 +305,35 @@ try {
         }
         if (-not (Test-Path -LiteralPath (Get-RepoPath ([string]$entry.path)) -PathType Leaf)) {
             Add-Failure "Instruction-pack managed path is missing: $($entry.path)"
+        }
+    }
+    $managedPaths = @($instructionPack.files | ForEach-Object { [string]$_.path })
+    foreach ($requiredManagedPath in @(
+        "docs/agents/tools/Normalize-TextFiles.ps1",
+        "docs/agents/tools/Search-Repo.ps1",
+        "docs/agents/tools/Test-AgentInstructions.ps1"
+    )) {
+        if ($managedPaths -notcontains $requiredManagedPath) {
+            Add-Failure "Instruction-pack metadata does not manage required helper: $requiredManagedPath"
+        }
+    }
+    $validationCommands = @($instructionPack.validation | ForEach-Object { [string]$_ })
+    foreach ($expectedCommand in @(
+        "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
+        "git diff --check"
+    )) {
+        if ($validationCommands -notcontains $expectedCommand) {
+            Add-Failure "Instruction-pack validation command is missing: $expectedCommand"
+        }
+    }
+    $windowsPowerShell51Fallback = @($instructionPack.windowsPowerShell51Fallback | ForEach-Object { [string]$_ })
+    foreach ($expectedCommand in @(
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
+    )) {
+        if ($windowsPowerShell51Fallback -notcontains $expectedCommand) {
+            Add-Failure "Instruction-pack Windows PowerShell 5.1 fallback is missing: $expectedCommand"
         }
     }
 }
@@ -313,33 +362,29 @@ $policyFiles = @(
     "docs/agents/reviewers/security-boundary.md",
     "docs/agents/reviewers/state-integrity.md"
 )
-$portableSharedFiles = @(
-    $policyFiles
-    "docs/agents/instruction-pack.json"
-    "docs/prompts/README.md"
-    "docs/prompts/orchestrator.md"
-    "docs/prompts/agent_upgrade.md"
-    ".codex/agents/discovery_fast.toml"
-    ".codex/agents/implementation_fast.toml"
-    ".codex/agents/implementation_max.toml"
-    ".codex/agents/reviewer_high.toml"
-    ".codex/agents/reviewer_max.toml"
-    ".codex/agents/architect_max.toml"
-) | Select-Object -Unique
+$managedPortableFiles = @()
+if ($null -ne $instructionPack) {
+    $managedPortableFiles = @(
+        $instructionPack.files |
+            ForEach-Object { [string]$_.path } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+}
+$portableSharedFiles = @($policyFiles + $managedPortableFiles | Select-Object -Unique)
 $privateIdentifiers = @($PrivateIdentifier | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 foreach ($relativePath in $portableSharedFiles) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
     if ($text -match '(?i)C:\\Users\\|C:\\DOCS_PROJ\\') {
-        Add-Failure "Tracked shared instruction contains a private machine path: $relativePath"
+        Add-Failure "Portable shared file contains a private machine path: $relativePath"
     }
     foreach ($identifier in $privateIdentifiers) {
         if ($text.IndexOf($identifier, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
-            Add-Failure "Tracked shared instruction contains a supplied private identifier: $relativePath"
+            Add-Failure "Portable shared file contains a supplied private identifier: $relativePath"
         }
     }
 }
-if (-not ($failures | Where-Object { $_ -match '^Tracked shared instruction contains .*private' })) {
-    Add-Pass "Tracked shared instructions contain no private machine paths or supplied private identifiers."
+if ($null -ne $instructionPack -and -not ($failures | Where-Object { $_ -match '^Portable shared file contains .*private' })) {
+    Add-Pass "Portable shared policy files, including every instruction-pack managed file, contain no private machine paths or supplied private identifiers."
 }
 
 $linkFiles = $policyFiles | Where-Object { $_ -ne "AGENTS.md" -and $_ -ne "CLAUDE.md" }
