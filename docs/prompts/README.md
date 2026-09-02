@@ -9,7 +9,7 @@ Use these as starting points, then fill the placeholders and remove anything tha
 - `fw_upgrade.md` - upgrade a downstream app from an older framework snapshot while preserving app-specific behavior.
 - `agent_upgrade.md` - audit and modernize this repository's development-agent instruction stack after a meaningful agent/runtime release or accumulated guidance drift.
 - `app_test_bootstrap_cleanup.md` - remove inherited framework implementation tests from a downstream app while keeping app smoke and app-specific coverage.
-- `orchestrator.md` - coordinate a large or risky task with planning, bounded delegation, implementation packets, verification, review, and closeout.
+- `orchestrator.md` - coordinate a qualifying non-trivial, risky, cross-cutting, ambiguous, or repeatedly failing task with bounded ownership, verification, review, and closeout.
 - `pr_code_review.md` - review a GitHub PR, fix confirmed issues, verify, and repeat until ready for rereview.
 - `agent_reflection.md` - periodically inspect task summaries and improve shared agent instructions only where the pattern is stable and worth the added guidance.
 - `security_hardening.md` - review and harden a scoped feature, PR, or finding set using the repository security guardrails.
@@ -21,4 +21,4 @@ Use these as starting points, then fill the placeholders and remove anything tha
 
 Task-summary history shows repeated work in PR review/fix loops, security hardening, framework upgrades, downstream app test cleanup, docs and agent-instruction hygiene, test stabilization, focused feature work, and occasional large multi-step efforts. Prefer one of those specific prompts over a broad generic request when starting that workflow.
 
-Prompts are optional task workflows. Use them within the repository instructions, task-summary rules, security guardrails, documentation sync rules, and testing guidance.
+Prompts are task workflows. Most are selected explicitly; `orchestrator.md` is also loaded automatically by the routing criteria in `docs/agents/workflow.md`. Use them within the repository instructions, task-summary rules, security guardrails, documentation sync rules, and testing guidance.

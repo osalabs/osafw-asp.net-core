@@ -30,6 +30,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
 - [agents/tools/](agents/tools/): scoped repository search and strict UTF-8/CRLF validation helpers.
+- [agents/instruction-pack.json](agents/instruction-pack.json): version and managed-path metadata for deliberate agent-instruction upgrades in copied applications.
 - [agents/domain.md](agents/domain.md): verified stable framework/domain facts.
 - [agents/glossary.md](agents/glossary.md): stable project terms.
 - [agents/heuristics.md](agents/heuristics.md): unique reusable working heuristics not already owned by a canonical framework doc or `AGENTS.md`.
