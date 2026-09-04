@@ -24,8 +24,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 - [agents/workflow.md](agents/workflow.md): request validation, framework/application role detection, work staging, permissions, summaries, and safe self-improvement.
 - [agents/verification.md](agents/verification.md): proportional verification entrypoints and worktree/resource-isolation matrix.
-- [agents/review-routing.md](agents/review-routing.md): adaptive risk routing, specialist triggers, adjudication, and no-subagent fallback.
-- [agents/code_reviewer.md](agents/code_reviewer.md): integrating review procedure, severity, one final verdict, and loop stop rule.
+- [agents/review-routing.md](agents/review-routing.md): reviewer selection, specialist triggers, review handoff and summary audit, and local fallback.
+- [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
 - [agents/reviewers/](agents/reviewers/): focused overlays loaded only for agent workflow, consumer compatibility, performance, security, or state-integrity risk.
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.

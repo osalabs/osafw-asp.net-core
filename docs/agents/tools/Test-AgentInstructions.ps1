@@ -435,24 +435,23 @@ if ($failures.Count -eq 0) {
     Add-Pass "Root, documentation-map, and reviewer routes are connected."
 }
 
-$roleRoutes = @{
-    discovery_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
-    implementation_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
-    implementation_max = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
-    reviewer_high = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
-    reviewer_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
-    architect_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
+$roleOwners = @{
+    discovery_fast = "docs/agents/workflow.md"
+    implementation_fast = "docs/agents/workflow.md"
+    implementation_max = "docs/agents/workflow.md"
+    reviewer_high = "docs/agents/review-routing.md"
+    reviewer_max = "docs/agents/review-routing.md"
+    architect_max = "docs/agents/workflow.md"
 }
-foreach ($role in $roleRoutes.Keys) {
-    foreach ($relativePath in $roleRoutes[$role]) {
-        $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
-        if ($text.IndexOf($role, [System.StringComparison]::Ordinal) -lt 0) {
-            Add-Failure "Durable role route is missing '$role': $relativePath"
-        }
+foreach ($role in $roleOwners.Keys) {
+    $relativePath = $roleOwners[$role]
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    if ($text.IndexOf($role, [System.StringComparison]::Ordinal) -lt 0) {
+        Add-Failure "Canonical role owner is missing '$role': $relativePath"
     }
 }
-if (-not ($failures | Where-Object { $_ -like 'Durable role route is missing*' })) {
-    Add-Pass "Durable routing names every project custom-agent role and retains local fallback."
+if (-not ($failures | Where-Object { $_ -like 'Canonical role owner is missing*' })) {
+    Add-Pass "Canonical routing names every project custom-agent role."
 }
 
 $textFiles = [System.Collections.Generic.List[string]]::new()
@@ -562,7 +561,7 @@ $semanticPolicyFiles = @(
 )
 foreach ($relativePath in $semanticPolicyFiles) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
-    if ($text -match '(?i)gpt-5\.|model_reasoning_effort\s*=') {
+    if ($text -match '(?i)\bgpt-\d|model_reasoning_effort\s*=') {
         Add-Failure "Durable semantic workflow contains a model/reasoning pin: $relativePath"
     }
 }
@@ -670,20 +669,25 @@ if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic wo
     Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and project configuration remain primary-model-neutral."
 }
 
-$supplementalSummaryAuditFiles = @(
-    "docs/agents/code_reviewer.md",
-    "docs/agents/review-routing.md",
-    ".codex/agents/reviewer_high.toml",
-    ".codex/agents/reviewer_max.toml"
-)
-foreach ($relativePath in $supplementalSummaryAuditFiles) {
+if ($reviewRoutingText -notmatch '(?i)initial verdict' -or $reviewRoutingText -notmatch '(?i)changed active summar') {
+    Add-Failure "Canonical review policy is missing its post-verdict summary-audit guidance."
+}
+$policyRoutes = @{
+    "docs/agents/code_reviewer.md" = @("docs/agents/review-routing.md")
+    ".codex/agents/reviewer_high.toml" = @("docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
+    ".codex/agents/reviewer_max.toml" = @("docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
+    "docs/prompts/orchestrator.md" = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
+}
+foreach ($relativePath in $policyRoutes.Keys) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
-    if ($text -notmatch '(?i)initial verdict' -or $text -notmatch '(?i)changed active summar') {
-        Add-Failure "Review policy does not require a post-verdict audit of changed active summaries: $relativePath"
+    foreach ($route in $policyRoutes[$relativePath]) {
+        if ($text.IndexOf($route, [System.StringComparison]::Ordinal) -lt 0) {
+            Add-Failure "Policy consumer does not route to ${route}: $relativePath"
+        }
     }
 }
-if (-not ($failures | Where-Object { $_ -like 'Review policy does not require*' })) {
-    Add-Pass "Independent-review policy requires changed active summaries to be audited after the initial verdict."
+if (-not ($failures | Where-Object { $_ -like 'Canonical review policy*' -or $_ -like 'Policy consumer*' })) {
+    Add-Pass "Canonical review handoff and summary-audit guidance is reachable from policy consumers."
 }
 
 $instructionPack = $null
