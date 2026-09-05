@@ -29,13 +29,23 @@ Delegate only when each child will produce a bounded output the primary consumes
 
 | Bounded work | Role / condition |
 | --- | --- |
-| Read-only discovery | `discovery_fast`, when its evidence replaces primary discovery. |
-| Small implementation | `implementation_fast`, only for low-risk, well-specified work with a deterministic falsifying check and disjoint writable files. |
-| Implementation escalation | `implementation_max`, only for a concrete specialist payoff: an exceptionally costly security/data/migration/compatibility miss, interacting high-risk contracts, or a substantive failed direct attempt. |
-| Architecture or recovery decision | `architect_max`, only for a material architecture choice, high-risk adjudication, consequential ambiguity, or recovery after bounded attempts fail. |
+| Read-only discovery | `discovery_fast`; optional `discovery_astra_low`, when its evidence replaces primary discovery. |
+| Small implementation | `implementation_fast`; optional `implementation_astra_medium`, only for low-risk, well-specified work with a deterministic falsifying check and disjoint writable files. |
+| Standard implementation | `implementation_sol_high`, for a well-defined independent packet with exclusive ownership and observable verification; unresolved material contract decisions stay with the primary. |
+| Implementation escalation | `implementation_max` or `implementation_astra_xhigh`, only for a concrete specialist payoff: an exceptionally costly security/data/migration/compatibility miss, interacting high-risk contracts, or a substantive failed direct attempt. `implementation_astra_max` additionally requires the maximum-effort consequence gate in `docs/agents/review-routing.md`. |
+| Architecture or recovery decision | `architect_max` or `architect_astra_xhigh`, only for a material architecture choice, high-risk adjudication, consequential ambiguity, or recovery after bounded attempts fail. `architect_astra_max` additionally requires the maximum-effort consequence gate in `docs/agents/review-routing.md`. |
 | Independent review | Select the role and execution mode through `docs/agents/review-routing.md`. |
 
-These roles are optional capabilities, not correctness guarantees or an automatic upgrade over the primary task's chosen model. Durable guidance applies regardless of model choice; replaceable role model/reasoning settings live only in `.codex/agents/*.toml`. Do not pin or replace the primary task's model in repository guidance. If delegation or a named profile is unavailable, perform the required stage locally with the same evidence and stop conditions and disclose the fallback.
+### Select a profile after selecting the role
+
+- Honor explicit developer model, family, effort, and cost constraints first. Starting with a model is not a family-only restriction. Keep the developer-selected primary model unchanged.
+- Select an available, role-appropriate profile by the packet's required quality, latency, cost, and consequences. Delegation may cross model generations in either direction without another confirmation when existing authority and constraints permit it. Use the primary model's family only as a tie-breaker when the task offers no stronger reason.
+- Keep the fast discovery and small-implementation profiles as inexpensive helper defaults. Use their alternatives for a recorded task-specific reason or explicit developer preference. A new model or higher effort alone does not justify another agent.
+- Inspect the active tool's profile settings, or its TOML file when needed. Names are handles; configured model, effort, sandbox, and instructions determine behavior. A pinned profile overrides spawn model/effort values, so choose the correct profile instead of trying to retarget a pinned role. A read-only reviewer is not an implementation worker.
+- Do not invent model availability or infer quality equivalence from effort labels. If the preferred profile is unavailable, choose another available profile satisfying the same role, gate, and explicit constraints and disclose the substitution. If none qualifies, perform the stage locally with the same evidence and stop conditions; disclose the fallback and any loss of review independence. An explicitly required model remains a blocker for that delegated step.
+- Record a short selection reason in the delegation packet; avoid per-task benchmark research. For developer starting-model advice or deliberate recalibration, consult the optional dated [model-selection note](model-selection.md).
+
+These roles are optional capabilities, not correctness guarantees or automatic upgrades over the primary task. Durable workflow remains model-neutral; executable model/reasoning settings live in `.codex/agents/*.toml`. Dated selection advice is advisory and does not pin the primary model.
 
 For qualifying orchestration, use `docs/prompts/orchestrator.md` as the plan and handoff template. Each packet supplies the objective/acceptance, context/exclusions, writable and read-only paths, verification/output, and stop conditions for ambiguity, contract expansion, unsafe state, or repeated failure.
 

@@ -32,8 +32,10 @@ Require a fresh independent reviewer for meaningful security/privacy, data-integ
 
 When independent review is triggered and the capability exists, use a fresh separate agent with no access to the implementing agent's conversation history. Predeclare the review trigger and role before the reviewer sees the diff:
 
-- Use `reviewer_high` for the ordinary independent gate.
-- Use `reviewer_max` only when a material first-pass miss could cause catastrophic or exceptionally costly security/privacy, data-integrity, irreversible-migration, cross-provider, broad source-copy compatibility, or generated-output harm. Implementation escalation or repeated substantive failure requires a fresh review decision but does not by itself meet this consequence gate.
+- Apply the profile-selection policy in `docs/agents/workflow.md`; the primary model's family does not restrict review to that generation.
+- Use `reviewer_high` or `reviewer_astra_high` for the ordinary independent gate.
+- Use `reviewer_astra_xhigh` when interacting high-risk contracts or repeated substantive implementation failure justify deeper independent review. Record that condition; task size alone is insufficient.
+- **Maximum-effort consequence gate:** use `reviewer_max` or `reviewer_astra_max` only when a material first-pass miss could cause catastrophic or exceptionally costly security/privacy, data-integrity, irreversible-migration, cross-provider, broad source-copy compatibility, or generated-output harm. Implementation escalation or repeated substantive failure requires a fresh review decision but does not by itself meet this consequence gate. Profiles whose instructions reference this gate must record the same exceptional consequence before use.
 - Do not launch one reviewer per file or suspected issue, or use an architecture role as a routine reviewer. Review depth is not a correctness guarantee.
 
 For an eligible local review, or when independent capability is unavailable, perform a deliberate second pass: set aside implementation intent, read `code_reviewer.md` and selected overlays, and inspect the outcome and final diff before the implementation narrative. Disclose local execution and any unavailable capability; keep the same review criteria.

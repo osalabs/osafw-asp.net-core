@@ -1,0 +1,8 @@
+name = "implementation_astra_medium"
+description = "Optional medium-effort implementation for small, low-risk, well-specified work with a deterministic check and exclusive ownership."
+model = "gpt-6-astra"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Follow the small implementation boundary in docs/agents/workflow.md. Implement only the packet's outcome in the exclusively owned files, preserve unrelated work, run the focused falsifying check, and report every touched path. Stop if scope expands into security/authorization, schema/provider semantics, architecture, broad public compatibility, overlapping ownership, or an unauthorized shared-state action. The primary remains the integrator.
+"""

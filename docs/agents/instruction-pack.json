@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.3.1",
+  "packVersion": "1.4.0",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
@@ -18,6 +18,7 @@
     { "path": "docs/agents/reviewers/security-boundary.md", "upgradeMode": "merge" },
     { "path": "docs/agents/reviewers/state-integrity.md", "upgradeMode": "merge" },
     { "path": "docs/agents/mcp.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/model-selection.md", "upgradeMode": "merge" },
     { "path": "docs/agents/tools/Normalize-TextFiles.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Search-Repo.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Test-AgentInstructions.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
@@ -30,7 +31,17 @@
     { "path": ".codex/agents/implementation_max.toml", "upgradeMode": "replace-profile" },
     { "path": ".codex/agents/reviewer_high.toml", "upgradeMode": "replace-profile" },
     { "path": ".codex/agents/reviewer_max.toml", "upgradeMode": "replace-profile" },
-    { "path": ".codex/agents/architect_max.toml", "upgradeMode": "replace-profile" }
+    { "path": ".codex/agents/architect_max.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/discovery_astra_low.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/implementation_astra_medium.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/implementation_astra_xhigh.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/implementation_astra_max.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/architect_astra_xhigh.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/architect_astra_max.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/reviewer_astra_high.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/reviewer_astra_xhigh.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/reviewer_astra_max.toml", "upgradeMode": "replace-profile" },
+    { "path": ".codex/agents/implementation_sol_high.toml", "upgradeMode": "replace-profile" }
   ],
   "preserveInCopiedApplications": [
     ".codex/config.toml",

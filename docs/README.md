@@ -28,6 +28,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
 - [agents/reviewers/](agents/reviewers/): focused overlays loaded only for agent workflow, consumer compatibility, performance, security, or state-integrity risk.
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
+- [agents/model-selection.md](agents/model-selection.md): optional dated starting-model advice, benchmark evidence, and lightweight profile calibration; not required for ordinary tasks.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
 - [agents/tools/](agents/tools/): scoped repository search and strict UTF-8/CRLF validation helpers.
 - [agents/instruction-pack.json](agents/instruction-pack.json): version and managed-path metadata for deliberate agent-instruction upgrades in copied applications.
