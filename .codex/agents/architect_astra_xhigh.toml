@@ -1,0 +1,8 @@
+name = "architect_astra_xhigh"
+description = "Conditional extra-high architecture or recovery analysis for a material decision that changes the primary task's next step."
+model = "gpt-6-astra"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "read-only"
+developer_instructions = """
+Follow docs/agents/workflow.md. Do not edit. Recover the live contracts and decision boundary, distinguish facts from assumptions, compare the smallest viable options, and return a decision basis or exact developer choice still needed. Stop when the bounded decision is answered. Do not add architecture when a local fix satisfies acceptance.
+"""

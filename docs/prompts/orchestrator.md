@@ -1,47 +1,26 @@
-# Non-Trivial Task Orchestrator Prompt
+# Orchestration Template
 
-Use this workflow whenever the orchestrated-path triggers in `docs/agents/workflow.md` apply. Small/local work stays on the direct path. Follow repository instructions, security guardrails, task-summary rules, and user direction throughout.
+Use only when the delegation criteria in `docs/agents/workflow.md` are met. That file owns eligibility, role selection, stage limits, file ownership, fallback, and evidence requirements. `docs/agents/review-routing.md` owns reviewer selection and handoff. This template supplies the task-specific plan and worker packets.
 
 ## Objective
-
-Coordinate this task end to end:
 
 - Goal: `<clear end state>`
 - Acceptance: `<observable result and evidence sufficient to declare completion>`
 - Scope: `<paths, features, docs, schemas, tests, or PR/issue links>`
 - Out of scope: `<explicit exclusions>`
-- Risk level: `<why this needs orchestration>`
 
-## Operating Rules
+## Plan
 
-- Keep the main agent responsible for integration, user communication, final decisions, and verification.
-- Delegation is capability-conditional. When unavailable, keep the same bounded stages and checks in the main task rather than blocking.
-- Pass a delegation-payoff gate before every child: name the reusable output, why the primary will not reproduce it, its non-overlapping ownership, its acceptance/stop conditions, and the expected critical-path or specialist-quality gain. Stay direct when that case is not credible.
-- Use the smallest sufficient route and a stage budget: normally choose at most one pre-implementation delegation stage. Stack discovery, architecture, and implementation roles only when every stage produces a distinct consumed artifact that changes the next decision and justifies its own critical-path cost.
-- Do not spawn merely because work is non-trivial, cross-cutting, high-risk, or a profile is available. High risk may require stronger verification, a fresh reviewer, or architecture escalation without delegating implementation.
-- When the matching bounded stage and project profile/capability are available, route read-only discovery to `discovery_fast`, small low-risk well-specified implementation with a deterministic acceptance check and disjoint ownership to `implementation_fast`, bounded high-risk implementation escalation to `implementation_max`, ordinary independent review to `reviewer_high`, predeclared catastrophic or exceptionally costly failure review to `reviewer_max`, and material architecture/high-risk ambiguity/failed-attempt decision escalation to `architect_max`. Every implementation child requires exclusive ownership and returns to the primary integrator. Otherwise execute the same packet locally; do not drop the stage or weaken its checks.
-- Delegate only bounded work with clear inputs, exclusive writable paths, verification, output format, and stop conditions.
-- Maintain a file lease list. Read-only scopes may overlap; writable scopes must not. The main agent must not edit a leased file until the worker returns or the lease is explicitly revoked.
-- Do not let sub-agents make broad repo-wide changes or resolve shared contracts without main-agent review.
-- Preserve user changes and unrelated dirty worktree state.
-- Pause for user direction only when requested, when implementation would materially expand beyond the stated outcome, or when a risky/destructive/shared-state step lacks authority.
-- Record important decisions, commands, risks, and follow-ups in the task summary as the work evolves.
-
-## Phase 1 - Intake And Map
-
-Read the fast entry docs and task-specific entry points. Then produce a compact plan:
-
-- Critical path: `<must happen in order>`
-- Safe parallel work: `<independent research/checks/tests>`
-- Tightly coupled work: `<keep with main agent>`
-- Delegation payoff: `<reusable output, non-overlap, expected gain, and work the primary will not repeat>`
-- Verification strategy: `<smallest checks that can falsify the change>`
-- Review strategy: `<integrator plus triggered overlay(s); independent reviewer or local fallback>`
+- Critical path: `<what must happen in order>`
+- Safe parallel work: `<independently useful workstreams>`
+- Tightly coupled work: `<keep with the primary agent>`
+- Delegation payoff: `<output consumed, work the primary will not repeat, and expected time or specialist-quality benefit>`
+- Stages and ownership: `<selected roles, exclusive writable paths, and lease handoffs>`
+- Verification: `<smallest checks that can falsify the change>`
+- Review: `<router-selected execution mode and overlay(s)>`
 - Stop/replan triggers: `<conditions that require a plan change>`
 
-## Phase 2 - Delegation Packets
-
-Use packets like this for each bounded worker:
+## Worker packet
 
 ```md
 Objective: <specific bounded result>
@@ -55,56 +34,21 @@ Expected output: <findings, changed paths, commands/results, or patch summary>
 Stop/escalate if: <ambiguity, overlap, repeated failure, risky contract expansion, unsafe state, or missing dependency>
 ```
 
-Good delegation targets:
+## Integration and verification
 
-- targeted codebase research
-- independent docs/spec review
-- schema/config parity checks
-- focused test failure triage
-- implementation in disjoint files
-- post-implementation verification
-- code review after the main integration pass
+Consume returned work and reconcile file leases using the workflow's ownership rules. The primary agent resolves shared contracts and inspects the integrated diff, including generated output and documentation.
 
-## Phase 3 - Implementation
+Fill only the checks relevant to the changed behavior:
 
-Integrate the work in the main workspace:
-
-- Implement the requested behavior first.
-- Keep changes scoped to the requested behavior and nearby contracts.
-- Prefer existing framework patterns and helpers.
-- Update docs/tests alongside public behavior or workflow changes.
-- Re-read worker outputs before relying on them.
-- Do not repeat a delegated discovery or implementation stage unless its output is demonstrably incomplete or stale; record that failure and revoke the lease before taking it back locally.
-- Reconcile and release each file lease before editing or integrating that scope.
-
-## Phase 4 - Verification
-
-Run focused checks first, then broader checks only when risk justifies them:
-
-- Build/test command(s): `<commands>`
+- Build/test commands: `<commands>`
 - Manual/browser checks: `<flows>`
 - Static searches: `<patterns>`
 - Text/line-ending checks: `<files>`
 - Public-contract controls: `<established entry paths and baseline consumers>`
 - Behavior controls: `<ordinary/attacker negatives plus intended-safe/trusted and preserved-compatibility positives>`
 
-If a check fails, classify whether it is caused by this task, pre-existing, or environmental. Fix task-caused failures before closing.
+Classify failures as task-caused, pre-existing, or environmental using evidence; fix task-caused failures before closeout.
 
-## Phase 5 - Review Loop
+## Review and closeout
 
-Route the final diff through `docs/agents/review-routing.md`, then use `docs/agents/code_reviewer.md` for the one adjudicated verdict when the task affects runtime behavior, schemas, templates, scripts, tests, configuration, or risky workflow docs.
-
-For the review, use the `reviewer_high` or `reviewer_max` route selected before diff inspection by `review-routing.md` when that profile/capability is available; otherwise perform the documented local second pass:
-
-- Findings must be concrete and path/line grounded.
-- Fix real issues in the main workspace.
-- Repeat while Blocker, High, or Medium findings remain. Low observations do not keep the loop open.
-
-## Phase 6 - Closeout
-
-Before final response:
-
-- Complete the task summary, including verification and residual risk.
-- Note whether docs, heuristics, ADRs, or changelog entries were added or intentionally skipped.
-- Make sure no machine-local details, secrets, bulky logs, or external app names leaked into shared files.
-- Summarize what changed, what was verified, and any important follow-up.
+Apply `docs/agents/review-routing.md`, then `docs/agents/code_reviewer.md` for review criteria, adjudication, and the loop stop rule. Complete the workflow's required task evidence and summary audit. Report the outcome, verification, relevant documentation/migration decisions, and remaining risk.

@@ -150,6 +150,57 @@ function Get-TomlSimpleKeyName {
     return $key
 }
 
+function Test-NonemptyTomlString {
+    param([string]$Text, [string]$Key)
+
+    $basicLine = '"(?<basicLine>(?:\\[^\r\n]|[^"\\\r\n])*)"'
+    $literalLine = "'(?<literalLine>[^'\r\n]*)'"
+    $basicMulti = '"""(?<basicMulti>(?:\\[\s\S]|[^"\\]|"{1,2}(?!"))*)(?<basicEnd>"{3,5})'
+    $literalMulti = "'''(?<literalMulti>(?:[^']|'{1,2}(?!'))*)(?<literalEnd>'{3,5})"
+    $pattern = '(?m)^' + [regex]::Escape($Key) + '[ \t]*=[ \t]*(?:' +
+        ($basicMulti, $literalMulti, $basicLine, $literalLine -join '|') +
+        ')[ \t]*(?:#[^\r\n]*)?\r?$'
+    $match = [regex]::Match($Text, $pattern)
+    if (-not $match.Success) {
+        return $false
+    }
+
+    $isBasic = $false
+    $isMultiline = $false
+    if ($match.Groups['basicMulti'].Success) {
+        $value = $match.Groups['basicMulti'].Value + ('"' * ($match.Groups['basicEnd'].Length - 3))
+        $isBasic = $true
+        $isMultiline = $true
+    }
+    elseif ($match.Groups['literalMulti'].Success) {
+        $value = $match.Groups['literalMulti'].Value + ("'" * ($match.Groups['literalEnd'].Length - 3))
+    }
+    elseif ($match.Groups['basicLine'].Success) {
+        $value = $match.Groups['basicLine'].Value
+        $isBasic = $true
+    }
+    else {
+        $value = $match.Groups['literalLine'].Value
+    }
+    if ($value -match '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]') {
+        return $false
+    }
+
+    try {
+        if ($isBasic) {
+            if ($isMultiline) {
+                $value = [regex]::Replace($value, '(?<!\\)((?:\\\\)*)\\[ \t]*\r?\n[ \t\r\n]*', '$1')
+            }
+            # Quoted TOML keys and basic-string values use the same escape decoder.
+            $value = Get-TomlSimpleKeyName ('"' + $value + '"')
+        }
+        return -not [string]::IsNullOrWhiteSpace($value)
+    }
+    catch {
+        return $false
+    }
+}
+
 function Get-TomlInlineTableEntries {
     param([string]$Value)
 
@@ -341,6 +392,28 @@ function Get-DisallowedCodexProjectConfigPins {
     return @($pins | Select-Object -Unique)
 }
 
+$profileFiles = [ordered]@{}
+foreach ($role in @(
+    "discovery_fast",
+    "implementation_fast",
+    "implementation_max",
+    "reviewer_high",
+    "reviewer_max",
+    "architect_max",
+    "discovery_astra_low",
+    "implementation_astra_medium",
+    "implementation_astra_xhigh",
+    "implementation_astra_max",
+    "architect_astra_xhigh",
+    "architect_astra_max",
+    "reviewer_astra_high",
+    "reviewer_astra_xhigh",
+    "reviewer_astra_max",
+    "implementation_sol_high"
+)) {
+    $profileFiles[".codex/agents/$role.toml"] = $role
+}
+
 $requiredFiles = @(
     "AGENTS.md",
     "CLAUDE.md",
@@ -358,18 +431,13 @@ $requiredFiles = @(
     "docs/agents/glossary.md",
     "docs/agents/heuristics.md",
     "docs/agents/mcp.md",
+    "docs/agents/model-selection.md",
     "docs/agents/tasks/index.md",
     "docs/agents/instruction-pack.json",
     "docs/agents/tools/Normalize-TextFiles.ps1",
     "docs/agents/tools/Search-Repo.ps1",
-    "docs/agents/tools/Test-AgentInstructions.ps1",
-    ".codex/agents/discovery_fast.toml",
-    ".codex/agents/implementation_fast.toml",
-    ".codex/agents/implementation_max.toml",
-    ".codex/agents/reviewer_high.toml",
-    ".codex/agents/reviewer_max.toml",
-    ".codex/agents/architect_max.toml"
-)
+    "docs/agents/tools/Test-AgentInstructions.ps1"
+) + @($profileFiles.Keys)
 
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Get-RepoPath $relativePath))) {
@@ -435,24 +503,24 @@ if ($failures.Count -eq 0) {
     Add-Pass "Root, documentation-map, and reviewer routes are connected."
 }
 
-$roleRoutes = @{
-    discovery_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
-    implementation_fast = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
-    implementation_max = @("docs/agents/workflow.md", "docs/prompts/orchestrator.md")
-    reviewer_high = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
-    reviewer_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
-    architect_max = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/prompts/orchestrator.md")
-}
-foreach ($role in $roleRoutes.Keys) {
-    foreach ($relativePath in $roleRoutes[$role]) {
-        $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
-        if ($text.IndexOf($role, [System.StringComparison]::Ordinal) -lt 0) {
-            Add-Failure "Durable role route is missing '$role': $relativePath"
-        }
+$roleOwners = @{}
+foreach ($role in $profileFiles.Values) {
+    $roleOwners[$role] = if ($role.StartsWith("reviewer_", [System.StringComparison]::Ordinal)) {
+        "docs/agents/review-routing.md"
+    }
+    else {
+        "docs/agents/workflow.md"
     }
 }
-if (-not ($failures | Where-Object { $_ -like 'Durable role route is missing*' })) {
-    Add-Pass "Durable routing names every project custom-agent role and retains local fallback."
+foreach ($role in $roleOwners.Keys) {
+    $relativePath = $roleOwners[$role]
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    if ($text.IndexOf($role, [System.StringComparison]::Ordinal) -lt 0) {
+        Add-Failure "Canonical role owner is missing '$role': $relativePath"
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Canonical role owner is missing*' })) {
+    Add-Pass "Canonical routing names every project custom-agent role."
 }
 
 $textFiles = [System.Collections.Generic.List[string]]::new()
@@ -520,36 +588,38 @@ if (-not ($failures | Where-Object { $_ -match 'UTF-8|BOM|preceded by CR|followe
     Add-Pass "Active instruction, routing, prompt, and helper text is strict UTF-8 without BOM and CRLF."
 }
 
-$profileFiles = [ordered]@{
-    ".codex/agents/discovery_fast.toml" = "discovery_fast"
-    ".codex/agents/implementation_fast.toml" = "implementation_fast"
-    ".codex/agents/implementation_max.toml" = "implementation_max"
-    ".codex/agents/reviewer_high.toml" = "reviewer_high"
-    ".codex/agents/reviewer_max.toml" = "reviewer_max"
-    ".codex/agents/architect_max.toml" = "architect_max"
-}
 $profileSandboxModes = @{
-    discovery_fast = "read-only"
-    implementation_fast = "workspace-write"
-    implementation_max = "workspace-write"
-    reviewer_high = "read-only"
-    reviewer_max = "read-only"
-    architect_max = "read-only"
+    discovery = "read-only"
+    implementation = "workspace-write"
+    reviewer = "read-only"
+    architect = "read-only"
 }
+$seenProfileNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($relativePath in $profileFiles.Keys) {
+    if (-not (Test-Path -LiteralPath (Get-RepoPath $relativePath) -PathType Leaf)) {
+        continue
+    }
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
     foreach ($key in @("name", "description", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions")) {
         if ($text -notmatch ("(?m)^" + [regex]::Escape($key) + "\s*=")) {
             Add-Failure "Custom-agent profile is missing '$key': $relativePath"
         }
     }
+    foreach ($key in @("name", "description", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions")) {
+        if (-not (Test-NonemptyTomlString -Text $text -Key $key)) {
+            Add-Failure "Custom-agent profile requires a nonempty TOML string for '$key': $relativePath"
+        }
+    }
     $nameMatch = [regex]::Match($text, '(?m)^name\s*=\s*"(?<name>[^"]+)"\s*$')
     if (-not $nameMatch.Success -or $nameMatch.Groups['name'].Value -ne $profileFiles[$relativePath]) {
         Add-Failure "Custom-agent profile name does not match its stable role id: $relativePath"
     }
+    if ($nameMatch.Success -and -not $seenProfileNames.Add($nameMatch.Groups['name'].Value)) {
+        Add-Failure "Custom-agent profile name is duplicated: $relativePath"
+    }
     $sandboxMatch = [regex]::Match($text, '(?m)^sandbox_mode\s*=\s*"(?<mode>[^"]+)"\s*$')
     $roleName = $profileFiles[$relativePath]
-    if (-not $sandboxMatch.Success -or $sandboxMatch.Groups['mode'].Value -ne $profileSandboxModes[$roleName]) {
+    if (-not $sandboxMatch.Success -or $sandboxMatch.Groups['mode'].Value -ne $profileSandboxModes[$roleName.Split('_')[0]]) {
         Add-Failure "Custom-agent profile sandbox does not match its stable role boundary: $relativePath"
     }
 }
@@ -562,7 +632,7 @@ $semanticPolicyFiles = @(
 )
 foreach ($relativePath in $semanticPolicyFiles) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
-    if ($text -match '(?i)gpt-5\.|model_reasoning_effort\s*=') {
+    if ($text -match '(?i)\bgpt-\d|model_reasoning_effort\s*=') {
         Add-Failure "Durable semantic workflow contains a model/reasoning pin: $relativePath"
     }
 }
@@ -670,20 +740,31 @@ if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic wo
     Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and project configuration remain primary-model-neutral."
 }
 
-$supplementalSummaryAuditFiles = @(
-    "docs/agents/code_reviewer.md",
-    "docs/agents/review-routing.md",
-    ".codex/agents/reviewer_high.toml",
-    ".codex/agents/reviewer_max.toml"
-)
-foreach ($relativePath in $supplementalSummaryAuditFiles) {
-    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
-    if ($text -notmatch '(?i)initial verdict' -or $text -notmatch '(?i)changed active summar') {
-        Add-Failure "Review policy does not require a post-verdict audit of changed active summaries: $relativePath"
+if ($reviewRoutingText -notmatch '(?i)initial verdict' -or $reviewRoutingText -notmatch '(?i)changed active summar') {
+    Add-Failure "Canonical review policy is missing its post-verdict summary-audit guidance."
+}
+$policyRoutes = @{
+    "docs/agents/code_reviewer.md" = @("docs/agents/review-routing.md")
+    "docs/prompts/orchestrator.md" = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
+}
+foreach ($relativePath in $profileFiles.Keys) {
+    if ($profileFiles[$relativePath].StartsWith("reviewer_", [System.StringComparison]::Ordinal)) {
+        $policyRoutes[$relativePath] = @("docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
     }
 }
-if (-not ($failures | Where-Object { $_ -like 'Review policy does not require*' })) {
-    Add-Pass "Independent-review policy requires changed active summaries to be audited after the initial verdict."
+foreach ($relativePath in $policyRoutes.Keys) {
+    if (-not (Test-Path -LiteralPath (Get-RepoPath $relativePath) -PathType Leaf)) {
+        continue
+    }
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    foreach ($route in $policyRoutes[$relativePath]) {
+        if ($text.IndexOf($route, [System.StringComparison]::Ordinal) -lt 0) {
+            Add-Failure "Policy consumer does not route to ${route}: $relativePath"
+        }
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Canonical review policy*' -or $_ -like 'Policy consumer*' })) {
+    Add-Pass "Canonical review handoff and summary-audit guidance is reachable from policy consumers."
 }
 
 $instructionPack = $null
@@ -702,6 +783,18 @@ try {
         }
     }
     $managedPaths = @($instructionPack.files | ForEach-Object { [string]$_.path })
+    foreach ($duplicate in @($managedPaths | Group-Object | Where-Object { $_.Count -gt 1 })) {
+        Add-Failure "Instruction-pack managed path is duplicated: $($duplicate.Name)"
+    }
+    foreach ($profilePath in $profileFiles.Keys) {
+        $entries = @($instructionPack.files | Where-Object { [string]$_.path -ceq $profilePath })
+        if ($entries.Count -ne 1 -or [string]$entries[0].upgradeMode -cne "replace-profile") {
+            Add-Failure "Instruction-pack must manage profile exactly once with replace-profile: $profilePath"
+        }
+    }
+    if ($managedPaths -notcontains "docs/agents/model-selection.md") {
+        Add-Failure "Instruction-pack does not manage the optional model-selection advice."
+    }
     foreach ($requiredManagedPath in @(
         "docs/agents/tools/Normalize-TextFiles.ps1",
         "docs/agents/tools/Search-Repo.ps1",

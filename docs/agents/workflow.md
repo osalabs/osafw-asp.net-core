@@ -23,23 +23,35 @@ Use a focused developer interview only for a broad feature with unresolved choic
 
 ## 3. Size and stage the work
 
-- **Direct path (default):** keep work in the primary task whenever one owner can coherently discover, implement, verify, and integrate the outcome. This includes non-trivial and cross-cutting changes whose contracts or writable files are tightly coupled. High security, data, provider, compatibility, or workflow risk requires stronger verification and review, not automatic implementation delegation. Do not add orchestration ceremony merely because source code, tests, or several related files change.
-- **Orchestrated path:** load and follow `docs/prompts/orchestrator.md` only when staged control is needed and the delegation-payoff test passes. Before spawning, identify a bounded output that the primary will consume rather than reproduce, exclusive or read-only ownership, explicit acceptance/stop conditions, and a credible latency or specialist-quality gain. Normally this means at least two independently useful workstreams that can overlap or a material ambiguity/repeated-failure recovery stage that changes the next decision. Use a stage budget: normally choose at most one pre-implementation delegation stage, and stack discovery, architecture, and implementation roles only when every stage produces a distinct artifact that materially changes the next decision and justifies its own critical-path cost. If ownership overlaps, the work is tightly coupled, or the primary must repeat the discovery/integration, stay direct. Fresh independent review is a separate quality gate and may remain sequential.
-- **Escalated path:** use `architect_max` only for a material architecture choice, a high-risk adjudication, unresolved ambiguity that changes the result, or recovery after bounded attempts failed. Use `implementation_max` only when a bounded high-risk implementation has a credible specialist-quality payoff: for example, a first-pass miss could cause exceptional security, data, irreversible-migration, or downstream compatibility harm; interacting high-risk contracts materially increase the reasoning burden; or a bounded direct attempt failed for a substantive reason. Treat these profiles as conditional capabilities, not correctness guarantees. Neither profile is automatic ceremony for ordinary non-trivial work or risk labels alone. Transfer exclusive writable ownership to an implementation worker and keep the primary task as integrator; when the capability is unavailable, perform the same bounded stage locally and disclose the fallback.
+Keep work in the primary task when one owner can coherently discover, implement, verify, and integrate it, including non-trivial changes with tightly coupled contracts or files. High risk requires stronger verification and review; it does not automatically require implementation delegation.
 
-Checkpointed commits can make a long change easier to review or roll back, but a useful commit shape does not authorize committing. Create/switch branches, commit, push, open/merge PRs, release, or deploy only when explicitly requested.
+Delegate only when each child will produce a bounded output the primary consumes rather than reproduces, with exclusive or read-only ownership, acceptance/stop conditions, and a credible time or specialist-quality benefit. Normally this means independently useful workstreams that can overlap, or an architecture/recovery decision that changes the next step. Stay direct when ownership overlaps or the primary would repeat the work. Normally use at most one pre-implementation delegation stage; add another only when its distinct output changes the next decision and justifies the delay. Independent review is a separate quality gate governed by `docs/agents/review-routing.md`.
 
-Optional delegation is capability-conditional and must pass the payoff test for each child: use `discovery_fast` only when its bounded evidence replaces primary discovery; `implementation_fast` only for a small, low-risk, well-specified change with a deterministic falsifying check and disjoint file ownership; `implementation_max` only for the escalated implementation path above; `reviewer_high` for the ordinary fresh quality gate triggered by `review-routing.md`; `reviewer_max` for that router's predeclared catastrophic or exceptionally costly failure triggers; and `architect_max` only for bounded decision escalation. Do not spawn because a profile exists, route a sequential child whose output will be recomputed, or delegate tightly coupled contract decisions. Keep final integration in the primary task. If a named profile or delegation is unavailable, execute the required stage locally with the same packet, evidence, and stop conditions. Custom-agent model and reasoning selections live only in `.codex/agents/*.toml`; do not pin or replace the primary task's model in repository guidance.
+| Bounded work | Role / condition |
+| --- | --- |
+| Read-only discovery | `discovery_fast`; optional `discovery_astra_low`, when its evidence replaces primary discovery. |
+| Small implementation | `implementation_fast`; optional `implementation_astra_medium`, only for low-risk, well-specified work with a deterministic falsifying check and disjoint writable files. |
+| Standard implementation | `implementation_sol_high`, for a well-defined independent packet with exclusive ownership and observable verification; unresolved material contract decisions stay with the primary. |
+| Implementation escalation | `implementation_max` or `implementation_astra_xhigh`, only for a concrete specialist payoff: an exceptionally costly security/data/migration/compatibility miss, interacting high-risk contracts, or a substantive failed direct attempt. `implementation_astra_max` additionally requires the maximum-effort consequence gate in `docs/agents/review-routing.md`. |
+| Architecture or recovery decision | `architect_max` or `architect_astra_xhigh`, only for a material architecture choice, high-risk adjudication, consequential ambiguity, or recovery after bounded attempts fail. `architect_astra_max` additionally requires the maximum-effort consequence gate in `docs/agents/review-routing.md`. |
+| Independent review | Select the role and execution mode through `docs/agents/review-routing.md`. |
 
-Every delegation packet must be bounded and contain:
+### Select a profile after selecting the role
 
-- objective and observable acceptance criteria;
-- relevant evidence/context and explicit exclusions;
-- exclusive writable file ownership plus any read-only paths;
-- required verification and expected output format;
-- stop/escalation conditions, including ambiguity, contract expansion, unsafe state, or repeated failure.
+- Honor explicit developer model, family, effort, and cost constraints first. Starting with a model is not a family-only restriction. Keep the developer-selected primary model unchanged.
+- Select an available, role-appropriate profile by the packet's required quality, latency, cost, and consequences. Delegation may cross model generations in either direction without another confirmation when existing authority and constraints permit it. Use the primary model's family only as a tie-breaker when the task offers no stronger reason.
+- Keep the fast discovery and small-implementation profiles as inexpensive helper defaults. Use their alternatives for a recorded task-specific reason or explicit developer preference. A new model or higher effort alone does not justify another agent.
+- Inspect the active tool's profile settings, or its TOML file when needed. Names are handles; configured model, effort, sandbox, and instructions determine behavior. A pinned profile overrides spawn model/effort values, so choose the correct profile instead of trying to retarget a pinned role. A read-only reviewer is not an implementation worker.
+- Do not invent model availability or infer quality equivalence from effort labels. If the preferred profile is unavailable, choose another available profile satisfying the same role, gate, and explicit constraints and disclose the substitution. If none qualifies, perform the stage locally with the same evidence and stop conditions; disclose the fallback and any loss of review independence. An explicitly required model remains a blocker for that delegated step.
+- Record a short selection reason in the delegation packet; avoid per-task benchmark research. For developer starting-model advice or deliberate recalibration, consult the optional dated [model-selection note](model-selection.md).
 
-Maintain a file lease list while workers run. Read-only work may overlap; writers may run concurrently only when their writable paths are disjoint. Do not assign two workers overlapping files, and do not edit a leased file in the primary task until its worker returns or the lease is revoked. Workers preserve unrelated changes and report every touched path. The primary agent retains integration, final diff review, verification, and cleanup. If custom agents or delegation are unavailable, execute the same packeted stages sequentially in the primary task and disclose the local fallback.
+These roles are optional capabilities, not correctness guarantees or automatic upgrades over the primary task. Durable workflow remains model-neutral; executable model/reasoning settings live in `.codex/agents/*.toml`. Dated selection advice is advisory and does not pin the primary model.
+
+For qualifying orchestration, use `docs/prompts/orchestrator.md` as the plan and handoff template. Each packet supplies the objective/acceptance, context/exclusions, writable and read-only paths, verification/output, and stop conditions for ambiguity, contract expansion, unsafe state, or repeated failure.
+
+Maintain a file lease list while workers run. Read-only scopes may overlap; writable scopes must be disjoint, and the primary must wait for a worker to return or revoke its lease before editing its files. Workers preserve unrelated changes and report every touched path. Reproduce delegated work only when its output is demonstrably incomplete or stale; record that failure. The primary owns shared-contract decisions, integration, user communication, final diff review, verification, and cleanup.
+
+Checkpointed commits can help a long change, but do not authorize Git actions. Create/switch branches, commit, push, open/merge PRs, release, or deploy only when explicitly requested. Honor authority already provided in the current task instead of requesting it again.
 
 ## 4. Implement and verify
 
@@ -52,7 +64,9 @@ Maintain a file lease list while workers run. Read-only work may overlap; writer
 
 ## 5. Record evidence proportionally
 
-Create or update one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` when the prompt requires it or the work is non-trivial, iterative, runtime/schema/config/test/script-affecting, or changes shared agent workflow. Add/update one concise line in `docs/agents/tasks/index.md`. Do not rewrite historical summaries merely to fit a new format.
+Read-only diagnosis, explanation, audit, and review do not create repository files unless the user requests a saved report or summary. Trivial changes also need no summary unless requested; runtime, schema, runtime configuration, test, script, and shared agent-workflow changes still require one even when small.
+
+For those changes and other non-trivial or iterative implementation, create or update one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` and one concise entry in `docs/agents/tasks/index.md`. Do not rewrite historical summaries merely to fit a new format.
 
 Use only relevant headings:
 
@@ -67,7 +81,7 @@ Use only relevant headings:
 - `Knowledge-promotion candidates`: verified facts that may belong in domain/glossary/heuristics/ADR docs; do not duplicate them in the summary after promotion.
 - `Reflection`: process friction, avoidable work, tool/delegation value, and a specific instruction improvement candidate rather than a task recap.
 
-When delegation or capability escalation materially affects a non-trivial task, record the chosen route, the child output actually consumed, gross active intervals with known approval/platform waits separated, failed-command or rework count, and whether the route changed the critical path. Do not add this ceremony to trivial direct work.
+When delegation materially affects a task, record the route, output consumed, and any relevant failure or fallback. Record timing, separated approval/platform waits, rework counts, and critical-path effects only for a workflow evaluation or benchmark; report unavailable telemetry rather than estimating it.
 
 Summaries are recall evidence, not authority. Search the index first and open only summaries whose descriptions match the task. Validate old claims against current code.
 

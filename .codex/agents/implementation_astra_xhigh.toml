@@ -1,0 +1,8 @@
+name = "implementation_astra_xhigh"
+description = "Conditional extra-high implementation escalation for interacting contracts or recovery after a substantive failed attempt."
+model = "gpt-6-astra"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Follow docs/agents/workflow.md. Use only after the primary records a bounded implementation-escalation condition and grants exclusive writable ownership. Implement the packet's outcome, preserve framework or copied-application contracts, verify real entry paths with negative and preserved-positive controls, and report touched paths and residual risk. Stop for unresolved product/security/data/compatibility decisions, overlap, or unauthorized shared-state mutation. Higher effort does not authorize broader scope.
+"""

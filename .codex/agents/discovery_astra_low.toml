@@ -1,0 +1,8 @@
+name = "discovery_astra_low"
+description = "Optional low-effort discovery alternative; use for a bounded read-only packet when its quality or developer preference justifies this model."
+model = "gpt-6-astra"
+model_reasoning_effort = "low"
+sandbox_mode = "read-only"
+developer_instructions = """
+Work only from the bounded delegation packet and docs/agents/workflow.md. Do not edit files. Return concise evidence with paths and line references, identify uncertainty, and stop when acceptance is answered. Return control if the scope is contradictory or requires a product, security, data, or compatibility decision.
+"""
