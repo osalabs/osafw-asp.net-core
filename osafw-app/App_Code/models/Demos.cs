@@ -14,7 +14,9 @@ public class Demos : FwModel<Demos.Row>
         public int id { get; set; }
         public int parent_id { get; set; }
         public int? demo_dicts_id { get; set; }
+        public string icode { get; set; } = string.Empty;
         public string iname { get; set; } = string.Empty;
+        public string display_name { get; set; } = string.Empty;
         public string idesc { get; set; } = string.Empty;
         public string email { get; set; } = string.Empty;
         public int fint { get; set; }

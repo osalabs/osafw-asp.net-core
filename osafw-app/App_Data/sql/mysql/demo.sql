@@ -32,7 +32,9 @@ CREATE TABLE demos (
   parent_id             INT NOT NULL DEFAULT 0,           /*parent id - combo selection from SQL*/
   demo_dicts_id         INT NULL,                         /* demo dictionary link*/
 
+  icode                 VARCHAR(32) NOT NULL DEFAULT '',  /*project-style code used by the computed display name*/
   iname                 VARCHAR(64) NOT NULL DEFAULT '',  /*string value for names*/
+  display_name          VARCHAR(128) GENERATED ALWAYS AS (CONCAT(icode, CASE WHEN icode <> '' AND iname <> '' THEN ' — ' ELSE '' END, iname)) STORED,
   idesc                 TEXT,                             /*large text value*/
 
   email                 VARCHAR(128) NOT NULL DEFAULT '', /*string value for unique field, such as email*/

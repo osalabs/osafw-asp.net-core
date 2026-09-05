@@ -692,11 +692,22 @@ public class FW : IDisposable
         catch (AuthException Ex)
         {
             logger(LogLevel.DEBUG, Ex.Message);
-            // if not logged - just redirect to login
             if (!isLogged)
-                redirect(config("UNLOGGED_DEFAULT_URL").toStr(), false);
+            {
+                var url = config("UNLOGGED_DEFAULT_URL").toStr();
+                // Preserve page navigation through login, without replaying form/API requests.
+                if (HttpMethods.IsGet(request.Method) && route.method == "GET" && getResponseExpectedFormat() == "")
+                {
+                    url = "/Login";
+                    // Path excludes PathBase; redirect() adds ROOT_URL once after login.
+                    var gourl = request.Path.ToUriComponent() + request.QueryString.ToUriComponent();
+                    if (Utils.isAppUrl(gourl, config("ROOT_DOMAIN").toStr()))
+                        url = Utils.addUrlQueryParam(url, "gourl", gourl);
+                }
+                redirect(url, false);
+            }
             else
-                errMsg(Ex.Message);
+                errMsg(Ex.Message, Ex);
         }
         catch (ApplicationException Ex)
         {
@@ -1711,7 +1722,7 @@ public class FW : IDisposable
     /// <summary>
     /// Returns the cached model instance for a model type known only at runtime.
     /// </summary>
-    /// <param name="modelType">Concrete type derived from <see cref="FwModel"/>.</param>
+    /// <param name="modelType">Closed, non-abstract type derived from <see cref="FwModel"/> with a public parameterless constructor.</param>
     /// <returns>The initialized model instance shared with the other model lookup overloads.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="modelType"/> is null.</exception>
     /// <exception cref="ArgumentException"><paramref name="modelType"/> is not a concrete <see cref="FwModel"/> type.</exception>
@@ -1726,8 +1737,7 @@ public class FW : IDisposable
         string cacheKey = modelType.Name;
         if (!models.TryGetValue(cacheKey, out object? value))
         {
-            if (Activator.CreateInstance(modelType) is not FwModel modelInstance)
-                throw new InvalidOperationException($"Could not create model instance for {modelType.FullName}.");
+            var modelInstance = (FwModel)Activator.CreateInstance(modelType)!;
 
             modelInstance.init(this);
             value = modelInstance;

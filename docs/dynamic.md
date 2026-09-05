@@ -169,6 +169,8 @@ Vue header metadata is nested under `header.filter`; use `header.filter.type`, `
 
 Developer-generated and virtual controllers build a two-column `show_fields` / `showform_fields` layout from schema metadata when a controller-specific config does not define those arrays.
 
+- Schema-detected computed/generated columns stay visible in lists and forms, but their generated edit definition is read-only `plaintext` and they are omitted from generated `save_fields`. Explicit stored or file-based controller config remains authoritative.
+- The bundled Demos kitchen-sink example mirrors this contract across its classic, Dynamic, and Vue controllers: `icode` and `iname` are editable, while database-computed `display_name` (`CODE — Title`) is visible, searchable/sortable, and read-only.
 - Wide content fields such as markdown, textareas, raw HTML, and subtables are kept in the primary content column.
 - Major lookup identity fields such as `iname` and `icode` stay in the primary content column.
 - Compact non-system fields on larger generated forms are balanced into the right-side column only when the right column stays visually lighter after the field is added.

@@ -176,3 +176,12 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-08-09-agentic-instructions-upgrade.md` - Upgraded dual-mode agent routing, verification/isolation, adaptive review overlays, prompts, validation, and ignored local FPF refresh handling.
 - `summary-2026-08-11-objective-acceptance.md` - Added a compact objective/acceptance field to shared task evidence and the large-task orchestrator prompt.
 - `summary-2026-08-11-pr275-model-by-type.md` - Added a validated runtime-type model lookup that shares the existing `FW` model cache and supersedes PR #275 against current master.
+- `summary-2026-08-20-computed-virtual-fields.md` - Made schema-generated computed fields read-only and excluded them from generated saves across SQL Server, SQLite, and MySQL metadata.
+- `summary-2026-08-20-demo-computed-display-name.md` - Added the Demos kitchen-sink `display_name` computed-column example across provider schemas and classic, Dynamic, and Vue screens.
+- `summary-2026-08-27-codex-agent-workflow.md` - Added explicit adaptive role routing, project custom-agent profiles, and a versioned copied instruction pack; empirical comparison remains pending.
+- `summary-2026-08-29-fresh-reviewer-context.md` - Required available post-implementation independent reviewers to be fresh separate agents receiving context only through an explicit review handoff.
+- `summary-2026-08-30-adaptive-workflow-benchmark-promotion.md` - Promoted benchmark-backed direct-first routing, bounded role escalation, public-entry controls, portable copied-pack validation, model-neutral project-config compatibility, and mandatory supplemental summary audit in instruction pack 1.3.0.
+- `summary-2026-09-02-login-return.md` - Added safe login return navigation for protected-page links, preserved query/base-path behavior, and rejected control-character redirect URLs.
+- `summary-2026-09-04-agent-instruction-simplification.md` - Consolidated workflow and review ownership, clarified summary exceptions, and made instruction validation independent of a particular GPT generation while preserving role settings.
+- `summary-2026-09-05-model-profile-selection.md` - Added optional Astra profiles, cross-generation selection, dated starting-model advice, and lightweight catalog/behavior calibration.
+- `summary-2026-09-05-pr279-review-followup.md` - Simplified runtime model construction, expanded cache-sharing and invalid-type coverage, and refreshed PR #279 against master.

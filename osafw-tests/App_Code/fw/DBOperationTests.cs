@@ -166,6 +166,51 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void LoadTableSchemaFull_RequestsSqlServerComputedMetadata()
+        {
+            var db = new PagingDb(DB.DBTYPE_SQLSRV)
+            {
+                Rows =
+                [
+                    new DBRow(new FwDict
+                    {
+                        ["name"] = "display_name",
+                        ["type"] = "nvarchar",
+                        ["is_computed"] = 1
+                    })
+                ]
+            };
+
+            var fields = db.loadTableSchemaFull("schema_sql_computed");
+
+            StringAssert.Contains(db.LastSql, "'IsComputed') as is_computed");
+            Assert.AreEqual(1, ((FwDict)fields[0]!)["is_computed"].toInt());
+        }
+
+        [TestMethod]
+        public void LoadTableSchemaFull_RequestsMySqlGeneratedMetadata()
+        {
+            var db = new PagingDb(DB.DBTYPE_MYSQL)
+            {
+                Rows =
+                [
+                    new DBRow(new FwDict
+                    {
+                        ["name"] = "display_name",
+                        ["type"] = "varchar",
+                        ["is_computed"] = 1
+                    })
+                ]
+            };
+
+            var fields = db.loadTableSchemaFull("schema_mysql_generated");
+
+            StringAssert.Contains(db.LastSql, "c.GENERATION_EXPRESSION");
+            StringAssert.Contains(db.LastSql, "as is_computed");
+            Assert.AreEqual(1, ((FwDict)fields[0]!)["is_computed"].toInt());
+        }
+
+        [TestMethod]
         public void BuildSelect_RejectsInvalidPaging()
         {
             var db = new PagingDb(DB.DBTYPE_SQLSRV);

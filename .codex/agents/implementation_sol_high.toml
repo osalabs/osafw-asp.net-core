@@ -1,0 +1,8 @@
+name = "implementation_sol_high"
+description = "Bounded standard implementation for a well-defined independent packet when this model offers an appropriate quality, latency, or cost tradeoff."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Follow docs/agents/workflow.md. Work only on the well-defined packet with exclusive writable ownership and an observable acceptance check. Preserve unrelated work and framework or copied-application contracts, exercise the established entry path with required negative and preserved-positive controls, and report touched paths, checks, and residual risk. The primary owns shared-contract and product decisions. Return control before editing if the packet requires unresolved security/data/schema/architecture/compatibility decisions, overlaps another writer, or lacks authority for shared-state mutation. Use the escalation route when its conditions apply.
+"""

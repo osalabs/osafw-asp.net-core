@@ -26,7 +26,9 @@ CREATE TABLE demos (
   parent_id             INT NOT NULL DEFAULT 0,           /*parent id - combo selection from SQL*/
   demo_dicts_id         INT NULL FOREIGN KEY REFERENCES demo_dicts(id),           /* demo dictionary link*/
 
+  icode                 NVARCHAR(32) NOT NULL DEFAULT '', /*project-style code used by the computed display name*/
   iname                 NVARCHAR(64) NOT NULL DEFAULT '', /*string value for names*/
+  display_name          AS CAST(CONCAT(icode, CASE WHEN icode <> '' AND iname <> '' THEN N' — ' ELSE N'' END, iname) AS NVARCHAR(128)) PERSISTED,
   idesc                 NVARCHAR(MAX),                    /*large text value*/
 
   email                 NVARCHAR(128) NOT NULL DEFAULT '',/*string value for unique field, such as email*/
@@ -109,10 +111,11 @@ CREATE TABLE demos_items (
 TEST DATA
 INSERT statements for demos table
 */
-INSERT INTO demos (parent_id, demo_dicts_id, iname, idesc, email, fint, ffloat, frange, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, is_switch, fdate_combo, fdate_pop, fdatetime, fdatetime_utc, fdatetime_offset, fdatetime_local, ftime, att_id, status, add_time, add_users_id)
+INSERT INTO demos (parent_id, demo_dicts_id, icode, iname, idesc, email, fint, ffloat, frange, dict_link_auto_id, dict_link_multi, fcombo, fradio, fyesno, is_checkbox, is_switch, fdate_combo, fdate_pop, fdatetime, fdatetime_utc, fdatetime_offset, fdatetime_local, ftime, att_id, status, add_time, add_users_id)
 SELECT TOP 100
   ABS(CHECKSUM(NEWID())) % 10,    -- random parent_id between 0 and 9
   ABS(CHECKSUM(NEWID())) % 3 + 1, -- random demo_dicts_id between 1 and 3
+  CONCAT('DEMO-', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential project-style code
   CONCAT('Name', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential name
   CONCAT('Description', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential description
   CONCAT('email', ROW_NUMBER() OVER (ORDER BY (SELECT NULL))), -- sequential email

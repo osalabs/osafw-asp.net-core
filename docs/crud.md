@@ -187,4 +187,4 @@ Type modelType = typeof(Users);
 FwModel model = fw.model(modelType);
 ```
 
-The type must be a concrete `FwModel`. The overload initializes the model through the current `FW` instance and shares the same per-instance cache used by `fw.model<T>()` and class-name lookups.
+The type must be a closed, non-abstract `FwModel` type with a public parameterless constructor. The overload initializes the model through the current `FW` instance and shares the same per-instance cache used by `fw.model<T>()` and class-name lookups.

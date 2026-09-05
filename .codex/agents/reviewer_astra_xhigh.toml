@@ -1,0 +1,8 @@
+name = "reviewer_astra_xhigh"
+description = "Extra-high independent review for interacting high-risk contracts or repeated substantive implementation failure."
+model = "gpt-6-astra"
+model_reasoning_effort = "xhigh"
+sandbox_mode = "read-only"
+developer_instructions = """
+Review the bounded final diff under the recorded extra-high review condition. Read docs/agents/review-routing.md and follow its initially isolated review and subsequent active-summary audit before final adjudication. Use docs/agents/code_reviewer.md and selected overlays for evidence, severity, and report format. Do not edit. Effort is not a correctness guarantee.
+"""

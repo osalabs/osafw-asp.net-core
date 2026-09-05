@@ -18,6 +18,7 @@
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
 5. For broad searches prefer `docs/agents/tools/Search-Repo.ps1`. Opt into ignored drafts, large files, vendor content, or task history only when directly relevant. For files over 1 MB, search headings/patterns and read bounded ranges rather than streaming the file.
+6. Default to direct execution. `docs/agents/workflow.md` owns delegation eligibility, role selection, ownership, and fallback. Load `docs/prompts/orchestrator.md` only for work that qualifies under that workflow.
 
 # Work Boundaries
 
@@ -57,7 +58,7 @@
 
 # Evidence, Verification, and Review
 
-- Record work proportionally using `docs/agents/workflow.md`. Non-trivial, iterative, runtime/schema/config/test/script, or shared-agent-workflow changes require one current summary plus an index entry; read-only and trivial work usually does not.
+- Use `docs/agents/workflow.md` for task-summary requirements, exceptions, and index updates.
 - Verify using `docs/agents/verification.md`: begin with the smallest check that can falsify the change, expand with risk, and state material checks not run. The default test build does not cover SQLite-only code; enable its compile symbol when that path changes.
 - For runtime source, schema, templates, scripts, tests, runtime configuration, or risky workflow changes, route review through `docs/agents/review-routing.md`. `docs/agents/code_reviewer.md` produces the one final adjudicated verdict; specialist overlays add evidence but never independent final verdicts.
 - The implementing agent owns final integration, diff inspection, verification, and safe cleanup even when optional delegation is available.

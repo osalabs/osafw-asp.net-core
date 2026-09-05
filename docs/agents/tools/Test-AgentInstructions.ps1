@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$RepoRoot
+    [string]$RepoRoot,
+
+    [string[]]$PrivateIdentifier = @()
 )
 
 Set-StrictMode -Version Latest
@@ -46,6 +48,372 @@ function Read-StrictUtf8 {
     }
 }
 
+function Remove-TomlLineComment {
+    param([string]$Line)
+
+    $inBasicString = $false
+    $inLiteralString = $false
+    $escaped = $false
+
+    for ($i = 0; $i -lt $Line.Length; $i++) {
+        $character = $Line[$i]
+        if ($inBasicString) {
+            if ($escaped) {
+                $escaped = $false
+                continue
+            }
+            if ($character -eq '\') {
+                $escaped = $true
+                continue
+            }
+            if ($character -eq '"') {
+                $inBasicString = $false
+            }
+            continue
+        }
+        if ($inLiteralString) {
+            if ($character -eq "'") {
+                $inLiteralString = $false
+            }
+            continue
+        }
+        if ($character -eq '#') {
+            return $Line.Substring(0, $i)
+        }
+        if ($character -eq '"') {
+            $inBasicString = $true
+        }
+        elseif ($character -eq "'") {
+            $inLiteralString = $true
+        }
+    }
+
+    return $Line
+}
+
+function Get-TomlSimpleKeyName {
+    param([string]$KeyText)
+
+    $key = $KeyText.Trim()
+    if ($key.Length -ge 2 -and $key[0] -eq '"' -and $key[$key.Length - 1] -eq '"') {
+        $value = $key.Substring(1, $key.Length - 2)
+        $builder = [System.Text.StringBuilder]::new()
+        for ($i = 0; $i -lt $value.Length; $i++) {
+            $character = $value[$i]
+            if ($character -ne '\') {
+                [void]$builder.Append($character)
+                continue
+            }
+            if ($i + 1 -ge $value.Length) {
+                throw "Invalid TOML basic-key escape."
+            }
+            $i++
+            $escape = $value[$i]
+            switch -CaseSensitive ($escape) {
+                'b' { [void]$builder.Append([char]0x0008) }
+                't' { [void]$builder.Append([char]0x0009) }
+                'n' { [void]$builder.Append([char]0x000A) }
+                'f' { [void]$builder.Append([char]0x000C) }
+                'r' { [void]$builder.Append([char]0x000D) }
+                '"' { [void]$builder.Append('"') }
+                '\' { [void]$builder.Append('\') }
+                'u' {
+                    if ($i + 4 -ge $value.Length) {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    $hex = $value.Substring($i + 1, 4)
+                    if ($hex -notmatch '^[0-9A-Fa-f]{4}$') {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    [void]$builder.Append([char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)))
+                    $i += 4
+                }
+                'U' {
+                    if ($i + 8 -ge $value.Length) {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    $hex = $value.Substring($i + 1, 8)
+                    if ($hex -notmatch '^[0-9A-Fa-f]{8}$') {
+                        throw "Invalid TOML Unicode key escape."
+                    }
+                    [void]$builder.Append([char]::ConvertFromUtf32([Convert]::ToInt32($hex, 16)))
+                    $i += 8
+                }
+                default { throw "Invalid TOML basic-key escape." }
+            }
+        }
+        $key = $builder.ToString()
+    }
+    elseif ($key.Length -ge 2 -and $key[0] -eq "'" -and $key[$key.Length - 1] -eq "'") {
+        $key = $key.Substring(1, $key.Length - 2)
+    }
+    return $key
+}
+
+function Test-NonemptyTomlString {
+    param([string]$Text, [string]$Key)
+
+    $basicLine = '"(?<basicLine>(?:\\[^\r\n]|[^"\\\r\n])*)"'
+    $literalLine = "'(?<literalLine>[^'\r\n]*)'"
+    $basicMulti = '"""(?<basicMulti>(?:\\[\s\S]|[^"\\]|"{1,2}(?!"))*)(?<basicEnd>"{3,5})'
+    $literalMulti = "'''(?<literalMulti>(?:[^']|'{1,2}(?!'))*)(?<literalEnd>'{3,5})"
+    $pattern = '(?m)^' + [regex]::Escape($Key) + '[ \t]*=[ \t]*(?:' +
+        ($basicMulti, $literalMulti, $basicLine, $literalLine -join '|') +
+        ')[ \t]*(?:#[^\r\n]*)?\r?$'
+    $match = [regex]::Match($Text, $pattern)
+    if (-not $match.Success) {
+        return $false
+    }
+
+    $isBasic = $false
+    $isMultiline = $false
+    if ($match.Groups['basicMulti'].Success) {
+        $value = $match.Groups['basicMulti'].Value + ('"' * ($match.Groups['basicEnd'].Length - 3))
+        $isBasic = $true
+        $isMultiline = $true
+    }
+    elseif ($match.Groups['literalMulti'].Success) {
+        $value = $match.Groups['literalMulti'].Value + ("'" * ($match.Groups['literalEnd'].Length - 3))
+    }
+    elseif ($match.Groups['basicLine'].Success) {
+        $value = $match.Groups['basicLine'].Value
+        $isBasic = $true
+    }
+    else {
+        $value = $match.Groups['literalLine'].Value
+    }
+    if ($value -match '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]') {
+        return $false
+    }
+
+    try {
+        if ($isBasic) {
+            if ($isMultiline) {
+                $value = [regex]::Replace($value, '(?<!\\)((?:\\\\)*)\\[ \t]*\r?\n[ \t\r\n]*', '$1')
+            }
+            # Quoted TOML keys and basic-string values use the same escape decoder.
+            $value = Get-TomlSimpleKeyName ('"' + $value + '"')
+        }
+        return -not [string]::IsNullOrWhiteSpace($value)
+    }
+    catch {
+        return $false
+    }
+}
+
+function Get-TomlInlineTableEntries {
+    param([string]$Value)
+
+    $entries = [System.Collections.Generic.List[string]]::new()
+    $entryStart = 1
+    $braceDepth = 1
+    $bracketDepth = 0
+    $inBasicString = $false
+    $inLiteralString = $false
+    $escaped = $false
+
+    for ($i = 1; $i -lt $Value.Length; $i++) {
+        $character = $Value[$i]
+        if ($inBasicString) {
+            if ($escaped) {
+                $escaped = $false
+                continue
+            }
+            if ($character -eq '\') {
+                $escaped = $true
+                continue
+            }
+            if ($character -eq '"') {
+                $inBasicString = $false
+            }
+            continue
+        }
+        if ($inLiteralString) {
+            if ($character -eq "'") {
+                $inLiteralString = $false
+            }
+            continue
+        }
+
+        switch ($character) {
+            '"' { $inBasicString = $true }
+            "'" { $inLiteralString = $true }
+            '{' { $braceDepth++ }
+            '}' {
+                $braceDepth--
+                if ($braceDepth -eq 0) {
+                    $entries.Add($Value.Substring($entryStart, $i - $entryStart))
+                    break
+                }
+            }
+            '[' { $bracketDepth++ }
+            ']' { $bracketDepth-- }
+            ',' {
+                if ($braceDepth -eq 1 -and $bracketDepth -eq 0) {
+                    $entries.Add($Value.Substring($entryStart, $i - $entryStart))
+                    $entryStart = $i + 1
+                }
+            }
+        }
+
+        if ($braceDepth -eq 0) {
+            break
+        }
+    }
+
+    return @($entries)
+}
+
+function Test-TomlHasUnescapedBasicStringDelimiter {
+    param([string]$Text)
+
+    $escaped = $false
+    for ($i = 0; $i -lt $Text.Length; $i++) {
+        $character = $Text[$i]
+        if ($escaped) {
+            $escaped = $false
+            continue
+        }
+        if ($character -eq '\') {
+            $escaped = $true
+            continue
+        }
+        if (
+            $character -eq '"' -and
+            $i + 2 -lt $Text.Length -and
+            $Text[$i + 1] -eq '"' -and
+            $Text[$i + 2] -eq '"'
+        ) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Get-DisallowedCodexProjectConfigPins {
+    param([string]$Text)
+
+    $pins = [System.Collections.Generic.List[string]]::new()
+    $section = "root"
+    $multilineStringDelimiter = $null
+    $simpleKeyPattern = '(?:"(?:\\.|[^"])*"|''[^'']*''|[A-Za-z0-9_-]+)'
+
+    foreach ($rawLine in [regex]::Split($Text, "`r`n|`n|`r")) {
+        if ($null -ne $multilineStringDelimiter) {
+            $hasClosingDelimiter = if ($multilineStringDelimiter -eq '"""') {
+                Test-TomlHasUnescapedBasicStringDelimiter $rawLine
+            }
+            else {
+                $rawLine.IndexOf($multilineStringDelimiter, [System.StringComparison]::Ordinal) -ge 0
+            }
+            if ($hasClosingDelimiter) {
+                $multilineStringDelimiter = $null
+            }
+            continue
+        }
+
+        $code = Remove-TomlLineComment $rawLine
+        $trimmed = $code.Trim()
+        if ($trimmed.Length -eq 0) {
+            continue
+        }
+        $tableHeader = [regex]::Match($trimmed, "^\[\s*(?<table>$simpleKeyPattern)\s*\]\s*$")
+        if ($tableHeader.Success) {
+            $tableName = Get-TomlSimpleKeyName $tableHeader.Groups['table'].Value
+            $section = if ($tableName -ceq "agents") { "agents" } else { "other" }
+            continue
+        }
+        if ($trimmed -match '^\[(?:\[[^\]]+\]\]|[^\]]+\])\s*$') {
+            $section = "other"
+            continue
+        }
+
+        $dottedAssignment = [regex]::Match(
+            $code,
+            "^\s*(?<table>$simpleKeyPattern)\s*\.\s*(?<key>$simpleKeyPattern)\s*="
+        )
+        if ($section -eq "root" -and $dottedAssignment.Success) {
+            $tableName = Get-TomlSimpleKeyName $dottedAssignment.Groups['table'].Value
+            $keyName = Get-TomlSimpleKeyName $dottedAssignment.Groups['key'].Value
+            if ($tableName -ceq "agents" -and @("default_subagent_model", "default_subagent_reasoning_effort") -ccontains $keyName) {
+                $pins.Add("agents.$keyName")
+            }
+        }
+
+        $assignment = [regex]::Match($code, "^\s*(?<key>$simpleKeyPattern)\s*=")
+        $value = $null
+        if ($dottedAssignment.Success -or $assignment.Success) {
+            $equalsIndex = $code.IndexOf('=')
+            $value = $code.Substring($equalsIndex + 1).TrimStart()
+        }
+        if ($assignment.Success) {
+            $keyName = Get-TomlSimpleKeyName $assignment.Groups['key'].Value
+            if ($section -eq "root" -and @("model", "model_reasoning_effort") -ccontains $keyName) {
+                $pins.Add($keyName)
+            }
+            elseif ($section -eq "agents" -and @("default_subagent_model", "default_subagent_reasoning_effort") -ccontains $keyName) {
+                $pins.Add("agents.$keyName")
+            }
+
+            if ($section -eq "root" -and $keyName -ceq "agents" -and $value.StartsWith("{")) {
+                foreach ($inlineEntry in @(Get-TomlInlineTableEntries $value)) {
+                    $inlineKeyMatch = [regex]::Match($inlineEntry, "^\s*(?<key>$simpleKeyPattern)\s*=")
+                    if (-not $inlineKeyMatch.Success) {
+                        continue
+                    }
+                    $inlineKeyName = Get-TomlSimpleKeyName $inlineKeyMatch.Groups['key'].Value
+                    if (@("default_subagent_model", "default_subagent_reasoning_effort") -ccontains $inlineKeyName) {
+                        $pins.Add("agents.$inlineKeyName")
+                    }
+                }
+            }
+
+        }
+        if ($null -ne $value) {
+            foreach ($delimiter in @('"""', "'''")) {
+                if ($value.StartsWith($delimiter)) {
+                    $remainder = $value.Substring($delimiter.Length)
+                    $hasClosingDelimiter = if ($delimiter -eq '"""') {
+                        Test-TomlHasUnescapedBasicStringDelimiter $remainder
+                    }
+                    else {
+                        $remainder.IndexOf($delimiter, [System.StringComparison]::Ordinal) -ge 0
+                    }
+                    if (-not $hasClosingDelimiter) {
+                        $multilineStringDelimiter = $delimiter
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    return @($pins | Select-Object -Unique)
+}
+
+$profileFiles = [ordered]@{}
+foreach ($role in @(
+    "discovery_fast",
+    "implementation_fast",
+    "implementation_max",
+    "reviewer_high",
+    "reviewer_max",
+    "architect_max",
+    "discovery_astra_low",
+    "implementation_astra_medium",
+    "implementation_astra_xhigh",
+    "implementation_astra_max",
+    "architect_astra_xhigh",
+    "architect_astra_max",
+    "reviewer_astra_high",
+    "reviewer_astra_xhigh",
+    "reviewer_astra_max",
+    "implementation_sol_high"
+)) {
+    $profileFiles[".codex/agents/$role.toml"] = $role
+}
+
 $requiredFiles = @(
     "AGENTS.md",
     "CLAUDE.md",
@@ -63,8 +431,13 @@ $requiredFiles = @(
     "docs/agents/glossary.md",
     "docs/agents/heuristics.md",
     "docs/agents/mcp.md",
-    "docs/agents/tasks/index.md"
-)
+    "docs/agents/model-selection.md",
+    "docs/agents/tasks/index.md",
+    "docs/agents/instruction-pack.json",
+    "docs/agents/tools/Normalize-TextFiles.ps1",
+    "docs/agents/tools/Search-Repo.ps1",
+    "docs/agents/tools/Test-AgentInstructions.ps1"
+) + @($profileFiles.Keys)
 
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Get-RepoPath $relativePath))) {
@@ -130,6 +503,26 @@ if ($failures.Count -eq 0) {
     Add-Pass "Root, documentation-map, and reviewer routes are connected."
 }
 
+$roleOwners = @{}
+foreach ($role in $profileFiles.Values) {
+    $roleOwners[$role] = if ($role.StartsWith("reviewer_", [System.StringComparison]::Ordinal)) {
+        "docs/agents/review-routing.md"
+    }
+    else {
+        "docs/agents/workflow.md"
+    }
+}
+foreach ($role in $roleOwners.Keys) {
+    $relativePath = $roleOwners[$role]
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    if ($text.IndexOf($role, [System.StringComparison]::Ordinal) -lt 0) {
+        Add-Failure "Canonical role owner is missing '$role': $relativePath"
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Canonical role owner is missing*' })) {
+    Add-Pass "Canonical routing names every project custom-agent role."
+}
+
 $textFiles = [System.Collections.Generic.List[string]]::new()
 foreach ($relativePath in @("AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/agents/tasks/index.md")) {
     $path = Get-RepoPath $relativePath
@@ -154,6 +547,27 @@ foreach ($directory in @("docs/agents", "docs/agents/reviewers", "docs/agents/to
             }
         }
 }
+foreach ($directory in @(".codex/agents")) {
+    $path = Get-RepoPath $directory
+    if (-not (Test-Path -LiteralPath $path)) {
+        continue
+    }
+    Get-ChildItem -LiteralPath $path -File -Recurse |
+        Where-Object { $_.Extension -in @(".md", ".ps1", ".json", ".toml") } |
+        ForEach-Object {
+            if (-not $textFiles.Contains($_.FullName)) {
+                $textFiles.Add($_.FullName)
+            }
+        }
+}
+$instructionPackPath = Get-RepoPath "docs/agents/instruction-pack.json"
+if ((Test-Path -LiteralPath $instructionPackPath) -and -not $textFiles.Contains($instructionPackPath)) {
+    $textFiles.Add($instructionPackPath)
+}
+$codexProjectConfigPath = Get-RepoPath ".codex/config.toml"
+if ((Test-Path -LiteralPath $codexProjectConfigPath) -and -not $textFiles.Contains($codexProjectConfigPath)) {
+    $textFiles.Add($codexProjectConfigPath)
+}
 
 foreach ($path in $textFiles) {
     try {
@@ -174,6 +588,249 @@ if (-not ($failures | Where-Object { $_ -match 'UTF-8|BOM|preceded by CR|followe
     Add-Pass "Active instruction, routing, prompt, and helper text is strict UTF-8 without BOM and CRLF."
 }
 
+$profileSandboxModes = @{
+    discovery = "read-only"
+    implementation = "workspace-write"
+    reviewer = "read-only"
+    architect = "read-only"
+}
+$seenProfileNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+foreach ($relativePath in $profileFiles.Keys) {
+    if (-not (Test-Path -LiteralPath (Get-RepoPath $relativePath) -PathType Leaf)) {
+        continue
+    }
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    foreach ($key in @("name", "description", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions")) {
+        if ($text -notmatch ("(?m)^" + [regex]::Escape($key) + "\s*=")) {
+            Add-Failure "Custom-agent profile is missing '$key': $relativePath"
+        }
+    }
+    foreach ($key in @("name", "description", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions")) {
+        if (-not (Test-NonemptyTomlString -Text $text -Key $key)) {
+            Add-Failure "Custom-agent profile requires a nonempty TOML string for '$key': $relativePath"
+        }
+    }
+    $nameMatch = [regex]::Match($text, '(?m)^name\s*=\s*"(?<name>[^"]+)"\s*$')
+    if (-not $nameMatch.Success -or $nameMatch.Groups['name'].Value -ne $profileFiles[$relativePath]) {
+        Add-Failure "Custom-agent profile name does not match its stable role id: $relativePath"
+    }
+    if ($nameMatch.Success -and -not $seenProfileNames.Add($nameMatch.Groups['name'].Value)) {
+        Add-Failure "Custom-agent profile name is duplicated: $relativePath"
+    }
+    $sandboxMatch = [regex]::Match($text, '(?m)^sandbox_mode\s*=\s*"(?<mode>[^"]+)"\s*$')
+    $roleName = $profileFiles[$relativePath]
+    if (-not $sandboxMatch.Success -or $sandboxMatch.Groups['mode'].Value -ne $profileSandboxModes[$roleName.Split('_')[0]]) {
+        Add-Failure "Custom-agent profile sandbox does not match its stable role boundary: $relativePath"
+    }
+}
+$semanticPolicyFiles = @(
+    "AGENTS.md",
+    "docs/agents/workflow.md",
+    "docs/agents/review-routing.md",
+    "docs/prompts/orchestrator.md",
+    "docs/prompts/agent_upgrade.md"
+)
+foreach ($relativePath in $semanticPolicyFiles) {
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    if ($text -match '(?i)\bgpt-\d|model_reasoning_effort\s*=') {
+        Add-Failure "Durable semantic workflow contains a model/reasoning pin: $relativePath"
+    }
+}
+
+$configPolicyCases = @(
+    [pscustomobject]@{
+        Name = "model-neutral agents table"
+        Text = "[agents]`r`nmax_concurrent_threads_per_session = 8`r`ninterrupt_message = true`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "model-neutral dotted agents key"
+        Text = "agents.max_concurrent_threads_per_session = 6`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "comments and multiline values"
+        Text = "# model = `"ignored`"`r`nnotes = `"`"`"`r`nmodel = `"also ignored`"`r`n`"`"`"`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "escaped multiline basic-string delimiter"
+        Text = 'developer_instructions = """' + "`r`n" + 'example = \"""' + "`r`n" + 'model = "inside instructions"' + "`r`n" + '"""' + "`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "dotted multiline value then primary pin"
+        Text = "metadata.note = `"`"`"`r`nmodel = `"ignored`"`r`n`"`"`"`r`nmodel = `"pinned`"`r`n"
+        ExpectedPins = @("model")
+    },
+    [pscustomobject]@{
+        Name = "primary model pin"
+        Text = "model = `"pinned`"`r`n"
+        ExpectedPins = @("model")
+    },
+    [pscustomobject]@{
+        Name = "quoted primary reasoning pin"
+        Text = "`"model_reasoning_effort`" = `"high`"`r`n"
+        ExpectedPins = @("model_reasoning_effort")
+    },
+    [pscustomobject]@{
+        Name = "agents table model default"
+        Text = "[agents]`r`ndefault_subagent_model = `"pinned`"`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    },
+    [pscustomobject]@{
+        Name = "dotted agents reasoning default"
+        Text = "agents.default_subagent_reasoning_effort = `"high`"`r`n"
+        ExpectedPins = @("agents.default_subagent_reasoning_effort")
+    },
+    [pscustomobject]@{
+        Name = "inline agents model default"
+        Text = "agents = { max_concurrent_threads_per_session = 4, default_subagent_model = `"pinned`" }`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    },
+    [pscustomobject]@{
+        Name = "inline text and nested values mentioning defaults"
+        Text = "agents = { note = `", default_subagent_model = text only`", values = [{ default_subagent_reasoning_effort = `"nested`" }], max_concurrent_threads_per_session = 4 }`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "case-sensitive unrelated keys"
+        Text = "Model = `"not a Codex model key`"`r`nAgents.default_subagent_model = `"not an agents key`"`r`n"
+        ExpectedPins = @()
+    },
+    [pscustomobject]@{
+        Name = "escaped primary model pin"
+        Text = "`"mo\u0064el`" = `"pinned`"`r`n"
+        ExpectedPins = @("model")
+    },
+    [pscustomobject]@{
+        Name = "escaped agents table model default"
+        Text = "[`"a\u0067ents`"]`r`ndefault_subagent_model = `"pinned`"`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    },
+    [pscustomobject]@{
+        Name = "escaped dotted agents reasoning default"
+        Text = "`"a\u0067ents`".default_subagent_reasoning_effort = `"high`"`r`n"
+        ExpectedPins = @("agents.default_subagent_reasoning_effort")
+    },
+    [pscustomobject]@{
+        Name = "escaped inline agents model default"
+        Text = "agents = { `"default_subagent_\u006dodel`" = `"pinned`" }`r`n"
+        ExpectedPins = @("agents.default_subagent_model")
+    }
+)
+foreach ($case in $configPolicyCases) {
+    $actualSignature = @(Get-DisallowedCodexProjectConfigPins $case.Text | Sort-Object) -join "|"
+    $expectedSignature = @($case.ExpectedPins | Sort-Object) -join "|"
+    if ($actualSignature -ne $expectedSignature) {
+        Add-Failure "Codex project config policy self-test failed '$($case.Name)': expected '$expectedSignature', got '$actualSignature'."
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Codex project config policy self-test*' })) {
+    Add-Pass "Codex project config policy accepts model-neutral controls and rejects primary or project-wide agent model pins."
+}
+
+if (Test-Path -LiteralPath $codexProjectConfigPath) {
+    $projectConfigText = Read-StrictUtf8 $codexProjectConfigPath
+    foreach ($pin in @(Get-DisallowedCodexProjectConfigPins $projectConfigText)) {
+        Add-Failure "Codex project config contains a disallowed model/reasoning pin: $pin"
+    }
+}
+if (-not ($failures | Where-Object { $_ -match 'Custom-agent profile|semantic workflow|Codex project config' })) {
+    Add-Pass "Custom-agent profiles contain replaceable role settings; durable workflow and project configuration remain primary-model-neutral."
+}
+
+if ($reviewRoutingText -notmatch '(?i)initial verdict' -or $reviewRoutingText -notmatch '(?i)changed active summar') {
+    Add-Failure "Canonical review policy is missing its post-verdict summary-audit guidance."
+}
+$policyRoutes = @{
+    "docs/agents/code_reviewer.md" = @("docs/agents/review-routing.md")
+    "docs/prompts/orchestrator.md" = @("docs/agents/workflow.md", "docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
+}
+foreach ($relativePath in $profileFiles.Keys) {
+    if ($profileFiles[$relativePath].StartsWith("reviewer_", [System.StringComparison]::Ordinal)) {
+        $policyRoutes[$relativePath] = @("docs/agents/review-routing.md", "docs/agents/code_reviewer.md")
+    }
+}
+foreach ($relativePath in $policyRoutes.Keys) {
+    if (-not (Test-Path -LiteralPath (Get-RepoPath $relativePath) -PathType Leaf)) {
+        continue
+    }
+    $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
+    foreach ($route in $policyRoutes[$relativePath]) {
+        if ($text.IndexOf($route, [System.StringComparison]::Ordinal) -lt 0) {
+            Add-Failure "Policy consumer does not route to ${route}: $relativePath"
+        }
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'Canonical review policy*' -or $_ -like 'Policy consumer*' })) {
+    Add-Pass "Canonical review handoff and summary-audit guidance is reachable from policy consumers."
+}
+
+$instructionPack = $null
+try {
+    $instructionPack = (Read-StrictUtf8 $instructionPackPath) | ConvertFrom-Json
+    if ([int]$instructionPack.schemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string]$instructionPack.packVersion) -or @($instructionPack.files).Count -eq 0) {
+        Add-Failure "Instruction-pack metadata has an unsupported schema or missing version."
+    }
+    foreach ($entry in @($instructionPack.files)) {
+        if ([string]::IsNullOrWhiteSpace([string]$entry.path) -or [string]::IsNullOrWhiteSpace([string]$entry.upgradeMode)) {
+            Add-Failure "Instruction-pack entry is missing path or upgradeMode."
+            continue
+        }
+        if (-not (Test-Path -LiteralPath (Get-RepoPath ([string]$entry.path)) -PathType Leaf)) {
+            Add-Failure "Instruction-pack managed path is missing: $($entry.path)"
+        }
+    }
+    $managedPaths = @($instructionPack.files | ForEach-Object { [string]$_.path })
+    foreach ($duplicate in @($managedPaths | Group-Object | Where-Object { $_.Count -gt 1 })) {
+        Add-Failure "Instruction-pack managed path is duplicated: $($duplicate.Name)"
+    }
+    foreach ($profilePath in $profileFiles.Keys) {
+        $entries = @($instructionPack.files | Where-Object { [string]$_.path -ceq $profilePath })
+        if ($entries.Count -ne 1 -or [string]$entries[0].upgradeMode -cne "replace-profile") {
+            Add-Failure "Instruction-pack must manage profile exactly once with replace-profile: $profilePath"
+        }
+    }
+    if ($managedPaths -notcontains "docs/agents/model-selection.md") {
+        Add-Failure "Instruction-pack does not manage the optional model-selection advice."
+    }
+    foreach ($requiredManagedPath in @(
+        "docs/agents/tools/Normalize-TextFiles.ps1",
+        "docs/agents/tools/Search-Repo.ps1",
+        "docs/agents/tools/Test-AgentInstructions.ps1"
+    )) {
+        if ($managedPaths -notcontains $requiredManagedPath) {
+            Add-Failure "Instruction-pack metadata does not manage required helper: $requiredManagedPath"
+        }
+    }
+    $validationCommands = @($instructionPack.validation | ForEach-Object { [string]$_ })
+    foreach ($expectedCommand in @(
+        "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
+        "git diff --check"
+    )) {
+        if ($validationCommands -notcontains $expectedCommand) {
+            Add-Failure "Instruction-pack validation command is missing: $expectedCommand"
+        }
+    }
+    $windowsPowerShell51Fallback = @($instructionPack.windowsPowerShell51Fallback | ForEach-Object { [string]$_ })
+    foreach ($expectedCommand in @(
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
+    )) {
+        if ($windowsPowerShell51Fallback -notcontains $expectedCommand) {
+            Add-Failure "Instruction-pack Windows PowerShell 5.1 fallback is missing: $expectedCommand"
+        }
+    }
+}
+catch {
+    Add-Failure "Instruction-pack metadata is invalid JSON: $($_.Exception.Message)"
+}
+if (-not ($failures | Where-Object { $_ -match '^Instruction-pack' })) {
+    Add-Pass "Versioned instruction-pack metadata resolves every managed file."
+}
+
 $policyFiles = @(
     "AGENTS.md",
     "CLAUDE.md",
@@ -192,14 +849,29 @@ $policyFiles = @(
     "docs/agents/reviewers/security-boundary.md",
     "docs/agents/reviewers/state-integrity.md"
 )
-foreach ($relativePath in $policyFiles) {
+$managedPortableFiles = @()
+if ($null -ne $instructionPack) {
+    $managedPortableFiles = @(
+        $instructionPack.files |
+            ForEach-Object { [string]$_.path } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+}
+$portableSharedFiles = @($policyFiles + $managedPortableFiles | Select-Object -Unique)
+$privateIdentifiers = @($PrivateIdentifier | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+foreach ($relativePath in $portableSharedFiles) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)
     if ($text -match '(?i)C:\\Users\\|C:\\DOCS_PROJ\\') {
-        Add-Failure "Tracked policy contains a private machine path: $relativePath"
+        Add-Failure "Portable shared file contains a private machine path: $relativePath"
+    }
+    foreach ($identifier in $privateIdentifiers) {
+        if ($text.IndexOf($identifier, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            Add-Failure "Portable shared file contains a supplied private identifier: $relativePath"
+        }
     }
 }
-if (-not ($failures | Where-Object { $_ -like 'Tracked policy contains a private machine path:*' })) {
-    Add-Pass "Tracked shared policy contains no known private machine paths."
+if ($null -ne $instructionPack -and -not ($failures | Where-Object { $_ -match '^Portable shared file contains .*private' })) {
+    Add-Pass "Portable shared policy files, including every instruction-pack managed file, contain no private machine paths or supplied private identifiers."
 }
 
 $linkFiles = $policyFiles | Where-Object { $_ -ne "AGENTS.md" -and $_ -ne "CLAUDE.md" }

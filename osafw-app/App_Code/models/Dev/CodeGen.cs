@@ -851,6 +851,7 @@ END" + Environment.NewLine;
                 continue; //skip unnecessary fields
 
             string fld_name = fld["name"].toStr();
+            var is_computed = fld["is_computed"].toBool();
             //fw.logger("field name=", fld_name, fld);
 
             if (fld["fw_name"].toStr() == "")
@@ -1024,13 +1025,20 @@ END" + Environment.NewLine;
 
             overrideUIOptions(fld, sf, sff, model_name); // override ui options (if any)
 
+            if (is_computed)
+            {
+                sff["type"] = "plaintext";
+                sff.Remove("required");
+                sff.Remove("validate");
+            }
+
             // layout
             addToFormColumns(fld, sf, sff, showFieldsTabs, showFormFieldsTabs, sys_fields, fields);
 
             var is_sys = false;
             if (fld["is_identity"].toBool() || sys_fields.ContainsKey(fld_name))
                 is_sys = true;
-            if (!is_sys || fld_name == "status")
+            if (!is_computed && (!is_sys || fld_name == "status"))
                 // add to save fields only if not system (except status)
                 saveFields.Add(fld_name);
         } // end of foreach field

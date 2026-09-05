@@ -781,6 +781,16 @@ Before replacing modal content or removing a modal, `fw-modal.js` calls `fw.disp
 
 ---
 
+## Login Return Navigation
+
+An anonymous ordinary browser GET to a protected page redirects to `/Login?gourl=...`. The framework URL-encodes the original application-relative path and query string as one `gourl` value. It excludes `PathBase`, because `FW.redirect()` applies `ROOT_URL` when sending the user back. URL fragments are not sent to the server and cannot be captured this way.
+
+`LoginController.IndexAction()` exposes a validated `gourl` in page state. Keep the hidden `gourl` input in `login/index/form.html` when customizing the login form; it preserves the destination through a failed login and resubmission. Password login and an existing MFA challenge validate the destination again on completion. A user who is already signed in also follows a valid `gourl` when opening `/Login`.
+
+`Utils.isAppUrl()` permits application-relative paths and absolute URLs under configured `ROOT_DOMAIN`. External origins, protocol-relative paths, backslash paths, and raw control characters are rejected. Invalid or absent login destinations fall back to `LOGGED_DEFAULT_URL`.
+
+Signed-in users still require permission for the requested page; denied access returns HTTP 403. Form submissions, method overrides to a non-GET action, JSON, and AJAX/PJAX requests retain the existing anonymous redirect through `UNLOGGED_DEFAULT_URL`, without capturing a return destination. Logout also continues to use `UNLOGGED_DEFAULT_URL`. Optional Windows login and first-time MFA enrollment retain their existing landing/continuation behavior.
+
 ## Default File Structure for /index, /show, /showform Directories
 
 When creating templates for dynamic controllers (such as admin CRUD screens), the following subdirectories and files are commonly used under each entity's template folder (e.g. `/template/admin/demosdynamic`). Each subdirectory corresponds to a controller action:

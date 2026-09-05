@@ -24,12 +24,14 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 - [agents/workflow.md](agents/workflow.md): request validation, framework/application role detection, work staging, permissions, summaries, and safe self-improvement.
 - [agents/verification.md](agents/verification.md): proportional verification entrypoints and worktree/resource-isolation matrix.
-- [agents/review-routing.md](agents/review-routing.md): adaptive risk routing, specialist triggers, adjudication, and no-subagent fallback.
-- [agents/code_reviewer.md](agents/code_reviewer.md): integrating review procedure, severity, one final verdict, and loop stop rule.
+- [agents/review-routing.md](agents/review-routing.md): reviewer selection, specialist triggers, review handoff and summary audit, and local fallback.
+- [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
 - [agents/reviewers/](agents/reviewers/): focused overlays loaded only for agent workflow, consumer compatibility, performance, security, or state-integrity risk.
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
+- [agents/model-selection.md](agents/model-selection.md): optional dated starting-model advice, benchmark evidence, and lightweight profile calibration; not required for ordinary tasks.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
 - [agents/tools/](agents/tools/): scoped repository search and strict UTF-8/CRLF validation helpers.
+- [agents/instruction-pack.json](agents/instruction-pack.json): version and managed-path metadata for deliberate agent-instruction upgrades in copied applications.
 - [agents/domain.md](agents/domain.md): verified stable framework/domain facts.
 - [agents/glossary.md](agents/glossary.md): stable project terms.
 - [agents/heuristics.md](agents/heuristics.md): unique reusable working heuristics not already owned by a canonical framework doc or `AGENTS.md`.

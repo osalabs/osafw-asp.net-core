@@ -1,13 +1,13 @@
 # Integrating Code Review Procedure
 
-Use this as the broad final review for runtime source, schema, templates, scripts, tests, runtime-affecting configuration, or risky shared developer/agent workflow changes. `review-routing.md` decides whether specialist overlays also apply.
+Use this as the broad final review for runtime source, schema, templates, scripts, tests, runtime-affecting configuration, or risky shared developer/agent workflow changes. `docs/agents/review-routing.md` owns reviewer selection, local review eligibility, specialist selection, and the review handoff sequence.
 
-Treat review as an independent-intent quality gate: use a separate reviewer when available, otherwise perform the documented local second pass. Review the requested outcome and final changed work as a skeptical senior engineer. Do not edit unless the caller explicitly asks for fixes. Produce the repository's one adjudicated verdict.
+Review the requested outcome and final changed work as a skeptical senior engineer using the execution mode selected by the router. Do not edit unless the caller explicitly asks for fixes. Produce the repository's one adjudicated verdict.
 
 ## Inputs
 
 - Read `AGENTS.md`, `review-routing.md`, and only the selected specialist overlay(s). Read ignored local instructions when present but never expose or commit them.
-- Read the active task summary when required/supplied. Search `tasks/index.md` before opening any other historical summary and reverify historical claims.
+- Follow the router's review handoff sequence, including context isolation and the supplemental summary audit, before final adjudication.
 - Inspect `git status --short`, diff/stat, and untracked files in task scope. Preserve and distinguish unrelated work.
 - Read only nearby implementation, tests, schema, templates, and canonical topic docs needed to understand the changed contract. Run applicable deterministic checks before treating their results as review judgment.
 - If specialists supplied candidate findings, validate each against current code, deduplicate the underlying defect, and resolve contradictory advice from evidence or an explicit developer decision.
@@ -16,13 +16,13 @@ Treat review as an independent-intent quality gate: use a separate reviewer when
 
 Check in this order, focusing depth where failure matters:
 
-1. **Requirements/correctness:** Does real control flow and data shape implement the desired outcome, including important error, empty, retry, and concurrency cases?
+1. **Requirements/correctness:** Does real control flow and data shape implement the desired outcome, including important error, empty, retry, concurrency, positive-classification, and ordinary negative-control cases?
 2. **Consumer contracts:** Are public APIs, routes/actions, templates/page-state/JSON, generated output, config/defaults, schema/provider, storage/frontend/email, and copied-app expectations preserved or deliberately migrated?
 3. **Data/state integrity:** Are writes, predicates, transactions, defaults/nulls, related records, date/time, fresh schemas, additive updates, jobs/retries, and cleanup safe for each claimed provider?
 4. **Security/privacy:** Apply `AGENTS.md` and any security overlay at the actual read/write/render/serve/tool boundary.
 5. **Performance/resources:** Apply the performance overlay only to plausible repeated/hot paths; avoid speculative rewrites.
 6. **Project fit/simplicity:** Does the change follow nearby osafw controller/model/template/config patterns and canonical docs with the fewest justified moving parts? Flag wrappers, test-only seams, duplicate branches, new defaults/casts, or restating comments only when they create real cost/risk.
-7. **Tests/evidence:** Can recorded checks falsify behavior at the nearest practical public boundary? Are important compile/provider/manual variants or clean-state checks missing?
+7. **Tests/evidence:** Can recorded checks falsify behavior at the nearest practical public boundary? Do fixtures exercise established production entry paths and baseline consumers rather than only new wrappers, injected configuration, or helpers that bypass them? For classifiers, default-deny behavior, security boundaries, and compatibility changes, are attacker/ordinary negative controls paired with intended-safe/trusted and preserved-compatibility positive controls? Are important compile/provider/manual variants or clean-state checks missing?
 8. **Docs/upgrade/release:** Are canonical docs, examples, provider paths, migration guidance, and `docs/CHANGELOG.md` aligned, or is the no-update decision evidenced?
 
 Consult the canonical specialist document rather than copying its rules: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, `datetime.md`, `deploy.md`, and `assistant.md` as relevant.
@@ -33,7 +33,7 @@ Consult the canonical specialist document rather than copying its rules: `docs/n
 - Require a tight location/control flow, evidence-based problem, impact, and smallest behavior-preserving fix direction. A checklist question, unsupported suspicion, or pure style preference is not a finding.
 - Do not inflate severity to force optional cleanup. Keep product/business judgment questions separate rather than inventing policy.
 - Do not repeat fixed findings unless the fix is incomplete.
-- When no independent reviewer capability exists, perform the routed overlays as a deliberate local second pass and disclose that fact. The verdict format remains the same.
+- Record whether review was independent or local. The verdict format is the same for both.
 
 ## Report format
 

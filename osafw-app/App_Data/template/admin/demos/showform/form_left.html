@@ -21,10 +21,23 @@
 </div>
 
 <div class="row form-row">
+  <label class="col-form-label col-md-3" for="icode">`Code`</label>
+  <div class="col">
+    <input id="icode" name="item[icode]" maxlength="32" value="<~i[icode]>" type="text" class="form-control">
+  </div>
+</div>
+<div class="row form-row">
   <label class="col-form-label col-md-3 required" for="iname">`Title`</label>
   <div class="col">
     <input id="iname" name="item[iname]" maxlength="64" value="<~i[iname]>" type="text" class="form-control" required>
     <p class="err-EXISTS">`This title already exists in our database`</p>
+  </div>
+</div>
+<div class="row form-row">
+  <label class="col-form-label col-md-3">`Display name`</label>
+  <div class="col">
+    <p class="form-control-plaintext"><~i[display_name]></p>
+    <small class="form-text">Computed by the database from Code and Title; shown after the next reload.</small>
   </div>
 </div>
 <div class="row form-row">

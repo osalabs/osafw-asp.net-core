@@ -31,8 +31,10 @@ public class LoginController : FwController
     public FwDict IndexAction()
     {
         FwDict ps = [];
+        var gourl = reqs("gourl");
+        var is_app_url = Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr());
         if (fw.isLogged)
-            fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
+            fw.redirect(is_app_url ? gourl : fw.config("LOGGED_DEFAULT_URL").toStr());
 
         FwDict item = reqh("item");
         if (isGet())
@@ -44,8 +46,7 @@ public class LoginController : FwController
 
         ps["login_mode"] = reqs("mode");
         ps["hide_sidebar"] = true;
-        var gourl = reqs("gourl");
-        if (Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr()))
+        if (is_app_url)
             ps["gourl"] = gourl;
 
         ps["i"] = item;
