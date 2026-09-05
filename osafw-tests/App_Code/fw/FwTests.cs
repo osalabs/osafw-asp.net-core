@@ -27,6 +27,86 @@ namespace osafw.Tests
             });
         }
 
+        public sealed class RuntimeTypeModel : FwModel
+        {
+            public int InitCalls { get; private set; }
+
+            public override void init(FW fw)
+            {
+                base.init(fw);
+                InitCalls++;
+            }
+        }
+
+        public static class OtherModels
+        {
+            public sealed class RuntimeTypeModel : FwModel { }
+        }
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void Model_ByRuntimeTypeInitializesAndSharesRequestCache(bool runtimeFirst)
+        {
+            var fw = TestHelpers.CreateFw();
+
+            var first = runtimeFirst
+                ? (RuntimeTypeModel)fw.model(typeof(RuntimeTypeModel))
+                : fw.model<RuntimeTypeModel>();
+
+            Assert.AreSame(first, fw.model(typeof(RuntimeTypeModel)));
+            Assert.AreSame(first, fw.model<RuntimeTypeModel>());
+            Assert.AreEqual(1, first.InitCalls);
+        }
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void Model_ByRuntimeTypeSharesClassNameCache(bool runtimeFirst)
+        {
+            var fw = TestHelpers.CreateFw();
+
+            var first = runtimeFirst ? fw.model(typeof(Users)) : fw.model(nameof(Users));
+
+            Assert.AreSame(first, fw.model(typeof(Users)));
+            Assert.AreSame(first, fw.model(nameof(Users)));
+            Assert.AreSame(first, fw.model<Users>());
+        }
+
+        [TestMethod]
+        public void Model_ByRuntimeTypeRejectsIncompatibleCachedType()
+        {
+            var fw = TestHelpers.CreateFw();
+            var original = fw.model<RuntimeTypeModel>();
+
+            Assert.ThrowsExactly<System.InvalidOperationException>(() => fw.model(typeof(OtherModels.RuntimeTypeModel)));
+
+            Assert.AreSame(original, fw.model(typeof(RuntimeTypeModel)));
+            Assert.AreEqual(1, original.InitCalls);
+        }
+
+        [TestMethod]
+        [DataRow(typeof(string))]
+        [DataRow(typeof(FwModel))]
+        public void Model_ByRuntimeTypeRejectsInvalidType(System.Type modelType)
+        {
+            var fw = TestHelpers.CreateFw();
+
+            var exception = Assert.ThrowsExactly<System.ArgumentException>(() => fw.model(modelType));
+
+            Assert.AreEqual("modelType", exception.ParamName);
+        }
+
+        [TestMethod]
+        public void Model_ByRuntimeTypeRejectsNull()
+        {
+            var fw = TestHelpers.CreateFw();
+
+            var exception = Assert.ThrowsExactly<System.ArgumentNullException>(() => fw.model((System.Type)null!));
+
+            Assert.AreEqual("modelType", exception.ParamName);
+        }
+
         [TestMethod]
         public void FormatUserDateTime_FormatsIsoAndLocal()
         {

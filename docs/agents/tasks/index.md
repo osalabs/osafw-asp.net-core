@@ -175,6 +175,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-07-29-scaffold-cli-workflow.md` - Made the built-in CLI the required default for standard CRUD modules and added an explicit approval step before applying schema to the configured development database.
 - `summary-2026-08-09-agentic-instructions-upgrade.md` - Upgraded dual-mode agent routing, verification/isolation, adaptive review overlays, prompts, validation, and ignored local FPF refresh handling.
 - `summary-2026-08-11-objective-acceptance.md` - Added a compact objective/acceptance field to shared task evidence and the large-task orchestrator prompt.
+- `summary-2026-08-11-pr275-model-by-type.md` - Added a validated runtime-type model lookup that shares the existing `FW` model cache and supersedes PR #275 against current master.
 - `summary-2026-08-20-computed-virtual-fields.md` - Made schema-generated computed fields read-only and excluded them from generated saves across SQL Server, SQLite, and MySQL metadata.
 - `summary-2026-08-20-demo-computed-display-name.md` - Added the Demos kitchen-sink `display_name` computed-column example across provider schemas and classic, Dynamic, and Vue screens.
 - `summary-2026-08-27-codex-agent-workflow.md` - Added explicit adaptive role routing, project custom-agent profiles, and a versioned copied instruction pack; empirical comparison remains pending.
@@ -183,3 +184,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-02-login-return.md` - Added safe login return navigation for protected-page links, preserved query/base-path behavior, and rejected control-character redirect URLs.
 - `summary-2026-09-04-agent-instruction-simplification.md` - Consolidated workflow and review ownership, clarified summary exceptions, and made instruction validation independent of a particular GPT generation while preserving role settings.
 - `summary-2026-09-05-model-profile-selection.md` - Added optional Astra profiles, cross-generation selection, dated starting-model advice, and lightweight catalog/behavior calibration.
+- `summary-2026-09-05-pr279-review-followup.md` - Simplified runtime model construction, expanded cache-sharing and invalid-type coverage, and refreshed PR #279 against master.
