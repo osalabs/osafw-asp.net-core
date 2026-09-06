@@ -162,7 +162,7 @@ IF LEN(@sql) > 0
         int sql_ctr = 0;
         var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
         dropExistingForeignKeys();
-        string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
+        string[] files = ["fwdatabase.sql", "spages.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
             var sql_file = Path.Combine(sql_root, file);

@@ -10,64 +10,65 @@ using System.Text.Json.Nodes;
 
 namespace osafw;
 
-public class AdminSpagesController : FwAdminController
+public class AdminSpagesController : FwDynamicController
 {
     public static new int access_level = Users.ACL_MEMBER;
     protected Spages model = null!;
     public override void init(FW fw)
     {
         base.init(fw);
-        model = fw.model<Spages>();
-        model0 = model;
-        // initialization
         base_url = "/Admin/Spages";
-        required_fields = "iname";
-        save_fields = "iname idesc idesc_left idesc_right head_att_id template prio meta_keywords meta_description custom_head custom_css custom_js redirect_url";
-        search_fields = "url iname idesc";
-        list_sortdef = "iname asc"; // default sorting: name, asc|desc direction
-        list_sortmap = Utils.qh("id|id iname|iname pub_time|pub_time upd_time|upd_time status|status url|url");
+        loadControllerConfig();
+        model = model0 as Spages ?? throw new FwConfigUndefinedModelException();
+        db = model.getDB();
+    }
+
+    public override void setListSearch()
+    {
+        if (string.IsNullOrEmpty(list_view) || list_view == model.table_name)
+        {
+            list_view = model.adminListSource(list_where_params);
+        }
+
+        base.setListSearch();
+        string kind = list_filter["is_snippet"].toStr();
+        if (kind is "0" or "1")
+        {
+            list_where += " AND is_snippet=@spages_kind";
+            list_where_params["spages_kind"] = kind.toInt();
+        }
+    }
+
+    protected override void setListFields()
+    {
+        var fields = Utils.qw(getViewListUserFields()).Where(view_list_map.ContainsKey)
+            .Concat(Utils.qw("id iname url status is_snippet is_home redirect_url")).Distinct();
+        list_fields = string.Join(", ", fields.Select(field => db.qid(field)));
+    }
+
+    public override void setListSearchStatus()
+    {
+        if (list_filter["status"].toStr() == "all" && fw.userAccessLevel >= Users.ACL_SITEADMIN)
+        {
+            return;
+        }
+
+        base.setListSearchStatus();
     }
 
     public override void getListRows()
     {
-        if (list_filter["sortby"].toStr() == "iname" && list_filter["s"].toStr() == "" && (this.list_filter["status"].toStr() == "" || this.list_filter["status"].toStr() == "0"))
+        base.getListRows();
+        model.attachPublicationUrls(list_rows);
+        foreach (var row in list_rows)
         {
-            // show tree only if sort by title and no search and status by all or active
-            this.list_count = db.valuep("select count(*) from " + db.qid(model.table_name) + " where " + this.list_where, this.list_where_params).toLong();
-            if (this.list_count > 0)
-            {
-                // build pages tree
-                FwList pages_tree = model.listTreeByFilter(this.list_where, this.list_where_params, "parent_id, prio desc, iname");
-                this.list_rows = model.listTreeFlat(pages_tree, 0);
-                // apply LIMIT
-                var pagesize = this.list_filter["pagesize"].toInt();
-                var pagenum = this.list_filter["pagenum"].toInt();
-                if (this.list_count > pagesize)
-                {
-                    FwList subset = [];
-                    int start_offset = pagenum * pagesize;
-                    for (int i = start_offset; i <= Math.Min(start_offset + pagesize, this.list_rows.Count) - 1; i++)
-                        subset.Add(this.list_rows[i]);
-                    this.list_rows = subset;
-                }
-
-                this.list_pager = FormUtils.getPager(this.list_count, pagenum, pagesize);
-            }
-            else
-            {
-                this.list_rows = [];
-                this.list_pager = [];
-            }
-        }
-        else
-            // if order not by iname or search performed - display plain page list using  Me.get_list_rows()
-            base.getListRows();
-        // add/modify rows from db if necessary
-        foreach (FwDict row in this.list_rows)
-        {
-            row["full_url"] = model.getFullUrl(row["id"].toInt());
+            row["status_label"] = Spages.statusLabel(row["status"].toInt());
         }
     }
+
+    public override FwDict modelOne(int id) => id > 0 ? model.oneDraftOrFail(id) : new FwDict();
+
+    public override FwDict ShowAction(int id) => new FwDict { ["_redirect"] = base_url + "/" + id + "/edit" };
 
     public override FwDict ShowFormAction(int id = 0)
     {
@@ -128,7 +129,7 @@ public class AdminSpagesController : FwAdminController
             throw new AuthException();
         }
 
-        if (fw.route.action is "SaveMulti" or "SaveSort" or "RestoreDeleted")
+        if (fw.route.action == "SaveSort")
         {
             throw new UserException("Use the CMS draft and publication controls to change pages.");
         }
@@ -147,62 +148,29 @@ public class AdminSpagesController : FwAdminController
             ["Migrate"] = Permissions.PERMISSION_EDIT,
             ["Media"] = Permissions.PERMISSION_VIEW
         };
+        if (fw.route.action == "SaveMulti" && bulkAction() is "delete" or "restore")
+        {
+            // Standard RBAC maps SaveMulti to edit before applying controller overrides.
+            access_actions_to_permissions[Permissions.PERMISSION_EDIT] = Permissions.PERMISSION_DELETE;
+        }
         base.checkAccess();
     }
 
-    public override FwDict? IndexAction()
+    public override FwDict IndexAction()
     {
-        string search = reqs("s").Trim();
-        string state = reqs("state");
-        string kind = reqs("kind");
-        var rows = new FwList();
-        int unmigrated = db.valuep("SELECT COUNT(*) FROM " + db.qid(model.table_name) + " WHERE draft_json IS NULL OR draft_json='' ").toInt();
-        foreach (var raw in db.array(model.table_name, DB.h("status", db.opNOT(FwModel.STATUS_DELETED)), "iname"))
+        var ps = base.IndexAction();
+        if (fw.isJsonExpected())
         {
-            if (raw["draft_json"].toStr().Length == 0)
-            {
-                continue;
-            }
-
-            var item = model.oneDraftOrFail(raw["id"].toInt());
-            if (search.Length > 0 && !(item["iname"].toStr() + " " + item["url"].toStr()).Contains(search, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (state.Length > 0 && item["workflow"].toStr() != state)
-            {
-                continue;
-            }
-
-            if (kind == "snippets" && !item["is_snippet"].toBool() || kind == "pages" && item["is_snippet"].toBool())
-            {
-                continue;
-            }
-
-            item["full_url"] = model.publishedUrl(raw["id"].toInt());
-            item["is_live"] = !item["is_snippet"].toBool() && model.onePublished(raw["id"].toInt(), 100).Count > 0;
-            item["workflow_label"] = Spages.workflowLabel(item["workflow"].toInt());
-            rows.Add(item);
+            return ps;
         }
 
-        const int PAGE_SIZE = 30;
-        int pagenum = Math.Max(0, reqi("pagenum"));
-        string filterUrl = "?s=" + Uri.EscapeDataString(search) + "&state=" + Uri.EscapeDataString(state) + "&kind=" + Uri.EscapeDataString(kind) + "&pagenum=";
-        return new FwDict
-        {
-            ["cms"] = true,
-            ["list_rows"] = new FwList(rows.Skip(pagenum * PAGE_SIZE).Take(PAGE_SIZE)),
-            ["count"] = rows.Count,
-            ["prev_url"] = pagenum > 0 ? filterUrl + (pagenum - 1) : "",
-            ["next_url"] = (pagenum + 1) * PAGE_SIZE < rows.Count ? filterUrl + (pagenum + 1) : "",
-            ["s"] = search,
-            ["state"] = state,
-            ["kind"] = kind,
-            ["is_needs_migration"] = unmigrated > 0,
-            ["is_site_admin"] = fw.userAccessLevel >= Users.ACL_SITEADMIN,
-            ["is_publisher"] = model.isPublisher()
-        };
+        ps["is_needs_migration"] = db.valuep("SELECT COUNT(*) FROM " + db.qid(model.table_name)
+            + " WHERE draft_json IS NULL OR draft_json=''").toInt() > 0;
+        ps["is_site_admin"] = fw.userAccessLevel >= Users.ACL_SITEADMIN;
+        ps["is_author"] = model.isAuthor();
+        ps["is_publisher"] = model.isPublisher();
+        ps["is_readonly"] = is_readonly || list_filter["status"].toStr() == "127";
+        return ps;
     }
 
     private FwDict buildForm(int id)
@@ -215,30 +183,12 @@ public class AdminSpagesController : FwAdminController
             ["template"] = "article",
             ["content_json"] = SpagesContent.empty().ToJsonString(),
             ["is_nav_visible"] = 1,
-            ["workflow"] = Spages.WORKFLOW_DRAFT
+            ["status"] = Spages.STATUS_DRAFT
         };
-        item["workflow_label"] = Spages.workflowLabel(item["workflow"].toInt());
+        item["status_label"] = Spages.statusLabel(item["status"].toInt());
         var parents = new FwList();
-        var parentOptions = new FwList();
-        var snippets = new FwList();
-        var all = db.array(model.table_name, DB.h("status", db.opNOT(FwModel.STATUS_DELETED)), "iname");
-        foreach (var raw in all)
-        {
-            if (raw["draft_json"].toStr().Length == 0)
-            {
-                continue;
-            }
-
-            var other = model.oneDraftOrFail(raw["id"].toInt());
-            if (other["is_snippet"].toBool())
-            {
-                snippets.Add(new FwDict { ["key"] = other["url"], ["title"] = other["iname"] });
-            }
-            else if (other["id"].toInt() != id)
-            {
-                parentOptions.Add(other);
-            }
-        }
+        var parentOptions = model.listSelectOptionsParents(id);
+        var snippets = model.listSelectOptionsSnippets();
 
         int parentId = item["parent_id"].toInt();
         var seen = new System.Collections.Generic.HashSet<int>
@@ -273,16 +223,20 @@ public class AdminSpagesController : FwAdminController
             ["snippets_json"] = Utils.jsonEncode(snippets),
             ["history"] = id > 0 ? model.listRevisions(id) : new FwList(),
             ["is_publisher"] = model.isPublisher(),
-            ["is_readonly"] = !model.isAuthor(),
+            ["is_readonly"] = !model.isAuthor() || item["status"].toInt() == Spages.STATUS_DELETED,
+            ["base_url"] = base_url,
+            ["rbac"] = rbac,
             ["is_showform"] = true,
             ["full_url"] = id > 0 ? model.publishedUrl(id) : "",
             ["usages"] = item["is_snippet"].toBool() ? model.listSnippetUsages(item["url"].toStr(), true) : new FwList()
         };
         ps["is_site_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN);
-        ps["is_author"] = model.isAuthor();
+        ps["is_author"] = model.isAuthor() && item["status"].toInt() != Spages.STATUS_DELETED;
         ps["is_scheduled"] = id > 0 && model.isScheduled(id);
         ps["is_live"] = id > 0 && model.onePublished(id, 100).Count > 0;
-        ps["is_in_review"] = item["workflow"].toInt() == Spages.WORKFLOW_IN_REVIEW;
+        ps["is_in_review"] = item["status"].toInt() == Spages.STATUS_IN_REVIEW;
+        setAddUpdUser(ps, item);
+        setPSReturnContext(ps);
         return ps;
     }
 
@@ -326,8 +280,8 @@ public class AdminSpagesController : FwAdminController
             {
                 ["success"] = true,
                 ["revision_id"] = revisionId,
-                ["workflow"] = item["workflow"],
-                ["workflow_label"] = Spages.workflowLabel(item["workflow"].toInt())
+                ["status"] = item["status"],
+                ["status_label"] = Spages.statusLabel(item["status"].toInt())
             }
         };
     }
@@ -375,17 +329,115 @@ public class AdminSpagesController : FwAdminController
 
     public override FwDict? DeleteAction(int id)
     {
+        enforceListMutation("DELETE");
+        requireDeletePermission();
+        model.delete(id);
+        fw.flash("onedelete", 1);
+        return afterSave(true);
+    }
+
+    public override FwDict? RestoreDeletedAction(int id)
+    {
         enforcePost();
         checkReadOnly();
-        model.requireAuthor(true);
-        model.updateWorkflow(id, "unpublish", "Page withdrawn");
-        return new FwDict
+        requireDeletePermission();
+        model.updateRestoreDeleted(id);
+        fw.flash("record_updated", 1);
+        return afterSave(true, id);
+    }
+
+    /// <summary>Standard list forms use a PUT method override; CMS transitions still require the session XSS token.</summary>
+    public override FwDict? SaveMultiAction()
+    {
+        enforceListMutation("PUT");
+        route_onerror = FW.ACTION_INDEX;
+        string action = bulkAction();
+        if (action is "delete" or "restore")
         {
-            ["_json"] = new FwDict
+            requireDeletePermission();
+        }
+        if (action.Length == 0)
+        {
+            return base.SaveMultiAction(); // Standard user-list operations.
+        }
+
+        if (action is not ("submit" or "unpublish" or "delete" or "restore"))
+        {
+            throw new UserException("Choose a supported page action.");
+        }
+
+        model.requireAuthor(action != "submit");
+        var rows = new FwList();
+        foreach (string key in reqh("cb").Keys)
+        {
+            if (!int.TryParse(key, out int id) || id <= 0)
             {
-                ["success"] = true
+                throw new UserException("Select valid pages.");
             }
-        };
+
+            var item = model.oneDraftOrFail(id);
+            if (action == "delete" && item["is_home"].toBool())
+            {
+                throw new UserException("The home page cannot be deleted.");
+            }
+
+            bool isDeleted = item["status"].toInt() == Spages.STATUS_DELETED;
+            if (isDeleted != (action == "restore"))
+            {
+                throw new UserException("Restore pages from the trash before editing them.");
+            }
+
+            rows.Add(item);
+        }
+
+        int count = 0;
+        try
+        {
+            // Withdraw pages before shared snippets so dependency validation sees each committed transition.
+            foreach (var item in rows.OrderBy(x => x["is_snippet"].toInt()))
+            {
+                int id = item["id"].toInt();
+                if (action == "restore")
+                {
+                    model.updateRestoreDeleted(id);
+                }
+                else
+                {
+                    model.updateWorkflow(id, action, "Updated through the page list");
+                }
+
+                count++;
+            }
+        }
+        catch (UserException ex)
+        {
+            throw new UserException($"{count} page(s) updated. {ex.Message}");
+        }
+
+        fw.flash("success", $"{count} page(s) updated.");
+        return afterSave(true, new FwDict { ["ctr"] = count });
+    }
+
+    private void enforceListMutation(string method)
+    {
+        if (fw.route.method != "POST" && fw.route.method != method)
+        {
+            throw new UserException("Use the page action form to make this change.");
+        }
+
+        checkXSS();
+        checkReadOnly();
+    }
+
+    private string bulkAction() => fw.FORM.ContainsKey("delete") ? "delete" : reqs("cms_action");
+
+    private void requireDeletePermission()
+    {
+        if (fw.userAccessLevel < Users.ACL_SITEADMIN && !fw.model<Users>()
+            .isAccessByRolesResourcePermission(fw.userId, "AdminSpages", Permissions.PERMISSION_DELETE))
+        {
+            throw new AuthException();
+        }
     }
 
     /// <summary>
@@ -431,7 +483,7 @@ public class AdminSpagesController : FwAdminController
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var publicationTime)
                     ? publicationTime : DateTime.UnixEpoch;
                 bool isPublished = row["status"].toInt() == FwModel.STATUS_ACTIVE;
-                int workflow = isPublished ? (when > DateTime.UtcNow ? Spages.WORKFLOW_SCHEDULED : Spages.WORKFLOW_PUBLISHED) : Spages.WORKFLOW_DRAFT;
+                int status = isPublished ? (when > DateTime.UtcNow ? Spages.STATUS_SCHEDULED : Spages.STATUS_PUBLISHED) : row["status"].toInt();
                 model.addRevision(row["id"].toInt(), Spages.KIND_ORIGINAL, Utils.jsonEncode(original), DateTime.UtcNow, "Original content before block conversion");
                 model.addRevision(row["id"].toInt(), isPublished ? Spages.KIND_PUBLISHED : Spages.KIND_SAVED, snapshot, when, "Initial block revision");
                 db.update(model.table_name, new FwDict
@@ -439,7 +491,7 @@ public class AdminSpagesController : FwAdminController
                     ["draft_json"] = snapshot,
                     ["content_json"] = content,
                     ["template"] = layout,
-                    ["workflow"] = workflow
+                    ["status"] = status
                 }, DB.h("id", row["id"]));
                 db.commit();
                 count++;

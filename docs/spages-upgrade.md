@@ -9,27 +9,31 @@ Read [Spages CMS](spages.md) for the resulting authoring, publication, routing, 
 Before changing an application:
 
 1. Back up the application database and confirm its configured database provider.
-2. Merge the Spages model and controller, ParsePage templates, assets, `libman.json`, schema files, and additive update for that provider. Preserve application-specific routes, layouts, and templates deliberately.
+2. Merge the Spages model and controller, ParsePage templates, assets, `libman.json`, schema files, and additive updates for that provider. Preserve application-specific routes, layouts, and templates deliberately.
 3. Restore client dependencies and build the application.
 4. Review custom public Spages reads. Public consumers must use `onePublished`, `listPublished`, `listIndexable`, or a visibility check over `listPublicationsByDate`. Editor integrations use `oneDraftOrFail`, `saveDraft`, `updateWorkflow`, and `restoreRevision`.
 
 ## Apply the schema
 
-Existing databases use the additive script selected by `FwUpdates`:
+Existing databases use the provider-specific additive scripts selected by `FwUpdates`:
 
-| Provider | Update file |
-| --- | --- |
-| SQL Server | `osafw-app/App_Data/sql/updates/upd2026-09-05-spages-cms.sql` |
-| SQLite | `osafw-app/App_Data/sql/sqlite/updates/upd2026-09-05-spages-cms.sql` |
-| MySQL | `osafw-app/App_Data/sql/mysql/updates/upd2026-09-05-spages-cms.sql` |
+| Provider | CMS schema update | Status consolidation update |
+| --- | --- | --- |
+| SQL Server | `osafw-app/App_Data/sql/updates/upd2026-09-05-spages-cms.sql` | `osafw-app/App_Data/sql/updates/upd2026-09-06-spages-status.sql` |
+| SQLite | `osafw-app/App_Data/sql/sqlite/updates/upd2026-09-05-spages-cms.sql` | `osafw-app/App_Data/sql/sqlite/updates/upd2026-09-06-spages-status.sql` |
+| MySQL | `osafw-app/App_Data/sql/mysql/updates/upd2026-09-05-spages-cms.sql` | `osafw-app/App_Data/sql/mysql/updates/upd2026-09-06-spages-status.sql` |
+
+Then apply `upd2026-09-06-spages-working-metadata.sql` from the same provider update folder. It synchronizes existing drafts' search descriptions, redirects, and page-image selection with the columns used by the standard list. An absent or invalid image reference preserves the existing column; an explicit null or zero clears it, and a nonzero ID must exist in `att`.
 
 Use the application's normal `FwUpdates` flow so the provider-specific script is recorded in the update ledger. In development, pending updates are available through `/Admin/FwUpdates`; the existing `HomeController.IndexAction` check can redirect to the pending-update flow when `IS_DEV` and `is_fwupdates_auto_apply` are enabled.
 
-`FwUpdates` stores a script's SQL when it first discovers the filename. Replacing that file does not change an existing ledger entry. If an earlier development version of the CMS schema was already applied, inspect its actual columns and prepare a separate repair; do not reset the ledger or replay this script over existing CMS tables.
+`FwUpdates` stores a script's SQL when it first discovers the filename. Replacing that file does not change an existing ledger entry. The September 5 scripts remain frozen for databases where they were already discovered or applied; the separately named September 6 update performs the status consolidation. Do not reset the ledger or replay the September 5 script over existing CMS tables.
 
-Do not run a provider's `fwdatabase.sql` against an existing database. Fresh-schema files drop and recreate framework tables.
+Do not run a provider's `fwdatabase.sql` against an existing database. Fresh-schema files drop and recreate framework tables. For a fresh database, run the provider's `spages.sql` immediately after `fwdatabase.sql` to add the initial published pages and matching revision history.
 
-The additive update adds the block document, working draft, workflow, access, navigation, indexing, alias, and snippet fields to `spages`, plus the `spages_revisions` table. Applying the schema does not convert content.
+The September 5 update adds the block document, working draft, temporary workflow, access, navigation, indexing, alias, and snippet fields to `spages`, plus the `spages_revisions` table. For converted rows, the September 6 update maps those temporary workflow values to standard `status` values: `0` Published, `10` Draft, `20` In review, `30` Changes requested, `40` Scheduled, and `127` Deleted. Rows whose `draft_json` is missing or empty retain their original status so the later content migration can reconstruct their published, unpublished, deleted, or scheduled history. The update synchronizes the standard list metadata from valid `draft_json` and then removes `workflow`.
+
+The consolidation does not rewrite source Markdown columns, `content_json`, `draft_json`, or revision history. Missing, invalid, or incorrectly typed draft metadata retains its existing column value. Unexpected legacy workflow numbers are carried into `status` for explicit review instead of being discarded.
 
 ## Convert existing rows
 

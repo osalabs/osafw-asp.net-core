@@ -4,7 +4,7 @@
 
     const FORM = document.getElementById('spages-editor');
     const ACTIONS_FORM = document.getElementById('cms-actions');
-    const WORKFLOW_IN_REVIEW = 10;
+    const STATUS_IN_REVIEW = 20;
 
     document.querySelectorAll('select[data-selected]').forEach(SELECT => {
         SELECT.value = SELECT.dataset.selected || SELECT.options[0].value;
@@ -65,7 +65,7 @@
 
     if (!IS_AUTHOR) {
         FORM.querySelectorAll('input, textarea, select, button').forEach(CONTROL => {
-            if (!CONTROL.matches('[data-preview]')) CONTROL.disabled = true;
+            if (!CONTROL.matches('[data-preview], [data-bs-toggle="tab"]')) CONTROL.disabled = true;
         });
         STATE.textContent = 'Read-only';
     }
@@ -83,8 +83,8 @@
     }
 
     function changed(event) {
-        const IS_WORKFLOW_FIELD = event?.target && ['spages-note', 'spages-publish-at'].includes(event.target.id);
-        if (isReady && !IS_WORKFLOW_FIELD) markChanged();
+        const IS_PUBLICATION_FIELD = event?.target && ['spages-note', 'spages-publish-at'].includes(event.target.id);
+        if (isReady && !IS_PUBLICATION_FIELD) markChanged();
     }
 
     function showError(error) {
@@ -197,7 +197,7 @@
     register('header', 'Heading', [
         ['text', 'Heading text'],
         ['level', 'Heading level', { choices: [[2, 'H2 — section'], [3, 'H3 — subsection'], [4, 'H4'], [5, 'H5'], [6, 'H6']] }],
-        ['anchor', 'Link anchor (optional)', { maxLength: 64, pattern: '[A-Za-z][A-Za-z0-9_-]{0,63}', placeholder: 'section-name', help: 'Starts with a letter; use letters, numbers, hyphens, or underscores.' }]
+        ['anchor', 'Link anchor (optional)', { maxLength: 64, pattern: '[A-Za-z][A-Za-z0-9_\\-]{0,63}', placeholder: 'section-name', help: 'Starts with a letter; use letters, numbers, hyphens, or underscores.' }]
     ], { level: 2 });
     register('quote', 'Quote', [['text', 'Quotation', { multiline: true }], ['caption', 'Attribution']]);
     register('code', 'Code', [['code', 'Code (displayed as text)', { multiline: true }]]);
@@ -429,7 +429,7 @@
         SLOT.closest('label').hidden = true;
         URL_INPUT.required = true;
         URL_INPUT.maxLength = 64;
-        URL_INPUT.pattern = '[a-z][a-z0-9_-]{0,63}';
+        URL_INPUT.pattern = '[a-z][a-z0-9_\\-]{0,63}';
         URL_INPUT.readOnly = pageId > 0;
     }
 
@@ -492,12 +492,12 @@
         }
     }
 
-    function updateWorkflowActions(workflow, isScheduled) {
-        const SUBMIT_BUTTON = FORM.querySelector('[data-workflow="Submit"]');
-        const CHANGES_BUTTON = FORM.querySelector('[data-workflow="Changes"]');
-        const CANCEL_BUTTON = FORM.querySelector('[data-workflow="Cancel"]');
-        if (SUBMIT_BUTTON) SUBMIT_BUTTON.hidden = workflow === WORKFLOW_IN_REVIEW;
-        if (CHANGES_BUTTON) CHANGES_BUTTON.hidden = workflow !== WORKFLOW_IN_REVIEW;
+    function updateStatusActions(status, isScheduled) {
+        const SUBMIT_BUTTON = FORM.querySelector('[data-status-action="Submit"]');
+        const CHANGES_BUTTON = FORM.querySelector('[data-status-action="Changes"]');
+        const CANCEL_BUTTON = FORM.querySelector('[data-status-action="Cancel"]');
+        if (SUBMIT_BUTTON) SUBMIT_BUTTON.hidden = status === STATUS_IN_REVIEW;
+        if (CHANGES_BUTTON) CHANGES_BUTTON.hidden = status !== STATUS_IN_REVIEW;
         if (CANCEL_BUTTON) CANCEL_BUTTON.hidden = !isScheduled;
     }
 
@@ -509,25 +509,27 @@
     FORM.addEventListener('input', changed);
     FORM.addEventListener('change', changed);
     document.getElementById('spages-layout').addEventListener('change', updateLayout);
-    updateWorkflowActions(Number(FORM.dataset.workflow), isTrue(FORM.dataset.isScheduled));
+    updateStatusActions(Number(FORM.dataset.status), isTrue(FORM.dataset.isScheduled));
 
-    FORM.querySelector('[data-preview]').addEventListener('click', async () => {
-        const PREVIEW = window.open('about:blank', '_blank');
-        try {
-            if (!pageId || isDirty) await saveDraft(true);
-            if (pageId && PREVIEW) {
-                PREVIEW.opener = null;
-                PREVIEW.location = BASE_URL + '/(Preview)/' + pageId;
-            } else {
+    document.querySelectorAll('[data-preview]').forEach(BUTTON => {
+        BUTTON.addEventListener('click', async () => {
+            const PREVIEW = window.open('about:blank', '_blank');
+            try {
+                if (!pageId || isDirty) await saveDraft(true);
+                if (pageId && PREVIEW) {
+                    PREVIEW.opener = null;
+                    PREVIEW.location = BASE_URL + '/(Preview)/' + pageId;
+                } else {
+                    PREVIEW?.close();
+                }
+            } catch (error) {
                 PREVIEW?.close();
+                showError(error);
             }
-        } catch (error) {
-            PREVIEW?.close();
-            showError(error);
-        }
+        });
     });
 
-    FORM.querySelectorAll('[data-workflow]').forEach(BUTTON => {
+    FORM.querySelectorAll('[data-status-action]').forEach(BUTTON => {
         BUTTON.addEventListener('click', async () => {
             BUTTON.disabled = true;
             clearTimeout(autosaveTimer);
@@ -538,7 +540,7 @@
                 BODY.set('note', document.getElementById('spages-note').value);
                 const DATE = document.getElementById('spages-publish-at')?.value;
                 if (DATE) BODY.set('publish_at', new Date(DATE).toISOString());
-                await request(BASE_URL + '/(' + BUTTON.dataset.workflow + ')/' + pageId, BODY);
+                await request(BASE_URL + '/(' + BUTTON.dataset.statusAction + ')/' + pageId, BODY);
                 isDirty = false;
                 STATE.textContent = 'Publication updated';
                 ERROR_BOX.hidden = true;

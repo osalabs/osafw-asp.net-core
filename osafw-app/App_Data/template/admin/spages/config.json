@@ -1,0 +1,113 @@
+{
+  "model": "Spages",
+  "required_fields": "iname",
+  "save_fields": [
+    "iname",
+    "parent_id",
+    "url",
+    "head_att_id",
+    "template",
+    "prio",
+    "meta_keywords",
+    "meta_description",
+    "meta_title",
+    "custom_head",
+    "custom_css",
+    "custom_js",
+    "redirect_url",
+    "url_aliases",
+    "content_json",
+    "access_level",
+    "is_nav_visible",
+    "nav_title",
+    "is_noindex",
+    "status",
+    "is_snippet"
+  ],
+  "search_fields": "url iname nav_title meta_title meta_description",
+  "list_sortdef": "iname asc",
+  "list_sortmap": {
+    "id": "id",
+    "parent_id": "parent_id",
+    "url": "url",
+    "iname": "iname",
+    "head_att_id": "head_att_id",
+    "pub_time": "pub_time",
+    "template": "template",
+    "prio": "prio",
+    "is_home": "is_home",
+    "redirect_url": "redirect_url",
+    "is_snippet": "is_snippet",
+    "access_level": "access_level",
+    "is_nav_visible": "is_nav_visible",
+    "nav_title": "nav_title",
+    "meta_title": "meta_title",
+    "is_noindex": "is_noindex",
+    "status": "status",
+    "add_time": "add_time",
+    "add_users_id": "add_users_id",
+    "upd_time": "upd_time",
+    "upd_users_id": "upd_users_id"
+  },
+  "is_dynamic_index": true,
+  "is_dynamic_index_edit": false,
+  "view_list_defaults": "iname is_snippet status url upd_time",
+  "view_list_map": {
+    "id": "ID",
+    "parent_id": "Parent ID",
+    "url": "URL",
+    "iname": "Title",
+    "head_att_id": "Page image ID",
+    "pub_time": "Publication time",
+    "template": "Layout",
+    "prio": "Navigation order",
+    "is_home": "Home page",
+    "redirect_url": "Redirect URL",
+    "is_snippet": "Content kind",
+    "access_level": "Minimum access",
+    "is_nav_visible": "In navigation",
+    "nav_title": "Navigation label",
+    "meta_title": "Search title",
+    "meta_description": "Search description",
+    "is_noindex": "No index",
+    "status": "Status",
+    "add_time": "Added",
+    "add_users_id": "Added by",
+    "upd_time": "Updated",
+    "upd_users_id": "Updated by"
+  },
+  "view_list_custom": "iname is_snippet status url",
+  "list_column_filters": {
+    "enabled": true,
+    "fields": {
+      "iname": {
+        "type": "text"
+      },
+      "url": {
+        "type": "text"
+      },
+      "is_snippet": {
+        "type": "multi_select",
+        "lookup_tpl": "/admin/spages/content_kind.sel"
+      },
+      "status": {
+        "type": "multi_select",
+        "lookup_tpl": "/admin/spages/status.sel"
+      },
+      "upd_time": {
+        "type": "date_range",
+        "field_storage_type": "datetime"
+      }
+    }
+  },
+  "is_dynamic_show": false,
+  "is_dynamic_showform": false,
+  "form_new_defaults": {
+    "parent_id": 0,
+    "is_snippet": 0,
+    "access_level": 0,
+    "is_nav_visible": 1,
+    "status": 10,
+    "template": "article"
+  }
+}

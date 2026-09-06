@@ -142,8 +142,8 @@ public class SecurityStoredRenderingTests
         StringAssert.Contains(modelSource, "foreach (string field in Utils.qw(\"custom_head custom_css custom_js\"))");
         StringAssert.Contains(modelSource, "item[field] = old[field].toStr();");
 
-        int guardStart = formTemplate.IndexOf("<~custom if=\"is_site_admin\" inline>", StringComparison.Ordinal);
-        int guardEnd = formTemplate.IndexOf("</~custom>", StringComparison.Ordinal);
+        int guardStart = formTemplate.IndexOf("<~custom_panel if=\"is_site_admin\" inline>", StringComparison.Ordinal);
+        int guardEnd = formTemplate.IndexOf("</~custom_panel>", StringComparison.Ordinal);
         Assert.IsTrue(guardStart >= 0 && guardEnd > guardStart);
         string trustedControls = formTemplate[guardStart..guardEnd];
         foreach (string field in new[] { "custom_head", "custom_css", "custom_js" })

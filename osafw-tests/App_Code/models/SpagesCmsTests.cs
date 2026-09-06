@@ -80,6 +80,11 @@ public partial class SpagesCmsTests
         }
 
         fw.db.execMultipleSQL(File.ReadAllText(baseline.Length > 0 ? baseline : Path.Combine(sqlRoot, "fwdatabase.sql")));
+        if (baseline.Length == 0)
+        {
+            fw.db.execMultipleSQL(File.ReadAllText(Path.Combine(sqlRoot, "spages.sql")));
+        }
+
         if (baseline.Length > 0)
         {
             // Exercise provider discovery and its ledger, applying only this task's update to the old schema.
@@ -92,6 +97,10 @@ public partial class SpagesCmsTests
                 var update = fw.db.row("fwupdates", new FwDict { ["iname"] = "upd2026-09-05-spages-cms.sql" });
                 Assert.AreEqual(File.ReadAllText(Path.Combine(sqlRoot, "updates/upd2026-09-05-spages-cms.sql")), update["idesc"].toStr());
                 updates.applyOne(update["id"].toInt());
+                var statusUpdate = fw.db.row("fwupdates", new FwDict { ["iname"] = "upd2026-09-06-spages-status.sql" });
+                updates.applyOne(statusUpdate["id"].toInt());
+                var metadataUpdate = fw.db.row("fwupdates", new FwDict { ["iname"] = "upd2026-09-06-spages-working-metadata.sql" });
+                updates.applyOne(metadataUpdate["id"].toInt());
                 updates.loadUpdates();
                 Assert.AreEqual(FwUpdates.STATUS_APPLIED, fw.db.value("fwupdates", new FwDict { ["id"] = update["id"] }, "status").toInt());
                 Assert.AreEqual(1, fw.db.array("fwupdates", new FwDict { ["iname"] = "upd2026-09-05-spages-cms.sql" }).Count);
@@ -383,6 +392,8 @@ public partial class SpagesCmsTests
             {
                 if (condition == "missing")
                 {
+                    // A deleted attachment can remain in historical JSON after its live foreign key is cleared.
+                    fw.db.update("spages", new FwDict { ["head_att_id"] = null }, new FwDict { ["head_att_id"] = attachment });
                     fw.db.del("att", new FwDict { ["id"] = attachment });
                 }
                 else if (condition == "rebound")
@@ -668,12 +679,12 @@ public partial class SpagesCmsTests
         Assert.IsTrue(editor.isAuthor());
         Assert.IsTrue(editor.isPublisher());
         editor.updateWorkflow(id, "submit", "Ready for review");
-        Assert.AreEqual(Spages.WORKFLOW_IN_REVIEW, editor.oneDraftOrFail(id)["workflow"].toInt());
+        Assert.AreEqual(Spages.STATUS_IN_REVIEW, editor.oneDraftOrFail(id)["status"].toInt());
         Assert.AreEqual(Spages.KIND_SUBMITTED, editor.listRevisions(id)[0]["kind"].toInt());
         editor.updateWorkflow(id, "changes", "Clarify the introduction");
-        Assert.AreEqual(Spages.WORKFLOW_CHANGES_REQUESTED, editor.oneDraftOrFail(id)["workflow"].toInt());
+        Assert.AreEqual(Spages.STATUS_CHANGES_REQUESTED, editor.oneDraftOrFail(id)["status"].toInt());
         editor.updateWorkflow(id, "publish");
-        Assert.AreEqual(Spages.WORKFLOW_PUBLISHED, editor.oneDraftOrFail(id)["workflow"].toInt());
+        Assert.AreEqual(Spages.STATUS_PUBLISHED, editor.oneDraftOrFail(id)["status"].toInt());
         var denied = request(79).model<Spages>();
         Assert.IsFalse(denied.isAuthor());
         Assert.IsFalse(denied.isPublisher());

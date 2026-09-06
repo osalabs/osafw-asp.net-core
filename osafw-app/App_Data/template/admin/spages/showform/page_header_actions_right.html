@@ -1,4 +1,2 @@
-<~btn_preview if="id" inline>
-  <a href="<~full_url>" target="_blank" class="btn btn-outline-secondary" title="View"><~/common/icons/box-arrow-up-right><span class="d-none d-lg-inline"> `Preview`</span></a>
-</~btn_preview>
-<~/common/form/btn_top_save_addnew>
+<button class="btn btn-default" type="button" data-preview><~/common/icons/box-arrow-up-right><span class="btn-label">Preview</span></button>
+<button class="btn btn-primary" type="submit" form="spages-editor" <~/common/attr/disabled unless="is_author">>Save draft</button>

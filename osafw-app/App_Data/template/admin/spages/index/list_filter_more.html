@@ -1,4 +1,18 @@
-<div class="row form-row">
-  <~/common/list/fstatus>
-  <~/common/list/filter_table_buttons_static>
+<div class="row form-row align-items-end">
+  <div class="col-sm-6 col-lg-3">
+    <label class="form-label" for="fstatus">Status</label>
+    <select id="fstatus" name="f[status]" class="form-select">
+      <option value="">All except deleted</option>
+      <option value="all" <~/common/attr/selected ifeq="f[status]" value="all">>All including deleted</option>
+      <~/admin/spages/status.sel select="f[status]">
+    </select>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <label class="form-label" for="fis-snippet">Content kind</label>
+    <select id="fis-snippet" name="f[is_snippet]" class="form-select">
+      <option value="">Pages and snippets</option>
+      <~/admin/spages/content_kind.sel select="f[is_snippet]">
+    </select>
+  </div>
+  <~/common/list/filter_table_buttons>
 </div>

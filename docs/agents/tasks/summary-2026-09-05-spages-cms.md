@@ -12,7 +12,7 @@ Provide a lean, extensible CMS for small public websites and application pages u
 - Snippets use `is_snippet` and the existing `url` as their stable key. Reuse shares the revision workflow, validates dependencies/access, pins historical previews, and keeps snippet rollback separate. Nested snippets are excluded.
 - Manual aliases are newline-separated `url_aliases` on the page. Actual prior paths, including descendant moves and scheduled transitions, are derived from publication history. Redirects cannot be stored by clients after later publication changes.
 - Public navigation, search, HTML/XML sitemaps, attachment access, and optional RAG use effective publications and ancestor restrictions. `listIndexable` owns the repeated indexability filter. Missing or inaccessible media is omitted during reads; approval remains strict.
-- Matching fresh/additive schemas and demo seeds for SQL Server, SQLite, and MySQL. New boolean fields use `is_`; workflow and revision kind are numeric. Added columns have comments, and indexes follow provider/table conventions. Page-level image accessibility columns and the redirect table were removed.
+- Matching fresh/additive schemas and demo seeds for SQL Server, SQLite, and MySQL. New boolean fields use `is_`; the standard page `status` and revision `kind` hold numeric codes. Added columns have comments, and indexes follow provider/table conventions. Page-level image accessibility columns and the redirect table were removed.
 - One-time `AdminSpagesController.MigrateAction` converts every unconverted row, retains full original snapshots and source columns, preserves unsupported Markdown in editable blocks, and commits per row for resumability. Public requests never convert data or fall back to old Markdown storage.
 - Demo SQL provides two page drafts and one shared help snippet without replacing the application homepage. Current documentation is in [Spages CMS](../../spages.md); conversion instructions are in [the upgrade guide](../../spages-upgrade.md). The changelog contains breaking upgrade contracts only.
 
@@ -40,7 +40,7 @@ A fresh `reviewer_astra_xhigh` (`gpt-6-astra`, xhigh) reviewed the diff against 
 
 ## Commands used / verification
 
-All final builds use absolute `OutDir` paths under ignored `artifacts/assistant_spages_feedback/`. TRX evidence is under its `tests/results/` directory. Earlier counts in this task are superseded by the following final runs.
+The earlier simplification pass used absolute `OutDir` paths under ignored `artifacts/assistant_spages_feedback/`, with TRX evidence in `tests/results/`. These results describe that pass; the subsequent standard-admin pass and its final evidence are recorded below.
 
 | Check | Command / result |
 | --- | --- |
@@ -68,7 +68,7 @@ For a copied app, review its provider update, run the Site Admin conversion acti
 
 - The configured development database was repaired and converted after explicit authorization, as recorded below; no Visual Studio restart was needed. The original checkout remains on `codex/spages-cms`; no extra CMS worktree is needed. The task-owned SQL Server database was dropped after final passes, and the recorded isolated runtime process was stopped. Ignored build/runtime/TRX evidence remains under `artifacts/assistant_spages_feedback/`.
 - SQLite reports the pre-existing NU1903 warning for SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q). MySQL runtime, production IIS deployment, and Linux runtime verification remain unperformed.
-- Resolution/validation intentionally materializes small page collections per request. Application caches must consider publication dates, audience, and snippet dependencies. History pruning, translations, anonymous previews, multistage approvals, nested builders, and separate search infrastructure remain application extensions.
+- Navigation, search, and publication validation intentionally materialize small page collections per request. Single-page and child lookups use filtered database queries and request-scoped resolution. Application caches must consider publication dates, audience, and snippet dependencies. History pruning, translations, anonymous previews, multistage approvals, nested builders, and separate search infrastructure remain application extensions.
 
 ## September 6 development-schema repair
 
@@ -81,6 +81,49 @@ The SQL Server harness reproduced the exact admin failure from the pre-CMS schem
 A fresh `reviewer_astra_high` (`gpt-6-astra`, high) performed independent state-integrity review before reading this summary. Line-ending observations were corrected and an explicit timestamp assertion was added. The reviewer inspected the application runner, final evidence, and entire active summary; final adjudication was **No blocking findings. Review loop can stop.** The disposable database was removed after verification. The upgrade guide now explains the stored-script behavior and why resetting the ledger or replaying the CMS schema is inappropriate. There is no additional breaking change to record in the changelog.
 
 The user subsequently authorized local development database changes as needed during development. The reviewed script hash was checked before executing `apply.ps1`; the repair preserved all six pages and three saved revisions. The existing Site Admin conversion action then converted the two remaining original pages, leaving zero unconverted rows and adding two Original content and two Published revisions. Chrome verified the admin list, initialized editor, and public page; an anonymous request to `/test-page` returned HTTP 200 without a SQL exception. No restart or runtime-source change was necessary. The only browser console error observed was the unrelated Visual Studio Browser Link endpoint returning 404.
+
+## September 6 standard admin and status consolidation
+
+The latest developer feedback supersedes the custom list and separate workflow column. `AdminSpagesController` now extends `FwDynamicController`, using the standard title/actions, filter block, configurable/sortable columns, checkboxes, pagination, and bulk-action infrastructure. The custom editor uses standard header composition and five tabs: Content, Navigation and Search, Image, Custom, and Revisions. Save state remains visible in the header. The minimum access dropdown uses the common framework selector.
+
+`spages.status` now holds Published 0, Draft 10, In review 20, Changes requested 30, Scheduled 40, and Deleted 127. The list derives an elapsed schedule's display/filter status from eligible revisions; no background write is needed. Trash records a withdrawal and retains history; restoring creates a draft and requires publishing to return to the public site. Generic bulk actions cannot bypass publisher, read-only, XSS, target-row, or delete permissions. Partial bulk completion reports the committed count rather than implying an all-or-nothing transaction.
+
+Provider `spages.sql` files own starter Home/Test page records. Fresh initialization runs them after the schema, and optional `demo.sql` remains separately installable. The immutable September 5 update is unchanged. The additive September 6 update synchronizes converted working metadata, maps workflow into status, preserves unconverted rows' original status and deleted rows, then drops workflow. All three provider fresh/update/seed paths are aligned; MySQL execution is not claimed.
+
+Single-page, child, and route candidate reads now put revision and URL conditions in SQL. Request-scoped revision resolution is reused by ancestor checks and URL construction. SQLite uses a registered ordinal-ignore-case collation for Unicode URL matching. Standard admin list queries select scalar columns and batch effective URLs for the displayed rows. Existing tree APIs remain deprecated wrappers; ParsePage renders escaped select-option data. `SpagesContent` handles the block document contract, sanitization/rendering, conversion, and tool/layout registration, while `Spages` owns storage and publication/access rules.
+
+### Delegation and independent review
+
+The schema/seed/provider packet and standard-admin frontend packet used two `implementation_sol_high` agents (`gpt-5.6-sol`, high). The primary implemented and integrated model/controller changes. A fresh `reviewer_astra_xhigh` (`gpt-6-astra`, xhigh) was selected because publication, provider migration, RBAC, and copied-app contracts interact. Initial review preceded access to this active summary.
+
+The independent review identified bulk delete permission mapping, an incorrectly invoked access selector, read-only editor reads being blocked, and SQLite Unicode URL matching. Supplemental review identified public list links missing `ROOT_URL` and refined read authorization to respect list/edit grants without requiring an unrelated view grant. These received fixes and regression checks. Browser validation also corrected heading/snippet-key HTML patterns for Chrome's Unicode-set regex syntax. The final list projection includes the scalar fields consumed by the Home badge and redirect cell. Final integration review found that three existing draft metadata fields were not synchronized for the new list: search description, redirect URL, and header image. A separately named working-metadata update fixes them without rewriting an already-applied script; it checks JSON types, column lengths, image clearing, and attachment existence. A provider-backed regression checks real admin search, repeat application, and unchanged source JSON/history.
+
+Automatic approval review rejected a proposed removal of read-helper authorization. That rejected edit did not run. The implemented alternative adds an explicit read-only editor route/permission gate while retaining write authorization.
+
+### Current verification evidence
+
+Current outputs use ignored `artifacts/assistant_spages_standard/`; all build output directories are absolute. Final checks:
+
+| Check | Result / retained evidence |
+| --- | --- |
+| Default full suite | **766/766 passed**, `test-results/default-final/default.trx`. |
+| SQLite full suite | **821/821 passed**, `test-results/metadata-final/sqlite-full.trx`. |
+| SQL Server final CMS, fresh | **49/49 passed**, `test-results/provider/metadata-final-sqlserver-fresh.trx`. |
+| SQL Server final CMS, pre-CMS baseline plus all CMS updates | **49/49 passed**, `test-results/provider/metadata-final-sqlserver-baseline.trx`. |
+| SQLite baseline upgrade | **49/49 passed**, `test-results/provider/metadata-final-sqlite-baseline.trx`. |
+| Final SQLite + roles CMS regressions | **49/49 passed**, `test-results/metadata-final/metadata-cms.trx`, including the working-metadata upgrade. The earlier four focused reviewer regressions also passed. |
+| Full SQLite + roles suite | **766 passed, 56 failed, 822 total**, `test-results/combined-final/combined.trx`. All 48 CMS tests passed. The broader failures report missing DB type/configuration in other fixtures; this combination is not reported as a passing full suite, and no baseline comparison was run to establish when those fixture failures originated. |
+| MySQL | Current SQL and provider query paths inspected statically; no server run. The earlier MySQL compilation result above predates this status/list refactor. |
+
+Tests exercise standard list metadata, filters/paging, elapsed schedules, per-ID query counts and cached URLs, trash/restore, bulk token and permission controls, old tree signatures, ParsePage escaping, ROOT_URL links, common access options, read-only permissions, Unicode lookup, publication/access boundaries, and migration repeatability.
+
+Chrome used the configured Visual Studio app after the user authorized development database writes. The reviewed September 6 script was loaded and its stored SQL compared with the repository script before applying it through the normal update UI. Its ledger status is Applied. The separately named working-metadata update was subsequently reviewed, passed isolated JSON/type/FK/history controls on both tested providers, and was applied through the same UI after comparing stored SQL with reviewed bytes. Its SQL Server SHA-256 is `f2a6c55dc85c71668d610d399145f08eccaaa334b8917fae8140f165fc2e3eb6`. Both updates are recorded Applied. Visual Studio rebuilt and restarted successfully; the list and editor run without the reported missing-column failure.
+
+Product Design assessment compared the DemosDynamic list with the revised Spages list and inspected public/editor captures using existing framework theme tokens. Default, Pink, Shadows, and Blue were exercised in light and dark; desktop captures are retained under `screens/`. Checks covered all tabs, visible save state, keyboard tab switching and focus, access/SEO autosave persistence, explicit creation, review submission, and opening an in-review page without an autosave or status change. At 390 by 844, public and editor content stayed within the document width, and the scrollable tab strip made Revisions reachable. Tab labels remain on one line. Trash and restore were exercised through the standard bulk controls; restore returned a draft. Anonymous `/test-page` and `/sitemap.xml` returned HTTP 200, and a missing CMS path returned HTTP 404. The unpublished demo help snippet was deliberately left as a draft, so its page preview showed the expected unavailable-snippet notice; earlier isolated runs verified the fully published demos. The only remaining observed console error was Visual Studio Browser Link returning 404.
+
+The broader roles-enabled suite limitation above, MySQL runtime, production deployment, native file chooser automation, and exhaustive screen-reader/all-mobile-theme testing remain outside the passing evidence. No private connection details, machine paths, or reference-application details are stored in this summary.
+
+The exact browser verification page and its revisions were removed after identity/dependency checks, leaving the original six development pages and seven revisions. The workflow column is absent. Task browser traces were moved under ignored artifacts; the pre-existing July trace and unrelated untracked work were preserved. The Visual Studio app remains running. The entire summary received an independent factual/privacy audit without findings. Strict UTF-8/no BOM/CRLF, one-line route literals, documentation links, JavaScript syntax, and `git diff --check` passed. The final SQL Server fresh/baseline and SQLite baseline suites each passed all 49 CMS checks after the metadata fix. Independent review and the supplemental evidence audit resolved all material findings. Final adjudication: **No blocking findings. Review loop can stop.**
 
 ## Reflection
 

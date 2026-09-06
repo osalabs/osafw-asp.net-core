@@ -4,8 +4,8 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-09-05
 
-- Existing Spages installations must apply the provider-specific additive update and then run the authenticated Site Admin **Convert existing pages to blocks** action. There is no runtime legacy fallback; take a database backup and follow [the upgrade guide](spages-upgrade.md) before editors use the new workflow.
-- Custom Spages integrations must separate published reads from draft editing. Public consumers use `onePublished`, `listPublished`, `listIndexable`, or an audience check over `listPublicationsByDate`; editor integrations use `oneDraftOrFail`, `saveDraft`, `updateWorkflow`, and `restoreRevision`. Custom SQL and templates must account for revision-based publication, numeric workflow/kind codes, `is_nav_visible`, `is_noindex`, `url_aliases`, and snippet keys stored in `url`.
+- Existing Spages installations must apply the provider-specific additive updates and then run the authenticated Site Admin **Convert existing pages to blocks** action. There is no runtime legacy fallback; take a database backup and follow [the upgrade guide](spages-upgrade.md) before editors use the new workflow.
+- Custom Spages integrations must separate published reads from draft editing. Public consumers use `onePublished`, `listPublished`, `listIndexable`, or an audience check over `listPublicationsByDate`; editor integrations use `oneDraftOrFail`, `saveDraft`, `updateWorkflow`, and `restoreRevision`. Custom SQL and templates must account for revision-based publication, numeric status/kind codes, `is_nav_visible`, `is_noindex`, `url_aliases`, and snippet keys stored in `url`.
 - Custom Spages templates must use the sanitized `html_main`, `html_left`, and `html_right` page-state fields with ParsePage's `noescape` option. Markdown fields no longer supply public content; merge application layouts and executable customization deliberately during upgrade.
 
 ## 2026-09-02

@@ -5,6 +5,10 @@
 .spages-cms .btn-outline-danger { color:var(--bs-danger-text-emphasis); border-color:var(--bs-danger-text-emphasis); }
 .spages-cms .btn-outline-danger:hover { color:var(--bs-body-bg); background:var(--bs-danger-text-emphasis); }
 .spages-breadcrumbs a { color:var(--bs-body-color); }
+.spages-tabs { margin-bottom:1rem; }
+.spages-tabs .nav-link { color:var(--bs-body-color); white-space:nowrap; }
+.spages-tabs .nav-link.active { font-weight:600; }
+.spages-tab-content > .tab-pane { min-height:18rem; }
 .spages-workspace { display:grid; grid-template-columns:minmax(0,1fr) 18rem; gap:1.5rem; align-items:start; }
 .spages-writing { min-width:0; }
 .spages-publishing { position:sticky; top:1rem; }
@@ -26,13 +30,14 @@
 .spages-tool-unavailable textarea { font-family:var(--bs-font-monospace); font-size:.8125rem; }
 .spages-tool-field { display:block; font-size:.875rem; margin:.6rem 0; }
 .spages-tool-field .form-control, .spages-tool-field .form-select { margin-top:.25rem; }
-.spages-settings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem 1rem; padding:1rem 0; }
+.spages-settings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem 1rem; padding:1rem; }
 .spages-settings label { display:block; }
 .spages-wide-field { grid-column:1/-1; }
 .spages-page-image { grid-column:1/-1; }
 .spages-page-image .spages-tool { background:transparent; }
+.spages-image-settings { padding:1rem; }
 .spages-url-field { border-left:.25rem solid var(--bs-primary); padding:.75rem 1rem; background:var(--bs-tertiary-bg); border-radius:var(--bs-border-radius); }
 #spages-editor summary { padding:.35rem 0; font-weight:600; cursor:pointer; }
 .spages-cms :is(input, select, textarea, button, a, [contenteditable], summary):focus-visible { outline:2px solid var(--bs-body-color); outline-offset:3px; }
 @media(max-width:991px) { .spages-workspace { grid-template-columns:1fr; } .spages-publishing { position:static; grid-row:1; } .spages-canvas { padding:1rem 2.25rem; } }
-@media(max-width:575px) { .spages-settings { grid-template-columns:1fr; } .spages-canvas { padding:.75rem 1.5rem; } .spages-publish-actions { grid-template-columns:1fr; } }
+@media(max-width:575px) { .spages-tabs { flex-wrap:nowrap; overflow-x:auto; } .spages-settings { grid-template-columns:1fr; } .spages-canvas { padding:.75rem 1.5rem; } .spages-publish-actions { grid-template-columns:1fr; } }

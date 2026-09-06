@@ -45,7 +45,7 @@ To enable SQLite:
 }
 ```
 
-4. Initialize with the scripts from `osafw-app/App_Data/sql/sqlite/` in this order: `fwdatabase.sql`, `database.sql`, `lookups.sql`, `views.sql`, then optional `roles.sql` and `demo.sql`.
+4. Initialize with the scripts from `osafw-app/App_Data/sql/sqlite/` in this order: `fwdatabase.sql`, `spages.sql`, `database.sql`, `lookups.sql`, `views.sql`, then optional `roles.sql` and `demo.sql`.
 
 When the app is compiled with `isSQLite` and `type` is `SQLite`, `FwSessionCache` stores sessions in the SQLite `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server or another verified distributed provider/cache instead of SQLite.
 
@@ -57,7 +57,7 @@ SQL Server is the production-primary provider and owns the primary schema/update
 
 The MySQL compile/runtime adapter is available, but the bundled MySQL fresh-install schema is not at parity with the SQL Server/SQLite core schema. Do not treat `osafw-app/App_Data/sql/mysql/fwdatabase.sql` and `lookups.sql` as a turnkey new-database setup until their required framework-table parity has been verified or repaired for the target deployment.
 
-Fresh schema files are destructive initialization inputs, not upgrade scripts: the `fwdatabase.sql` variants drop and recreate framework tables. Use them only for a new or disposable database. Existing deployments use additive scripts through `FwUpdates`:
+Fresh schema files are destructive initialization inputs, not upgrade scripts: the `fwdatabase.sql` variants drop and recreate framework tables. For each provider, run its `spages.sql` after `fwdatabase.sql` to add the initial published pages and their revision history. Use these scripts only for a new or disposable database. Existing deployments use additive scripts through `FwUpdates`:
 
 - SQL Server scans `osafw-app/App_Data/sql/updates/`.
 - SQLite scans only `osafw-app/App_Data/sql/sqlite/updates/` and does not replay SQL Server updates.

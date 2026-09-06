@@ -39,7 +39,7 @@ public class SQLiteDBTests
     public void SQLiteSchemaScripts_CreateFreshFrameworkDatabase()
     {
         var sqlRoot = Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite");
-        foreach (var script in new[] { "fwdatabase.sql", "lookups.sql", "views.sql", "roles.sql", "demo.sql" })
+        foreach (var script in new[] { "fwdatabase.sql", "spages.sql", "lookups.sql", "views.sql", "roles.sql", "demo.sql" })
             db.execMultipleSQL(File.ReadAllText(Path.Combine(sqlRoot, script)));
 
         var tables = db.tables();

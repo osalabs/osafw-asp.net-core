@@ -2,7 +2,7 @@
 
 Spages is the framework's block CMS for small public websites, intranets, and application content. It uses framework users, permissions, attachments, routing, themes, and ParsePage templates. Authors edit a working draft; public requests read immutable published revisions.
 
-Existing applications must complete [the Spages upgrade](spages-upgrade.md) before using the editor. Fresh database schemas already contain the required fields and revision table.
+Existing applications must complete [the Spages upgrade](spages-upgrade.md) before using the editor. Fresh database schemas contain the required fields and revision table; the separate provider `spages.sql` script installs the starter pages during initialization.
 
 ## Access and routing
 
@@ -19,7 +19,7 @@ Canonical URLs use the existing `ROOT_DOMAIN` setting and the published page pat
 
 ## Authoring
 
-Open **Pages** from the manager menu to create a page or reusable snippet. A page has a title, URL segment, optional parent, navigation and search metadata, layout, content regions, optional after-content snippet, and publication controls. Secondary page settings stay collapsed while writing.
+Open **Pages** from the manager menu to create a page or reusable snippet. A page has a title, URL segment, optional parent, navigation and search metadata, layout, content regions, optional after-content snippet, and publication controls. The standard dynamic list supports filtering, sortable and customizable columns, checkboxes, bulk actions, and pagination. The editor keeps Content, Navigation and Search, Image, Custom, and Revisions in top tabs; executable customization remains restricted to Site Admins.
 
 The bundled Editor.js core is pinned in `libman.json`. Built-in blocks include paragraphs, H2-H6 headings, flat lists, quotes, images, files, tables, code, dividers, callouts, cards, buttons, Markdown, and reusable snippets. The page title supplies H1. Headings may define a link anchor.
 
@@ -33,13 +33,16 @@ An editor control that is missing for a stored tool displays the original block 
 
 Authors can submit drafts for review. Publishers can request changes, publish immediately, schedule a future publication, cancel a scheduled publication, or unpublish content.
 
-| Workflow | Code |
+| Page status | Code |
 | --- | ---: |
-| Draft | 0 |
-| In review | 10 |
-| Changes requested | 20 |
-| Published | 30 |
+| Published | 0 |
+| Draft | 10 |
+| In review | 20 |
+| Changes requested | 30 |
 | Scheduled | 40 |
+| Deleted | 127 |
+
+The standard `spages.status` column holds the authoring state. Saving changes to a published page makes a draft while its approved revision remains public. An elapsed schedule displays and filters as Published without a background update. Public eligibility is determined from revisions, not the draft row status.
 
 | Revision kind | Code |
 | --- | ---: |
@@ -52,7 +55,7 @@ Authors can submit drafts for review. Publishers can request changes, publish im
 
 Publication approves a snapshot of content and settings. A future publication leaves the currently eligible revision visible until its effective UTC time. A newer scheduled release replaces an earlier pending release. Cancellation marks the pending release ineligible; unpublishing records a withdrawal so an older revision cannot reappear.
 
-Restoring a revision copies it into a new draft. Review and publish that draft to complete a rollback. Page rollback and snippet rollback are separate operations.
+Restoring a revision copies it into a new draft. Review and publish that draft to complete a rollback. Page rollback and snippet rollback are separate operations. Bulk actions can submit, unpublish, move pages to trash, or restore drafts. Restoring from trash does not republish the page; deletion retains revision history. Required published or scheduled snippet dependencies prevent removal.
 
 Preview uses the public renderer but requires author access. Preview responses are private, excluded from indexing, and display a preview banner. A historical page preview uses the snippet revisions recorded with that page revision.
 
@@ -102,6 +105,10 @@ Use the publication API for public output and the draft API for editor integrati
 | `renderSnippet(key)` | Render an eligible named snippet for the current audience. |
 
 `listPublicationsByDate` resolves revision timing but does not itself apply an audience. Pass its results through the visibility-aware public methods or enforce the intended audience before exposing content.
+
+`oneByUrl` and `listChildren` filter eligible revisions in the database. Single-page reads and URL construction share request-scoped resolution, including ancestor checks. The existing `tree`, `getPagesTree`, `getPagesTreeList`, and `getPagesTreeSelectHtml` names remain as deprecated wrappers. Select-option labels are prepared as data and escaped by ParsePage.
+
+`SpagesContent` owns versioned block JSON, validation, sanitized HTML rendering, Markdown conversion, and developer tool/layout registration. `Spages` owns persistence, publication, access, URLs, and dependencies. ParsePage consumes the sanitized output through its standard `noescape` option.
 
 `buildPageState` supplies `page[html_main]`, `html_left`, `html_right`, `html_after_content`, and declared `html_slot_<name>` values. These values are sanitized server-rendered HTML for the Spages public templates.
 

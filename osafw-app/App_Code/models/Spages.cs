@@ -41,7 +41,6 @@ public class Spages : FwModel<Spages.Row>
         public int is_snippet { get; set; }
         public string content_json { get; set; } = string.Empty;
         public string draft_json { get; set; } = string.Empty;
-        public int workflow { get; set; }
         public string review_note { get; set; } = string.Empty;
         public int access_level { get; set; }
         public int is_nav_visible { get; set; }
@@ -64,7 +63,11 @@ public class Spages : FwModel<Spages.Row>
     /// <summary>Withdraw a page while retaining its identity and immutable publication history.</summary>
     public override void delete(int id, bool is_perm = false)
     {
-        updateWorkflow(id, "unpublish", "Withdrawn through the model API");
+        var item = oneDraftOrFail(id);
+        if (item["is_home"].toBool())
+            throw new UserException("The home page cannot be deleted.");
+
+        updateWorkflow(id, "delete", "Moved to trash through the model API");
     }
 
     public bool isExistsByUrl(string url, int parent_id, int not_id)
@@ -85,7 +88,8 @@ public class Spages : FwModel<Spages.Row>
     /// <summary>Find an effective publication by URL segment and parent for the current audience.</summary>
     public FwDict oneByUrl(string url, int parent_id)
     {
-        return listPublished().FirstOrDefault(x => x["parent_id"].toInt() == parent_id && x["url"].toStr().Equals(url, StringComparison.OrdinalIgnoreCase)) ?? [];
+        return listPublishedByFilter(publicationUrlPredicate("url") + " AND " + snapshotFieldSql("parent_id", true) + "=@parent_id",
+            new FwDict { ["url"] = url, ["parent_id"] = parent_id }).FirstOrDefault() ?? [];
     }
 
     // return one latest record by full_url (i.e. relative url from root, without domain)
@@ -96,7 +100,7 @@ public class Spages : FwModel<Spages.Row>
 
     public FwList listChildren(int parent_id)
     {
-        return new FwList(listPublished().Where(x => x["parent_id"].toInt() == parent_id));
+        return listPublishedByFilter(snapshotFieldSql("parent_id", true) + "=@parent_id", DB.h("parent_id", parent_id));
     }
 
     /// <summary>
@@ -176,19 +180,39 @@ public class Spages : FwModel<Spages.Row>
     /// <returns>HTML <c>option</c> elements.</returns>
     public string renderTreeSelectOptions(string selected_id, FwList? pages_tree, int level = 0)
     {
-        StringBuilder result = new();
-        if (pages_tree != null)
+        return fw.parsePage("/admin/spages", "select_options.html", new FwDict
         {
-            foreach (FwDict row in pages_tree)
-            {
-                result.AppendLine("<option value=\"" + row["id"] + "\"" + (row["id"].toStr() == selected_id ? " selected=\"selected\" " : "") + ">" + Utils.strRepeat("&#8212; ", level) + row["iname"] + "</option>");
-                // subpages
-                result.Append(renderTreeSelectOptions(selected_id, (FwList? )row["children"], level + 1));
-            }
-        }
-
-        return result.ToString();
+            ["options"] = listSelectOptionsTree(pages_tree, level),
+            ["selected_id"] = selected_id
+        });
     }
+
+    /// <summary>Flatten a tree into escaped-label data for ParsePage select options.</summary>
+    public FwList listSelectOptionsTree(FwList? pages_tree, int level = 0)
+    {
+        var result = new FwList();
+        if (pages_tree == null)
+            return result;
+
+        foreach (var row in pages_tree)
+        {
+            result.Add(new FwDict { ["id"] = row["id"], ["iname"] = new string('—', level) + (level > 0 ? " " : "") + row["iname"].toStr() });
+            result.AddRange(listSelectOptionsTree(row["children"] as FwList, level + 1));
+        }
+        return result;
+    }
+
+    [Obsolete("DEPRECATED: Use listTreeByFilter.")]
+    public FwList tree(string where, FwDict list_where_params, string orderby) => listTreeByFilter(where, list_where_params, orderby);
+
+    [Obsolete("DEPRECATED: Use listTree.")]
+    public FwList getPagesTree(FwList rows, int parent_id, int level = 0, string parent_url = "") => listTree(rows, parent_id, level, parent_url);
+
+    [Obsolete("DEPRECATED: Use listTreeFlat.")]
+    public FwList getPagesTreeList(FwList? pages_tree, int level = 0) => listTreeFlat(pages_tree, level);
+
+    [Obsolete("DEPRECATED: Use listSelectOptionsTree with a ParsePage select template.")]
+    public string getPagesTreeSelectHtml(string selected_id, FwList? pages_tree, int level = 0) => renderTreeSelectOptions(selected_id, pages_tree, level);
 
     /// <summary>
     /// Builds the app-relative URL path for a page by walking its parent chain.
@@ -196,7 +220,7 @@ public class Spages : FwModel<Spages.Row>
     /// <returns>URL like <c>/page/subpage/subsubpage</c>, or empty string when the chain is invalid.</returns>
     public string getFullUrl(int id, int level = 0)
     {
-        return onePublished(id).Count > 0 ? publishedUrl(id) : "";
+        return onePublished(id)["full_url"].toStr();
     }
 
     /// <summary>
@@ -278,11 +302,11 @@ public class Spages : FwModel<Spages.Row>
     public const string CONTENT_FIELDS = "iname parent_id url head_att_id template prio meta_keywords meta_description meta_title custom_head custom_css custom_js redirect_url url_aliases content_json access_level is_nav_visible nav_title is_noindex status is_home is_snippet";
     public const int AUTHOR_LEVEL = Users.ACL_MANAGER;
     public const int PUBLISHER_LEVEL = Users.ACL_MANAGER;
-    public const int WORKFLOW_DRAFT = 0;
-    public const int WORKFLOW_IN_REVIEW = 10;
-    public const int WORKFLOW_CHANGES_REQUESTED = 20;
-    public const int WORKFLOW_PUBLISHED = 30;
-    public const int WORKFLOW_SCHEDULED = 40;
+    public const int STATUS_PUBLISHED = STATUS_ACTIVE;
+    public const int STATUS_DRAFT = STATUS_INACTIVE;
+    public const int STATUS_IN_REVIEW = 20;
+    public const int STATUS_CHANGES_REQUESTED = 30;
+    public const int STATUS_SCHEDULED = 40;
     public const int KIND_SAVED = 0;
     public const int KIND_SUBMITTED = 10;
     public const int KIND_CHANGES_REQUESTED = 20;
@@ -291,6 +315,7 @@ public class Spages : FwModel<Spages.Row>
     public const int KIND_ORIGINAL = 50;
     private DateTime? requestTime;
     private Dictionary<int, FwDict>? currentPublications;
+    private readonly Dictionary<int, FwDict> resolvedPublications = new();
     // A request uses one publication instant; approved publication dates use whole UTC seconds.
     private DateTime now => requestTime ??= new DateTime(DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, DateTimeKind.Utc);
 
@@ -308,6 +333,25 @@ public class Spages : FwModel<Spages.Row>
         }
     }
 
+    /// <summary>Keep author access and allow read-only managers only through their authorized list or editor route.</summary>
+    private void requireEditorRead()
+    {
+        if (isAuthor())
+            return;
+
+        string actionMore = fw.route.action_more;
+        if (fw.route.action == FW.ACTION_SHOW_FORM && Utils.isEmpty(fw.route.id))
+            actionMore = FW.ACTION_MORE_NEW;
+
+        if (fw.userId <= 0 || fw.userAccessLevel < AUTHOR_LEVEL
+            || fw.route.controller != "AdminSpages" || fw.route.action is not ("Index" or "ShowForm")
+            || (fw.userAccessLevel < Users.ACL_SITEADMIN && !fw.model<Users>()
+                .isAccessByRolesResourceAction(fw.userId, "AdminSpages", fw.route.action, actionMore)))
+        {
+            throw new AuthException();
+        }
+    }
+
     /// <summary>Read the working draft for an editor. Public consumers must use onePublished instead.</summary>
     public FwDict oneDraftOrFail(int id)
     {
@@ -318,14 +362,14 @@ public class Spages : FwModel<Spages.Row>
         }
 
         var item = Utils.jsonDecodeDict(row["draft_json"].toStr()) ?? throw new UserException("Convert existing pages using the Site Admin migration action before editing.");
-        foreach (var field in Utils.qw("id workflow review_note add_time add_users_id upd_time upd_users_id"))
+        foreach (var field in Utils.qw("id status review_note add_time add_users_id upd_time upd_users_id"))
         {
             item[field] = row[field];
         }
 
-        if (item["workflow"].toInt() == WORKFLOW_SCHEDULED && !isScheduled(id))
+        if (item["status"].toInt() == STATUS_SCHEDULED && !isScheduled(id))
         {
-            item["workflow"] = WORKFLOW_PUBLISHED;
+            item["status"] = STATUS_PUBLISHED;
         }
 
         return item;
@@ -337,6 +381,8 @@ public class Spages : FwModel<Spages.Row>
         requireAuthor();
         var item = FormUtils.filter(input, CONTENT_FIELDS);
         var old = id > 0 ? oneDraftOrFail(id) : new FwDict();
+        if (id > 0 && old["status"].toInt() == STATUS_DELETED)
+            throw new UserException("Restore this deleted page before editing it.");
         if (id > 0)
         {
             foreach (var field in Utils.qw(CONTENT_FIELDS))
@@ -362,7 +408,7 @@ public class Spages : FwModel<Spages.Row>
 
         item["is_home"] = old["is_home"].toInt();
         item["is_snippet"] = id > 0 ? old["is_snippet"].toInt() : item["is_snippet"].toInt() == 1 ? 1 : 0;
-        item["status"] = STATUS_ACTIVE;
+        item["status"] = STATUS_DRAFT;
         item["access_level"] = Math.Clamp(item["access_level"].toInt(), 0, 100);
         item["parent_id"] = Math.Max(0, item["parent_id"].toInt());
         item["prio"] = item["prio"].toInt();
@@ -443,23 +489,14 @@ public class Spages : FwModel<Spages.Row>
 
             if (id == 0)
             {
-                id = db.insert(table_name, new FwDict
-                {
-                    ["iname"] = item["iname"],
-                    ["url"] = item["url"],
-                    ["status"] = STATUS_INACTIVE,
-                    ["is_snippet"] = item["is_snippet"],
-                    ["draft_json"] = json,
-                    ["workflow"] = WORKFLOW_DRAFT,
-                    ["add_users_id"] = fw.userId
-                });
+                var fields = new FwDict(item) { ["draft_json"] = json, ["add_users_id"] = fw.userId };
+                id = db.insert(table_name, fields);
             }
             else
             {
-                db.update(table_name, new FwDict
+                db.update(table_name, new FwDict(item)
                 {
                     ["draft_json"] = json,
-                    ["workflow"] = WORKFLOW_DRAFT,
                     ["upd_time"] = now,
                     ["upd_users_id"] = fw.userId
                 }, DB.h("id", id));
@@ -520,17 +557,119 @@ public class Spages : FwModel<Spages.Row>
 
     public int restoreRevision(int id, int revisionId) => saveDraft(id, oneRevisionOrFail(id, revisionId));
 
+    /// <summary>Restore a trashed record to a draft without making any earlier publication visible.</summary>
+    public void updateRestoreDeleted(int id)
+    {
+        requireAuthor(true);
+        var item = oneDraftOrFail(id);
+        if (item["status"].toInt() != STATUS_DELETED)
+            throw new UserException("Only deleted pages can be restored from trash.");
+
+        item["status"] = STATUS_DRAFT;
+        db.begin();
+        try
+        {
+            db.update(table_name, new FwDict { ["status"] = STATUS_DRAFT, ["upd_time"] = now, ["upd_users_id"] = fw.userId }, DB.h("id", id));
+            addRevision(id, KIND_SAVED, Utils.jsonEncode(FormUtils.filter(item, CONTENT_FIELDS)), now, "Restored from trash");
+            db.commit();
+        }
+        catch
+        {
+            db.rollback();
+            throw;
+        }
+        clearCmsCache();
+    }
+
+    /// <summary>SQL source for the standard admin list; elapsed schedules display and filter as Published without a scheduler.</summary>
+    public string adminListSource(FwDict parameters)
+    {
+        parameters["spages_at"] = now;
+        var fields = db.tableSchemaFull(table_name).Keys.Where(field => field != "status").Select(field => "s." + db.qid(field));
+        return $@"(SELECT {string.Join(", ", fields)},
+            CASE WHEN s.status={STATUS_SCHEDULED} AND NOT EXISTS (
+                SELECT 1 FROM {db.qid(REVISION_TABLE)} r WHERE r.spages_id=s.id AND r.status=0
+                    AND r.kind={KIND_PUBLISHED} AND r.effective_time>@spages_at)
+                THEN {STATUS_PUBLISHED} ELSE s.status END AS status
+            FROM {qTable()} s) spages_list";
+    }
+
+    /// <summary>Prepare live links for one admin result page with one batch query plus any missing ancestors.</summary>
+    public void attachPublicationUrls(FwList rows)
+    {
+        requireEditorRead();
+        var ids = rows.Select(row => row["id"].toInt()).Distinct().ToList();
+        if (ids.Count == 0)
+            return;
+
+        var parameters = new FwDict { ["at"] = now };
+        var names = new List<string>();
+        for (int index = 0; index < ids.Count; index++)
+        {
+            string name = "page" + index;
+            names.Add("@" + name);
+            parameters[name] = ids[index];
+            resolvedPublications[ids[index]] = [];
+        }
+        foreach (var revision in db.arrayp($@"SELECT r.* FROM {db.qid(REVISION_TABLE)} r
+            WHERE r.spages_id IN ({string.Join(",", names)}) AND {publicationPredicate()}", parameters))
+            resolvedPublications[revision["spages_id"].toInt()] = buildPublication(revision);
+
+        foreach (var row in rows)
+        {
+            var page = onePublished(row["id"].toInt(), Users.ACL_SITEADMIN);
+            row["full_url"] = page["full_url"].toStr();
+            row["is_live"] = page.Count > 0 && !page["is_snippet"].toBool();
+        }
+    }
+
+    /// <summary>Editor parent options exclude the selected page and its descendants.</summary>
+    public FwList listSelectOptionsParents(int id)
+    {
+        requireEditorRead();
+        var rows = new FwList(db.array(table_name, new FwDict
+        {
+            ["status"] = db.opNOT(STATUS_DELETED), ["is_snippet"] = 0, ["draft_json"] = db.opNOT("")
+        }, "iname", new[] { "id", "parent_id", "iname" }));
+        var excluded = new HashSet<int>();
+        if (id > 0)
+            excluded.Add(id);
+        for (int level = 0; level < 20; level++)
+        {
+            var children = rows.Where(row => excluded.Contains(row["parent_id"].toInt()) && !excluded.Contains(row["id"].toInt())).Select(row => row["id"].toInt()).ToArray();
+            if (children.Length == 0)
+                break;
+            excluded.UnionWith(children);
+        }
+        var available = new FwList(rows.Where(row => !excluded.Contains(row["id"].toInt())));
+        return listSelectOptionsTree(listTree(available, 0));
+    }
+
+    public FwList listSelectOptionsSnippets()
+    {
+        requireEditorRead();
+        return new FwList(db.array(table_name, new FwDict
+        {
+            ["status"] = db.opNOT(STATUS_DELETED), ["is_snippet"] = 1, ["draft_json"] = db.opNOT("")
+        }, "iname", new[] { "id", "url", "iname" }).Select(row => new FwDict { ["key"] = row["url"], ["title"] = row["iname"] }));
+    }
+
     /// <summary>Approve a draft snapshot or change its review state. Future releases leave the current publication visible.</summary>
     public int updateWorkflow(int id, string action, string note = "", DateTime? publishAt = null)
     {
-        requireAuthor(action is "publish" or "changes" or "unpublish" or "cancel");
-        if (action is not ("submit" or "changes" or "publish" or "unpublish" or "cancel"))
+        requireAuthor(action is "publish" or "changes" or "unpublish" or "cancel" or "delete");
+        if (action is not ("submit" or "changes" or "publish" or "unpublish" or "cancel" or "delete"))
         {
             throw new UserException("Unknown publishing action.");
         }
 
         var item = oneDraftOrFail(id);
-        if (action == "changes" && item["workflow"].toInt() != WORKFLOW_IN_REVIEW)
+        if (item["status"].toInt() == STATUS_DELETED)
+            throw new UserException("Restore this deleted page before changing its publication.");
+        if (action == "delete" && item["is_home"].toBool())
+            throw new UserException("The home page cannot be deleted.");
+
+        if (action == "changes" && item["status"].toInt() != STATUS_IN_REVIEW)
         {
             throw new UserException("Only a submitted draft can be sent back for changes.");
         }
@@ -548,7 +687,7 @@ public class Spages : FwModel<Spages.Row>
         }
 
         int revisionId = 0;
-        bool isRelease = action is "publish" or "unpublish" or "cancel";
+        bool isRelease = action is "publish" or "unpublish" or "cancel" or "delete";
         db.begin();
         try
         {
@@ -562,12 +701,13 @@ public class Spages : FwModel<Spages.Row>
             }
 
             var before = listPublicationsByDate(when);
-            int workflow = action switch
+            int status = action switch
             {
-                "submit" => WORKFLOW_IN_REVIEW,
-                "changes" => WORKFLOW_CHANGES_REQUESTED,
-                "publish" => when > now ? WORKFLOW_SCHEDULED : WORKFLOW_PUBLISHED,
-                _ => WORKFLOW_DRAFT
+                "submit" => STATUS_IN_REVIEW,
+                "changes" => STATUS_CHANGES_REQUESTED,
+                "publish" => when > now ? STATUS_SCHEDULED : STATUS_PUBLISHED,
+                "delete" => STATUS_DELETED,
+                _ => STATUS_DRAFT
             };
             if (action == "publish")
             {
@@ -579,7 +719,7 @@ public class Spages : FwModel<Spages.Row>
                 validatePublication(id, item, after, when);
                 revisionId = addRevision(id, KIND_PUBLISHED, Utils.jsonEncode(FormUtils.filter(item, CONTENT_FIELDS)), when, note, captureSnippetVersions(item, before));
             }
-            else if (action == "unpublish")
+            else if (action is "unpublish" or "delete")
             {
                 if (item["is_snippet"].toBool() && listSnippetUsages(item["url"].toStr(), true).Count > 0)
                 {
@@ -591,13 +731,14 @@ public class Spages : FwModel<Spages.Row>
             }
             else if (action != "cancel")
             {
+                item["status"] = status;
                 int kind = action == "submit" ? KIND_SUBMITTED : KIND_CHANGES_REQUESTED;
                 revisionId = addRevision(id, kind, Utils.jsonEncode(FormUtils.filter(item, CONTENT_FIELDS)), now, note, captureSnippetVersions(item, listPublicationsByDate()));
             }
 
             db.update(table_name, new FwDict
             {
-                ["workflow"] = workflow,
+                ["status"] = status,
                 ["review_note"] = note.Length > 1000 ? note[..1000] : note,
                 ["upd_time"] = now,
                 ["upd_users_id"] = fw.userId
@@ -618,7 +759,7 @@ public class Spages : FwModel<Spages.Row>
         }
 
         clearCmsCache();
-        if (action is "publish" or "unpublish" or "cancel")
+        if (action is "publish" or "unpublish" or "cancel" or "delete")
         {
             try
             {
@@ -658,12 +799,13 @@ public class Spages : FwModel<Spages.Row>
         ["effective_time"] = db.opGT(now)
     }, "id").toInt() > 0;
 
-    public static string workflowLabel(int workflow) => workflow switch
+    public static string statusLabel(int status) => status switch
     {
-        WORKFLOW_IN_REVIEW => "In review",
-        WORKFLOW_CHANGES_REQUESTED => "Changes requested",
-        WORKFLOW_PUBLISHED => "Published",
-        WORKFLOW_SCHEDULED => "Scheduled",
+        STATUS_IN_REVIEW => "In review",
+        STATUS_CHANGES_REQUESTED => "Changes requested",
+        STATUS_PUBLISHED => "Published",
+        STATUS_SCHEDULED => "Scheduled",
+        STATUS_DELETED => "Deleted",
         _ => "Draft"
     };
 
@@ -762,6 +904,7 @@ public class Spages : FwModel<Spages.Row>
     internal void clearCmsCache()
     {
         currentPublications = null;
+        resolvedPublications.Clear();
         fw.cache.requestRemoveWithPrefix(cache_prefix);
         FwCache.remove("home_page");
     }
@@ -784,35 +927,13 @@ public class Spages : FwModel<Spages.Row>
             return currentPublications;
         }
 
-        var releases = db.arrayp($@"
-            SELECT r.* FROM {db.qid(REVISION_TABLE)} r
-             WHERE r.status=0 AND r.kind IN ({KIND_PUBLISHED},{KIND_WITHDRAWN})
-               AND r.effective_time<=@at
-               AND NOT EXISTS (
-                   SELECT 1 FROM {db.qid(REVISION_TABLE)} n
-                    WHERE n.spages_id=r.spages_id AND n.status=0
-                      AND n.kind IN ({KIND_PUBLISHED},{KIND_WITHDRAWN}) AND n.effective_time<=@at
-                      AND (n.effective_time>r.effective_time OR (n.effective_time=r.effective_time AND n.id>r.id)))", DB.h("at", at ?? now));
+        var releases = db.arrayp($"SELECT r.* FROM {db.qid(REVISION_TABLE)} r WHERE {publicationPredicate()}", DB.h("at", at ?? now));
         var pages = new Dictionary<int, FwDict>();
         foreach (var release in releases)
         {
-            if (release["kind"].toInt() == KIND_WITHDRAWN)
-            {
-                continue;
-            }
-
-            var page = Utils.jsonDecodeDict(release["snapshot_json"].toStr()) ?? new FwDict();
-            if (page.Count == 0 || page["status"].toInt() != STATUS_ACTIVE)
-            {
-                continue;
-            }
-
-            int id = release["spages_id"].toInt();
-            page["id"] = id;
-            page["revision_id"] = release["id"];
-            page["pub_time"] = release["effective_time"];
-            page["add_time"] = release["add_time"];
-            pages[id] = page;
+            var page = buildPublication(release);
+            if (page.Count > 0)
+                pages[page["id"].toInt()] = page;
         }
 
         if (at == null)
@@ -823,6 +944,101 @@ public class Spages : FwModel<Spages.Row>
         return pages;
     }
 
+    // A candidate is filtered only after superseding releases have been considered, including withdrawals.
+    private string publicationPredicate() => $@"
+        r.status=0 AND r.kind IN ({KIND_PUBLISHED},{KIND_WITHDRAWN}) AND r.effective_time<=@at
+        AND EXISTS (SELECT 1 FROM {qTable()} p WHERE p.id=r.spages_id AND p.status<>{STATUS_DELETED})
+        AND NOT EXISTS (
+            SELECT 1 FROM {db.qid(REVISION_TABLE)} n
+             WHERE n.spages_id=r.spages_id AND n.status=0
+               AND n.kind IN ({KIND_PUBLISHED},{KIND_WITHDRAWN}) AND n.effective_time<=@at
+               AND (n.effective_time>r.effective_time OR (n.effective_time=r.effective_time AND n.id>r.id)))";
+
+    private static FwDict buildPublication(FwDict release)
+    {
+        if (release.Count == 0 || release["kind"].toInt() != KIND_PUBLISHED)
+            return [];
+
+        var page = Utils.jsonDecodeDict(release["snapshot_json"].toStr()) ?? new FwDict();
+        if (page.Count == 0 || page["status"].toInt() != STATUS_ACTIVE)
+            return [];
+
+        page["id"] = release["spages_id"];
+        page["revision_id"] = release["id"];
+        page["pub_time"] = release["effective_time"];
+        page["add_time"] = release["add_time"];
+        return page;
+    }
+
+    private FwDict onePublication(int id)
+    {
+        if (id <= 0)
+            return [];
+        if (currentPublications != null)
+            return currentPublications.TryGetValue(id, out var current) ? current : [];
+        if (resolvedPublications.TryGetValue(id, out var cached))
+            return cached;
+
+        var revision = db.rowp($"SELECT r.* FROM {db.qid(REVISION_TABLE)} r WHERE r.spages_id=@id AND {publicationPredicate()}",
+            new FwDict { ["id"] = id, ["at"] = now });
+        var page = buildPublication(revision);
+        resolvedPublications[id] = page;
+        return page;
+    }
+
+    // Preserve Unicode ordinal matching on SQLite without loading unrelated page documents.
+    private string publicationUrlPredicate(string parameter)
+    {
+#if isSQLite
+        if (db.dbtype == DB.DBTYPE_SQLITE)
+        {
+            var connection = (Microsoft.Data.Sqlite.SqliteConnection)db.getConnection();
+            connection.CreateCollation("SPAGES_URL", StringComparer.OrdinalIgnoreCase.Compare);
+            return snapshotFieldSql("url") + " COLLATE SPAGES_URL=@" + parameter;
+        }
+#endif
+        return "LOWER(" + snapshotFieldSql("url") + ")=LOWER(@" + parameter + ")";
+    }
+
+    // Field names are private, fixed call-site values; user data is always bound as query parameters.
+    private string snapshotFieldSql(string field, bool isNumber = false)
+    {
+        string value = db.dbtype switch
+        {
+            DB.DBTYPE_SQLITE => $"json_extract(r.snapshot_json, '$.{field}')",
+            DB.DBTYPE_MYSQL => $"JSON_UNQUOTE(JSON_EXTRACT(r.snapshot_json, '$.{field}'))",
+            _ => $"JSON_VALUE(r.snapshot_json, '$.{field}')"
+        };
+        if (!isNumber)
+            return value;
+
+        return db.dbtype switch
+        {
+            DB.DBTYPE_SQLITE => $"CAST({value} AS INTEGER)",
+            DB.DBTYPE_MYSQL => $"CAST({value} AS SIGNED)",
+            _ => $"TRY_CONVERT(INT, {value})"
+        };
+    }
+
+    private FwList listPublishedByFilter(string predicate, FwDict parameters, int? audience = null)
+    {
+        parameters["at"] = now;
+        var revisions = db.arrayp($@"SELECT r.* FROM {db.qid(REVISION_TABLE)} r
+            WHERE {publicationPredicate()} AND r.kind={KIND_PUBLISHED}
+              AND {snapshotFieldSql("is_snippet", true)}=0 AND {predicate}", parameters);
+        var result = new FwList();
+        foreach (var revision in revisions)
+        {
+            var page = buildPublication(revision);
+            resolvedPublications[revision["spages_id"].toInt()] = page;
+            if (!isVisible(page, audience: audience))
+                continue;
+            var item = new FwDict(page) { ["full_url"] = publishedUrl(page["id"].toInt()) };
+            result.Add(item);
+        }
+        return new FwList(result.OrderByDescending(row => row["prio"].toInt()).ThenBy(row => row["iname"].toStr()));
+    }
+
     public bool isVisible(FwDict page, Dictionary<int, FwDict>? pages = null, int? audience = null)
     {
         if (page.Count == 0)
@@ -830,7 +1046,6 @@ public class Spages : FwModel<Spages.Row>
             return false;
         }
 
-        pages ??= listPublicationsByDate();
         int level = audience ?? (fw.userId > 0 ? fw.userAccessLevel : 0);
         var seen = new HashSet<int>();
         var current = page;
@@ -847,10 +1062,7 @@ public class Spages : FwModel<Spages.Row>
                 return true;
             }
 
-            if (!pages.TryGetValue(parent, out current!))
-            {
-                return false;
-            }
+            current = pages != null ? (pages.TryGetValue(parent, out var ancestor) ? ancestor : []) : onePublication(parent);
         }
 
         return false;
@@ -858,8 +1070,8 @@ public class Spages : FwModel<Spages.Row>
 
     public FwDict onePublished(int id, int? audience = null)
     {
-        var pages = listPublicationsByDate();
-        return pages.TryGetValue(id, out var page) && isVisible(page, pages, audience) ? new(page) : [];
+        var page = onePublication(id);
+        return isVisible(page, audience: audience) ? new FwDict(page) { ["full_url"] = publishedUrl(id) } : [];
     }
 
     public FwList listPublished(int? audience = null)
@@ -884,12 +1096,12 @@ public class Spages : FwModel<Spages.Row>
 
     public string publishedUrl(int id, Dictionary<int, FwDict>? pages = null)
     {
-        pages ??= listPublicationsByDate();
         var parts = new List<string>();
         var seen = new HashSet<int>();
         while (id > 0)
         {
-            if (!seen.Add(id) || seen.Count > 20 || !pages.TryGetValue(id, out var row) || row["is_snippet"].toBool())
+            var row = pages != null ? (pages.TryGetValue(id, out var page) ? page : []) : onePublication(id);
+            if (!seen.Add(id) || seen.Count > 20 || row.Count == 0 || row["is_snippet"].toBool())
             {
                 return "";
             }
@@ -908,24 +1120,29 @@ public class Spages : FwModel<Spages.Row>
     public FwDict onePublishedByPath(string path, int? audience = null)
     {
         path = localPath(path);
-        var pages = listPublicationsByDate();
-        foreach (var page in pages.Values)
+        string slug = path.Split('/').Last();
+        string predicate = path == "/" ? snapshotFieldSql("is_home", true) + "=1" : publicationUrlPredicate("slug");
+        var candidates = listPublishedByFilter(predicate, new FwDict { ["slug"] = slug }, audience);
+        foreach (var page in candidates)
         {
-            if (!page["is_snippet"].toBool() && string.Equals(publishedUrl(page["id"].toInt(), pages), path, StringComparison.OrdinalIgnoreCase) && isVisible(page, pages, audience))
+            if (string.Equals(page["full_url"].toStr(), path, StringComparison.OrdinalIgnoreCase))
             {
                 var item = new FwDict(page);
                 item["full_url"] = path;
                 var breadcrumbs = new FwList();
                 int id = page["id"].toInt();
                 var seen = new HashSet<int>();
-                while (id > 0 && seen.Add(id) && pages.TryGetValue(id, out var parent))
+                while (id > 0 && seen.Add(id))
                 {
+                    var parent = onePublication(id);
+                    if (parent.Count == 0)
+                        break;
                     if (!parent["is_home"].toBool())
                     {
                         breadcrumbs.Insert(0, new FwDict
                         {
                             ["iname"] = parent["iname"],
-                            ["url"] = publishedUrl(id, pages),
+                            ["url"] = publishedUrl(id),
                             ["is_current"] = id == page["id"].toInt()
                         });
                     }

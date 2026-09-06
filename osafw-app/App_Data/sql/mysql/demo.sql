@@ -97,7 +97,7 @@ CREATE TABLE demos_demo_dicts (
 /* CMS demonstration drafts */
 -- Existing URLs and the homepage are preserved; these inserts can be repeated safely.
 -- Publish the demo-help snippet before publishing either sample page that includes it.
-INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, status)
 SELECT 0, 'demo-help', 'How can we help?', 'article', 10, 0, 1, 1, 'Help', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"callout","data":{"title":"Let''s find the right next step","text":"Tell us what you need. Our team will connect you with the right person."}},{"type":"button","data":{"text":"Contact our team","url":"/Contact"}}]}},"slots":{}}', JSON_OBJECT(
     'iname', 'How can we help?',
     'parent_id', 0,
@@ -121,14 +121,14 @@ SELECT 0, 'demo-help', 'How can we help?', 'article', 10, 0, 1, 1, 'Help', '{"sc
     'status', 10,
     'is_home', 0,
     'is_snippet', 1
-  ), 0, 10
+  ), 10
 WHERE NOT EXISTS (
   SELECT 1 FROM spages
   WHERE LOWER(url)='demo-help'
     OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(CASE WHEN JSON_VALID(draft_json) THEN draft_json ELSE NULL END, '$.url')))='demo-help'
 );
 
-INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, status)
 SELECT 0, 'demo-services', 'Good work starts with a clear plan', 'landing', 20, 0, 0, 1, 'Our services', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"Practical expertise. Thoughtful service. We help ambitious teams turn complex challenges into useful, lasting improvements."}},{"type":"button","data":{"text":"Explore our services","url":"#services"}},{"type":"header","data":{"text":"Support at every stage","level":2,"anchor":"services"}},{"type":"cards","data":{"items":[{"title":"Understand","text":"Find clarity through focused discovery, research, and a shared view of success."},{"title":"Create","text":"Build practical solutions around the people who will use them every day."},{"title":"Improve","text":"Keep learning, measure what matters, and make the next iteration better."}]}},{"type":"quote","data":{"text":"A good partnership makes the next step feel possible.","caption":"Our approach"}},{"type":"snippet","data":{"key":"demo-help"}}]}},"slots":{}}', JSON_OBJECT(
     'iname', 'Good work starts with a clear plan',
     'parent_id', 0,
@@ -152,14 +152,14 @@ SELECT 0, 'demo-services', 'Good work starts with a clear plan', 'landing', 20, 
     'status', 10,
     'is_home', 0,
     'is_snippet', 0
-  ), 0, 10
+  ), 10
 WHERE NOT EXISTS (
   SELECT 1 FROM spages
   WHERE LOWER(url)='demo-services'
     OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(CASE WHEN JSON_VALID(draft_json) THEN draft_json ELSE NULL END, '$.url')))='demo-services'
 );
 
-INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, status)
 SELECT 0, 'demo-department', 'People, resources, and a place to start', 'sidebar-right', 30, 0, 0, 1, 'Department resources', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"Your starting point for the people, guidance, and everyday resources that help our department do its best work."}},{"type":"header","data":{"text":"Start here","level":2}},{"type":"cards","data":{"items":[{"title":"New to the team?","text":"Get oriented with a simple checklist, team introductions, and the tools you need."},{"title":"Planning a project","text":"Use our shared guidance to define the outcome, find support, and prepare your next step."}]}},{"type":"table","data":{"caption":"Where to find support","withHeadings":true,"content":[["Need","First step"],["Getting access","Contact the service desk"],["Project advice","Speak with your team lead"]]}},{"type":"snippet","data":{"key":"demo-help"}}]},"right":{"blocks":[{"type":"callout","data":{"title":"Keep this page useful","text":"Found a gap or an outdated resource? Let the department editor know."}}]}},"slots":{}}', JSON_OBJECT(
     'iname', 'People, resources, and a place to start',
     'parent_id', 0,
@@ -183,7 +183,7 @@ SELECT 0, 'demo-department', 'People, resources, and a place to start', 'sidebar
     'status', 10,
     'is_home', 0,
     'is_snippet', 0
-  ), 0, 10
+  ), 10
 WHERE NOT EXISTS (
   SELECT 1 FROM spages
   WHERE LOWER(url)='demo-department'
