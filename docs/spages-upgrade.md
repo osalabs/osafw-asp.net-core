@@ -25,6 +25,8 @@ Existing databases use the additive script selected by `FwUpdates`:
 
 Use the application's normal `FwUpdates` flow so the provider-specific script is recorded in the update ledger. In development, pending updates are available through `/Admin/FwUpdates`; the existing `HomeController.IndexAction` check can redirect to the pending-update flow when `IS_DEV` and `is_fwupdates_auto_apply` are enabled.
 
+`FwUpdates` stores a script's SQL when it first discovers the filename. Replacing that file does not change an existing ledger entry. If an earlier development version of the CMS schema was already applied, inspect its actual columns and prepare a separate repair; do not reset the ledger or replay this script over existing CMS tables.
+
 Do not run a provider's `fwdatabase.sql` against an existing database. Fresh-schema files drop and recreate framework tables.
 
 The additive update adds the block document, working draft, workflow, access, navigation, indexing, alias, and snippet fields to `spages`, plus the `spages_revisions` table. Applying the schema does not convert content.
