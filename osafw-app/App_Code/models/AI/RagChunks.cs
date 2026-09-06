@@ -579,9 +579,34 @@ select d.id,
         return db.limit(sql, Math.Max(1, limit));
     }
 
+    private List<int>? cmsSourceIds;
+
+    private void addCmsParams(FwDict parameters)
+    {
+        int entityId = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE);
+        parameters["cms_entity_id"] = entityId;
+        if (cmsSourceIds == null)
+        {
+            cmsSourceIds = [0];
+            var pages = fw.model<Spages>();
+            if (entityId > 0 && pages.isEnabled())
+            {
+                var publications = pages.publishedPages().ToDictionary(x => x["id"].toInt());
+                foreach (var source in db.array(fw.model<RagSources>().table_name, DB.h("fwentities_id", entityId, "status", STATUS_ACTIVE, "index_status", RagSources.INDEX_STATUS_INDEXED)))
+                    if (publications.TryGetValue(source["item_id"].toInt(), out var page)
+                        && source["url"].toStr() == pages.publishedUrl(page["id"].toInt())
+                        && source["content_hash"].toStr() == RagSources.HashText(pages.publishedText(page)))
+                        cmsSourceIds.Add(source["id"].toInt());
+            }
+        }
+        parameters["cms_source_ids"] = cmsSourceIds;
+    }
+
     private string addSearchFilters(string sql, HashSet<int>? allowedEntityIds, HashSet<int>? allowedItemIds)
     {
         string filters = string.Empty;
+        if (fw.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE) > 0)
+            filters += " and (d.fwentities_id<>@cms_entity_id or d.rag_sources_id in (@cms_source_ids))";
         if (allowedEntityIds != null && allowedEntityIds.Count > 0)
             filters += " and d.fwentities_id in (@allowed_entity_ids)";
         if (allowedItemIds != null && allowedItemIds.Count > 0)
@@ -617,6 +642,7 @@ select d.id,
             "@kb_entity_id", fw.model<FwEntities>().idByIcode(FwEntities.ICODE_KB),
             "@current_access_level", fw.userAccessLevel
         );
+        addCmsParams(@params);
         if (allowedEntityIds != null && allowedEntityIds.Count > 0)
             @params["allowed_entity_ids"] = allowedEntityIds.ToList();
         if (allowedItemIds != null && allowedItemIds.Count > 0)
@@ -635,6 +661,7 @@ select d.id,
             "@kb_entity_id", fw.model<FwEntities>().idByIcode(FwEntities.ICODE_KB),
             "@current_access_level", fw.userAccessLevel
         );
+        addCmsParams(@params);
         if (allowedEntityIds != null && allowedEntityIds.Count > 0)
             @params["allowed_entity_ids"] = allowedEntityIds.ToList();
         if (allowedItemIds != null && allowedItemIds.Count > 0)
@@ -709,11 +736,11 @@ select d.id,
             {
                 if (!spageCache.TryGetValue(itemId, out var spage))
                 {
-                    spage = fw.model<Spages>().one(itemId).toFwDict();
+                    spage = fw.model<Spages>().published(itemId);
                     spageCache[itemId] = spage;
                 }
                 citation.SourceTitle = string.IsNullOrWhiteSpace(citation.SourceTitle) ? spage["iname"].toStr() : citation.SourceTitle;
-                citation.SourceUrl = string.IsNullOrWhiteSpace(citation.SourceUrl) ? fw.model<Spages>().getFullUrl(itemId) : citation.SourceUrl;
+                citation.SourceUrl = fw.model<Spages>().publishedUrl(itemId);
             }
 
             double vectorScore = row["CosineSim"].toDouble();

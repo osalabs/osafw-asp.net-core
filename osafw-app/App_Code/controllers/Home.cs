@@ -29,6 +29,12 @@ public class HomeController : FwController
     {
         fw.model<FwUpdates>().checkApplyIfDev();
 
+        if (fw.config("SPAGES_HOME_ENABLED").toBool() && fw.model<Spages>().isEnabled())
+        {
+            fw.model<Spages>().showCmsPage("/");
+            return null!;
+        }
+
         //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
 
         FwDict ps = FwCache.getValue("home_page") as FwDict ?? [];

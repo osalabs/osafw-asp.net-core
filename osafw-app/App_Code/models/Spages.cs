@@ -4,12 +4,13 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class Spages : FwModel<Spages.Row>
+public partial class Spages : FwModel<Spages.Row>
 {
     public class Row
     {
@@ -36,6 +37,20 @@ public class Spages : FwModel<Spages.Row>
         public int add_users_id { get; set; }
         public DateTime? upd_time { get; set; }
         public int upd_users_id { get; set; }
+        public int is_snippet { get; set; }
+        public string snippet_key { get; set; } = string.Empty;
+        public string content_json { get; set; } = string.Empty;
+        public string draft_json { get; set; } = string.Empty;
+        public int edit_version { get; set; }
+        public string workflow { get; set; } = string.Empty;
+        public string review_note { get; set; } = string.Empty;
+        public int access_level { get; set; }
+        public int nav_visible { get; set; }
+        public string nav_title { get; set; } = string.Empty;
+        public string meta_title { get; set; } = string.Empty;
+        public int noindex { get; set; }
+        public string image_alt { get; set; } = string.Empty;
+        public int image_decorative { get; set; }
     }
 
     public Spages() : base()
@@ -43,9 +58,30 @@ public class Spages : FwModel<Spages.Row>
         table_name = "spages";
     }
 
+    /// <summary>Compatibility read of the effective publication for the current audience. Editors use draft() explicitly.</summary>
+    public override DBRow one(int id) => isCmsReady() ? new DBRow(legacyProjection(published(id))) : base.one(id);
+
+    public override object? oneField(int id, string field_name) => isCmsReady() ? one(id)[field_name] : base.oneField(id, field_name);
+
+    private FwDict legacyProjection(FwDict item)
+    {
+        if (item.Count == 0) return item;
+        var page = (FwDict)pageState(item)["page"]!;
+        page["idesc"] = new SpagesContent.RenderedHtml(page["html_main"].toStr() + page["html_after_content"].toStr());
+        page["idesc_left"] = new SpagesContent.RenderedHtml(page["html_left"].toStr());
+        page["idesc_right"] = new SpagesContent.RenderedHtml(page["html_right"].toStr());
+        return page;
+    }
+
     // delete record, but don't allow to delete home page
     public override void delete(int id, bool is_perm = false)
     {
+        if (isCmsReady())
+        {
+            requireAuthor(true);
+            transition(id, draft(id)["edit_version"].toInt(), "unpublish", "Withdrawn through the model API");
+            return;
+        }
         var item_old = one(id);
         // home page cannot be deleted
         if (!item_old["is_home"].toBool())
@@ -79,6 +115,7 @@ public class Spages : FwModel<Spages.Row>
     // retun one latest record by url (i.e. with most recent pub_time if there are more than one page with such url)
     public FwDict oneByUrl(string url, int parent_id)
     {
+        if (isCmsReady()) return legacyProjection(publishedPages().FirstOrDefault(x => x["parent_id"].toInt() == parent_id && x["url"].toStr().Equals(url, StringComparison.OrdinalIgnoreCase)) ?? []);
         FwDict where = new()
         {
             ["parent_id"] = parent_id,
@@ -90,6 +127,7 @@ public class Spages : FwModel<Spages.Row>
     // return one latest record by full_url (i.e. relative url from root, without domain)
     public FwDict oneByFullUrl(string full_url)
     {
+        if (isCmsReady()) return legacyProjection(publishedByPath(full_url));
         string[] url_parts = full_url.Split("/");
         int parent_id = 0;
         var breadcrumbs = new FwList();
@@ -142,6 +180,7 @@ public class Spages : FwModel<Spages.Row>
 
     public FwList listChildren(int parent_id)
     {
+        if (isCmsReady()) return new FwList(publishedPages().Where(x => x["parent_id"].toInt() == parent_id));
         var where = new FwDict {
             { "status", db.opNOT(FwModel.STATUS_DELETED)},
             { "parent_id", parent_id}
@@ -246,6 +285,7 @@ public class Spages : FwModel<Spages.Row>
     /// <returns>URL like <c>/page/subpage/subsubpage</c>, or empty string when the chain is invalid.</returns>
     public string getFullUrl(int id, int level = 0)
     {
+        if (isCmsReady()) return published(id).Count > 0 ? publishedUrl(id) : "";
         if (id == 0 || level > 20) // prevent infinite loop
             return "";
 
@@ -264,7 +304,8 @@ public class Spages : FwModel<Spages.Row>
     {
         DBList result = [];
         var item = one(id);
-        while (item.Count > 0)
+        var seen = new System.Collections.Generic.HashSet<int>();
+        while (item.Count > 0 && seen.Add(item["id"].toInt()) && seen.Count <= 20)
         {
             var item_id = item["id"].toInt();
             if (item_id != id)
@@ -277,12 +318,15 @@ public class Spages : FwModel<Spages.Row>
 
     public bool isPublished(FwDict item)
     {
+        if (isCmsReady()) return published(item["id"].toInt()).Count > 0;
         return item["status"].toInt() == FwModel.STATUS_ACTIVE && (item["pub_time"] == null || item["pub_time"].toDate() <= DateTime.UtcNow);
     }
 
     // render page by full url
     public void showPageByFullUrl(string full_url)
     {
+        if (!isEnabled()) throw new NotFoundException();
+        if (isCmsReady()) { showCmsPage(full_url); return; }
         FwDict ps = [];
 
         // for navigation
@@ -293,9 +337,7 @@ public class Spages : FwModel<Spages.Row>
         bool is_pub;
         if (item.Count == 0 || !(is_pub = isPublished(item)) && !fw.model<Users>().isAccessLevel(Users.ACL_ADMIN))
         {
-            ps["hide_std_sidebar"] = true;
-            fw.parser("/error/404", ps);
-            return;
+            throw new NotFoundException();
         }
 
         var redirect_url = item["redirect_url"].toStr();
@@ -329,6 +371,7 @@ public class Spages : FwModel<Spages.Row>
 
     public DBList listChildrenPublished(int parent_id)
     {
+        if (isCmsReady()) return new DBList(publishedPages().Where(x => x["parent_id"].toInt() == parent_id).Select(x => new DBRow(x)));
         var now = DateTime.UtcNow;
         return db.arrayp(@$"select *
               from {db.qid(table_name)}

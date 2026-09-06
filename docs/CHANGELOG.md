@@ -2,6 +2,12 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-09-05
+
+- Spages now supports a block CMS on SQL Server and SQLite. Existing installations must apply the provider-specific additive update and explicitly convert existing pages; see [the upgrade guide](spages-upgrade.md). MySQL retains the legacy CMS and skips this update.
+- Spages public reads now use approved revisions, publication dates, and ancestor access. Editing integrations must use `draft()`/`saveDraft()` and the workflow API; raw SQL and legacy columns cannot represent effective publication. Compatibility `idesc` reads return server-rendered values supporting existing ParsePage Markdown templates; string-cast/DTO consumers must use `.toStr()` or block JSON. See [CMS compatibility](spages.md#compatibility-and-extension).
+- CMS-owned `/` remains opt-in. `/Search` and `/sitemap.xml` are new public routes; merge custom application routes deliberately. Missing/inaccessible CMS pages return HTTP 404. Restricted page files require page-owned uploads; raw Markdown HTML is disabled. Role thresholds remain manager-level by default, and Site Admin retains executable customization authority.
+
 ## 2026-09-02
 
 - Breaking for custom sign-in routes: anonymous browser GETs to protected pages now use `/Login?gourl=...` instead of `UNLOGGED_DEFAULT_URL`. Copied apps that used `UNLOGGED_DEFAULT_URL` to select a different sign-in route must adapt the destination in `FW.dispatch()` and carry the validated `gourl` through their login form. Logout and non-page requests still use `UNLOGGED_DEFAULT_URL`.

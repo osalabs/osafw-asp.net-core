@@ -8,9 +8,9 @@ using System.Text.RegularExpressions;
 
 namespace osafw;
 
-public class AdminSpagesController : FwAdminController
+public partial class AdminSpagesController : FwAdminController
 {
-    public static new int access_level = Users.ACL_MANAGER;
+    public static new int access_level = Users.ACL_MEMBER;
 
     protected Spages model = null!;
 
@@ -80,6 +80,7 @@ public class AdminSpagesController : FwAdminController
 
     public override FwDict ShowFormAction(int id = 0)
     {
+        if (model.isCmsReady()) return cmsForm(id);
         var parent_id = reqi("parent_id");
 
         // set new form defaults here if any
@@ -118,6 +119,7 @@ public class AdminSpagesController : FwAdminController
 
     public override FwDict? SaveAction(int id = 0)
     {
+        if (model.isCmsReady()) return cmsSave(id);
         route_onerror = FW.ACTION_SHOW_FORM;
 
         if (this.save_fields == null)

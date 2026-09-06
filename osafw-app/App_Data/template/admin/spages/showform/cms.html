@@ -1,0 +1,76 @@
+<link rel="stylesheet" href="<~ROOT_URL>/assets/css/spages-editor.css?v=3">
+<nav aria-label="breadcrumb" class="spages-breadcrumbs"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="<~../url>">Pages</a></li>
+  <~parents repeat inline><li class="breadcrumb-item"><a href="<~../url>/<~id>/edit"><~iname></a></li></~parents>
+  <li class="breadcrumb-item active" aria-current="page"><~i[iname] default="New page"></li>
+</ol></nav>
+<form id="spages-editor" class="spages-cms" method="post" action="<~../url>/<~id>" data-base="<~../url>" data-id="<~id>">
+  <input type="hidden" name="XSS" value="<~session[XSS]>">
+  <input type="hidden" name="expected_version" value="<~i[edit_version]>">
+  <input type="hidden" name="item[is_snippet]" value="<~i[is_snippet]>">
+  <textarea name="item[content_json]" id="spages-document" hidden><~i[content_json]></textarea>
+  <textarea id="spages-layouts" hidden><~layouts_json></textarea>
+  <textarea id="spages-snippets" hidden><~snippets_json></textarea>
+  <div id="spages-error" class="alert alert-danger" role="alert" hidden></div>
+  <div class="spages-workspace">
+    <div class="spages-writing">
+      <label for="spages-title" class="form-label"><~snippet_title if="i[is_snippet]" inline>Snippet title</~snippet_title><~page_title unless="i[is_snippet]" inline>Page title</~page_title></label>
+      <input id="spages-title" name="item[iname]" class="form-control form-control-lg mb-3" value="<~i[iname]>" maxlength="64" required placeholder="Give this content a clear title">
+      <~snippet_key if="i[is_snippet]" inline><div class="spages-snippet-key mb-3"><label for="spages-snippet-key" class="form-label fw-semibold">Stable snippet key</label><input id="spages-snippet-key" name="item[snippet_key]" class="form-control" value="<~i[snippet_key]>" maxlength="64" pattern="[a-z][a-z0-9_-]{0,63}" aria-describedby="spages-snippet-key-help" required><div id="spages-snippet-key-help" class="form-text">Used by pages that include this snippet. It becomes permanent after the first save.</div></div></~snippet_key>
+      <p class="text-body-secondary small"><~page_help unless="i[is_snippet]" inline>The page title is your main heading. </~page_help>Use H2 for sections and H3 for subsections. Choose + to add a block.</p>
+      <section class="spages-region" data-region="main"><h2 class="h6">Page content</h2><div id="spages-main" class="spages-canvas"></div></section>
+      <section class="spages-region" data-region="left" hidden><h2 class="h6">Left column</h2><div id="spages-left" class="spages-canvas"></div></section>
+      <section class="spages-region" data-region="right" hidden><h2 class="h6">Right column</h2><div id="spages-right" class="spages-canvas"></div></section>
+      <details class="mt-4"><summary>Navigation and search settings</summary><div class="spages-settings">
+        <label>URL segment<input name="item[url]" class="form-control" value="<~i[url]>" maxlength="255" placeholder="Generated from the title"></label>
+        <label>Parent page<select name="item[parent_id]" class="form-select" data-selected="<~i[parent_id]>"><option value="0">Top level</option><~parent_options repeat inline><option value="<~id>"><~iname></option></~parent_options></select></label>
+        <label>Navigation label<input name="item[nav_title]" class="form-control" value="<~i[nav_title]>" maxlength="128" placeholder="Use page title"></label>
+        <label>Navigation order<input name="item[prio]" type="number" class="form-control" value="<~i[prio]>"></label>
+        <label>Show in navigation<select name="item[nav_visible]" class="form-select" data-selected="<~i[nav_visible]>"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label>Search engine title<input name="item[meta_title]" class="form-control" value="<~i[meta_title]>" maxlength="255"></label>
+        <label>Description<textarea name="item[meta_description]" class="form-control" maxlength="255"><~i[meta_description]></textarea></label>
+        <label>Search engine indexing<select name="item[noindex]" class="form-select" data-selected="<~i[noindex]>"><option value="0">Allow indexing</option><option value="1">Ask search engines not to index</option></select></label>
+      </div></details>
+      <details class="mt-3"><summary>Page image and advanced settings</summary><div class="spages-settings">
+        <div class="spages-page-image"><input id="spages-head-att" name="item[head_att_id]" type="hidden" value="<~i[head_att_id]>"><div id="spages-head-media" data-att-id="<~i[head_att_id]>"></div></div>
+        <label>Image alternative text<input name="item[image_alt]" class="form-control" value="<~i[image_alt]>" maxlength="255"></label>
+        <label>Decorative page image<select name="item[image_decorative]" class="form-select" data-selected="<~i[image_decorative]>"><option value="0">No</option><option value="1">Yes — conveys no information</option></select></label>
+        <label>Redirect this page to<input name="item[redirect_url]" class="form-control" value="<~i[redirect_url]>" placeholder="/local-path"></label>
+        <~custom if="is_site_admin" inline>
+          <label>Custom head<textarea name="item[custom_head]" class="form-control" rows="3"><~i[custom_head]></textarea></label>
+          <label>Custom CSS<textarea name="item[custom_css]" class="form-control" rows="3"><~i[custom_css]></textarea></label>
+          <label>Custom JavaScript<textarea name="item[custom_js]" class="form-control" rows="3"><~i[custom_js]></textarea></label>
+        </~custom>
+      </div></details>
+      <details class="mt-3"><summary>Revisions</summary><p class="small text-body-secondary">Restoring creates a draft. Publish it to make the restored content live.</p>
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Saved (UTC)</th><th>Event</th><th>Note</th><th>Actions</th></tr></thead><tbody>
+          <~history repeat inline><tr><td><~add_time></td><td><~kind><~cancelled if="cancelled" inline> (cancelled)</~cancelled></td><td><~note></td><td><a class="btn btn-sm btn-default" target="_blank" rel="noopener" href="<~../url>/(Preview)/<~spages_id>?revision_id=<~id>">Preview</a> <button type="button" class="btn btn-sm btn-default" data-restore="<~id>">Restore</button></td></tr></~history>
+        </tbody></table></div>
+      </details>
+    </div>
+    <aside class="spages-publishing">
+      <div class="fw-card spages-publish-card">
+        <div class="d-flex align-items-start justify-content-between gap-2"><h2 class="h5 mb-0">Publishing</h2><span id="spages-workflow" class="badge text-bg-secondary"><~i[workflow]></span></div>
+        <p id="spages-save-state" role="status" aria-live="polite" class="small text-body-secondary my-2">Draft ready</p>
+        <div class="spages-publish-actions"><button class="btn btn-primary" type="submit">Save draft</button><button class="btn btn-default" type="button" data-preview>Preview</button></div>
+        <details class="spages-publish-more mt-3"><summary>Page options</summary><div class="pt-2">
+          <label class="form-label w-100">Layout<select id="spages-layout" name="item[template]" class="form-select" data-selected="<~i[template]>"><~layouts repeat inline><option value="<~id>"><~title></option></~layouts></select></label>
+          <label class="form-label w-100">Minimum access level<input name="item[access_level]" class="form-control" type="number" min="0" max="100" value="<~i[access_level]>"><span class="small text-body-secondary">0 = public, 1 = signed in. Parent restrictions also apply.</span></label>
+          <label class="form-label w-100 mb-0">After-content snippet<select id="spages-slot" class="form-select"><option value="">None</option></select></label>
+        </div></details>
+        <details class="spages-publish-more mt-2"><summary>Review and publication</summary><div class="pt-2">
+          <label class="form-label w-100">Review note<textarea id="spages-note" class="form-control" maxlength="1000"><~i[review_note]></textarea></label>
+          <~submit unless="is_in_review" inline><button class="btn btn-default w-100" type="button" data-workflow="Submit">Send for review</button></~submit>
+          <~publisher if="can_publish" inline>
+            <label class="form-label w-100 mt-3">Publish at (your local time)<input id="spages-publish-at" class="form-control" type="datetime-local"><span class="small text-body-secondary">Leave empty to publish now.</span></label>
+            <div class="d-grid gap-2"><button class="btn btn-success" type="button" data-workflow="Publish">Publish</button><~changes if="is_in_review" inline><button class="btn btn-default" type="button" data-workflow="Changes">Request changes</button></~changes><~cancel if="has_scheduled" inline><button class="btn btn-default" type="button" data-workflow="Cancel">Cancel scheduled publication</button></~cancel><~unpublish if="is_live" inline><button class="btn btn-outline-danger" type="button" data-workflow="Unpublish">Unpublish</button></~unpublish></div>
+          </~publisher>
+        </div></details>
+      </div>
+      <~subpage if="id" inline><~page unless="i[is_snippet]" inline><a class="btn btn-default mt-3" href="<~../url>/new?parent_id=<~id>">Add subpage</a></~page></~subpage>
+      <~usage if="usages" inline><div class="alert alert-info mt-3"><strong>Publishing updates these pages</strong><ul class="mb-0"><~usages repeat inline><li><a href="<~../url>/<~id>/edit"><~iname></a></li></~usages></ul></div></~usage>
+    </aside>
+  </div>
+</form>
+<script src="<~ROOT_URL>/assets/lib/editorjs/dist/editorjs.umd.js" defer></script>
+<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=4" defer></script>

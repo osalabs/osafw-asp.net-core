@@ -382,6 +382,9 @@ public class Att : FwModel<Att.Row>
         if (string.IsNullOrEmpty(entityCode))
             return false;
 
+        if (entityCode == FwEntities.ICODE_SPAGE)
+            return fw.model<Spages>().isAttachmentVisible(item["id"].toInt(), directItemId, action);
+
         FwModel parentModel;
         try
         {

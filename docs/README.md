@@ -13,6 +13,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [design_system.html](design_system.html): Bootstrap-based UI conventions, themes, tokens, and components.
 - [layout.md](layout.md): shared layout structure, CRUD headers, and theming extension points.
 - [dashboard.md](dashboard.md): dashboard pane types and extension patterns.
+- [spages.md](spages.md): optional block CMS, editorial workflow, public access, snippets, templates, and extension points.
+- [spages-upgrade.md](spages-upgrade.md): SQL Server/SQLite CMS upgrade and recoverable Markdown conversion.
 - [assistant.md](assistant.md): optional read-only RAG assistant, configuration, indexing, retrieval, and vector backends.
 - [deploy.md](deploy.md): Windows/IIS deployment prerequisites, scripts, verification, and recovery.
 - [reports.md](reports.md): hardcoded and Site Admin-managed reports.

@@ -302,8 +302,25 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 (1, 60, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.', 'min|1 step|1');
 
 /*Static pages*/
+DROP TABLE IF EXISTS spages_revisions;
+DROP TABLE IF EXISTS spages_redirects;
 DROP TABLE IF EXISTS spages;
 CREATE TABLE spages (
+  is_snippet INT NOT NULL DEFAULT 0,
+  snippet_key NVARCHAR(64) NOT NULL DEFAULT '',
+  content_json NVARCHAR(MAX),
+  draft_json NVARCHAR(MAX),
+  edit_version INT NOT NULL DEFAULT 0,
+  workflow NVARCHAR(24) NOT NULL DEFAULT 'draft',
+  review_note NVARCHAR(MAX),
+  access_level INT NOT NULL DEFAULT 0,
+  nav_visible INT NOT NULL DEFAULT 1,
+  nav_title NVARCHAR(128) NOT NULL DEFAULT '',
+  meta_title NVARCHAR(255) NOT NULL DEFAULT '',
+  noindex INT NOT NULL DEFAULT 0,
+  image_alt NVARCHAR(255) NOT NULL DEFAULT '',
+  image_decorative INT NOT NULL DEFAULT 0,
+
   id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   parent_id             INT NOT NULL DEFAULT 0,  /*parent page id*/
 
@@ -336,6 +353,33 @@ CREATE TABLE spages (
   INDEX IX_spages_parent_id (parent_id, prio),
   INDEX IX_spages_url (url)
 );
+CREATE TABLE spages_revisions (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  spages_id INT NOT NULL REFERENCES spages(id),
+  kind NVARCHAR(24) NOT NULL,
+  snapshot_json NVARCHAR(MAX) NOT NULL,
+  snippet_versions NVARCHAR(MAX),
+  effective_time DATETIME2 NOT NULL,
+  cancelled INT NOT NULL DEFAULT 0,
+  note NVARCHAR(1000),
+  add_time DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+  add_users_id INT NOT NULL DEFAULT 0
+);
+CREATE INDEX IX_spages_revisions_release ON spages_revisions (spages_id, kind, cancelled, effective_time, id);
+CREATE TABLE spages_redirects (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  source_url NVARCHAR(450) NOT NULL,
+  target_url NVARCHAR(450) NOT NULL DEFAULT '',
+  spages_id INT NOT NULL DEFAULT 0,
+  revision_id INT NOT NULL DEFAULT 0,
+  effective_time DATETIME2 NOT NULL,
+  status INT NOT NULL DEFAULT 0,
+  add_time DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+  add_users_id INT NOT NULL DEFAULT 0
+);
+CREATE INDEX IX_spages_redirects_source ON spages_redirects (source_url, status, effective_time);
+
+
 --TRUNCATE TABLE spages;
 INSERT INTO spages (parent_id, url, iname) VALUES
 (0,'','Home') --1

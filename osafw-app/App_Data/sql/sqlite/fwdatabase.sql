@@ -9,6 +9,8 @@ DROP TABLE IF EXISTS user_lists;
 DROP TABLE IF EXISTS user_views;
 DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS log_types;
+DROP TABLE IF EXISTS spages_revisions;
+DROP TABLE IF EXISTS spages_redirects;
 DROP TABLE IF EXISTS spages;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS users_cookies;
@@ -281,6 +283,21 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 
 /* Static pages */
 CREATE TABLE spages (
+  is_snippet INT NOT NULL DEFAULT 0,
+  snippet_key TEXT NOT NULL DEFAULT '',
+  content_json TEXT,
+  draft_json TEXT,
+  edit_version INT NOT NULL DEFAULT 0,
+  workflow TEXT NOT NULL DEFAULT 'draft',
+  review_note TEXT,
+  access_level INT NOT NULL DEFAULT 0,
+  nav_visible INT NOT NULL DEFAULT 1,
+  nav_title TEXT NOT NULL DEFAULT '',
+  meta_title TEXT NOT NULL DEFAULT '',
+  noindex INT NOT NULL DEFAULT 0,
+  image_alt TEXT NOT NULL DEFAULT '',
+  image_decorative INT NOT NULL DEFAULT 0,
+
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   parent_id             INTEGER NOT NULL DEFAULT 0,
 
@@ -310,6 +327,33 @@ CREATE TABLE spages (
   upd_time              DATETIME,
   upd_users_id          INTEGER DEFAULT 0
 );
+CREATE TABLE spages_revisions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  spages_id INT NOT NULL REFERENCES spages(id),
+  kind TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  snippet_versions TEXT,
+  effective_time DATETIME NOT NULL,
+  cancelled INT NOT NULL DEFAULT 0,
+  note TEXT,
+  add_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  add_users_id INT NOT NULL DEFAULT 0
+);
+CREATE INDEX IX_spages_revisions_release ON spages_revisions (spages_id, kind, cancelled, effective_time, id);
+CREATE TABLE spages_redirects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_url TEXT NOT NULL,
+  target_url TEXT NOT NULL DEFAULT '',
+  spages_id INT NOT NULL DEFAULT 0,
+  revision_id INT NOT NULL DEFAULT 0,
+  effective_time DATETIME NOT NULL,
+  status INT NOT NULL DEFAULT 0,
+  add_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  add_users_id INT NOT NULL DEFAULT 0
+);
+CREATE INDEX IX_spages_redirects_source ON spages_redirects (source_url, status, effective_time);
+
+
 CREATE INDEX IX_spages_parent_id ON spages (parent_id, prio);
 CREATE INDEX IX_spages_url ON spages (url);
 

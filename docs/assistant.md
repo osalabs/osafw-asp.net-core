@@ -56,7 +56,7 @@ Indexed source types:
 
 - KB article body.
 - KB article attachments with supported text/HTML/DOCX-like parsers.
-- Published Spages.
+- Effective published Spages, including current reused snippets. CMS retrieval rechecks audience/ancestor access, publication URL, and content hash before admitting stored chunks. Drafts, future-only pages, withdrawn content, and stale snippets cannot be used as retrieval text. Changed content can be temporarily absent until reindexed. Direct Spages consumers should use the [CMS effective-publication accessors](spages.md#public-reads-search-and-urls).
 - Files uploaded to assistant messages.
 
 Unsupported KB article files can still be uploaded and shown on the article, but they are not queued for RAG indexing until a matching parser is added.
