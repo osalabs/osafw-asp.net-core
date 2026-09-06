@@ -28,10 +28,11 @@
 .spages-tool-field .form-control, .spages-tool-field .form-select { margin-top:.25rem; }
 .spages-settings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem 1rem; padding:1rem 0; }
 .spages-settings label { display:block; }
+.spages-wide-field { grid-column:1/-1; }
 .spages-page-image { grid-column:1/-1; }
 .spages-page-image .spages-tool { background:transparent; }
-.spages-snippet-key { border-left:.25rem solid var(--bs-primary); padding:.75rem 1rem; background:var(--bs-tertiary-bg); border-radius:var(--bs-border-radius); }
+.spages-url-field { border-left:.25rem solid var(--bs-primary); padding:.75rem 1rem; background:var(--bs-tertiary-bg); border-radius:var(--bs-border-radius); }
 #spages-editor summary { padding:.35rem 0; font-weight:600; cursor:pointer; }
-#spages-editor summary:focus-visible { outline:.2rem solid rgba(var(--bs-primary-rgb),.35); outline-offset:.2rem; border-radius:var(--bs-border-radius-sm); }
+.spages-cms :is(input, select, textarea, button, a, [contenteditable], summary):focus-visible { outline:2px solid var(--bs-body-color); outline-offset:3px; }
 @media(max-width:991px) { .spages-workspace { grid-template-columns:1fr; } .spages-publishing { position:static; grid-row:1; } .spages-canvas { padding:1rem 2.25rem; } }
 @media(max-width:575px) { .spages-settings { grid-template-columns:1fr; } .spages-canvas { padding:.75rem 1.5rem; } .spages-publish-actions { grid-template-columns:1fr; } }

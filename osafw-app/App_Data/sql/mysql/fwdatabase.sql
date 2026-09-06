@@ -177,15 +177,16 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 (1, 60, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.', 'min|1 step|1');
 
 /*Static pages*/
+DROP TABLE IF EXISTS spages_revisions;
 DROP TABLE IF EXISTS spages;
 CREATE TABLE spages (
-  id                    INT NOT NULL auto_increment,
+  id                    INT NOT NULL AUTO_INCREMENT,
   parent_id             INT NOT NULL DEFAULT 0,  /*parent page id*/
+  head_att_id           INT NULL, /*optional head banner image*/
 
-  url                   VARCHAR(255) NOT NULL DEFAULT '',      /*sub-url from parent page*/
+  url                   VARCHAR(255) NOT NULL DEFAULT '',      /*page slug or stable snippet key*/
   iname                 VARCHAR(64) NOT NULL DEFAULT '',       /*page name-title*/
   idesc                 TEXT,                          /*page contents, markdown*/
-  head_att_id           INT NULL, /*optional head banner image*/
 
   idesc_left            TEXT,                          /*left sidebar content, markdown*/
   idesc_right           TEXT,                          /*right sidebar content, markdown*/
@@ -198,8 +199,21 @@ CREATE TABLE spages (
   is_home               INT DEFAULT 0,                          /* 1 is for home page (non-deletable page*/
   redirect_url          VARCHAR(255) NOT NULL DEFAULT '',      /*if set - redirect to this url instead displaying page*/
 
+  custom_head           LONGTEXT,                                                    -- Custom page head
   custom_css            TEXT,                          /*custom page css*/
   custom_js             TEXT,                          /*custom page js*/
+
+  is_snippet            TINYINT NOT NULL DEFAULT 0,                                  -- 1 for a reusable snippet; url is its stable key
+  content_json          LONGTEXT,                                                    -- Converted block document; draft and revision snapshots are authoritative
+  draft_json            LONGTEXT,                                                    -- Editable snapshot of all content fields; content_json remains a JSON string
+  workflow              TINYINT NOT NULL DEFAULT 0,                                  -- 0 Draft, 10 In review, 20 Changes requested, 30 Published, 40 Scheduled
+  review_note           LONGTEXT,                                                    -- Current editorial review feedback
+  access_level          INT NOT NULL DEFAULT 0,                                      -- Minimum framework access level required to view this page
+  is_nav_visible        TINYINT NOT NULL DEFAULT 1,                                  -- 1 to include the published page in navigation
+  nav_title             VARCHAR(128) NOT NULL DEFAULT '',                            -- Optional navigation label; empty uses the page title
+  meta_title            VARCHAR(255) NOT NULL DEFAULT '',                            -- Optional browser and search title; empty uses the page title
+  is_noindex            TINYINT NOT NULL DEFAULT 0,                                  -- 1 to exclude the published page from search indexing
+  url_aliases           LONGTEXT,                                                    -- Manual app-local URL aliases, one per line
 
   status                TINYINT NOT NULL DEFAULT 0,    /*0-ok, 10-not published, 127-deleted*/
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -208,18 +222,87 @@ CREATE TABLE spages (
   upd_users_id          INT DEFAULT 0,
 
   PRIMARY KEY (id),
-  KEY IX_spages_parent_id (parent_id, prio),
-  KEY IX_spages_url (url),
+  INDEX IX_spages_parent_id (parent_id, prio),
+  INDEX IX_spages_url (url),
   FOREIGN KEY (head_att_id) REFERENCES att(id)
 ) DEFAULT CHARSET=utf8mb4;
---TRUNCATE TABLE spages;
-INSERT INTO spages (parent_id, url, iname) VALUES
-(0,'','Home') --1
-,(0,'test-page','Test  page') --2
-;
-update spages set is_home=1 where id=1;
 
+/* Immutable page snapshots and publication history */
+CREATE TABLE spages_revisions (
+  id                    INT NOT NULL AUTO_INCREMENT,                                 -- Revision identity
+  spages_id             INT NOT NULL,                                                -- Page or snippet owning this revision
 
+  kind                  TINYINT NOT NULL DEFAULT 0,                                  -- 0 Saved, 10 Submitted, 20 Changes requested, 30 Published, 40 Withdrawn, 50 Original
+  snapshot_json         LONGTEXT NOT NULL,                                           -- Immutable content-field snapshot; content_json remains a JSON string
+  snippet_versions      LONGTEXT,                                                    -- Pinned snippet revision IDs keyed by the snippet url
+  effective_time        DATETIME NOT NULL,                                           -- Effective instant in DB timezone; reads normalize to UTC
+  note                  VARCHAR(1000),                                               -- Editorial note for this revision
+
+  status                TINYINT NOT NULL DEFAULT 0,                                  -- 0 retained/eligible, 127 cancelled scheduled release
+  add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- Creation instant in DB timezone; reads normalize to UTC
+  add_users_id          INT NOT NULL DEFAULT 0,                                      -- User who created this revision; 0 for system seeds
+
+  PRIMARY KEY (id),
+  FOREIGN KEY (spages_id) REFERENCES spages(id),
+  INDEX IX_spages_revisions_release (spages_id, kind, status, effective_time, id)
+) DEFAULT CHARSET=utf8mb4;
+
+-- Fresh installations include published block pages and matching working drafts.
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+VALUES (0, '', 'Home', 'article', 1, 1, 0, 1, '', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"Welcome to your new website."}}]}},"slots":{}}', JSON_OBJECT(
+    'iname', 'Home',
+    'parent_id', 0,
+    'url', '',
+    'head_att_id', 0,
+    'template', 'article',
+    'prio', 1,
+    'meta_keywords', '',
+    'meta_description', '',
+    'meta_title', '',
+    'custom_head', '',
+    'custom_css', '',
+    'custom_js', '',
+    'redirect_url', '',
+    'url_aliases', '',
+    'content_json', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"Welcome to your new website."}}]}},"slots":{}}',
+    'access_level', 0,
+    'is_nav_visible', 1,
+    'nav_title', '',
+    'is_noindex', 0,
+    'status', 0,
+    'is_home', 1,
+    'is_snippet', 0
+  ), 30, 0);
+
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+VALUES (0, 'test-page', 'Test  page', 'article', 2, 0, 0, 1, '', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"This is a sample page. Edit its blocks in Pages."}}]}},"slots":{}}', JSON_OBJECT(
+    'iname', 'Test  page',
+    'parent_id', 0,
+    'url', 'test-page',
+    'head_att_id', 0,
+    'template', 'article',
+    'prio', 2,
+    'meta_keywords', '',
+    'meta_description', '',
+    'meta_title', '',
+    'custom_head', '',
+    'custom_css', '',
+    'custom_js', '',
+    'redirect_url', '',
+    'url_aliases', '',
+    'content_json', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"This is a sample page. Edit its blocks in Pages."}}]}},"slots":{}}',
+    'access_level', 0,
+    'is_nav_visible', 1,
+    'nav_title', '',
+    'is_noindex', 0,
+    'status', 0,
+    'is_home', 0,
+    'is_snippet', 0
+  ), 30, 0);
+
+INSERT INTO spages_revisions (spages_id, kind, snapshot_json, snippet_versions, effective_time, note, status, add_users_id)
+SELECT id, 30, draft_json, '{}', COALESCE(pub_time, CURRENT_TIMESTAMP), 'Initial published page', 0, 0
+FROM spages WHERE id IN (1, 2);
 
 /*event types for log*/
 DROP TABLE IF EXISTS events;

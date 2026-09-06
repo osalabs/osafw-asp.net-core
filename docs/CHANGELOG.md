@@ -4,9 +4,9 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-09-05
 
-- Spages now supports a block CMS on SQL Server and SQLite. Existing installations must apply the provider-specific additive update and explicitly convert existing pages; see [the upgrade guide](spages-upgrade.md). MySQL retains the legacy CMS and skips this update.
-- Spages public reads now use approved revisions, publication dates, and ancestor access. Editing integrations must use `draft()`/`saveDraft()` and the workflow API; raw SQL and legacy columns cannot represent effective publication. Compatibility `idesc` reads return server-rendered values supporting existing ParsePage Markdown templates; string-cast/DTO consumers must use `.toStr()` or block JSON. See [CMS compatibility](spages.md#compatibility-and-extension).
-- CMS-owned `/` remains opt-in. `/Search` and `/sitemap.xml` are new public routes; merge custom application routes deliberately. Missing/inaccessible CMS pages return HTTP 404. Restricted page files require page-owned uploads; raw Markdown HTML is disabled. Role thresholds remain manager-level by default, and Site Admin retains executable customization authority.
+- Existing Spages installations must apply the provider-specific additive update and then run the authenticated Site Admin **Convert existing pages to blocks** action. There is no runtime legacy fallback; take a database backup and follow [the upgrade guide](spages-upgrade.md) before editors use the new workflow.
+- Custom Spages integrations must separate published reads from draft editing. Public consumers use `onePublished`, `listPublished`, `listIndexable`, or an audience check over `listPublicationsByDate`; editor integrations use `oneDraftOrFail`, `saveDraft`, `updateWorkflow`, and `restoreRevision`. Custom SQL and templates must account for revision-based publication, numeric workflow/kind codes, `is_nav_visible`, `is_noindex`, `url_aliases`, and snippet keys stored in `url`.
+- Custom Spages templates must use the sanitized `html_main`, `html_left`, and `html_right` page-state fields with ParsePage's `noescape` option. Markdown fields no longer supply public content; merge application layouts and executable customization deliberately during upgrade.
 
 ## 2026-09-02
 

@@ -134,17 +134,31 @@ public class SecurityStoredRenderingTests
     public void StaticPageExecutableFields_AreReservedForSiteadminsInFormAndSavePolicy()
     {
         var controllerSource = readRepoFile("osafw-app", "App_Code", "controllers", "AdminSpages.cs");
-        var formTemplate = readRepoFile("osafw-app", "App_Data", "template", "admin", "spages", "showform", "page_content.html");
+        var modelSource = readRepoFile("osafw-app", "App_Code", "models", "Spages.cs");
+        var formTemplate = readRepoFile("osafw-app", "App_Data", "template", "admin", "spages", "showform", "cms.html");
 
         StringAssert.Contains(controllerSource, "ps[\"is_site_admin\"] = fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN);");
-        StringAssert.Contains(controllerSource, "if (!fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))");
-        StringAssert.Contains(controllerSource, "foreach (string field in Utils.qw(\"custom_head custom_css custom_js\"))");
-        Assert.IsFalse(controllerSource.Contains("canSaveStaticPageExecutableFields", StringComparison.Ordinal));
-        Assert.IsFalse(controllerSource.Contains("removeStaticPageExecutableFields", StringComparison.Ordinal));
-        StringAssert.Contains(formTemplate, "<~trusted_executable_fields if=\"is_site_admin\" inline>");
-        StringAssert.Contains(formTemplate, "name=\"item[custom_head]\"");
-        StringAssert.Contains(formTemplate, "name=\"item[custom_css]\"");
-        StringAssert.Contains(formTemplate, "name=\"item[custom_js]\"");
+        StringAssert.Contains(modelSource, "if (!fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN))");
+        StringAssert.Contains(modelSource, "foreach (string field in Utils.qw(\"custom_head custom_css custom_js\"))");
+        StringAssert.Contains(modelSource, "item[field] = old[field].toStr();");
+
+        int guardStart = formTemplate.IndexOf("<~custom if=\"is_site_admin\" inline>", StringComparison.Ordinal);
+        int guardEnd = formTemplate.IndexOf("</~custom>", StringComparison.Ordinal);
+        Assert.IsTrue(guardStart >= 0 && guardEnd > guardStart);
+        string trustedControls = formTemplate[guardStart..guardEnd];
+        foreach (string field in new[] { "custom_head", "custom_css", "custom_js" })
+        {
+            StringAssert.Contains(trustedControls, "name=\"item[" + field + "]\"");
+            StringAssert.Contains(trustedControls, "<~i[" + field + "]>");
+            Assert.IsFalse(trustedControls.Contains("<~i[" + field + "] noescape>", StringComparison.Ordinal));
+        }
+
+        var headTemplate = readRepoFile("osafw-app", "App_Data", "template", "home", "spage", "head_script.html");
+        var cssTemplate = readRepoFile("osafw-app", "App_Data", "template", "home", "spage", "head.css");
+        var jsTemplate = readRepoFile("osafw-app", "App_Data", "template", "home", "spage", "head.js");
+        StringAssert.Contains(headTemplate, "<~page[custom_head] noescape>");
+        StringAssert.Contains(cssTemplate, "<~page[custom_css] noescape>");
+        StringAssert.Contains(jsTemplate, "<~page[custom_js] noescape>");
     }
 
     [TestMethod]

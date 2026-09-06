@@ -164,7 +164,7 @@ public class RagSources : FwModel<RagSources.Row>
             return false;
 
         var pages = fw.model<Spages>();
-        var page = pages.published(spageId, 100);
+        var page = pages.onePublished(spageId, 100);
         if (page.Count == 0 || page["is_snippet"].toBool())
         {
             deleteByEntity(FwEntities.ICODE_SPAGE, spageId);

@@ -185,4 +185,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-04-agent-instruction-simplification.md` - Consolidated workflow and review ownership, clarified summary exceptions, and made instruction validation independent of a particular GPT generation while preserving role settings.
 - `summary-2026-09-05-model-profile-selection.md` - Added optional Astra profiles, cross-generation selection, dated starting-model advice, and lightweight catalog/behavior calibration.
 - `summary-2026-09-05-pr279-review-followup.md` - Simplified runtime model construction, expanded cache-sharing and invalid-type coverage, and refreshed PR #279 against master.
-- `summary-2026-09-05-spages-cms.md` - Added an optional block CMS with draft/revision workflow, effective publication/access, reusable snippets, discovery/redirects, recoverable provider upgrades, and theme-aware public/editor layouts.
+- `summary-2026-09-05-spages-cms.md` - Added and simplified the block CMS: draft/revision publication, reusable snippets, page aliases, effective access/discovery, three-provider schemas, one-time conversion, and verified public/editor themes.

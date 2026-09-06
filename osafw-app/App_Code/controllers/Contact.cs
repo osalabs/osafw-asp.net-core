@@ -25,8 +25,8 @@ public class ContactController : FwController
 
         fw.Session("contact_view_time", DateTime.Now.ToString());
 
-        FwDict page = fw.model<Spages>().oneByFullUrl(base_url);
-        ps["page"] = page;
+        var model = fw.model<Spages>();
+        ps["page"] = model.buildPageState(model.onePublishedByPath(base_url))["page"];
         ps["hide_sidebar"] = true;
         return ps;
     }
@@ -75,8 +75,8 @@ public class ContactController : FwController
     {
         FwDict ps = [];
 
-        FwDict page = fw.model<Spages>().oneByFullUrl(base_url + "/Sent");
-        ps["page"] = page;
+        var model = fw.model<Spages>();
+        ps["page"] = model.buildPageState(model.onePublishedByPath(base_url + "/Sent"))["page"];
         ps["hide_sidebar"] = true;
         return ps;
     }

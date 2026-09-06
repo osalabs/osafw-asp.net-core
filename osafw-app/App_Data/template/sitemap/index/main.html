@@ -1,8 +1,4 @@
 <h1><~title></h1>
-<~cms_pages if="cms" inline><ul class="sitemap-list"><~pages repeat inline><li><a href="<~ROOT_URL><~full_url>"><~iname></a></li></~pages></ul></~cms_pages>
-
-<~page[idesc] markdown noescape>
-
-<ul class="list-unstyled sitemap-list">
-<~pages_tree repeat>
+<ul class="sitemap-list">
+  <~pages repeat inline><li><a href="<~ROOT_URL><~full_url>"><~iname></a></li></~pages>
 </ul>

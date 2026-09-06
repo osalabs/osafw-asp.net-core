@@ -1196,11 +1196,7 @@ public class ParsePage
                     attr_count -= 1;
                 }
 
-                // CMS compatibility fields already contain server-rendered HTML. Preserve normal escaping;
-                // only a template's existing noescape instruction emits that HTML without encoding it.
-                if (attr_count > 0 && hattrs.ContainsKey("markdown") && originalValue is SpagesContent.RenderedHtml)
-                    attr_count -= 1;
-                else if (attr_count > 0 && hattrs.ContainsKey("markdown"))
+                if (attr_count > 0 && hattrs.ContainsKey("markdown"))
                 {
                     // try to dynamically load Markdig, equivalent to:
                     // var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();

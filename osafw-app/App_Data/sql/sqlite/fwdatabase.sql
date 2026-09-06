@@ -10,7 +10,6 @@ DROP TABLE IF EXISTS user_views;
 DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS log_types;
 DROP TABLE IF EXISTS spages_revisions;
-DROP TABLE IF EXISTS spages_redirects;
 DROP TABLE IF EXISTS spages;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS users_cookies;
@@ -283,28 +282,13 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 
 /* Static pages */
 CREATE TABLE spages (
-  is_snippet INT NOT NULL DEFAULT 0,
-  snippet_key TEXT NOT NULL DEFAULT '',
-  content_json TEXT,
-  draft_json TEXT,
-  edit_version INT NOT NULL DEFAULT 0,
-  workflow TEXT NOT NULL DEFAULT 'draft',
-  review_note TEXT,
-  access_level INT NOT NULL DEFAULT 0,
-  nav_visible INT NOT NULL DEFAULT 1,
-  nav_title TEXT NOT NULL DEFAULT '',
-  meta_title TEXT NOT NULL DEFAULT '',
-  noindex INT NOT NULL DEFAULT 0,
-  image_alt TEXT NOT NULL DEFAULT '',
-  image_decorative INT NOT NULL DEFAULT 0,
-
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   parent_id             INTEGER NOT NULL DEFAULT 0,
+  head_att_id           INTEGER NULL REFERENCES att(id),
 
   url                   TEXT NOT NULL DEFAULT '',
   iname                 TEXT NOT NULL DEFAULT '',
   idesc                 TEXT,
-  head_att_id           INTEGER NULL REFERENCES att(id),
 
   idesc_left            TEXT,
   idesc_right           TEXT,
@@ -321,46 +305,54 @@ CREATE TABLE spages (
   custom_css            TEXT,
   custom_js             TEXT,
 
+  is_snippet            TINYINT NOT NULL DEFAULT 0,                                  -- 1 for a reusable snippet; url is its stable key
+  content_json          TEXT,                                                        -- Converted block document; draft and revision snapshots are authoritative
+  draft_json            TEXT,                                                        -- Editable snapshot of all content fields; content_json remains a JSON string
+  workflow              TINYINT NOT NULL DEFAULT 0,                                  -- 0 Draft, 10 In review, 20 Changes requested, 30 Published, 40 Scheduled
+  review_note           TEXT,                                                        -- Current editorial review feedback
+  access_level          INT NOT NULL DEFAULT 0,                                      -- Minimum framework access level required to view this page
+  is_nav_visible        TINYINT NOT NULL DEFAULT 1,                                  -- 1 to include the published page in navigation
+  nav_title             TEXT NOT NULL DEFAULT '',                                    -- Optional navigation label; empty uses the page title
+  meta_title            TEXT NOT NULL DEFAULT '',                                    -- Optional browser and search title; empty uses the page title
+  is_noindex            TINYINT NOT NULL DEFAULT 0,                                  -- 1 to exclude the published page from search indexing
+  url_aliases           TEXT,                                                        -- Manual app-local URL aliases, one per line
+
   status                INTEGER NOT NULL DEFAULT 0,
   add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   add_users_id          INTEGER DEFAULT 0,
   upd_time              DATETIME,
   upd_users_id          INTEGER DEFAULT 0
 );
-CREATE TABLE spages_revisions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  spages_id INT NOT NULL REFERENCES spages(id),
-  kind TEXT NOT NULL,
-  snapshot_json TEXT NOT NULL,
-  snippet_versions TEXT,
-  effective_time DATETIME NOT NULL,
-  cancelled INT NOT NULL DEFAULT 0,
-  note TEXT,
-  add_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  add_users_id INT NOT NULL DEFAULT 0
-);
-CREATE INDEX IX_spages_revisions_release ON spages_revisions (spages_id, kind, cancelled, effective_time, id);
-CREATE TABLE spages_redirects (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  source_url TEXT NOT NULL,
-  target_url TEXT NOT NULL DEFAULT '',
-  spages_id INT NOT NULL DEFAULT 0,
-  revision_id INT NOT NULL DEFAULT 0,
-  effective_time DATETIME NOT NULL,
-  status INT NOT NULL DEFAULT 0,
-  add_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  add_users_id INT NOT NULL DEFAULT 0
-);
-CREATE INDEX IX_spages_redirects_source ON spages_redirects (source_url, status, effective_time);
-
-
 CREATE INDEX IX_spages_parent_id ON spages (parent_id, prio);
 CREATE INDEX IX_spages_url ON spages (url);
 
-INSERT INTO spages (parent_id, url, iname) VALUES
-(0,'','Home'),
-(0,'test-page','Test  page');
-UPDATE spages SET is_home=1 WHERE id=1;
+/* Immutable page snapshots and publication history */
+CREATE TABLE spages_revisions (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,                           -- Revision identity
+  spages_id             INT NOT NULL REFERENCES spages(id),                          -- Page or snippet owning this revision
+
+  kind                  TINYINT NOT NULL DEFAULT 0,                                  -- 0 Saved, 10 Submitted, 20 Changes requested, 30 Published, 40 Withdrawn, 50 Original
+  snapshot_json         TEXT NOT NULL,                                               -- Immutable content-field snapshot; content_json remains a JSON string
+  snippet_versions      TEXT,                                                        -- Pinned snippet revision IDs keyed by the snippet url
+  effective_time        DATETIME NOT NULL,                                           -- Effective instant in DB timezone; reads normalize to UTC
+  note                  TEXT,                                                        -- Editorial note for this revision
+
+  status                TINYINT NOT NULL DEFAULT 0,                                  -- 0 retained/eligible, 127 cancelled scheduled release
+  add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- Creation instant in DB timezone; reads normalize to UTC
+  add_users_id          INT NOT NULL DEFAULT 0                                       -- User who created this revision; 0 for system seeds
+);
+CREATE INDEX IX_spages_revisions_release ON spages_revisions (spages_id, kind, status, effective_time, id);
+
+-- Fresh installations include published block pages and matching working drafts.
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+VALUES (0, '', 'Home', 'article', 1, 1, 0, 1, '', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"Welcome to your new website."}}]}},"slots":{}}', '{"iname":"Home","parent_id":0,"url":"","head_att_id":0,"template":"article","prio":1,"meta_keywords":"","meta_description":"","meta_title":"","custom_head":"","custom_css":"","custom_js":"","redirect_url":"","url_aliases":"","content_json":"{\"schemaVersion\":1,\"regions\":{\"main\":{\"blocks\":[{\"type\":\"paragraph\",\"data\":{\"text\":\"Welcome to your new website.\"}}]}},\"slots\":{}}","access_level":0,"is_nav_visible":1,"nav_title":"","is_noindex":0,"status":0,"is_home":1,"is_snippet":0}', 30, 0);
+
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+VALUES (0, 'test-page', 'Test  page', 'article', 2, 0, 0, 1, '', '{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"This is a sample page. Edit its blocks in Pages."}}]}},"slots":{}}', '{"iname":"Test  page","parent_id":0,"url":"test-page","head_att_id":0,"template":"article","prio":2,"meta_keywords":"","meta_description":"","meta_title":"","custom_head":"","custom_css":"","custom_js":"","redirect_url":"","url_aliases":"","content_json":"{\"schemaVersion\":1,\"regions\":{\"main\":{\"blocks\":[{\"type\":\"paragraph\",\"data\":{\"text\":\"This is a sample page. Edit its blocks in Pages.\"}}]}},\"slots\":{}}","access_level":0,"is_nav_visible":1,"nav_title":"","is_noindex":0,"status":0,"is_home":0,"is_snippet":0}', 30, 0);
+
+INSERT INTO spages_revisions (spages_id, kind, snapshot_json, snippet_versions, effective_time, note, status, add_users_id)
+SELECT id, 30, draft_json, '{}', COALESCE(pub_time, CURRENT_TIMESTAMP), 'Initial published page', 0, 0
+FROM spages WHERE id IN (1, 2);
 
 /* Logs types */
 CREATE TABLE log_types (

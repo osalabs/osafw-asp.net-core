@@ -1,8 +1,8 @@
-<~preview if="is_preview" inline><div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="status"><span><strong>Editor preview</strong> — this view may include unpublished changes.</span><a class="btn btn-sm btn-outline-dark" href="<~/admin/spages/url>/<~page[id]>/edit">Return to editor</a></div></~preview>
+<~preview if="is_preview" inline><div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="status"><span><strong>Editor preview</strong> — this view may include unpublished changes.</span><a class="btn btn-sm btn-default" href="<~/admin/spages/url>/<~page[id]>/edit">Return to editor</a></div></~preview>
 <nav aria-label="breadcrumb" class="spage-breadcrumbs"><~admin_edit><ol class="breadcrumb"><li class="breadcrumb-item"><a href="<~ROOT_URL>/">Home</a></li><~page[breadcrumbs] repeat inline><li class="breadcrumb-item"><~current if="is_current" inline><span aria-current="page"><~iname></span></~current><~ancestor unless="is_current" inline><a href="<~ROOT_URL><~url>"><~iname></a></~ancestor></li></~page[breadcrumbs]></ol></nav>
 <~page_navigation if="pages" inline><nav class="spage-navigation" aria-label="Website pages"><~pages repeat inline><a href="<~ROOT_URL><~full_url>"><~nav_title if="nav_title"><~iname unless="nav_title"></a></~pages></nav></~page_navigation>
 <article class="spage-document spage-layout-<~page[template]>">
-  <header class="spage-intro"><h1><~page[iname]></h1><~hero if="page[head_att_id_url]" inline><img src="<~page[head_att_id_url]>" alt="<~page[image_alt] unless="page[image_decorative]">" class="spage-hero img-fluid"></~hero></header>
+  <header class="spage-intro"><h1><~page[iname]></h1><~hero if="page[head_att_id_url]" inline><img src="<~page[head_att_id_url]>" alt="" class="spage-hero img-fluid"></~hero></header>
   <div class="spage-columns">
     <~left if="page[html_left]" inline><aside class="spage-region spage-left" aria-label="Related information"><~page[html_left] noescape></aside></~left>
     <div class="spage-region spage-main"><~page[html_main] noescape></div>

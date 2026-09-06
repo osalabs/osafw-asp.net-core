@@ -205,7 +205,7 @@ public class DocumentEmbeddingService
     private async Task<List<RagChunks.ChunkEmbedding>> buildSpageSourceChunksAsync(RagSources.Row source, CancellationToken cancellationToken)
     {
         var pages = fw.model<Spages>();
-        var page = pages.published(source.item_id, 100);
+        var page = pages.onePublished(source.item_id, 100);
         if (page.Count == 0 || page["is_snippet"].toBool())
             return [];
 

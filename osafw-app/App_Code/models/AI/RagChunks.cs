@@ -589,11 +589,11 @@ select d.id,
         {
             cmsSourceIds = [0];
             var pages = fw.model<Spages>();
-            if (entityId > 0 && pages.isEnabled())
+            if (entityId > 0)
             {
-                var publications = pages.publishedPages().ToDictionary(x => x["id"].toInt());
+                var listPublicationsByDate = pages.listPublished().ToDictionary(x => x["id"].toInt());
                 foreach (var source in db.array(fw.model<RagSources>().table_name, DB.h("fwentities_id", entityId, "status", STATUS_ACTIVE, "index_status", RagSources.INDEX_STATUS_INDEXED)))
-                    if (publications.TryGetValue(source["item_id"].toInt(), out var page)
+                    if (listPublicationsByDate.TryGetValue(source["item_id"].toInt(), out var page)
                         && source["url"].toStr() == pages.publishedUrl(page["id"].toInt())
                         && source["content_hash"].toStr() == RagSources.HashText(pages.publishedText(page)))
                         cmsSourceIds.Add(source["id"].toInt());
@@ -736,7 +736,7 @@ select d.id,
             {
                 if (!spageCache.TryGetValue(itemId, out var spage))
                 {
-                    spage = fw.model<Spages>().published(itemId);
+                    spage = fw.model<Spages>().onePublished(itemId);
                     spageCache[itemId] = spage;
                 }
                 citation.SourceTitle = string.IsNullOrWhiteSpace(citation.SourceTitle) ? spage["iname"].toStr() : citation.SourceTitle;

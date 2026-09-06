@@ -303,31 +303,15 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 
 /*Static pages*/
 DROP TABLE IF EXISTS spages_revisions;
-DROP TABLE IF EXISTS spages_redirects;
 DROP TABLE IF EXISTS spages;
 CREATE TABLE spages (
-  is_snippet INT NOT NULL DEFAULT 0,
-  snippet_key NVARCHAR(64) NOT NULL DEFAULT '',
-  content_json NVARCHAR(MAX),
-  draft_json NVARCHAR(MAX),
-  edit_version INT NOT NULL DEFAULT 0,
-  workflow NVARCHAR(24) NOT NULL DEFAULT 'draft',
-  review_note NVARCHAR(MAX),
-  access_level INT NOT NULL DEFAULT 0,
-  nav_visible INT NOT NULL DEFAULT 1,
-  nav_title NVARCHAR(128) NOT NULL DEFAULT '',
-  meta_title NVARCHAR(255) NOT NULL DEFAULT '',
-  noindex INT NOT NULL DEFAULT 0,
-  image_alt NVARCHAR(255) NOT NULL DEFAULT '',
-  image_decorative INT NOT NULL DEFAULT 0,
-
-  id int IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
   parent_id             INT NOT NULL DEFAULT 0,  /*parent page id*/
+  head_att_id           INT NULL FOREIGN KEY REFERENCES att(id), /*optional head banner image*/
 
-  url                   NVARCHAR(255) NOT NULL DEFAULT '',      /*sub-url from parent page*/
+  url                   NVARCHAR(255) NOT NULL DEFAULT '',      /*page slug or stable snippet key*/
   iname                 NVARCHAR(64) NOT NULL DEFAULT '',       /*page name-title*/
   idesc                 NVARCHAR(MAX),                          /*page contents, markdown*/
-  head_att_id           INT NULL FOREIGN KEY REFERENCES att(id), /*optional head banner image*/
 
   idesc_left            NVARCHAR(MAX),                          /*left sidebar content, markdown*/
   idesc_right           NVARCHAR(MAX),                          /*right sidebar content, markdown*/
@@ -344,6 +328,18 @@ CREATE TABLE spages (
   custom_css            NVARCHAR(MAX),                          /*custom page css*/
   custom_js             NVARCHAR(MAX),                          /*custom page js*/
 
+  is_snippet            TINYINT NOT NULL DEFAULT 0,                                  -- 1 for a reusable snippet; url is its stable key
+  content_json          NVARCHAR(MAX),                                               -- Converted block document; draft and revision snapshots are authoritative
+  draft_json            NVARCHAR(MAX),                                               -- Editable snapshot of all content fields; content_json remains a JSON string
+  workflow              TINYINT NOT NULL DEFAULT 0,                                  -- 0 Draft, 10 In review, 20 Changes requested, 30 Published, 40 Scheduled
+  review_note           NVARCHAR(MAX),                                               -- Current editorial review feedback
+  access_level          INT NOT NULL DEFAULT 0,                                      -- Minimum framework access level required to view this page
+  is_nav_visible        TINYINT NOT NULL DEFAULT 1,                                  -- 1 to include the published page in navigation
+  nav_title             NVARCHAR(128) NOT NULL DEFAULT '',                           -- Optional navigation label; empty uses the page title
+  meta_title            NVARCHAR(255) NOT NULL DEFAULT '',                           -- Optional browser and search title; empty uses the page title
+  is_noindex            TINYINT NOT NULL DEFAULT 0,                                  -- 1 to exclude the published page from search indexing
+  url_aliases           NVARCHAR(MAX),                                               -- Manual app-local URL aliases, one per line
+
   status                TINYINT NOT NULL DEFAULT 0,    /*0-ok, 10-not published, 127-deleted*/
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),
   add_users_id          INT DEFAULT 0,
@@ -353,39 +349,35 @@ CREATE TABLE spages (
   INDEX IX_spages_parent_id (parent_id, prio),
   INDEX IX_spages_url (url)
 );
+
+/* Immutable page snapshots and publication history */
 CREATE TABLE spages_revisions (
-  id INT IDENTITY(1,1) PRIMARY KEY,
-  spages_id INT NOT NULL REFERENCES spages(id),
-  kind NVARCHAR(24) NOT NULL,
-  snapshot_json NVARCHAR(MAX) NOT NULL,
-  snippet_versions NVARCHAR(MAX),
-  effective_time DATETIME2 NOT NULL,
-  cancelled INT NOT NULL DEFAULT 0,
-  note NVARCHAR(1000),
-  add_time DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-  add_users_id INT NOT NULL DEFAULT 0
-);
-CREATE INDEX IX_spages_revisions_release ON spages_revisions (spages_id, kind, cancelled, effective_time, id);
-CREATE TABLE spages_redirects (
-  id INT IDENTITY(1,1) PRIMARY KEY,
-  source_url NVARCHAR(450) NOT NULL,
-  target_url NVARCHAR(450) NOT NULL DEFAULT '',
-  spages_id INT NOT NULL DEFAULT 0,
-  revision_id INT NOT NULL DEFAULT 0,
-  effective_time DATETIME2 NOT NULL,
-  status INT NOT NULL DEFAULT 0,
-  add_time DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-  add_users_id INT NOT NULL DEFAULT 0
-);
-CREATE INDEX IX_spages_redirects_source ON spages_redirects (source_url, status, effective_time);
+  id                    INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,                     -- Revision identity
+  spages_id             INT NOT NULL REFERENCES spages(id),                          -- Page or snippet owning this revision
 
+  kind                  TINYINT NOT NULL DEFAULT 0,                                  -- 0 Saved, 10 Submitted, 20 Changes requested, 30 Published, 40 Withdrawn, 50 Original
+  snapshot_json         NVARCHAR(MAX) NOT NULL,                                      -- Immutable content-field snapshot; content_json remains a JSON string
+  snippet_versions      NVARCHAR(MAX),                                               -- Pinned snippet revision IDs keyed by the snippet url
+  effective_time        DATETIME2 NOT NULL,                                          -- Effective instant in DB timezone; reads normalize to UTC
+  note                  NVARCHAR(1000),                                              -- Editorial note for this revision
 
---TRUNCATE TABLE spages;
-INSERT INTO spages (parent_id, url, iname) VALUES
-(0,'','Home') --1
-,(0,'test-page','Test  page') --2
-;
-update spages set is_home=1 where id=1;
+  status                TINYINT NOT NULL DEFAULT 0,                                  -- 0 retained/eligible, 127 cancelled scheduled release
+  add_time              DATETIME2 NOT NULL DEFAULT GETDATE(),                        -- Creation instant in DB timezone; reads normalize to UTC
+  add_users_id          INT NOT NULL DEFAULT 0,                                      -- User who created this revision; 0 for system seeds
+
+  INDEX IX_spages_revisions_release (spages_id, kind, status, effective_time, id)
+);
+
+-- Fresh installations include published block pages and matching working drafts.
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+VALUES (0, N'', N'Home', N'article', 1, 1, 0, 1, N'', N'{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"Welcome to your new website."}}]}},"slots":{}}', N'{"iname":"Home","parent_id":0,"url":"","head_att_id":0,"template":"article","prio":1,"meta_keywords":"","meta_description":"","meta_title":"","custom_head":"","custom_css":"","custom_js":"","redirect_url":"","url_aliases":"","content_json":"{\"schemaVersion\":1,\"regions\":{\"main\":{\"blocks\":[{\"type\":\"paragraph\",\"data\":{\"text\":\"Welcome to your new website.\"}}]}},\"slots\":{}}","access_level":0,"is_nav_visible":1,"nav_title":"","is_noindex":0,"status":0,"is_home":1,"is_snippet":0}', 30, 0);
+
+INSERT INTO spages (parent_id, url, iname, template, prio, is_home, is_snippet, is_nav_visible, nav_title, content_json, draft_json, workflow, status)
+VALUES (0, N'test-page', N'Test  page', N'article', 2, 0, 0, 1, N'', N'{"schemaVersion":1,"regions":{"main":{"blocks":[{"type":"paragraph","data":{"text":"This is a sample page. Edit its blocks in Pages."}}]}},"slots":{}}', N'{"iname":"Test  page","parent_id":0,"url":"test-page","head_att_id":0,"template":"article","prio":2,"meta_keywords":"","meta_description":"","meta_title":"","custom_head":"","custom_css":"","custom_js":"","redirect_url":"","url_aliases":"","content_json":"{\"schemaVersion\":1,\"regions\":{\"main\":{\"blocks\":[{\"type\":\"paragraph\",\"data\":{\"text\":\"This is a sample page. Edit its blocks in Pages.\"}}]}},\"slots\":{}}","access_level":0,"is_nav_visible":1,"nav_title":"","is_noindex":0,"status":0,"is_home":0,"is_snippet":0}', 30, 0);
+
+INSERT INTO spages_revisions (spages_id, kind, snapshot_json, snippet_versions, effective_time, note, status, add_users_id)
+SELECT id, 30, draft_json, '{}', COALESCE(pub_time, GETDATE()), 'Initial published page', 0, 0
+FROM spages WHERE id IN (1, 2);
 
 /*Logs types*/
 DROP TABLE IF EXISTS log_types;
