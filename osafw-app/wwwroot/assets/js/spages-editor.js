@@ -499,6 +499,10 @@
             STATE.textContent = 'Saving draft…';
             await collect();
             const BODY = new FormData(FORM);
+            // Unchecked checkboxes are omitted by FormData; explicitly clear their saved draft values.
+            FORM.querySelectorAll('input[type="checkbox"][name]:not(:disabled)').forEach(INPUT => {
+                BODY.set(INPUT.name, INPUT.checked ? '1' : '0');
+            });
             BODY.set('autosave', isAutosave ? '1' : '0');
             const RESULT = await request(BASE_URL + '/' + pageId, BODY);
             pageId = RESULT.id;

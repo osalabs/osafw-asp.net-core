@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="<~ROOT_URL>/assets/css/spages-editor.css?v=10">
+<link rel="stylesheet" href="<~ROOT_URL>/assets/css/spages-editor.css?v=11">
 
 <form id="spages-editor" class="spages-cms" method="post" action="<~../url>/<~id>" data-base="<~../url>" data-id="<~id>" data-status="<~i[status]>" data-is-author="<~is_author>" data-is-scheduled="<~is_scheduled>">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
@@ -53,12 +53,13 @@
       <div class="spages-settings-groups">
         <fieldset class="fw-card spages-settings">
           <legend class="h5 spages-wide-field">URL and access</legend>
-          <label class="spages-wide-field" for="spages-parent"><span class="form-label">Parent page</span>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-parent">Parent page</label>
             <select id="spages-parent" name="item[parent_id]" class="form-select" data-selected="<~i[parent_id]>">
-              <option value="0" data-url="">Top level</option>
-              <~parent_options repeat inline><option value="<~id>" data-url="<~full_url>"><~iname></option></~parent_options>
+              <option value="0" data-url="">— Top level —</option>
+              <~parent_options repeat inline><option value="<~id>" data-url="<~full_url>"><~iname><~home_parent ifeq="full_url" value="/" inline> (site root)</~home_parent></option></~parent_options>
             </select>
-          </label>
+          </div>
           <div class="spages-wide-field">
             <label class="form-label" for="spages-url"><~snippet_url_label if="i[is_snippet]" inline>Snippet key</~snippet_url_label><~page_url_label unless="i[is_snippet]" inline>URL segment</~page_url_label></label>
             <div class="input-group spages-url-input">
@@ -67,28 +68,61 @@
             </div>
             <div id="spages-url-help" class="form-text"><~snippet_url_help if="i[is_snippet]" inline>Pages use this stable key to include the snippet. It becomes permanent after the first save.</~snippet_url_help><~page_url_help unless="i[is_snippet]" inline>Leave empty to generate it from the title.</~page_url_help></div>
           </div>
-          <label class="spages-wide-field">Minimum access level<select name="item[access_level]" class="form-select" data-selected="<~i[access_level]>"><option value="0">Public</option><~/common/sel/access_level.sel select="i[access_level]"></select><span class="form-text">Parent restrictions also apply.</span></label>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-access-level">Minimum access level</label>
+            <select id="spages-access-level" name="item[access_level]" class="form-select" data-selected="<~i[access_level]>" aria-describedby="spages-access-help"><option value="0">Public</option><~/common/sel/access_level.sel select="i[access_level]"></select>
+            <div class="form-text" id="spages-access-help">Parent restrictions also apply.</div>
+          </div>
         </fieldset>
 
         <fieldset class="fw-card spages-settings">
           <legend class="h5 spages-wide-field">Navigation</legend>
-          <label class="spages-wide-field">Navigation label<input name="item[nav_title]" class="form-control" value="<~i[nav_title]>" maxlength="128" placeholder="Use page title"></label>
-          <label>Show in navigation<select name="item[is_nav_visible]" class="form-select" data-selected="<~i[is_nav_visible]>"><option value="1">Yes</option><option value="0">No</option></select></label>
-          <label>Navigation order<input name="item[prio]" type="number" class="form-control" value="<~i[prio]>"></label>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-nav-title">Navigation label</label>
+            <input id="spages-nav-title" name="item[nav_title]" class="form-control" value="<~i[nav_title]>" maxlength="128" placeholder="Use page title">
+          </div>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-nav-order">Navigation order</label>
+            <input id="spages-nav-order" name="item[prio]" type="number" class="form-control" value="<~i[prio]>">
+          </div>
+          <div class="form-check spages-wide-field">
+            <input id="spages-nav-visible" name="item[is_nav_visible]" class="form-check-input" type="checkbox" value="1" <~/common/attr/checked if="i[is_nav_visible]">>
+            <label class="form-check-label" for="spages-nav-visible">Show in navigation</label>
+          </div>
         </fieldset>
 
         <fieldset class="fw-card spages-settings">
           <legend class="h5 spages-wide-field">Search engines</legend>
-          <label class="spages-wide-field">Search engine title<input name="item[meta_title]" class="form-control" value="<~i[meta_title]>" maxlength="255" placeholder="Use page title"></label>
-          <label class="spages-wide-field">Description<textarea name="item[meta_description]" class="form-control" rows="3" maxlength="255"><~i[meta_description]></textarea></label>
-          <label>Keywords<input name="item[meta_keywords]" class="form-control" value="<~i[meta_keywords]>" maxlength="255"></label>
-          <label>Search engine indexing<select name="item[is_noindex]" class="form-select" data-selected="<~i[is_noindex]>"><option value="0">Allow indexing</option><option value="1">Ask search engines not to index</option></select></label>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-meta-title">Search engine title</label>
+            <input id="spages-meta-title" name="item[meta_title]" class="form-control" value="<~i[meta_title]>" maxlength="255" placeholder="Use page title">
+          </div>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-meta-description">Description</label>
+            <textarea id="spages-meta-description" name="item[meta_description]" class="form-control" rows="3" maxlength="255"><~i[meta_description]></textarea>
+          </div>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-meta-keywords">Keywords</label>
+            <input id="spages-meta-keywords" name="item[meta_keywords]" class="form-control" value="<~i[meta_keywords]>" maxlength="255">
+          </div>
+          <div class="form-check spages-wide-field">
+            <input id="spages-noindex" name="item[is_noindex]" class="form-check-input" type="checkbox" value="1" <~/common/attr/checked if="i[is_noindex]">>
+            <label class="form-check-label" for="spages-noindex">Ask search engines not to index this page</label>
+          </div>
         </fieldset>
 
         <fieldset class="fw-card spages-settings">
           <legend class="h5 spages-wide-field">Redirects</legend>
-          <label class="spages-wide-field">Redirect this page to<input name="item[redirect_url]" class="form-control" value="<~i[redirect_url]>" maxlength="255" placeholder="/local-path"><span class="form-text">Leave empty to display this page's content.</span></label>
-          <~aliases unless="i[is_snippet]" inline><label class="spages-wide-field">Old local paths<textarea name="item[url_aliases]" class="form-control" rows="3" placeholder="/old-page&#10;/previous-section/old-page"><~i[url_aliases]></textarea><span class="form-text">One local path per line. Visitors to these old paths are sent to this page.</span></label></~aliases>
+          <div class="spages-wide-field">
+            <label class="form-label" for="spages-redirect-url">Redirect this page to</label>
+            <input id="spages-redirect-url" name="item[redirect_url]" class="form-control" aria-describedby="spages-redirect-url-help" value="<~i[redirect_url]>" maxlength="255" placeholder="/local-path">
+            <div id="spages-redirect-url-help" class="form-text">Leave empty to display this page's content.</div>
+          </div>
+          <~aliases unless="i[is_snippet]" inline><div class="spages-wide-field">
+            <label class="form-label" for="spages-url-aliases">Old local paths</label>
+            <textarea id="spages-url-aliases" name="item[url_aliases]" class="form-control" aria-describedby="spages-url-aliases-help" rows="3" placeholder="/old-page&#10;/previous-section/old-page"><~i[url_aliases]></textarea>
+            <div id="spages-url-aliases-help" class="form-text">One local path per line. Visitors to these old paths are sent to this page.</div>
+          </div></~aliases>
         </fieldset>
       </div>
     </section>
@@ -127,4 +161,4 @@
 </form>
 
 <script src="<~ROOT_URL>/assets/lib/editorjs/dist/editorjs.umd.js" defer></script>
-<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=9" defer></script>
+<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=10" defer></script>
