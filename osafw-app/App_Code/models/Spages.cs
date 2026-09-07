@@ -133,7 +133,7 @@ public class Spages : FwModel<Spages.Row>
                 FwDict row2 = new(row);
                 row2["_level"] = level;
                 // row2["_level1"] level + 1 'to easier use in templates
-                var full_url = parent_url + "/" + row["url"];
+                var full_url = parent_url.TrimEnd('/') + "/" + row["url"];
                 row2["full_url"] = full_url;
                 row2["children"] = listTree(rows, row["id"].toInt(), level + 1, full_url);
                 result.Add(row2);
@@ -196,7 +196,12 @@ public class Spages : FwModel<Spages.Row>
 
         foreach (var row in pages_tree)
         {
-            result.Add(new FwDict { ["id"] = row["id"], ["iname"] = new string('—', level) + (level > 0 ? " " : "") + row["iname"].toStr() });
+            result.Add(new FwDict
+            {
+                ["id"] = row["id"],
+                ["iname"] = new string('—', level) + (level > 0 ? " " : "") + row["iname"].toStr(),
+                ["full_url"] = row["full_url"]
+            });
             result.AddRange(listSelectOptionsTree(row["children"] as FwList, level + 1));
         }
         return result;
@@ -623,6 +628,83 @@ public class Spages : FwModel<Spages.Row>
         }
     }
 
+    /// <summary>
+    /// Order already-filtered admin rows as a flat hierarchy, preserving sibling sort order.
+    /// Missing parents become roots; malformed cycles remain visible once. Pagination follows this step.
+    /// Snippet associations do not make snippets into child pages.
+    /// </summary>
+    public DBList listAdminTreeRows(DBList rows)
+    {
+        var pageIds = rows.Where(row => !row["is_snippet"].toBool()).Select(row => row["id"].toInt()).ToHashSet();
+        var children = rows.Where(row => !row["is_snippet"].toBool()).ToLookup(row => row["parent_id"].toInt());
+        var roots = rows.Where(row => row["is_snippet"].toBool() || !pageIds.Contains(row["parent_id"].toInt()));
+        var result = new DBList();
+        var visited = new HashSet<int>();
+        var pending = new Stack<(DBRow Row, int Level)>();
+        foreach (var root in roots.Concat(rows))
+        {
+            pending.Push((root, 0));
+            while (pending.Count > 0)
+            {
+                var (row, level) = pending.Pop();
+                int id = row["id"].toInt();
+                if (!visited.Add(id))
+                {
+                    continue;
+                }
+
+                row["is_tree"] = "1";
+                row["is_subpage"] = !row["is_snippet"].toBool() && row["parent_id"].toInt() > 0 ? "1" : "0";
+                row["tree_indent"] = (Math.Min(level, 20) * 1.25).ToString(CultureInfo.InvariantCulture);
+                result.Add(row);
+                if (!row["is_snippet"].toBool())
+                {
+                    foreach (var child in children[id].Reverse())
+                    {
+                        pending.Push((child, level + 1));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Editor media is limited to this page's uploads and the public, unbound library.</summary>
+    public FwList listEditorMedia(int id, bool isImageOnly = false, int categoryId = 0)
+    {
+        requireAuthor();
+        oneDraftOrFail(id);
+        string where = "status=0 AND ((fwentities_id=@entity AND item_id=@id) OR fwentities_id IS NULL OR fwentities_id=0)";
+        var parameters = new FwDict
+        {
+            ["entity"] = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE),
+            ["id"] = id
+        };
+        if (isImageOnly)
+        {
+            where += " AND is_image=1";
+        }
+        if (categoryId > 0)
+        {
+            where += " AND att_categories_id=@category";
+            parameters["category"] = categoryId;
+        }
+
+        FwList rows = db.selectRaw("id,iname,fname,icode,is_image", db.qid("att"), where, parameters, "id DESC", 0, 100);
+        foreach (var row in rows)
+        {
+            row["url"] = fw.model<Att>().getUrl(row);
+        }
+        return rows;
+    }
+
+    /// <summary>Return an authorized draft image URL, or empty for an unavailable/non-image attachment.</summary>
+    public string getDraftImageUrl(FwDict page)
+    {
+        requireEditorRead();
+        return attachmentUrl(page["head_att_id"].toInt(), page, false, true, new Dictionary<int, FwDict>(), true);
+    }
+
     /// <summary>Editor parent options exclude the selected page and its descendants.</summary>
     public FwList listSelectOptionsParents(int id)
     {
@@ -630,7 +712,7 @@ public class Spages : FwModel<Spages.Row>
         var rows = new FwList(db.array(table_name, new FwDict
         {
             ["status"] = db.opNOT(STATUS_DELETED), ["is_snippet"] = 0, ["draft_json"] = db.opNOT("")
-        }, "iname", new[] { "id", "parent_id", "iname" }));
+        }, "iname", new[] { "id", "parent_id", "iname", "url" }));
         var excluded = new HashSet<int>();
         if (id > 0)
             excluded.Add(id);

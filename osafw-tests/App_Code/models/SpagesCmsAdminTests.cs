@@ -1,5 +1,6 @@
 #if isSQLite
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
 using System.Linq;
@@ -183,5 +184,147 @@ public partial class SpagesCmsTests
         Assert.IsFalse(html.Contains("<script>"));
         StringAssert.Contains(html, "selected");
     }
+    [TestMethod]
+    public void TitleSortOrdersSiblingsWithinParentsBeforePagingAndOtherSortsStayFlat()
+    {
+        int parent = create("tree-parent");
+        int child = create("tree-child", parent);
+        int other = create("tree-other");
+        int sibling = create("tree-sibling", parent);
+        cms.saveDraft(parent, DB.h("iname", "Tree Z parent"));
+        cms.saveDraft(child, DB.h("iname", "Tree A child"));
+        cms.saveDraft(other, DB.h("iname", "Tree M other"));
+        cms.saveDraft(sibling, DB.h("iname", "Tree B sibling"));
+
+        FwList list(string sort, string direction, int page = 0, int size = 25, string search = "Tree ")
+        {
+            var current = request();
+            current.FORM["f"] = new FwDict
+            {
+                ["s"] = search, ["sortby"] = sort, ["sortdir"] = direction,
+                ["pagesize"] = size, ["pagenum"] = page
+            };
+            return (FwList)adminController(current).IndexAction()["list_rows"]!;
+        }
+
+        var rows = list("iname", "asc");
+        CollectionAssert.AreEqual(new[] { other, parent, child, sibling }, rows.Select(row => row["id"].toInt()).ToArray());
+        Assert.AreEqual("1.25", rows[2]["tree_indent"].toStr());
+        Assert.IsTrue(rows[2]["is_subpage"].toBool());
+        CollectionAssert.AreEqual(new[] { parent, sibling, child, other }, list("iname", "desc").Select(row => row["id"].toInt()).ToArray());
+        Assert.AreEqual(child, list("iname", "asc", 1, 2)[0]["id"].toInt());
+        Assert.AreEqual(child, list("iname", "asc", search: "Tree A")[0]["id"].toInt(), "Filtering out a parent must retain the matching child.");
+        var flat = list("id", "asc");
+        CollectionAssert.AreEqual(new[] { parent, child, other, sibling }, flat.Select(row => row["id"].toInt()).ToArray());
+        Assert.IsFalse(flat.Any(row => row["is_tree"].toBool()));
+        Assert.IsFalse(rows.Any(row => row.ContainsKey("draft_json") || row.ContainsKey("content_json")));
+    }
+
+    [TestMethod]
+    public void AdminHierarchyKeepsAssociatedSnippetsAndMalformedCyclesVisibleOnce()
+    {
+        var rows = new DBList
+        {
+            new DBRow { ["id"] = "3", ["parent_id"] = "1", ["is_snippet"] = "1" },
+            new DBRow { ["id"] = "1", ["parent_id"] = "2" },
+            new DBRow { ["id"] = "2", ["parent_id"] = "1" },
+            new DBRow { ["id"] = "4", ["parent_id"] = "999" }
+        };
+        var result = cms.listAdminTreeRows(rows);
+        Assert.HasCount(4, result);
+        Assert.AreEqual(4, result.Select(row => row["id"]).Distinct().Count());
+        Assert.AreEqual("3", result[0]["id"]);
+        Assert.AreEqual("0", result[0]["is_subpage"]);
+        Assert.AreEqual("0", result[0]["tree_indent"]);
+    }
+
+    [TestMethod]
+    public void ParentOptionsIncludeDraftPathsWithoutDuplicatingHomeSlash()
+    {
+        int home = fw.db.value("spages", DB.h("is_home", 1), "id").toInt();
+        int parent = create("url-parent", home);
+        int child = create("url-child", parent);
+        var options = cms.listSelectOptionsParents(0);
+        Assert.AreEqual("/url-parent/url-child", options.Single(row => row["id"].toInt() == child)["full_url"].toStr());
+        Assert.IsFalse(cms.listSelectOptionsParents(parent).Any(row => row["id"].toInt() == child));
+        var state = adminController(request(), "ShowForm").ShowFormAction(child);
+        Assert.AreEqual("https://example.org/url-parent/", state["parent_url_prefix"].toStr());
+    }
+
+    [TestMethod]
+    public void StandardImagePickerLimitsImagesToPageAndPublicLibraryAndAuthorAccess()
+    {
+        int page = create("picker-page", access: 80);
+        int other = create("picker-other", access: 80);
+        int entity = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_SPAGE);
+        int add(int owner, bool isImage = true, int status = 0) => fw.db.insert("att", new FwDict
+        {
+            ["iname"] = "Picker image", ["fname"] = "picker.png", ["icode"] = Guid.NewGuid().ToString("N"),
+            ["is_image"] = isImage ? 1 : 0, ["status"] = status,
+            ["fwentities_id"] = owner > 0 ? entity : null, ["item_id"] = owner > 0 ? owner : null
+        });
+        int ownImage = add(page);
+        int libraryImage = add(0);
+        int foreignImage = add(other);
+        int file = add(page, false);
+        int deletedImage = add(page, status: FwModel.STATUS_DELETED);
+        var state = adminController(request(), "SelectImage").SelectImageAction(page);
+        var ids = ((FwList)state["att_dr"]!).Select(row => row["id"].toInt()).ToArray();
+        CollectionAssert.AreEquivalent(new[] { ownImage, libraryImage }, ids);
+        Assert.AreEqual("/admin/att/select", state["_basedir"].toStr());
+        Assert.AreEqual("/Admin/Spages/(Upload)/" + page, state["upload_url"].toStr());
+        Assert.ThrowsExactly<NotFoundException>(() => adminController(request(), "SelectImage").SelectImageAction(999999));
+        Assert.ThrowsExactly<AuthException>(() => adminController(request(0), "SelectImage"));
+        Assert.ThrowsExactly<AuthException>(() => adminController(request(79), "SelectImage"));
+        var draft = cms.oneDraftOrFail(page);
+        draft["head_att_id"] = ownImage;
+        Assert.IsTrue(cms.getDraftImageUrl(draft).Contains("/Att/"));
+        foreach (int unavailable in new[] { foreignImage, file, deletedImage })
+        {
+            draft["head_att_id"] = unavailable;
+            Assert.AreEqual("", cms.getDraftImageUrl(draft));
+        }
+    }
+
+    [TestMethod]
+    public void ImageUploadReturnsStoredUrlAndKeepsPageOwnership()
+    {
+        int page = create("actual-upload", access: 80);
+        string uploadRoot = Path.Combine(Path.GetTempPath(), "osafw-spages-upload-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(uploadRoot);
+        // FwConfig caches an IConfiguration instance, so use a new provider for this isolated upload root.
+        config = new ConfigurationBuilder().AddConfiguration(config).AddInMemoryCollection(
+            new System.Collections.Generic.Dictionary<string, string?>
+            {
+                ["appSettings:site_root"] = uploadRoot,
+                ["appSettings:UPLOAD_DIR"] = "/uploads"
+            }).Build();
+        try
+        {
+            var current = request();
+            current.is_log_events = false; // This fixture isolates uploads and does not install activity-log dictionaries.
+            using var stream = File.OpenRead(Path.Combine(root(), "osafw-app/wwwroot/assets/img/logo.png"));
+            var file = new Microsoft.AspNetCore.Http.FormFile(stream, 0, stream.Length, "file1", "cms-logo.png");
+            current.request.Form = new Microsoft.AspNetCore.Http.FormCollection(
+                new System.Collections.Generic.Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(),
+                new Microsoft.AspNetCore.Http.FormFileCollection { file });
+            current.Session("XSS", "upload-token");
+            current.FORM["XSS"] = "upload-token";
+            var response = (FwDict)adminController(current, "Upload", "POST").UploadAction(page)["_json"]!;
+            var attachment = current.db.row("att", DB.h("id", response["id"]));
+            Assert.IsTrue(Directory.GetFiles(uploadRoot, "*.png", SearchOption.AllDirectories).Length > 0);
+            Assert.IsTrue(response["is_image"].toBool());
+            Assert.AreEqual("cms-logo.png", response["iname"].toStr());
+            Assert.IsTrue(attachment["icode"].toStr().Length > 0);
+            Assert.AreEqual("/Att/" + attachment["icode"].toStr(), response["url"].toStr());
+            Assert.AreEqual(page, attachment["item_id"].toInt());
+            Assert.AreEqual(current.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE), attachment["fwentities_id"].toInt());
+        }
+        finally
+        {
+            Directory.Delete(uploadRoot, true);
+        }
+    }
+
 }
 #endif

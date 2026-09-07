@@ -42,7 +42,7 @@ public class AdminSpagesController : FwDynamicController
     protected override void setListFields()
     {
         var fields = Utils.qw(getViewListUserFields()).Where(view_list_map.ContainsKey)
-            .Concat(Utils.qw("id iname url status is_snippet is_home redirect_url")).Distinct();
+            .Concat(Utils.qw("id parent_id iname url status is_snippet is_home redirect_url")).Distinct();
         list_fields = string.Join(", ", fields.Select(field => db.qid(field)));
     }
 
@@ -54,6 +54,20 @@ public class AdminSpagesController : FwDynamicController
         }
 
         base.setListSearchStatus();
+    }
+
+    public override DBList getListRowsQuery(int offset = 0, int limit = -1)
+    {
+        if (list_filter["sortby"].toStr() != "iname")
+        {
+            return base.getListRowsQuery(offset, limit);
+        }
+
+        // Apply SQL filters first, then page the hierarchy so children stay below their parent.
+        // Only the selected list columns are read; content documents are never loaded here.
+        var rows = model.listAdminTreeRows(base.getListRowsQuery());
+        var page = rows.Skip(offset);
+        return new DBList(limit >= 0 ? page.Take(limit) : page);
     }
 
     public override void getListRows()
@@ -146,7 +160,8 @@ public class AdminSpagesController : FwDynamicController
             ["Upload"] = Permissions.PERMISSION_EDIT,
             ["Preview"] = Permissions.PERMISSION_VIEW,
             ["Migrate"] = Permissions.PERMISSION_EDIT,
-            ["Media"] = Permissions.PERMISSION_VIEW
+            ["Media"] = Permissions.PERMISSION_VIEW,
+            ["SelectImage"] = Permissions.PERMISSION_VIEW
         };
         if (fw.route.action == "SaveMulti" && bulkAction() is "delete" or "restore")
         {
@@ -186,21 +201,9 @@ public class AdminSpagesController : FwDynamicController
             ["status"] = Spages.STATUS_DRAFT
         };
         item["status_label"] = Spages.statusLabel(item["status"].toInt());
-        var parents = new FwList();
         var parentOptions = model.listSelectOptionsParents(id);
         var snippets = model.listSelectOptionsSnippets();
-
-        int parentId = item["parent_id"].toInt();
-        var seen = new System.Collections.Generic.HashSet<int>
-        {
-            id
-        };
-        while (parentId > 0 && seen.Add(parentId) && seen.Count <= 20)
-        {
-            var parent = model.oneDraftOrFail(parentId);
-            parents.Insert(0, parent);
-            parentId = parent["parent_id"].toInt();
-        }
+        string parentPath = parentOptions.FirstOrDefault(row => row["id"].toInt() == item["parent_id"].toInt())?["full_url"].toStr() ?? "";
 
         var layouts = new FwList();
         foreach (var entry in SpagesContent.layouts())
@@ -216,7 +219,8 @@ public class AdminSpagesController : FwDynamicController
             ["cms"] = true,
             ["id"] = id,
             ["i"] = item,
-            ["parents"] = parents,
+            ["parent_url_prefix"] = fw.config("ROOT_DOMAIN").toStr().TrimEnd('/') + parentPath.TrimEnd('/') + "/",
+            ["head_image_url"] = model.getDraftImageUrl(item),
             ["parent_options"] = parentOptions,
             ["layouts"] = layouts,
             ["layouts_json"] = Utils.jsonEncode(SpagesContent.layouts().ToDictionary(x => x.Key, x => new { regions = x.Value.Regions, slots = x.Value.Slots })),
@@ -517,16 +521,29 @@ public class AdminSpagesController : FwDynamicController
 
     public FwDict MediaAction(int id)
     {
-        model.requireAuthor();
-        model.oneDraftOrFail(id);
-        int entity = fw.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE);
-        var rows = db.arrayp("SELECT id,iname,fname,icode,is_image FROM att WHERE status=0 AND ((fwentities_id=@entity AND item_id=@id) OR fwentities_id IS NULL OR fwentities_id=0) ORDER BY id DESC", DB.h("entity", entity, "id", id));
         return new FwDict
         {
-            ["_json"] = new FwDict
-            {
-                ["items"] = new FwList(rows.Take(100).Select(x => new FwDict(x)))
-            }
+            ["_json"] = new FwDict { ["items"] = model.listEditorMedia(id) }
+        };
+    }
+
+    /// <summary>Reuse the standard attachment modal with page-scoped reads and uploads.</summary>
+    public FwDict SelectImageAction(int id)
+    {
+        int categoryId = reqi("att_categories_id");
+        if (reqs("category").Length > 0)
+        {
+            categoryId = fw.model<AttCategories>().oneByIcode(reqs("category"))["id"].toInt();
+        }
+
+        return new FwDict
+        {
+            ["_basedir"] = "/admin/att/select",
+            ["upload_url"] = fw.config("ROOT_URL").toStr() + base_url + "/(Upload)/" + id,
+            ["file_accept"] = "image/*",
+            ["att_dr"] = model.listEditorMedia(id, true, categoryId),
+            ["select_att_categories_id"] = fw.model<AttCategories>().listSelectOptions(),
+            ["att_categories_id"] = categoryId
         };
     }
 
@@ -554,7 +571,10 @@ public class AdminSpagesController : FwDynamicController
             {
                 ["success"] = 1,
                 ["id"] = first["id"],
-                ["name"] = first["fname"]
+                ["name"] = first["fname"],
+                ["iname"] = first["iname"],
+                ["url"] = fw.model<Att>().getUrl(first["id"].toInt()),
+                ["is_image"] = first["is_image"]
             }
         };
     }

@@ -13,7 +13,6 @@
 .spages-writing { min-width:0; }
 .spages-publishing { position:sticky; top:1rem; }
 .spages-publish-card { padding:1rem; }
-.spages-publish-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
 .spages-publish-more { border-top:1px solid var(--bs-border-color); padding-top:.65rem; }
 .spages-publish-more summary { font-size:.875rem; }
 .spages-canvas { background:var(--bs-body-bg); color:var(--bs-body-color); border:1px solid var(--bs-border-color); border-radius:var(--bs-border-radius-lg); padding:1rem 2.75rem; }
@@ -40,4 +39,10 @@
 #spages-editor summary { padding:.35rem 0; font-weight:600; cursor:pointer; }
 .spages-cms :is(input, select, textarea, button, a, [contenteditable], summary):focus-visible { outline:2px solid var(--bs-body-color); outline-offset:3px; }
 @media(max-width:991px) { .spages-workspace { grid-template-columns:1fr; } .spages-publishing { position:static; grid-row:1; } .spages-canvas { padding:1rem 2.25rem; } }
-@media(max-width:575px) { .spages-tabs { flex-wrap:nowrap; overflow-x:auto; } .spages-settings { grid-template-columns:1fr; } .spages-canvas { padding:.75rem 1.5rem; } .spages-publish-actions { grid-template-columns:1fr; } }
+@media(max-width:575px) { .spages-tabs { flex-wrap:nowrap; overflow-x:auto; } .spages-settings { grid-template-columns:1fr; } .spages-canvas { padding:.75rem 1.5rem; } }
+.spages-settings-groups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; align-items:start; }
+.spages-settings-groups .spages-settings { margin:0; gap:1rem; }
+.spages-settings legend { float:none; width:auto; margin:0; padding:0; }
+.spages-url-input .input-group-text { max-width:100%; overflow-wrap:anywhere; white-space:normal; text-align:start; }
+.spages-url-input .form-control { min-width:10rem; }
+@media(max-width:991px) { .spages-settings-groups { grid-template-columns:1fr; } }

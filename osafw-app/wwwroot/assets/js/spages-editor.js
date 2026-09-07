@@ -433,15 +433,42 @@
         URL_INPUT.readOnly = pageId > 0;
     }
 
-    const HEAD_MEDIA = document.getElementById('spages-head-media');
-    if (HEAD_MEDIA) {
-        mediaPicker(HEAD_MEDIA, { att_id: Number(HEAD_MEDIA.dataset.attId || 0) }, true, {
-            label: 'Page image',
-            uploadLabel: 'Upload a page image',
-            valueTarget: document.getElementById('spages-head-att'),
-            isReadOnly: !IS_AUTHOR
-        });
+    const PARENT_SELECT = document.getElementById('spages-parent');
+    const PARENT_URL = document.getElementById('spages-parent-url');
+    function updateParentUrl() {
+        if (!PARENT_URL) return;
+        const PATH = PARENT_SELECT.selectedOptions[0]?.dataset.url || '';
+        PARENT_URL.textContent = PARENT_URL.dataset.origin.replace(/\/$/, '') + PATH.replace(/\/$/, '') + '/';
     }
+    PARENT_SELECT.addEventListener('change', updateParentUrl);
+    updateParentUrl();
+
+    const IMAGE_ID = document.getElementById('spages-head-att');
+    const IMAGE_PREVIEW = document.getElementById('spages-image-preview');
+    document.getElementById('spages-select-image').addEventListener('click', async () => {
+        try {
+            if (!pageId) await saveDraft(false);
+            window.jQuery('#modal-att').data('load-url', BASE_URL + '/(SelectImage)/' + pageId);
+            window.modal_att_open('', (event, id, name, url, isImage) => {
+                if (!isTrue(isImage)) {
+                    showError(new Error('Choose an image file for the page image.'));
+                    return;
+                }
+                IMAGE_ID.value = id;
+                IMAGE_PREVIEW.querySelector('img').src = url + '?preview=1&size=l';
+                IMAGE_PREVIEW.hidden = false;
+                markChanged();
+            });
+        } catch (error) {
+            showError(error);
+        }
+    });
+    document.getElementById('spages-remove-image').addEventListener('click', () => {
+        IMAGE_ID.value = '';
+        IMAGE_PREVIEW.hidden = true;
+        IMAGE_PREVIEW.querySelector('img').removeAttribute('src');
+        markChanged();
+    });
 
     function updateLayout() {
         const LAYOUT = LAYOUTS[document.getElementById('spages-layout').value];

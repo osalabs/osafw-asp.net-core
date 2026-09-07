@@ -680,7 +680,7 @@ These help keep your templates DRY and consistent. Below are the most important 
 
 #### JavaScript Components and CSS Includes
 - **ajaxform.html**: Includes jQuery Form plugin. Usage: `<~/common/ajaxform>`
-- **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`
+- **att.html**: Includes attachment selection modal. Usage: `<~/common/att>`. Controllers reusing `/admin/att/select` may provide a server-controlled `upload_url` and an optional `file_accept` input hint; absent values preserve the standard upload route and unrestricted file chooser. The receiving controller remains responsible for upload validation and attachment authorization.
 - **autocomplete.html**: Includes Bootstrap Simple Autocomplete JS through `fw.initComponent` so repeated includes share one loaded asset. Usage: `<~/common/autocomplete>`
 - **bootstrap_select.html**: Includes bootstrap-select JS/CSS through `fw.initComponent`, initializes `select.selectpicker`, and preserves autosave/list-filter behavior. Usage: `<~/common/bootstrap_select>`
 - **modal.html**: Loads `fw-modal.js`, adds `.on-fw-modal` remote modal triggers, `.on-fw-modal-link` same-modal link loading, and lookup add/edit helpers. Usage: `<~/common/modal>`
