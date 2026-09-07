@@ -115,9 +115,9 @@ public class AdminSpagesController : FwDynamicController
         }
 
         var redirect_url = item["redirect_url"].toStr();
-        if (isValid && !Utils.isEmpty(redirect_url) && !Utils.isAppUrl(redirect_url, fw.config("ROOT_DOMAIN").toStr()))
+        if (isValid && !Utils.isEmpty(redirect_url))
         {
-            fw.FormErrors["redirect_url"] = "APP_URL";
+            Spages.redirectUrl(redirect_url);
         }
 
         if (isValid)

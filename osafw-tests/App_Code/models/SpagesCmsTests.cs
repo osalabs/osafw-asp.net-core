@@ -26,9 +26,10 @@ public partial class SpagesCmsTests
         return dir?.FullName ?? throw new InvalidOperationException("Repository root not found.");
     }
 
-    private FW request(int level = 100)
+    private FW request(int level = 100, string pathBase = "")
     {
         var context = TestHelpers.CreateHttpContext("spages-tests");
+        context.Request.PathBase = pathBase;
         var current = new FW(context, config);
         if (level > 0)
         {
@@ -198,9 +199,9 @@ public partial class SpagesCmsTests
         return result["count"].toInt();
     }
 
-    private (FW Current, string Html) renderCmsResponse(string pagePath, int level = 0)
+    private (FW Current, string Html) renderCmsResponse(string pagePath, int level = 0, string pathBase = "")
     {
-        var current = request(level);
+        var current = request(level, pathBase);
         current.G["PAGE_LAYOUT"] = "main.html";
         using var body = new MemoryStream();
         current.response.Body = body;

@@ -485,10 +485,7 @@ public class Spages : FwModel<Spages.Row>
         }
 
         item["content_json"] = doc.ToJsonString();
-        if (!string.IsNullOrWhiteSpace(item["redirect_url"].toStr()))
-        {
-            localPath(item["redirect_url"].toStr());
-        }
+        item["redirect_url"] = redirectUrl(item["redirect_url"].toStr());
 
         item["url_aliases"] = string.Join("\n", listUrlAliases(item));
         var json = Utils.jsonEncode(item);
@@ -1421,6 +1418,34 @@ public class Spages : FwModel<Spages.Row>
         return 101;
     }
 
+    /// <summary>
+    /// Validate an optional CMS redirect: an app-local path or an absolute HTTP/HTTPS URL.
+    /// External destinations are editorial content approved through the normal publication workflow.
+    /// This does not change the app-local policy for return URLs or old-path aliases.
+    /// </summary>
+    public static string redirectUrl(string target)
+    {
+        if (target.Any(char.IsControl) || target.Contains('\\') || target.Length > 255)
+            throw new UserException("Use a local path or a full HTTP/HTTPS URL (maximum 255 characters).");
+
+        target = target.Trim();
+        if (target.Length == 0)
+            return "";
+        if (target.StartsWith('/'))
+            return localPath(target);
+
+        if (!Uri.TryCreate(target, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString()
+            || uri.Scheme is not ("http" or "https") || uri.Host.Length == 0 || uri.UserInfo.Length > 0)
+            throw new UserException("Use a local path or a full HTTP/HTTPS URL without embedded credentials (maximum 255 characters).");
+
+        // HTTP response headers require ASCII, including internationalized hostnames.
+        string normalized = new UriBuilder(uri) { Host = uri.IdnHost }.Uri.AbsoluteUri;
+        if (normalized.Length > 255)
+            throw new UserException("Use a redirect URL of at most 255 characters after URL encoding.");
+
+        return normalized;
+    }
+
     public static string localPath(string path)
     {
         path = path.Trim();
@@ -1745,8 +1770,10 @@ public class Spages : FwModel<Spages.Row>
 
         if (page["redirect_url"].toStr().Length > 0)
         {
+            string destination = redirectUrl(page["redirect_url"].toStr());
             fw.response.StatusCode = 301;
-            fw.response.Headers.Location = fw.config("ROOT_URL").toStr() + localPath(page["redirect_url"].toStr());
+            fw.response.Headers.Location = destination.StartsWith('/')
+                ? fw.config("ROOT_URL").toStr() + destination : destination;
             return;
         }
 
@@ -1795,15 +1822,38 @@ public class Spages : FwModel<Spages.Row>
         return target.Equals(source, StringComparison.OrdinalIgnoreCase) ? "" : target;
     }
 
+    // An absolute URL back into this deployment must participate in the same loop checks as local paths.
+    private string localRedirectPath(string target)
+    {
+        target = redirectUrl(target);
+        if (target.StartsWith('/'))
+            return target;
+        if (target.Length == 0 || !Uri.TryCreate(fw.config("ROOT_DOMAIN").toStr(), UriKind.Absolute, out var root))
+            return "";
+
+        var destination = new Uri(target);
+        if (destination.Scheme != root.Scheme || destination.Port != root.Port
+            || !destination.IdnHost.Equals(root.IdnHost, StringComparison.OrdinalIgnoreCase))
+            return "";
+
+        string rootPath = root.AbsolutePath.TrimEnd('/');
+        string path = destination.AbsolutePath;
+        if (path.Equals(rootPath, StringComparison.OrdinalIgnoreCase))
+            return "/";
+        return path.StartsWith(rootPath + "/", StringComparison.OrdinalIgnoreCase) ? localPath(path[rootPath.Length..]) : "";
+    }
+
     private void validateRedirect(string source, string target, Dictionary<int, FwDict> pages, Dictionary<string, int> aliases)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             localPath(source)
         };
-        string path = localPath(target);
+        string path = localRedirectPath(target);
         for (int i = 0; i < 20; i++)
         {
+            if (path.Length == 0)
+                return; // An external destination ends the CMS chain.
             if (!seen.Add(path))
             {
                 throw new UserException("This redirect would create a loop.");
@@ -1817,7 +1867,7 @@ public class Spages : FwModel<Spages.Row>
                     return;
                 }
 
-                path = localPath(page["redirect_url"].toStr());
+                path = localRedirectPath(page["redirect_url"].toStr());
             }
             else if (aliases.TryGetValue(path, out int id))
             {

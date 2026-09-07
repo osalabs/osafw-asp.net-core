@@ -57,8 +57,8 @@
     <section class="tab-pane fade" id="spages-navigation-pane" role="tabpanel" aria-labelledby="spages-navigation-tab" tabindex="0">
       <div class="fw-card">
         <div class="row">
-          <div class="col-xl-9">
-            <div class="fw-fieldset">
+          <div class="col-xl-9 d-xl-flex">
+            <div class="fw-fieldset w-100">
               <div class="fw-fieldset-legend" role="button" tabindex="0">URL and access</div>
               <div class="row form-row">
                 <label class="col-form-label col-md-3" for="spages-parent">Parent page</label>
@@ -88,8 +88,8 @@
               </div>
             </div>
           </div>
-          <div class="col-xl-3">
-            <fieldset class="fw-fieldset" <~/common/attr/disabled if="i[is_snippet]">>
+          <div class="col-xl-3 d-xl-flex">
+            <fieldset class="fw-fieldset w-100" <~/common/attr/disabled if="i[is_snippet]">>
               <div class="fw-fieldset-legend" role="button" tabindex="0">Navigation</div>
               <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Not used for snippets.</p></~snippet_settings_help>
               <div class="row form-row">
@@ -105,11 +105,10 @@
                 </div>
               </div>
               <div class="row form-row">
-                <label class="col-form-label col-md-3 col-xl-5" for="spages-nav-visible">Show in navigation</label>
                 <div class="col">
-                  <div class="form-check form-check-inline">
+                  <div class="form-check">
                     <input id="spages-nav-visible" name="item[is_nav_visible]" class="form-check-input" type="checkbox" value="1" <~/common/attr/checked if="i[is_nav_visible]">>
-                    <label class="form-check-label" for="spages-nav-visible">Yes</label>
+                    <label class="form-check-label" for="spages-nav-visible">Show in navigation</label>
                   </div>
                 </div>
               </div>
@@ -155,8 +154,8 @@
           <div class="row form-row">
             <label class="col-form-label col-md-3" for="spages-redirect-url">Redirect this page to</label>
             <div class="col">
-              <input id="spages-redirect-url" name="item[redirect_url]" class="form-control" aria-describedby="spages-redirect-url-help" value="<~i[redirect_url]>" maxlength="255" placeholder="/local-path">
-              <div id="spages-redirect-url-help" class="form-text">Leave empty to display this page's content.</div>
+              <input id="spages-redirect-url" name="item[redirect_url]" class="form-control" aria-describedby="spages-redirect-url-help" value="<~i[redirect_url]>" maxlength="255" placeholder="/local-path or https://example.com">
+              <div id="spages-redirect-url-help" class="form-text">Use a local path or a full HTTP/HTTPS URL. Leave empty to display this page's content.</div>
             </div>
           </div>
           <div class="row form-row">
