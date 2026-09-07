@@ -4,6 +4,7 @@
 
     const FORM = document.getElementById('spages-editor');
     const ACTIONS_FORM = document.getElementById('cms-actions');
+    const STATUS_DRAFT = 10;
     const STATUS_IN_REVIEW = 20;
 
     document.querySelectorAll('select[data-selected]').forEach(SELECT => {
@@ -58,6 +59,7 @@
     let documentData = JSON.parse(DOCUMENT_FIELD.value);
     let isDirty = false;
     let isReady = false;
+    let isWorkflowPending = false;
     let changeSequence = 0;
     let savePromise = null;
     let autosaveTimer;
@@ -511,6 +513,9 @@
                 history.replaceState(null, '', RESULT.location);
             }
             if (IS_SNIPPET) URL_INPUT.readOnly = true;
+            FORM.dataset.status = String(STATUS_DRAFT);
+            document.getElementById('spages-status').textContent = 'Draft';
+            updateStatusActions(STATUS_DRAFT, isTrue(FORM.dataset.isScheduled));
             await Promise.all(MEDIA_PICKERS.map(PICKER => PICKER.activate()));
             isDirty = changeSequence !== STARTED_SEQUENCE;
             STATE.textContent = isDirty ? 'Unsaved changes' : 'Draft saved at ' + new Date().toLocaleTimeString();
@@ -560,9 +565,12 @@
         });
     });
 
-    FORM.querySelectorAll('[data-status-action]').forEach(BUTTON => {
+    const STATUS_BUTTONS = document.querySelectorAll('[data-status-action]');
+    STATUS_BUTTONS.forEach(BUTTON => {
         BUTTON.addEventListener('click', async () => {
-            BUTTON.disabled = true;
+            if (!IS_AUTHOR || isWorkflowPending) return;
+            isWorkflowPending = true;
+            STATUS_BUTTONS.forEach(CONTROL => { CONTROL.disabled = true; });
             clearTimeout(autosaveTimer);
             try {
                 if (isDirty || !pageId) await saveDraft(false);
@@ -570,7 +578,7 @@
                 BODY.set('XSS', FORM.elements.XSS.value);
                 BODY.set('note', document.getElementById('spages-note').value);
                 const DATE = document.getElementById('spages-publish-at')?.value;
-                if (DATE) BODY.set('publish_at', new Date(DATE).toISOString());
+                if (DATE && !BUTTON.hasAttribute('data-publish-now')) BODY.set('publish_at', new Date(DATE).toISOString());
                 await request(BASE_URL + '/(' + BUTTON.dataset.statusAction + ')/' + pageId, BODY);
                 isDirty = false;
                 STATE.textContent = 'Publication updated';
@@ -579,7 +587,8 @@
             } catch (error) {
                 showError(error);
             } finally {
-                BUTTON.disabled = false;
+                isWorkflowPending = false;
+                STATUS_BUTTONS.forEach(CONTROL => { CONTROL.disabled = !IS_AUTHOR; });
             }
         });
     });

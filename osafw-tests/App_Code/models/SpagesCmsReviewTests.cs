@@ -43,6 +43,13 @@ public partial class SpagesCmsTests
 
         string formHtml = parser.parse_page("/admin/spages/showform", "main.html", state);
         var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(formHtml);
+        var publishButton = document.QuerySelector(".page-header [data-publish-now]")
+            ?? throw new AssertFailedException("Publishers need the header Publish action.");
+        Assert.IsTrue(publishButton.ClassList.Contains("btn-success"));
+        Assert.IsFalse(publishButton.HasAttribute("disabled"));
+        Assert.AreEqual("spages-editor", publishButton.PreviousElementSibling?.GetAttribute("form"));
+        Assert.AreEqual("Draft", document.QuerySelector(".page-header #spages-status")?.TextContent);
+
         var accessSelect = document.QuerySelector("select[name='item[access_level]']")
             ?? throw new AssertFailedException("The CMS access-level select was not rendered.");
         var options = accessSelect.QuerySelectorAll("option");
@@ -79,7 +86,16 @@ public partial class SpagesCmsTests
         var siteAdminFormFw = requestForReviewUser(readOnlySiteAdmin, Users.ACL_SITEADMIN);
         var siteAdminForm = reviewController(siteAdminFormFw, FW.ACTION_SHOW_FORM, id: page, actionMore: FW.ACTION_MORE_EDIT);
         siteAdminForm.checkAccess();
-        Assert.IsTrue(siteAdminForm.ShowFormAction(page)["is_readonly"].toBool());
+        var readOnlyState = siteAdminForm.ShowFormAction(page);
+        Assert.IsTrue(readOnlyState["is_readonly"].toBool());
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"),
+            IsLangUpdate = false
+        });
+        string readOnlyActions = parser.parse_page("/admin/spages/showform", "page_header_actions_right.html", readOnlyState);
+        Assert.IsFalse(readOnlyActions.Contains("data-publish-now", StringComparison.Ordinal),
+            "A read-only Site Admin must not receive the header Publish action.");
         Assert.ThrowsExactly<AuthException>(() => siteAdminFormFw.model<Spages>().saveDraft(page, new FwDict { ["iname"] = "Denied" }));
 
 #if isRoles
