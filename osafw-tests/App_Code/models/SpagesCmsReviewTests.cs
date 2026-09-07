@@ -45,10 +45,17 @@ public partial class SpagesCmsTests
         var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(formHtml);
         var publishButton = document.QuerySelector(".page-header [data-publish-now]")
             ?? throw new AssertFailedException("Publishers need the header Publish action.");
+        Assert.AreEqual("Publish Now", publishButton.TextContent.Trim());
         Assert.IsTrue(publishButton.ClassList.Contains("btn-success"));
         Assert.IsFalse(publishButton.HasAttribute("disabled"));
         Assert.AreEqual("spages-editor", publishButton.PreviousElementSibling?.GetAttribute("form"));
         Assert.AreEqual("Draft", document.QuerySelector(".page-header #spages-status")?.TextContent);
+        Assert.IsNotNull(document.QuerySelector(".page-header a[href='/portal/Admin/Spages/new?snippet=1&parent_id=" + page + "']"));
+        current.FORM["snippet"] = 1;
+        current.FORM["parent_id"] = page;
+        var newSnippet = reviewController(current, FW.ACTION_SHOW_FORM).ShowFormAction();
+        Assert.IsTrue(((FwDict)newSnippet["i"]!)["is_snippet"].toBool());
+        Assert.AreEqual(page, ((FwDict)newSnippet["i"]!)["parent_id"].toInt());
 
         var accessSelect = document.QuerySelector("select[name='item[access_level]']")
             ?? throw new AssertFailedException("The CMS access-level select was not rendered.");
@@ -61,18 +68,122 @@ public partial class SpagesCmsTests
         {
             ["field_name"] = "url",
             ["data"] = "rooted-page",
-            ["row"] = new FwDict { ["full_url"] = "/rooted-page", ["redirect_url"] = "" }
+            ["row"] = new FwDict { ["view_url"] = "/rooted-page", ["redirect_url"] = "" }
         });
         string actionsHtml = parser.parse_page("/admin/spages/index", "list_row_btn.html", new FwDict
         {
             ["row_click_url"] = "/portal/Admin/Spages/" + page + "/edit",
-            ["full_url"] = "/rooted-page"
+            ["view_url"] = "/rooted-page"
         });
         StringAssert.Contains(columnHtml, "href=\"/portal/rooted-page\"");
         StringAssert.Contains(actionsHtml, "href=\"/portal/rooted-page\"");
         Assert.IsFalse(columnHtml.Contains("href=\"/rooted-page\"", StringComparison.Ordinal));
         Assert.IsFalse(actionsHtml.Contains("href=\"/rooted-page\"", StringComparison.Ordinal));
     }
+
+    [TestMethod]
+    [DataRow(0, "text-bg-success")]
+    [DataRow(10, "text-bg-secondary")]
+    [DataRow(20, "text-bg-info")]
+    [DataRow(30, "text-bg-warning")]
+    [DataRow(40, "text-bg-primary")]
+    [DataRow(127, "text-bg-danger")]
+    public void StatusBadgesMatchBetweenListAndEditor(int status, string expectedClass)
+    {
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"), IsLangUpdate = false
+        });
+        string list = parser.parse_page("/admin/spages/index", "col_custom.html", new FwDict
+        {
+            ["field_name"] = "status", ["data"] = status
+        });
+        string header = parser.parse_page("/admin/spages/showform", "page_header_meta.html", new FwDict
+        {
+            ["i"] = new FwDict { ["status"] = status, ["status_label"] = Spages.statusLabel(status) }
+        });
+        var html = new AngleSharp.Html.Parser.HtmlParser();
+        foreach (string output in new[] { list, header })
+        {
+            var badge = html.ParseDocument(output).QuerySelector(".badge");
+            Assert.IsTrue(badge?.ClassList.Contains(expectedClass) == true, output);
+            StringAssert.Contains(badge.TextContent, Spages.statusLabel(status));
+        }
+    }
+
+    [TestMethod]
+    public void AdminViewLinksUseAccessiblePublicationsOrPrivateDraftPreviews()
+    {
+        int draft = create("view-draft");
+        int live = create("view-live");
+        publish(live);
+        save(live, "Unpublished replacement");
+        int scheduled = create("view-scheduled");
+        publish(scheduled, DateTime.UtcNow.AddDays(1));
+        int restricted = create("view-restricted", access: Users.ACL_SITEADMIN);
+        publish(restricted);
+        int snippet = cms.saveDraft(0, new FwDict
+        {
+            ["iname"] = "view-snippet", ["url"] = "view-snippet", ["is_snippet"] = 1,
+            ["template"] = "article", ["content_json"] = content("Reusable content")
+        });
+        publish(snippet);
+        var current = request(Users.ACL_MANAGER);
+        current.FORM["f"] = new FwDict { ["s"] = "view-", ["pagesize"] = 25 };
+        var rows = (FwList)adminController(current).IndexAction()["list_rows"]!;
+        Assert.AreEqual(5, rows.Count);
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"), IsLangUpdate = false,
+            GlobalsGetter = () => new FwDict { ["ROOT_URL"] = "/portal" }
+        });
+        foreach (var row in rows)
+        {
+            int id = row["id"].toInt();
+            string expectedUrl = id == live ? "/view-live" : "/Admin/Spages/(Preview)/" + id;
+            Assert.AreEqual(expectedUrl, row["view_url"].toStr());
+            Assert.AreEqual(id == live ? "View published page" : "Preview draft", row["view_title"].toStr());
+            string column = parser.parse_page("/admin/spages/index", "col_custom.html", new FwDict
+            {
+                ["field_name"] = "url", ["data"] = row["url"], ["row"] = row
+            });
+            string actions = parser.parse_page("/admin/spages/index", "list_row_btn.html", row);
+            StringAssert.Contains(column, "href=\"/portal" + expectedUrl + "\"");
+            StringAssert.Contains(actions, "href=\"/portal" + expectedUrl + "\"");
+        }
+        Assert.AreEqual(Spages.STATUS_DRAFT, rows.Single(row => row["id"].toInt() == live)["status"].toInt());
+        Assert.AreEqual(0, request(0).model<Spages>().onePublished(draft).Count);
+        StringAssert.Contains(request(0).model<Spages>().publishedText(cms.onePublished(live)), "Original public text");
+    }
+
+#if isRoles
+    [TestMethod]
+    public void ReadOnlyPreviewRequiresCmsViewAndKeepsContentPrivate()
+    {
+        int page = create("reader-preview");
+        int role = employeeRoleId();
+        grantReviewPermission(role, Permissions.PERMISSION_LIST);
+        int reader = createReviewUser(Users.ACL_MANAGER, true, role);
+        var deniedFw = requestForReviewUser(reader, Users.ACL_MANAGER);
+        var denied = reviewController(deniedFw, "Preview", id: page);
+        Assert.ThrowsExactly<AuthException>(() => denied.checkAccess());
+        Assert.ThrowsExactly<AuthException>(() => denied.PreviewAction(page));
+        Assert.IsFalse(deniedFw.model<Spages>().isAttachmentVisible(123, page));
+
+        grantReviewPermission(role, Permissions.PERMISSION_VIEW);
+        var allowedFw = requestForReviewUser(reader, Users.ACL_MANAGER);
+        allowedFw.response.Body = new MemoryStream();
+        var allowed = reviewController(allowedFw, "Preview", id: page);
+        allowed.checkAccess();
+        allowed.PreviewAction(page);
+        Assert.AreEqual("private, no-store", allowedFw.response.Headers.CacheControl.ToString());
+        Assert.AreEqual("noindex, nofollow", allowedFw.response.Headers["X-Robots-Tag"].ToString());
+        Assert.IsTrue(allowedFw.model<Spages>().isAttachmentVisible(123, page));
+        Assert.ThrowsExactly<AuthException>(() => allowedFw.model<Spages>().saveDraft(page, new FwDict { ["iname"] = "Denied" }));
+        Assert.AreEqual(0, request(0).model<Spages>().onePublished(page).Count);
+        Assert.ThrowsExactly<NotFoundException>(() => allowed.PreviewAction(int.MaxValue));
+    }
+#endif
 
     [TestMethod]
     public void ReadOnlyEditorsCanUseAuthorizedReadRoutesButCannotSaveDrafts()

@@ -328,7 +328,10 @@ public class Spages : FwModel<Spages.Row>
 
     public bool isPublisher() => isAuthor() && fw.userAccessLevel >= PUBLISHER_LEVEL;
 
-    public bool isPreviewAllowed() => isAuthor() && (fw.userAccessLevel >= Users.ACL_SITEADMIN || fw.model<Users>().isAccessByRolesResourcePermission(fw.userId, "AdminSpages", Permissions.PERMISSION_VIEW));
+    /// <summary>Authorized CMS readers may preview content and its files without gaining write access.</summary>
+    public bool isPreviewAllowed() => fw.userId > 0 && fw.userAccessLevel >= AUTHOR_LEVEL
+        && (fw.userAccessLevel >= Users.ACL_SITEADMIN || fw.model<Users>()
+            .isAccessByRolesResourcePermission(fw.userId, "AdminSpages", Permissions.PERMISSION_VIEW));
 
     public void requireAuthor(bool isPublisherRequired = false)
     {
@@ -623,7 +626,7 @@ public class Spages : FwModel<Spages.Row>
 
         foreach (var row in rows)
         {
-            var page = onePublished(row["id"].toInt(), Users.ACL_SITEADMIN);
+            var page = onePublished(row["id"].toInt());
             row["full_url"] = page["full_url"].toStr();
             row["is_live"] = page.Count > 0 && !page["is_snippet"].toBool();
         }

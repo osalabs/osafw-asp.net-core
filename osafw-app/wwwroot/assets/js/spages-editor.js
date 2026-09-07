@@ -515,6 +515,7 @@
             if (IS_SNIPPET) URL_INPUT.readOnly = true;
             FORM.dataset.status = String(STATUS_DRAFT);
             document.getElementById('spages-status').textContent = 'Draft';
+            document.getElementById('spages-status-badge').className = 'badge text-bg-secondary';
             updateStatusActions(STATUS_DRAFT, isTrue(FORM.dataset.isScheduled));
             await Promise.all(MEDIA_PICKERS.map(PICKER => PICKER.activate()));
             isDirty = changeSequence !== STARTED_SEQUENCE;

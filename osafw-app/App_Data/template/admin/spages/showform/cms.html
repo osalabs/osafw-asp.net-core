@@ -44,7 +44,7 @@
               </~publisher>
             </div></details>
           </div>
-          <~snippet_help if="i[is_snippet]" inline><div class="fw-card mt-3" id="spages-snippet-help">
+          <~snippet_help if="i[is_snippet]" inline><div class="fw-card mt-3 p-3" id="spages-snippet-help">
             <h2 class="h6">Using snippets</h2>
             <p class="small">A snippet is reusable content, such as contact details or a callout. Publish it, then insert it with a Reusable snippet block or an available page slot. Publishing changes updates every page that uses it.</p>
             <p class="small mb-0">Choose a Parent page to associate it with that page, or Top level for shared content. Snippet keys are site-wide; snippets have no public URL and cannot contain other snippets.</p>
@@ -57,7 +57,7 @@
     <section class="tab-pane fade" id="spages-navigation-pane" role="tabpanel" aria-labelledby="spages-navigation-tab" tabindex="0">
       <div class="fw-card">
         <div class="row">
-          <div class="col-xl-6">
+          <div class="col-xl-9">
             <div class="fw-fieldset">
               <div class="fw-fieldset-legend" role="button" tabindex="0">URL and access</div>
               <div class="row form-row">
@@ -82,30 +82,30 @@
               <div class="row form-row">
                 <label class="col-form-label col-md-3" for="spages-access-level">Minimum access level</label>
                 <div class="col">
-                  <select id="spages-access-level" name="item[access_level]" class="form-select" data-selected="<~i[access_level]>" aria-describedby="spages-access-help"><option value="0">Public</option><~/common/sel/access_level.sel select="i[access_level]"></select>
+                  <select id="spages-access-level" name="item[access_level]" class="form-select w-auto mw-100" data-selected="<~i[access_level]>" aria-describedby="spages-access-help"><option value="0">Public</option><~/common/sel/access_level.sel select="i[access_level]"></select>
                   <div class="form-text" id="spages-access-help">Parent restrictions also apply.</div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-xl-6">
+          <div class="col-xl-3">
             <fieldset class="fw-fieldset" <~/common/attr/disabled if="i[is_snippet]">>
               <div class="fw-fieldset-legend" role="button" tabindex="0">Navigation</div>
               <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Not used for snippets.</p></~snippet_settings_help>
               <div class="row form-row">
-                <label class="col-form-label col-md-3" for="spages-nav-title">Navigation label</label>
+                <label class="col-form-label col-md-3 col-xl-5" for="spages-nav-title">Navigation label</label>
                 <div class="col">
                   <input id="spages-nav-title" name="item[nav_title]" class="form-control" value="<~i[nav_title]>" maxlength="128" placeholder="Use page title">
                 </div>
               </div>
               <div class="row form-row">
-                <label class="col-form-label col-md-3" for="spages-nav-order">Navigation order</label>
+                <label class="col-form-label col-md-3 col-xl-5" for="spages-nav-order">Navigation order</label>
                 <div class="col">
-                  <input id="spages-nav-order" name="item[prio]" type="number" class="form-control" value="<~i[prio]>">
+                  <input id="spages-nav-order" name="item[prio]" type="number" class="form-control" style="max-width: 7rem" value="<~i[prio]>">
                 </div>
               </div>
               <div class="row form-row">
-                <label class="col-form-label col-md-3" for="spages-nav-visible">Show in navigation</label>
+                <label class="col-form-label col-md-3 col-xl-5" for="spages-nav-visible">Show in navigation</label>
                 <div class="col">
                   <div class="form-check form-check-inline">
                     <input id="spages-nav-visible" name="item[is_nav_visible]" class="form-check-input" type="checkbox" value="1" <~/common/attr/checked if="i[is_nav_visible]">>
@@ -229,4 +229,4 @@
 </form>
 
 <script src="<~ROOT_URL>/assets/lib/editorjs/dist/editorjs.umd.js" defer></script>
-<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=11" defer></script>
+<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=12" defer></script>

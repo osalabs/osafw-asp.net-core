@@ -107,7 +107,7 @@ public partial class SpagesCmsTests
     }
 
     [TestMethod]
-    public void PreviewRequiresAuthorAndMarksDraftResponsePrivateAndNoindex()
+    public void PreviewRequiresCmsAccessAndMarksDraftResponsePrivateAndNoindex()
     {
         int page = create("preview-private");
         save(page, "Unpublished preview marker 54b7");

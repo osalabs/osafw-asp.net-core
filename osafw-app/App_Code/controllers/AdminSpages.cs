@@ -87,6 +87,8 @@ public class AdminSpagesController : FwDynamicController
         foreach (var row in list_rows)
         {
             row["status_label"] = Spages.statusLabel(row["status"].toInt());
+            row["view_url"] = row["is_live"].toBool() ? row["full_url"] : base_url + "/(Preview)/" + row["id"];
+            row["view_title"] = row["is_live"].toBool() ? "View published page" : "Preview draft";
         }
     }
 
@@ -329,7 +331,6 @@ public class AdminSpagesController : FwDynamicController
 
     public void PreviewAction(int id)
     {
-        model.requireAuthor();
         if (!model.isPreviewAllowed())
         {
             throw new AuthException();
