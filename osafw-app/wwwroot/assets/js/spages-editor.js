@@ -211,7 +211,7 @@
     register('legacyMarkdown', 'Markdown', [['text', 'Markdown content', { multiline: true }]]);
     register('callout', 'Callout', [['title', 'Title'], ['text', 'Message', { multiline: true }]]);
     register('button', 'Button', [['text', 'Useful link label', { linkLabel: true }], ['url', 'Destination URL']]);
-    register('snippet', 'Reusable snippet', [['key', 'Snippet', { choices: [['', 'Choose a published snippet'], ...SNIPPETS.map(SNIPPET => [SNIPPET.key, SNIPPET.title])] }]]);
+    register('snippet', 'Snippet', [['key', 'Snippet', { choices: [['', 'Choose a published snippet'], ...SNIPPETS.map(SNIPPET => [SNIPPET.key, SNIPPET.title])] }]]);
     register('list', 'List', [['style', 'Style', { choices: [['unordered', 'Bullets'], ['ordered', 'Numbered']] }]], { items: [], style: 'unordered' }, (root, data) => {
         field(root, 'lines', 'One item per line', data.items.map(ITEM => typeof ITEM === 'string' ? ITEM : ITEM.content).join('\n'), { multiline: true });
     });
@@ -371,8 +371,8 @@
         render() {
             const ROOT = element('div', 'spages-tool spages-tool-unavailable');
             const IS_NESTED_SNIPPET = IS_SNIPPET && this.data.originalType === 'snippet';
-            ROOT.append(element('div', 'fw-semibold', IS_NESTED_SNIPPET ? 'Nested reusable snippet' : 'Unavailable block: ' + (this.data.originalType || 'unknown')));
-            ROOT.append(element('p', 'small mb-2', IS_NESTED_SNIPPET ? 'Reusable snippets cannot contain another snippet. Remove or replace this block; its original JSON remains available below.' : 'This site does not have the editor control for this block. Its original JSON is kept below and will be saved intact.'));
+            ROOT.append(element('div', 'fw-semibold', IS_NESTED_SNIPPET ? 'Nested snippet' : 'Unavailable block: ' + (this.data.originalType || 'unknown')));
+            ROOT.append(element('p', 'small mb-2', IS_NESTED_SNIPPET ? 'Snippets cannot contain another snippet. Remove or replace this block; its original JSON remains available below.' : 'This site does not have the editor control for this block. Its original JSON is kept below and will be saved intact.'));
             this.input = field(ROOT, 'raw', 'Original block JSON', this.data.raw, {
                 multiline: true,
                 help: 'Correct the JSON here or install the matching editor tool. Invalid JSON blocks saving so the original content cannot be lost.'
@@ -455,7 +455,7 @@
         try {
             if (!pageId) await saveDraft(false);
             window.jQuery('#modal-att').data('load-url', BASE_URL + '/(SelectImage)/' + pageId);
-            window.modal_att_open('', (event, id, name, url, isImage) => {
+            window.modal_att_open('spage_banner', (event, id, name, url, isImage) => {
                 if (!isTrue(isImage)) {
                     showError(new Error('Choose an image file for the page image.'));
                     return;

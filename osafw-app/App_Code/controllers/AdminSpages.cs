@@ -592,11 +592,13 @@ public class AdminSpagesController : FwDynamicController
         checkReadOnly();
         model.requireAuthor();
         model.oneDraftOrFail(id);
+        int categoryId = reqh("item")["att_categories_id"].toInt();
         var rows = fw.model<Att>().uploadMulti(new FwDict
         {
             ["fwentities_id"] = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_SPAGE),
             ["item_id"] = id,
-            ["add_users_id"] = fw.userId
+            ["add_users_id"] = fw.userId,
+            ["att_categories_id"] = categoryId > 0 ? categoryId : null
         });
         if (rows.Count == 0)
         {

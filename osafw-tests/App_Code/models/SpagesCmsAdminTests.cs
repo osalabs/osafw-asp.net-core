@@ -276,14 +276,26 @@ public partial class SpagesCmsTests
             ["is_image"] = isImage ? 1 : 0, ["status"] = status,
             ["fwentities_id"] = owner > 0 ? entity : null, ["item_id"] = owner > 0 ? owner : null
         });
+        int bannerCategory = fw.db.insert("att_categories", new FwDict
+        {
+            ["icode"] = AttCategories.CAT_SPAGE_BANNER, ["iname"] = "Page banners"
+        });
         int ownImage = add(page);
         int libraryImage = add(0);
         int foreignImage = add(other);
+        fw.db.update("att", DB.h("att_categories_id", bannerCategory), DB.h("id", ownImage));
+        fw.db.update("att", DB.h("att_categories_id", bannerCategory), DB.h("id", foreignImage));
         int file = add(page, false);
         int deletedImage = add(page, status: FwModel.STATUS_DELETED);
         var state = adminController(request(), "SelectImage").SelectImageAction(page);
         var ids = ((FwList)state["att_dr"]!).Select(row => row["id"].toInt()).ToArray();
         CollectionAssert.AreEquivalent(new[] { ownImage, libraryImage }, ids);
+        var bannerRequest = request();
+        bannerRequest.FORM["category"] = AttCategories.CAT_SPAGE_BANNER;
+        var bannerState = adminController(bannerRequest, "SelectImage").SelectImageAction(page);
+        Assert.AreEqual(bannerCategory, bannerState["att_categories_id"].toInt());
+        CollectionAssert.AreEquivalent(new[] { ownImage },
+            ((FwList)bannerState["att_dr"]!).Select(row => row["id"].toInt()).ToArray());
         Assert.AreEqual("/admin/att/select", state["_basedir"].toStr());
         Assert.AreEqual("/Admin/Spages/(Upload)/" + page, state["upload_url"].toStr());
         Assert.ThrowsExactly<NotFoundException>(() => adminController(request(), "SelectImage").SelectImageAction(999999));
@@ -300,9 +312,15 @@ public partial class SpagesCmsTests
     }
 
     [TestMethod]
-    public void ImageUploadReturnsStoredUrlAndKeepsPageOwnership()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ImageUploadReturnsStoredUrlAndKeepsPageOwnership(bool isBanner)
     {
         int page = create("actual-upload", access: 80);
+        int categoryId = isBanner ? fw.db.insert("att_categories", new FwDict
+        {
+            ["icode"] = AttCategories.CAT_SPAGE_BANNER, ["iname"] = "Page banners"
+        }) : 0;
         string uploadRoot = Path.Combine(Path.GetTempPath(), "osafw-spages-upload-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(uploadRoot);
         // FwConfig caches an IConfiguration instance, so use a new provider for this isolated upload root.
@@ -323,6 +341,8 @@ public partial class SpagesCmsTests
                 new Microsoft.AspNetCore.Http.FormFileCollection { file });
             current.Session("XSS", "upload-token");
             current.FORM["XSS"] = "upload-token";
+            if (isBanner)
+                current.FORM["item"] = new FwDict { ["att_categories_id"] = categoryId };
             var response = (FwDict)adminController(current, "Upload", "POST").UploadAction(page)["_json"]!;
             var attachment = current.db.row("att", DB.h("id", response["id"]));
             Assert.IsTrue(Directory.GetFiles(uploadRoot, "*.png", SearchOption.AllDirectories).Length > 0);
@@ -331,6 +351,7 @@ public partial class SpagesCmsTests
             Assert.IsTrue(attachment["icode"].toStr().Length > 0);
             Assert.AreEqual("/Att/" + attachment["icode"].toStr(), response["url"].toStr());
             Assert.AreEqual(page, attachment["item_id"].toInt());
+            Assert.AreEqual(categoryId, attachment["att_categories_id"].toInt());
             Assert.AreEqual(current.model<FwEntities>().idByIcode(FwEntities.ICODE_SPAGE), attachment["fwentities_id"].toInt());
         }
         finally

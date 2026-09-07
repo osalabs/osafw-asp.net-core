@@ -51,7 +51,7 @@
   },
   "is_dynamic_index": true,
   "is_dynamic_index_edit": false,
-  "view_list_defaults": "iname is_snippet status url upd_time",
+  "view_list_defaults": "iname status url upd_time",
   "view_list_map": {
     "id": "ID",
     "parent_id": "Parent ID",

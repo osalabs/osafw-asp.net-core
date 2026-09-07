@@ -46,7 +46,7 @@
           </div>
           <~snippet_help if="i[is_snippet]" inline><div class="fw-card mt-3 p-3" id="spages-snippet-help">
             <h2 class="h6">Using snippets</h2>
-            <p class="small">A snippet is reusable content, such as contact details or a callout. Publish it, then insert it with a Reusable snippet block or an available page slot. Publishing changes updates every page that uses it.</p>
+            <p class="small">A snippet is reusable content, such as contact details or a callout. Publish it, then insert it with a Snippet block or an available page slot. Publishing changes updates every page that uses it.</p>
             <p class="small mb-0">Choose a Parent page to associate it with that page, or Top level for shared content. Snippet keys are site-wide; snippets have no public URL and cannot contain other snippets.</p>
           </div></~snippet_help>
           <~usage if="usages" inline><div class="alert alert-info mt-3"><strong>Publishing updates these pages</strong><ul class="mb-0"><~usages repeat inline><li><a href="<~../url>/<~id>/edit"><~iname></a></li></~usages></ul></div></~usage>
@@ -175,7 +175,7 @@
         <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Page images are not used for snippets. Add images in the content editor instead.</p></~snippet_settings_help>
         <fieldset <~/common/attr/disabled if="i[is_snippet]">>
           <div class="row form-row">
-            <div class="col-form-label col-md-3">Image</div>
+            <div class="col-form-label col-md-2">Page banner</div>
             <div class="col">
               <input id="spages-head-att" name="item[head_att_id]" type="hidden" value="<~i[head_att_id]>">
               <button id="spages-select-image" type="button" class="btn btn-default" aria-describedby="spages-image-help"><~/common/icons/cloud-upload-fill> Select / Upload</button>
@@ -192,24 +192,24 @@
 
     <~custom_panel if="is_site_admin" inline><section class="tab-pane fade" id="spages-custom-pane" role="tabpanel" aria-labelledby="spages-custom-tab" tabindex="0">
       <div class="fw-card">
-        <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Custom head, CSS, and JavaScript apply to pages, not snippets.</p></~snippet_settings_help>
+        <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Custom Head HTML, CSS, and JavaScript apply to pages, not snippets.</p></~snippet_settings_help>
         <fieldset <~/common/attr/disabled if="i[is_snippet]">>
           <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-custom-head">Custom head</label>
+            <label class="col-form-label col-md-2" for="spages-custom-head">Custom Head HTML</label>
             <div class="col">
-              <textarea id="spages-custom-head" name="item[custom_head]" class="form-control font-monospace" rows="8"><~i[custom_head]></textarea>
+              <textarea id="spages-custom-head" name="item[custom_head]" class="form-control font-monospace" rows="8" placeholder="HTML added inside &lt;head&gt;, such as &lt;meta name=&quot;author&quot; content=&quot;Your company&quot;&gt;"><~i[custom_head]></textarea>
             </div>
           </div>
           <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-custom-css">Custom CSS</label>
+            <label class="col-form-label col-md-2" for="spages-custom-css">Custom CSS</label>
             <div class="col">
-              <textarea id="spages-custom-css" name="item[custom_css]" class="form-control font-monospace" rows="12"><~i[custom_css]></textarea>
+              <textarea id="spages-custom-css" name="item[custom_css]" class="form-control font-monospace" rows="12" placeholder="CSS rules without &lt;style&gt; tags, e.g. .spage-main h2 { color: var(--bs-primary); }"><~i[custom_css]></textarea>
             </div>
           </div>
           <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-custom-js">Custom JavaScript</label>
+            <label class="col-form-label col-md-2" for="spages-custom-js">Custom JavaScript</label>
             <div class="col">
-              <textarea id="spages-custom-js" name="item[custom_js]" class="form-control font-monospace" rows="12"><~i[custom_js]></textarea>
+              <textarea id="spages-custom-js" name="item[custom_js]" class="form-control font-monospace" rows="12" placeholder="JavaScript without &lt;script&gt; tags, e.g. console.log(&apos;Page loaded&apos;);"><~i[custom_js]></textarea>
             </div>
           </div>
         </fieldset>
@@ -229,4 +229,4 @@
 </form>
 
 <script src="<~ROOT_URL>/assets/lib/editorjs/dist/editorjs.umd.js" defer></script>
-<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=13" defer></script>
+<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=14" defer></script>
