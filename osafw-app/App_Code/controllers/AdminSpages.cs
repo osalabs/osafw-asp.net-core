@@ -70,6 +70,16 @@ public class AdminSpagesController : FwDynamicController
         return new DBList(limit >= 0 ? page.Take(limit) : page);
     }
 
+    /// <summary>Previous/Next follows the same filtered hierarchy as the Title-sorted list.</summary>
+    public override StrList getListIds(string list_view = "")
+    {
+        if (list_filter["sortby"].toStr() != "iname")
+            return base.getListIds(list_view);
+
+        list_fields = "id, parent_id, iname, is_snippet";
+        return new StrList(getListRowsQuery().Select(row => row["id"].toStr()));
+    }
+
     public override void getListRows()
     {
         base.getListRows();
@@ -151,6 +161,8 @@ public class AdminSpagesController : FwDynamicController
         // Existing RBAC remains an additional restriction; workflow roles never grant a missing resource permission.
         access_actions_to_permissions = new()
         {
+            ["QuickSearch"] = Permissions.PERMISSION_LIST,
+            ["Go"] = Permissions.PERMISSION_LIST,
             ["Publish"] = Permissions.PERMISSION_EDIT,
             ["Submit"] = Permissions.PERMISSION_EDIT,
             ["Changes"] = Permissions.PERMISSION_EDIT,
@@ -222,6 +234,7 @@ public class AdminSpagesController : FwDynamicController
             ["parent_url_prefix"] = fw.config("ROOT_DOMAIN").toStr().TrimEnd('/') + parentPath.TrimEnd('/') + "/",
             ["head_image_url"] = model.getDraftImageUrl(item),
             ["parent_options"] = parentOptions,
+            ["ancestors"] = model.listDraftParents(item["parent_id"].toInt()),
             ["layouts"] = layouts,
             ["layouts_json"] = Utils.jsonEncode(SpagesContent.layouts().ToDictionary(x => x.Key, x => new { regions = x.Value.Regions, slots = x.Value.Slots })),
             ["snippets_json"] = Utils.jsonEncode(snippets),

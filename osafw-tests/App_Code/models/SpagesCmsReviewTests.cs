@@ -132,6 +132,103 @@ public partial class SpagesCmsTests
     }
 
     [TestMethod]
+    public void EditorBreadcrumbsUseDraftAncestryAndStandardRecordNavigation()
+    {
+        int rootPage = create("breadcrumb-root");
+        int parent = create("breadcrumb-parent", rootPage);
+        int child = create("breadcrumb-child", parent);
+        cms.saveDraft(rootPage, new FwDict { ["iname"] = "Draft <root>" });
+        var current = request();
+        current.FORM["parent_id"] = parent;
+        var controller = reviewController(current, FW.ACTION_SHOW_FORM);
+        controller.checkAccess();
+        var state = controller.ShowFormAction();
+        CollectionAssert.AreEqual(new[] { rootPage, parent }, ((FwList)state["ancestors"]!).Select(row => row["id"].toInt()).ToArray());
+        Assert.AreEqual(0, request(0).model<Spages>().onePublished(parent).Count);
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"), IsLangUpdate = false
+        });
+        var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(parser.parse_page("/admin/spages/showform", "main.html", state));
+        var links = document.QuerySelectorAll(".page-header-breadcrumbs a");
+        Assert.AreEqual("/Admin/Spages/" + rootPage + "/edit", links[1].GetAttribute("href"));
+        Assert.AreEqual("Draft <root>", links[1].TextContent);
+        Assert.IsNull(links[1].QuerySelector("root"));
+        Assert.AreEqual("/Admin/Spages/" + parent + "/edit", links[2].GetAttribute("href"));
+        Assert.IsNotNull(document.QuerySelector(".page-header-record-nav .on-fw-quick-search"));
+        Assert.IsNull(document.QuerySelector(".page-header-record-nav a"), "An unsaved subpage has no adjacent record yet.");
+
+        var existing = reviewController(request(), FW.ACTION_SHOW_FORM, id: child, actionMore: FW.ACTION_MORE_EDIT).ShowFormAction(child);
+        document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(parser.parse_page("/admin/spages/showform", "main.html", existing));
+        Assert.AreEqual(2, document.QuerySelectorAll(".page-header-record-nav a[href*='/(Next)/']").Length);
+        CollectionAssert.AreEqual(new[] { rootPage, parent }, ((FwList)existing["ancestors"]!).Select(row => row["id"].toInt()).ToArray());
+    }
+
+    [TestMethod]
+    public void EditorQuickSearchIncludesDraftsAndUsesListPermissionForReadOnlyManagers()
+    {
+        int draft = create("quick-draft");
+        int deleted = create("quick-deleted");
+        cms.saveDraft(draft, new FwDict { ["iname"] = "Quick draft" });
+        cms.saveDraft(deleted, new FwDict { ["iname"] = "Quick deleted" });
+        cms.updateWorkflow(deleted, "delete");
+        var current = request();
+        current.FORM["q"] = "Quick";
+        var choices = (StrList)adminController(current, "QuickSearch").QuickSearchAction()["_json"]!;
+        CollectionAssert.AreEqual(new[] { FormUtils.formatAutocomplete("Quick draft", draft.ToString()) }, choices.ToArray());
+        Assert.AreEqual(draft, cms.listSelectOptionsAutocomplete(draft.ToString())[0]["id"].toInt());
+        Assert.ThrowsExactly<AuthException>(() => request(0).model<Spages>().listSelectOptionsAutocomplete("Quick"));
+
+#if isRoles
+        int role = employeeRoleId();
+        grantReviewPermission(role, Permissions.PERMISSION_LIST);
+        int reader = createReviewUser(Users.ACL_MANAGER, true, role);
+        var lookup = requestForReviewUser(reader, Users.ACL_MANAGER);
+        lookup.FORM["q"] = "Quick";
+        Assert.AreEqual(1, ((StrList)adminController(lookup, "QuickSearch").QuickSearchAction()["_json"]!).Count);
+        var go = requestForReviewUser(reader, Users.ACL_MANAGER);
+        go.FORM["s"] = choices[0];
+        go.FORM["is_edit"] = "1";
+        Assert.AreEqual("/Admin/Spages/" + draft + "/edit", adminController(go, "Go").GoAction()["_redirect"].toStr());
+        Assert.ThrowsExactly<AuthException>(() => go.model<Spages>().saveDraft(draft, new FwDict { ["iname"] = "Denied" }));
+#endif
+    }
+
+    [TestMethod]
+    public void SnippetFormsDisablePageOnlySettingsAndKeepPageRedirectControls()
+    {
+        int page = create("settings-page");
+        cms.saveDraft(page, new FwDict { ["redirect_url"] = "/Contact", ["url_aliases"] = "/old-settings-page" });
+        int snippet = cms.saveDraft(0, new FwDict
+        {
+            ["iname"] = "Associated help", ["is_snippet"] = 1, ["url"] = "settings-snippet",
+            ["parent_id"] = page, ["template"] = "article", ["content_json"] = content("Help text")
+        });
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"), IsLangUpdate = false
+        });
+        foreach (int id in new[] { page, snippet })
+        {
+            var state = reviewController(request(), FW.ACTION_SHOW_FORM, id: id, actionMore: FW.ACTION_MORE_EDIT).ShowFormAction(id);
+            var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(parser.parse_page("/admin/spages/showform", "main.html", state));
+            foreach (string selector in new[] { "#spages-nav-title", "#spages-meta-title", "#spages-noindex", "#spages-redirect-url", "#spages-url-aliases", "#spages-select-image", "#spages-custom-css" })
+            {
+                var field = document.QuerySelector(selector) ?? throw new AssertFailedException("Missing setting " + selector);
+                Assert.AreEqual(id == snippet, field.Closest("fieldset")?.HasAttribute("disabled") == true, selector);
+            }
+            Assert.AreEqual(id == snippet, document.QuerySelector("#spages-snippet-help") != null);
+            Assert.IsNull(document.QuerySelector("#spages-image-pane .fw-fieldset-legend, #spages-custom-pane .fw-fieldset-legend"));
+            Assert.IsNull(document.QuerySelector("#spages-access-level")?.Closest("fieldset[disabled]"));
+            if (id == page)
+            {
+                Assert.AreEqual("/Contact", document.QuerySelector("#spages-redirect-url")?.GetAttribute("value"));
+                Assert.AreEqual("/old-settings-page", document.QuerySelector("#spages-url-aliases")?.TextContent);
+            }
+        }
+    }
+
+    [TestMethod]
     public void UnicodePublicationLookupsMatchOrdinalCaseAndKeepNegativeBoundaries()
     {
         int published = create("Équipe");

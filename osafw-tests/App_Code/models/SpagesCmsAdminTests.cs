@@ -218,6 +218,19 @@ public partial class SpagesCmsTests
         CollectionAssert.AreEqual(new[] { parent, child, other, sibling }, flat.Select(row => row["id"].toInt()).ToArray());
         Assert.IsFalse(flat.Any(row => row["is_tree"].toBool()));
         Assert.IsFalse(rows.Any(row => row.ContainsKey("draft_json") || row.ContainsKey("content_json")));
+
+        int adjacent(int id, string sort, bool isPrevious = false, string search = "Tree ")
+        {
+            var current = request();
+            current.FORM["f"] = new FwDict { ["s"] = search, ["sortby"] = sort, ["sortdir"] = "asc" };
+            current.FORM["edit"] = "1";
+            current.FORM["prev"] = isPrevious ? "1" : "0";
+            return adminController(current, "Next").NextAction(id.ToString())["id"].toInt();
+        }
+        Assert.AreEqual(child, adjacent(parent, "iname"));
+        Assert.AreEqual(parent, adjacent(child, "iname", true));
+        Assert.AreEqual(other, adjacent(child, "id"));
+        Assert.AreEqual(child, adjacent(parent, "iname", search: "Tree A"));
     }
 
     [TestMethod]

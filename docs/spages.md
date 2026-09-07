@@ -21,9 +21,9 @@ Canonical URLs use the existing `ROOT_DOMAIN` setting and the published page pat
 
 Open **Pages** from the manager menu to create a page or reusable snippet. A page has a title, URL segment, optional parent, navigation and search metadata, layout, content regions, optional after-content snippet, and publication controls. The standard dynamic list supports filtering, sortable and customizable columns, checkboxes, bulk actions, and pagination. Sorting by Title groups child pages below their parents, with siblings following the selected direction. Other sorts remain flat. Filters run in SQL before hierarchy ordering and pagination; matching children remain visible when their parent is filtered out. Title sorting reads the filtered list columns to arrange the hierarchy, without loading content documents.
 
-The editor keeps Content, Navigation and Search, Image, Custom, and Revisions in top tabs; executable customization remains restricted to Site Admins. The header shows the current status, Save draft, Preview, and a green Publish action for authorized publishers. Header Publish saves pending edits and publishes immediately, regardless of the date in the scheduling panel. Use the Content tab’s publication panel to schedule a future release.
+The editor keeps Content, Navigation and Search, Image, Custom, and Revisions in top tabs; executable customization remains restricted to Site Admins. The header includes the standard record search and Previous/Next links, current status, Save draft, Preview, and a green Publish action for authorized publishers. Search includes non-deleted working titles, and Previous/Next follows the current list filters and ordering. Breadcrumbs link to each parent’s edit screen, including when adding a subpage. Header Publish saves pending edits and publishes immediately, regardless of the date in the scheduling panel. Use the Content tab’s publication panel to schedule a future release.
 
-Navigation and Search groups URL/access, navigation, search engines, and redirects. The parent selector distinguishes the top level and site root. The URL prefix follows the selected parent’s working-draft path. Navigation visibility and the request to prevent search-engine indexing use checkboxes; unchecked values are saved explicitly. Navigation and Search, Image, and Custom use standard horizontal framework form rows and collapsible `fw-fieldset` sections. Labels stack above controls on small screens. CMS controls inherit the framework’s theme styles.
+Navigation and Search groups URL/access, navigation, search engines, and redirects. The parent selector distinguishes the top level and site root. The URL prefix follows the selected parent’s working-draft path. Navigation visibility and the request to prevent search-engine indexing use checkboxes; unchecked values are saved explicitly. Settings use standard horizontal framework form rows. URL and access sits beside Navigation on wide screens; Search engines and Redirects each occupy a full-width section. These groups use collapsible `fw-fieldset` sections. Image and Custom use plain form rows without a redundant section legend. Labels and columns stack on small screens. CMS controls inherit the framework’s theme styles.
 
 The Image tab uses the standard Select / Upload modal, with a recommended 1110 × 300 px page image. Its library is limited to this page’s images and unbound public images; uploads are attached to the current page. Removing the selected page image clears the draft reference and does not delete the uploaded file.
 
@@ -79,7 +79,7 @@ Aliases resolve only after native routes miss and always target the page's curre
 
 ## Reusable snippets
 
-A snippet is a Spages row with `is_snippet=1`. Its `url` value is the stable lowercase snippet key, such as `contact-help`; no prefix is used. Snippets have no public page route and do not appear as separate navigation or search results.
+A snippet is a Spages row with `is_snippet=1`. Its `url` value is the stable lowercase snippet key, such as `contact-help`; no prefix is used. Snippets have no public page route and do not appear as separate navigation or search results. Choose a Parent page in Navigation and Search to associate a snippet with a page, or Top level for shared content. Keys remain site-wide and other eligible pages can reuse an associated snippet; the parent’s publication and access restrictions apply. The editor explains snippet use below Publishing and disables page-only navigation, search-engine, redirect, page-image, and executable customization settings. Content images and links remain available through blocks.
 
 Insert a snippet with the reusable snippet block or a layout slot. Snippets use the Article layout's main region and cannot contain other snippets. A consuming page cannot publish until its referenced snippet is published and available at an equal or less restrictive access level. A published or scheduled consumer prevents withdrawal of a required snippet.
 
@@ -99,6 +99,8 @@ Use the publication API for public output and the draft API for editor integrati
 
 | Method | Purpose |
 | --- | --- |
+| `listSelectOptionsAutocomplete(q)` | Editor-authorized lookup over non-deleted working titles; public selectors must use publication APIs. |
+| `listDraftParents(parentId)` | Working ancestor breadcrumb rows, from the topmost page through the supplied parent. |
 | `onePublished(id, audience)` | Return one eligible published page or snippet, or an empty dictionary. |
 | `listPublished(audience)` | List eligible published pages for an audience. |
 | `listIndexable(audience)` | List published pages eligible for search and sitemap indexing. |

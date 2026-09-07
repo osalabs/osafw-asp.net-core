@@ -338,20 +338,21 @@ public class Spages : FwModel<Spages.Row>
         }
     }
 
-    /// <summary>Keep author access and allow read-only managers only through their authorized list or editor route.</summary>
+    /// <summary>Keep author access and allow read-only managers only through their authorized CMS read routes.</summary>
     private void requireEditorRead()
     {
         if (isAuthor())
             return;
 
+        string readAction = fw.route.action is "QuickSearch" or "Go" ? FW.ACTION_INDEX : fw.route.action;
         string actionMore = fw.route.action_more;
         if (fw.route.action == FW.ACTION_SHOW_FORM && Utils.isEmpty(fw.route.id))
             actionMore = FW.ACTION_MORE_NEW;
 
         if (fw.userId <= 0 || fw.userAccessLevel < AUTHOR_LEVEL
-            || fw.route.controller != "AdminSpages" || fw.route.action is not ("Index" or "ShowForm")
+            || fw.route.controller != "AdminSpages" || fw.route.action is not ("Index" or "ShowForm" or "QuickSearch" or "Go" or "Next")
             || (fw.userAccessLevel < Users.ACL_SITEADMIN && !fw.model<Users>()
-                .isAccessByRolesResourceAction(fw.userId, "AdminSpages", fw.route.action, actionMore)))
+                .isAccessByRolesResourceAction(fw.userId, "AdminSpages", readAction, actionMore)))
         {
             throw new AuthException();
         }
@@ -703,6 +704,42 @@ public class Spages : FwModel<Spages.Row>
     {
         requireEditorRead();
         return attachmentUrl(page["head_att_id"].toInt(), page, false, true, new Dictionary<int, FwDict>(), true);
+    }
+
+    /// <summary>Editor autocomplete includes all non-deleted working titles, with the standard prefix/ID lookup.</summary>
+    public override FwList listSelectOptionsAutocomplete(string q, FwDict? def = null, int limit = 5, object? selected_id = null)
+    {
+        requireEditorRead();
+        string sql = $"SELECT id, iname FROM {qTable()} WHERE status<>@deleted AND (iname LIKE @name OR id=@id) ORDER BY iname";
+        if (limit > 0)
+            sql = db.limit(sql, limit);
+        return db.arrayp(sql, new FwDict
+        {
+            ["deleted"] = STATUS_DELETED,
+            ["name"] = q + "%",
+            ["id"] = q.toInt()
+        });
+    }
+
+    /// <summary>
+    /// Editor breadcrumbs from the topmost working ancestor through the supplied parent.
+    /// Stops at missing/deleted pages or malformed cycles; never reads publication snapshots.
+    /// </summary>
+    public FwList listDraftParents(int parentId)
+    {
+        requireEditorRead();
+        var parents = new FwList();
+        var seen = new HashSet<int>();
+        while (parentId > 0 && seen.Count < 20 && seen.Add(parentId))
+        {
+            var parent = db.rowp($"SELECT id, parent_id, iname FROM {qTable()} WHERE id=@id AND status<>@deleted AND is_snippet=0",
+                new FwDict { ["id"] = parentId, ["deleted"] = STATUS_DELETED });
+            if (parent.Count == 0)
+                break;
+            parents.Insert(0, parent);
+            parentId = parent["parent_id"].toInt();
+        }
+        return parents;
     }
 
     /// <summary>Editor parent options exclude the selected page and its descendants.</summary>

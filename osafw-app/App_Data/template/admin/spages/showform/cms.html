@@ -44,6 +44,11 @@
               </~publisher>
             </div></details>
           </div>
+          <~snippet_help if="i[is_snippet]" inline><div class="fw-card mt-3" id="spages-snippet-help">
+            <h2 class="h6">Using snippets</h2>
+            <p class="small">A snippet is reusable content, such as contact details or a callout. Publish it, then insert it with a Reusable snippet block or an available page slot. Publishing changes updates every page that uses it.</p>
+            <p class="small mb-0">Choose a Parent page to associate it with that page, or Top level for shared content. Snippet keys are site-wide; snippets have no public URL and cannot contain other snippets.</p>
+          </div></~snippet_help>
           <~usage if="usages" inline><div class="alert alert-info mt-3"><strong>Publishing updates these pages</strong><ul class="mb-0"><~usages repeat inline><li><a href="<~../url>/<~id>/edit"><~iname></a></li></~usages></ul></div></~usage>
         </aside>
       </div>
@@ -51,63 +56,70 @@
 
     <section class="tab-pane fade" id="spages-navigation-pane" role="tabpanel" aria-labelledby="spages-navigation-tab" tabindex="0">
       <div class="fw-card">
-        <div class="fw-fieldset">
-          <div class="fw-fieldset-legend" role="button" tabindex="0">URL and access</div>
-          <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-parent">Parent page</label>
-            <div class="col">
-              <select id="spages-parent" name="item[parent_id]" class="form-select" data-selected="<~i[parent_id]>">
-                <option value="0" data-url="">— Top level —</option>
-                <~parent_options repeat inline><option value="<~id>" data-url="<~full_url>"><~iname><~home_parent ifeq="full_url" value="/" inline> (site root)</~home_parent></option></~parent_options>
-              </select>
-            </div>
-          </div>
-          <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-url"><~snippet_url_label if="i[is_snippet]" inline>Snippet key</~snippet_url_label><~page_url_label unless="i[is_snippet]" inline>URL segment</~page_url_label></label>
-            <div class="col">
-              <div class="input-group spages-url-input">
-                <~prefix unless="i[is_snippet]" inline><span id="spages-parent-url" class="input-group-text" data-origin="<~ROOT_DOMAIN>"><~parent_url_prefix></span></~prefix>
-                <input id="spages-url" name="item[url]" class="form-control" value="<~i[url]>" maxlength="255" aria-describedby="spages-url-help" placeholder="<~snippet_placeholder if="i[is_snippet]" inline>shared-contact</~snippet_placeholder><~page_placeholder unless="i[is_snippet]" inline>Generated from the title</~page_placeholder>" <~home_url if="i[is_home]" inline>readonly</~home_url>>
+        <div class="row">
+          <div class="col-xl-6">
+            <div class="fw-fieldset">
+              <div class="fw-fieldset-legend" role="button" tabindex="0">URL and access</div>
+              <div class="row form-row">
+                <label class="col-form-label col-md-3" for="spages-parent">Parent page</label>
+                <div class="col">
+                  <select id="spages-parent" name="item[parent_id]" class="form-select" data-selected="<~i[parent_id]>">
+                    <option value="0" data-url="">— Top level —</option>
+                    <~parent_options repeat inline><option value="<~id>" data-url="<~full_url>"><~iname><~home_parent ifeq="full_url" value="/" inline> (site root)</~home_parent></option></~parent_options>
+                  </select>
+                </div>
               </div>
-              <div id="spages-url-help" class="form-text"><~snippet_url_help if="i[is_snippet]" inline>Pages use this stable key to include the snippet. It becomes permanent after the first save.</~snippet_url_help><~page_url_help unless="i[is_snippet]" inline>Leave empty to generate it from the title.</~page_url_help></div>
-            </div>
-          </div>
-          <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-access-level">Minimum access level</label>
-            <div class="col">
-              <select id="spages-access-level" name="item[access_level]" class="form-select" data-selected="<~i[access_level]>" aria-describedby="spages-access-help"><option value="0">Public</option><~/common/sel/access_level.sel select="i[access_level]"></select>
-              <div class="form-text" id="spages-access-help">Parent restrictions also apply.</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="fw-fieldset">
-          <div class="fw-fieldset-legend" role="button" tabindex="0">Navigation</div>
-          <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-nav-title">Navigation label</label>
-            <div class="col">
-              <input id="spages-nav-title" name="item[nav_title]" class="form-control" value="<~i[nav_title]>" maxlength="128" placeholder="Use page title">
-            </div>
-          </div>
-          <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-nav-order">Navigation order</label>
-            <div class="col">
-              <input id="spages-nav-order" name="item[prio]" type="number" class="form-control" value="<~i[prio]>">
-            </div>
-          </div>
-          <div class="row form-row">
-            <label class="col-form-label col-md-3" for="spages-nav-visible">Show in navigation</label>
-            <div class="col">
-              <div class="form-check form-check-inline">
-                <input id="spages-nav-visible" name="item[is_nav_visible]" class="form-check-input" type="checkbox" value="1" <~/common/attr/checked if="i[is_nav_visible]">>
-                <label class="form-check-label" for="spages-nav-visible">Yes</label>
+              <div class="row form-row">
+                <label class="col-form-label col-md-3" for="spages-url"><~snippet_url_label if="i[is_snippet]" inline>Snippet key</~snippet_url_label><~page_url_label unless="i[is_snippet]" inline>URL segment</~page_url_label></label>
+                <div class="col">
+                  <div class="input-group spages-url-input">
+                    <~prefix unless="i[is_snippet]" inline><span id="spages-parent-url" class="input-group-text" data-origin="<~ROOT_DOMAIN>"><~parent_url_prefix></span></~prefix>
+                    <input id="spages-url" name="item[url]" class="form-control" value="<~i[url]>" maxlength="255" aria-describedby="spages-url-help" placeholder="<~snippet_placeholder if="i[is_snippet]" inline>shared-contact</~snippet_placeholder><~page_placeholder unless="i[is_snippet]" inline>Generated from the title</~page_placeholder>" <~home_url if="i[is_home]" inline>readonly</~home_url>>
+                  </div>
+                  <div id="spages-url-help" class="form-text"><~snippet_url_help if="i[is_snippet]" inline>Pages use this stable key to include the snippet. It becomes permanent after the first save.</~snippet_url_help><~page_url_help unless="i[is_snippet]" inline>Leave empty to generate it from the title.</~page_url_help></div>
+                </div>
+              </div>
+              <div class="row form-row">
+                <label class="col-form-label col-md-3" for="spages-access-level">Minimum access level</label>
+                <div class="col">
+                  <select id="spages-access-level" name="item[access_level]" class="form-select" data-selected="<~i[access_level]>" aria-describedby="spages-access-help"><option value="0">Public</option><~/common/sel/access_level.sel select="i[access_level]"></select>
+                  <div class="form-text" id="spages-access-help">Parent restrictions also apply.</div>
+                </div>
               </div>
             </div>
           </div>
+          <div class="col-xl-6">
+            <fieldset class="fw-fieldset" <~/common/attr/disabled if="i[is_snippet]">>
+              <div class="fw-fieldset-legend" role="button" tabindex="0">Navigation</div>
+              <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Not used for snippets.</p></~snippet_settings_help>
+              <div class="row form-row">
+                <label class="col-form-label col-md-3" for="spages-nav-title">Navigation label</label>
+                <div class="col">
+                  <input id="spages-nav-title" name="item[nav_title]" class="form-control" value="<~i[nav_title]>" maxlength="128" placeholder="Use page title">
+                </div>
+              </div>
+              <div class="row form-row">
+                <label class="col-form-label col-md-3" for="spages-nav-order">Navigation order</label>
+                <div class="col">
+                  <input id="spages-nav-order" name="item[prio]" type="number" class="form-control" value="<~i[prio]>">
+                </div>
+              </div>
+              <div class="row form-row">
+                <label class="col-form-label col-md-3" for="spages-nav-visible">Show in navigation</label>
+                <div class="col">
+                  <div class="form-check form-check-inline">
+                    <input id="spages-nav-visible" name="item[is_nav_visible]" class="form-check-input" type="checkbox" value="1" <~/common/attr/checked if="i[is_nav_visible]">>
+                    <label class="form-check-label" for="spages-nav-visible">Yes</label>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </div>
         </div>
 
-        <div class="fw-fieldset">
+        <fieldset class="fw-fieldset" <~/common/attr/disabled if="i[is_snippet]">>
           <div class="fw-fieldset-legend" role="button" tabindex="0">Search engines</div>
+          <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Not used for snippets.</p></~snippet_settings_help>
           <div class="row form-row">
             <label class="col-form-label col-md-3" for="spages-meta-title">Search engine title</label>
             <div class="col">
@@ -135,10 +147,11 @@
               </div>
             </div>
           </div>
-        </div>
+        </fieldset>
 
-        <div class="fw-fieldset">
+        <fieldset class="fw-fieldset" <~/common/attr/disabled if="i[is_snippet]">>
           <div class="fw-fieldset-legend" role="button" tabindex="0">Redirects</div>
+          <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Not used for snippets.</p></~snippet_settings_help>
           <div class="row form-row">
             <label class="col-form-label col-md-3" for="spages-redirect-url">Redirect this page to</label>
             <div class="col">
@@ -146,21 +159,21 @@
               <div id="spages-redirect-url-help" class="form-text">Leave empty to display this page's content.</div>
             </div>
           </div>
-          <~aliases unless="i[is_snippet]" inline><div class="row form-row">
+          <div class="row form-row">
             <label class="col-form-label col-md-3" for="spages-url-aliases">Old local paths</label>
             <div class="col">
               <textarea id="spages-url-aliases" name="item[url_aliases]" class="form-control" aria-describedby="spages-url-aliases-help" rows="3" placeholder="/old-page&#10;/previous-section/old-page"><~i[url_aliases]></textarea>
               <div id="spages-url-aliases-help" class="form-text">One local path per line. Visitors to these old paths are sent to this page.</div>
             </div>
-          </div></~aliases>
-        </div>
+          </div>
+        </fieldset>
       </div>
     </section>
 
     <section class="tab-pane fade" id="spages-image-pane" role="tabpanel" aria-labelledby="spages-image-tab" tabindex="0">
       <div class="fw-card">
-        <div class="fw-fieldset">
-          <div class="fw-fieldset-legend" role="button" tabindex="0">Page image</div>
+        <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Page images are not used for snippets. Add images in the content editor instead.</p></~snippet_settings_help>
+        <fieldset <~/common/attr/disabled if="i[is_snippet]">>
           <div class="row form-row">
             <div class="col-form-label col-md-3">Image</div>
             <div class="col">
@@ -173,14 +186,14 @@
               </div>
             </div>
           </div>
-        </div>
+        </fieldset>
       </div>
     </section>
 
     <~custom_panel if="is_site_admin" inline><section class="tab-pane fade" id="spages-custom-pane" role="tabpanel" aria-labelledby="spages-custom-tab" tabindex="0">
       <div class="fw-card">
-        <div class="fw-fieldset">
-          <div class="fw-fieldset-legend" role="button" tabindex="0">Custom code</div>
+        <~snippet_settings_help if="i[is_snippet]" inline><p class="small text-body-secondary">Custom head, CSS, and JavaScript apply to pages, not snippets.</p></~snippet_settings_help>
+        <fieldset <~/common/attr/disabled if="i[is_snippet]">>
           <div class="row form-row">
             <label class="col-form-label col-md-3" for="spages-custom-head">Custom head</label>
             <div class="col">
@@ -199,7 +212,7 @@
               <textarea id="spages-custom-js" name="item[custom_js]" class="form-control font-monospace" rows="12"><~i[custom_js]></textarea>
             </div>
           </div>
-        </div>
+        </fieldset>
       </div>
     </section></~custom_panel>
 
