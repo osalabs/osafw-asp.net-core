@@ -3,5 +3,14 @@
   <~unpublished_link unless="view_url" inline><span title="<~restricted if="is_live" inline>Published page requires higher access</~restricted><~unpublished unless="is_live" inline>Not published yet</~unpublished>"><button class="btn btn-default" type="button" disabled><~/common/icons/box-arrow-up-right><span class="btn-label">View page</span></button></span></~unpublished_link>
 </~page_view>
 <button class="btn btn-default" type="button" data-preview><~/common/icons/eye><span class="btn-label">Preview</span></button>
-<button class="btn btn-primary" type="submit" form="spages-editor" <~/common/attr/disabled unless="is_author">><~/common/icons/floppy><span class="btn-label">Save draft</span></button>
+<div class="btn-group">
+  <button class="btn btn-primary" type="submit" form="spages-editor" <~/common/attr/disabled unless="is_author">><~/common/icons/floppy><span class="btn-label">Save draft</span></button>
+  <~draft_menu if="is_author" inline>
+    <button id="spages-draft-menu" class="btn btn-primary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Draft options" <~hidden_attr unless="is_published" inline>hidden</~hidden_attr>></button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><button class="dropdown-item text-danger" type="button" data-discard-draft>Discard draft</button></li>
+      <li><p id="spages-discard-help" class="small text-body-secondary px-3 py-2 mb-0">Return to the published version.</p></li>
+    </ul>
+  </~draft_menu>
+</div>
 <~publish if="is_publisher" inline><button class="btn btn-success" type="button" data-status-action="Publish" data-publish-now title="Publish now" <~/common/attr/disabled unless="is_author">><~/common/icons/journal-arrow-up><span class="btn-label">Publish Now</span></button></~publish>

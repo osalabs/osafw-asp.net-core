@@ -571,6 +571,58 @@ public class Spages : FwModel<Spages.Row>
 
     public int restoreRevision(int id, int revisionId) => saveDraft(id, oneRevisionOrFail(id, revisionId));
 
+    /// <summary>
+    /// Replace working changes with the current approved snapshot, retaining the discarded draft in history.
+    /// Does not publish, withdraw, or alter existing revisions. Cancel any scheduled publication first.
+    /// </summary>
+    public void updateDiscardDraft(int id)
+    {
+        requireAuthor();
+        db.begin();
+        try
+        {
+            lockPublicationNamespace();
+            clearCmsCache();
+            var draft = oneDraftOrFail(id);
+            var published = onePublication(id);
+            if (draft["status"].toInt() == STATUS_DELETED || published.Count == 0)
+                throw new UserException("There is no current published version to return to.");
+            if (isScheduled(id))
+                throw new UserException("Cancel the scheduled publication before discarding this draft.");
+
+            if (draft["status"].toInt() != STATUS_PUBLISHED)
+            {
+                addRevision(id, KIND_SAVED, Utils.jsonEncode(FormUtils.filter(draft, CONTENT_FIELDS)), now,
+                    "Draft discarded", captureSnippetVersions(draft, listPublicationsByDate()));
+                var fields = FormUtils.filter(published, CONTENT_FIELDS);
+                fields["status"] = STATUS_PUBLISHED;
+                string json = Utils.jsonEncode(fields);
+                fields["draft_json"] = json;
+                fields["review_note"] = "";
+                fields["upd_time"] = now;
+                fields["upd_users_id"] = fw.userId;
+                db.update(table_name, fields, DB.h("id", id));
+            }
+            db.commit();
+        }
+        catch
+        {
+            db.rollback();
+            throw;
+        }
+        finally
+        {
+            clearCmsCache();
+        }
+    }
+
+    /// <summary>Editor-only publication indicator, independent of working state and audience/ancestor visibility.</summary>
+    public bool isPublished(int id)
+    {
+        requireEditorRead();
+        return onePublication(id).Count > 0;
+    }
+
     /// <summary>Restore a trashed record to a draft without making any earlier publication visible.</summary>
     public void updateRestoreDeleted(int id)
     {
@@ -632,6 +684,7 @@ public class Spages : FwModel<Spages.Row>
         foreach (var row in rows)
         {
             var page = onePublished(row["id"].toInt());
+            row["is_published"] = isPublished(row["id"].toInt());
             row["full_url"] = page["full_url"].toStr();
             row["is_live"] = page.Count > 0 && !page["is_snippet"].toBool();
         }

@@ -48,7 +48,7 @@ public partial class SpagesCmsTests
         Assert.AreEqual("Publish Now", publishButton.TextContent.Trim());
         Assert.IsTrue(publishButton.ClassList.Contains("btn-success"));
         Assert.IsFalse(publishButton.HasAttribute("disabled"));
-        Assert.AreEqual("spages-editor", publishButton.PreviousElementSibling?.GetAttribute("form"));
+        Assert.AreEqual("spages-editor", publishButton.PreviousElementSibling?.QuerySelector("button[type=submit]")?.GetAttribute("form"));
         Assert.AreEqual("Draft", document.QuerySelector(".page-header #spages-status")?.TextContent);
         Assert.IsNotNull(document.QuerySelector(".page-header [title='Not published yet'] button[disabled]"));
         publish(page);
@@ -139,7 +139,7 @@ public partial class SpagesCmsTests
         var html = new AngleSharp.Html.Parser.HtmlParser();
         foreach (string output in new[] { list, header })
         {
-            var badge = html.ParseDocument(output).QuerySelector(".badge");
+            var badge = html.ParseDocument(output).QuerySelector(".badge:not([hidden])");
             Assert.IsTrue(badge?.ClassList.Contains(expectedClass) == true, output);
             StringAssert.Contains(badge.TextContent, Spages.statusLabel(status));
         }

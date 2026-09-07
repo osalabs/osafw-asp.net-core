@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="<~ROOT_URL>/assets/css/spages-editor.css?v=12">
 
-<form id="spages-editor" class="spages-cms" method="post" action="<~../url>/<~id>" data-base="<~../url>" data-id="<~id>" data-status="<~i[status]>" data-is-author="<~is_author>" data-is-scheduled="<~is_scheduled>">
+<form id="spages-editor" class="spages-cms" method="post" action="<~../url>/<~id>" data-base="<~../url>" data-id="<~id>" data-status="<~i[status]>" data-is-author="<~is_author>" data-is-scheduled="<~is_scheduled>" data-is-published="<~is_published>">
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
   <input type="hidden" name="item[is_snippet]" value="<~i[is_snippet]>">
   <textarea name="item[content_json]" id="spages-document" hidden><~i[content_json]></textarea>
@@ -229,4 +229,4 @@
 </form>
 
 <script src="<~ROOT_URL>/assets/lib/editorjs/dist/editorjs.umd.js" defer></script>
-<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=12" defer></script>
+<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=13" defer></script>

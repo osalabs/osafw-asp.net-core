@@ -4,6 +4,7 @@
 
     const FORM = document.getElementById('spages-editor');
     const ACTIONS_FORM = document.getElementById('cms-actions');
+    const STATUS_PUBLISHED = 0;
     const STATUS_DRAFT = 10;
     const STATUS_IN_REVIEW = 20;
 
@@ -60,6 +61,7 @@
     let isDirty = false;
     let isReady = false;
     let isWorkflowPending = false;
+    let isDiscardPending = false;
     let changeSequence = 0;
     let savePromise = null;
     let autosaveTimer;
@@ -77,7 +79,9 @@
     }
 
     function markChanged() {
+        if (isDiscardPending) return;
         isDirty = true;
+        updateDraftOptions();
         changeSequence++;
         STATE.textContent = 'Unsaved changes';
         clearTimeout(autosaveTimer);
@@ -490,9 +494,10 @@
     }
 
     async function saveDraft(isAutosave = false) {
+        if (isDiscardPending) return;
         if (savePromise) {
             await savePromise;
-            if (isAutosave && !isDirty) return;
+            if (isDiscardPending || (isAutosave && !isDirty)) return;
         }
         if (isAutosave && (!isDirty || !document.getElementById('spages-title').value.trim() || !FORM.checkValidity())) return;
         if (!isAutosave && !FORM.reportValidity()) throw new Error('Complete the required fields before saving.');
@@ -514,6 +519,10 @@
             }
             if (IS_SNIPPET) URL_INPUT.readOnly = true;
             FORM.dataset.status = String(STATUS_DRAFT);
+            FORM.dataset.isPublished = String(RESULT.is_published);
+            FORM.dataset.isScheduled = String(RESULT.is_scheduled);
+            document.getElementById('spages-published-badge').hidden = !isTrue(RESULT.is_published);
+            document.getElementById('spages-status-badge').hidden = false;
             document.getElementById('spages-status').textContent = 'Draft';
             document.getElementById('spages-status-badge').className = 'badge text-bg-secondary';
             updateStatusActions(STATUS_DRAFT, isTrue(FORM.dataset.isScheduled));
@@ -536,7 +545,50 @@
         if (SUBMIT_BUTTON) SUBMIT_BUTTON.hidden = status === STATUS_IN_REVIEW;
         if (CHANGES_BUTTON) CHANGES_BUTTON.hidden = status !== STATUS_IN_REVIEW;
         if (CANCEL_BUTTON) CANCEL_BUTTON.hidden = !isScheduled;
+        updateDraftOptions();
     }
+
+    function updateDraftOptions() {
+        const MENU = document.getElementById('spages-draft-menu');
+        const BUTTON = document.querySelector('[data-discard-draft]');
+        if (!MENU || !BUTTON) return;
+        MENU.hidden = !isTrue(FORM.dataset.isPublished);
+        const IS_SCHEDULED = isTrue(FORM.dataset.isScheduled);
+        BUTTON.disabled = IS_SCHEDULED || (!isDirty && Number(FORM.dataset.status) === STATUS_PUBLISHED);
+        document.getElementById('spages-discard-help').textContent = IS_SCHEDULED
+            ? 'Cancel the scheduled publication first.' : 'Return to the published version.';
+    }
+
+    document.querySelector('[data-discard-draft]')?.addEventListener('click', () => {
+        if (!IS_AUTHOR || isWorkflowPending) return;
+        window.fw.confirm('Replace all working changes with the current published version? Saved drafts remain in Revisions. Changes still unsaved in this editor will be lost.', 'Discard draft', async () => {
+            if (isWorkflowPending) return;
+            isWorkflowPending = true;
+            isDiscardPending = true;
+            clearTimeout(autosaveTimer);
+            // Let a save already sent finish before replacing the draft; block queued saves until reload.
+            FORM.inert = true;
+            const CONTROLS = [...document.querySelectorAll('button[form="spages-editor"], [data-preview], [data-status-action], [data-discard-draft]')]
+                .map(CONTROL => ({ control: CONTROL, isDisabled: CONTROL.disabled }));
+            CONTROLS.forEach(ENTRY => { ENTRY.control.disabled = true; });
+            try {
+                if (savePromise) await savePromise;
+                STATE.textContent = 'Discarding draft…';
+                const BODY = new FormData();
+                BODY.set('XSS', FORM.elements.XSS.value);
+                await request(BASE_URL + '/(DiscardDraft)/' + pageId, BODY);
+                isDirty = false;
+                location.reload();
+            } catch (error) {
+                FORM.inert = false;
+                isDiscardPending = false;
+                isWorkflowPending = false;
+                CONTROLS.forEach(ENTRY => { ENTRY.control.disabled = ENTRY.isDisabled; });
+                updateDraftOptions();
+                showError(error);
+            }
+        });
+    });
 
     FORM.addEventListener('submit', EVENT => {
         EVENT.preventDefault();
@@ -550,6 +602,7 @@
 
     document.querySelectorAll('[data-preview]').forEach(BUTTON => {
         BUTTON.addEventListener('click', async () => {
+            if (isDiscardPending) return;
             const PREVIEW = window.open('about:blank', '_blank');
             try {
                 if (!pageId || isDirty) await saveDraft(true);
@@ -596,6 +649,7 @@
 
     FORM.querySelectorAll('[data-restore]').forEach(BUTTON => {
         BUTTON.addEventListener('click', async () => {
+            if (isDiscardPending) return;
             try {
                 if (isDirty) await saveDraft(false);
                 const BODY = new FormData();

@@ -170,6 +170,7 @@ public class AdminSpagesController : FwDynamicController
             ["Changes"] = Permissions.PERMISSION_EDIT,
             ["Unpublish"] = Permissions.PERMISSION_EDIT,
             ["Cancel"] = Permissions.PERMISSION_EDIT,
+            ["DiscardDraft"] = Permissions.PERMISSION_EDIT,
             ["RestoreRevision"] = Permissions.PERMISSION_EDIT,
             ["Upload"] = Permissions.PERMISSION_EDIT,
             ["Preview"] = Permissions.PERMISSION_VIEW,
@@ -251,6 +252,7 @@ public class AdminSpagesController : FwDynamicController
         };
         ps["is_site_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN);
         ps["is_author"] = model.isAuthor() && item["status"].toInt() != Spages.STATUS_DELETED;
+        ps["is_published"] = model.isPublished(id);
         ps["is_scheduled"] = id > 0 && model.isScheduled(id);
         ps["is_live"] = id > 0 && model.onePublished(id, Users.ACL_SITEADMIN).Count > 0;
         ps["view_url"] = id > 0 ? model.onePublished(id)["full_url"].toStr() : "";
@@ -271,6 +273,8 @@ public class AdminSpagesController : FwDynamicController
             {
                 ["success"] = true,
                 ["id"] = savedId,
+                ["is_published"] = model.isPublished(savedId),
+                ["is_scheduled"] = model.isScheduled(savedId),
                 ["location"] = base_url + "/" + savedId + "/edit"
             }
         };
@@ -315,6 +319,14 @@ public class AdminSpagesController : FwDynamicController
     public FwDict UnpublishAction(int id) => workflow(id, "unpublish");
 
     public FwDict CancelAction(int id) => workflow(id, "cancel");
+
+    public FwDict DiscardDraftAction(int id)
+    {
+        enforcePost();
+        checkReadOnly();
+        model.updateDiscardDraft(id);
+        return new FwDict { ["_json"] = new FwDict { ["success"] = true } };
+    }
 
     public FwDict RestoreRevisionAction(int id)
     {
