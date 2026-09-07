@@ -218,8 +218,8 @@
     <section class="tab-pane fade" id="spages-revisions-pane" role="tabpanel" aria-labelledby="spages-revisions-tab" tabindex="0">
       <div class="fw-card">
         <p class="small text-body-secondary">Restoring creates a draft. Publish it to make the restored content live.</p>
-        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Saved (UTC)</th><th>Event</th><th>Note</th><th>Actions</th></tr></thead><tbody>
-          <~history repeat inline><tr><td><~add_time></td><td><~kind_label><~cancelled if="is_cancelled" inline> (cancelled)</~cancelled></td><td><~note></td><td><a class="btn btn-sm btn-default" target="_blank" rel="noopener" href="<~../url>/(Preview)/<~spages_id>?revision_id=<~id>">Preview</a> <button type="button" class="btn btn-sm btn-default" data-restore="<~id>">Restore</button></td></tr></~history>
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Saved</th><th>Event</th><th>Note</th><th>Actions</th></tr></thead><tbody>
+          <~history repeat inline><tr><td><~add_time date="long"></td><td><~kind_label><~cancelled if="is_cancelled" inline> (cancelled)</~cancelled></td><td><~note></td><td><a class="btn btn-sm btn-default" target="_blank" rel="noopener" href="<~../url>/(Preview)/<~spages_id>?revision_id=<~id>">Preview</a> <button type="button" class="btn btn-sm btn-default" data-restore="<~id>">Restore</button></td></tr></~history>
         </tbody></table></div>
         <p class="mb-0" <~/common/attr/display_none if="history">No revisions have been saved yet.</p>
       </div>
