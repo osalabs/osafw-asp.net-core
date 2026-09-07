@@ -50,6 +50,14 @@ public partial class SpagesCmsTests
         Assert.IsFalse(publishButton.HasAttribute("disabled"));
         Assert.AreEqual("spages-editor", publishButton.PreviousElementSibling?.GetAttribute("form"));
         Assert.AreEqual("Draft", document.QuerySelector(".page-header #spages-status")?.TextContent);
+        Assert.IsNotNull(document.QuerySelector(".page-header [title='Not published yet'] button[disabled]"));
+        publish(page);
+        save(page, "New working copy");
+        var publishedState = reviewController(request(), FW.ACTION_SHOW_FORM, id: page, actionMore: FW.ACTION_MORE_EDIT).ShowFormAction(page);
+        string publishedActions = parser.parse_page("/admin/spages/showform", "page_header_actions_right.html", publishedState);
+        var publishedLink = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(publishedActions).QuerySelector("a[target='_blank']");
+        Assert.AreEqual("/portal/rooted-page", publishedLink?.GetAttribute("href"));
+        Assert.AreEqual("View page", publishedLink?.TextContent.Trim());
         Assert.IsNotNull(document.QuerySelector(".page-header a[href='/portal/Admin/Spages/new?snippet=1&parent_id=" + page + "']"));
         current.FORM["snippet"] = 1;
         current.FORM["parent_id"] = page;
@@ -79,6 +87,32 @@ public partial class SpagesCmsTests
         StringAssert.Contains(actionsHtml, "href=\"/portal/rooted-page\"");
         Assert.IsFalse(columnHtml.Contains("href=\"/rooted-page\"", StringComparison.Ordinal));
         Assert.IsFalse(actionsHtml.Contains("href=\"/rooted-page\"", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void EditorViewPageDisablesInaccessiblePublications(bool isAncestorRestricted)
+    {
+        int parent = create("restricted-view-parent", access: isAncestorRestricted ? Users.ACL_SITEADMIN : 0);
+        publish(parent);
+        int child = create("restricted-view-child", parent, access: isAncestorRestricted ? 0 : Users.ACL_SITEADMIN);
+        publish(child);
+        var current = request(Users.ACL_MANAGER);
+        var controller = reviewController(current, FW.ACTION_SHOW_FORM, id: child, actionMore: FW.ACTION_MORE_EDIT);
+        controller.checkAccess();
+        var state = controller.ShowFormAction(child);
+        Assert.AreEqual("/restricted-view-parent/restricted-view-child", state["full_url"].toStr(), "Keep the existing path-only page state contract.");
+        Assert.AreEqual("", state["view_url"].toStr());
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"), IsLangUpdate = false
+        });
+        var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(
+            parser.parse_page("/admin/spages/showform", "page_header_actions_right.html", state));
+        Assert.IsNull(document.QuerySelector("a[target='_blank']"));
+        Assert.IsNotNull(document.QuerySelector("[title='Published page requires higher access'] button[disabled]"));
+        Assert.AreEqual(0, current.model<Spages>().onePublished(child).Count);
     }
 
     [TestMethod]
@@ -160,7 +194,10 @@ public partial class SpagesCmsTests
     [TestMethod]
     public void ReadOnlyPreviewRequiresCmsViewAndKeepsContentPrivate()
     {
-        int page = create("reader-preview");
+        int parent = create("reader-parent");
+        int page = create("reader-preview", parent);
+        cms.saveDraft(parent, new FwDict { ["iname"] = "reader-parent" });
+        cms.saveDraft(page, new FwDict { ["iname"] = "reader-preview" });
         int role = employeeRoleId();
         grantReviewPermission(role, Permissions.PERMISSION_LIST);
         int reader = createReviewUser(Users.ACL_MANAGER, true, role);
@@ -168,6 +205,7 @@ public partial class SpagesCmsTests
         var denied = reviewController(deniedFw, "Preview", id: page);
         Assert.ThrowsExactly<AuthException>(() => denied.checkAccess());
         Assert.ThrowsExactly<AuthException>(() => denied.PreviewAction(page));
+        Assert.ThrowsExactly<AuthException>(() => deniedFw.model<Spages>().listDraftParents(parent));
         Assert.IsFalse(deniedFw.model<Spages>().isAttachmentVisible(123, page));
 
         grantReviewPermission(role, Permissions.PERMISSION_VIEW);
@@ -175,7 +213,26 @@ public partial class SpagesCmsTests
         allowedFw.response.Body = new MemoryStream();
         var allowed = reviewController(allowedFw, "Preview", id: page);
         allowed.checkAccess();
-        allowed.PreviewAction(page);
+        var settings = FwConfig.GetCurrentSettings();
+        object? originalLayout = settings["PAGE_LAYOUT_PUBLIC"];
+        settings["PAGE_LAYOUT_PUBLIC"] = "main.html";
+        try
+        {
+            allowed.PreviewAction(page);
+        }
+        finally
+        {
+            settings["PAGE_LAYOUT_PUBLIC"] = originalLayout;
+        }
+        Assert.AreEqual(parent, allowedFw.model<Spages>().listDraftParents(parent)[0]["id"].toInt());
+        allowedFw.response.Body.Position = 0;
+        string previewHtml = new StreamReader(allowedFw.response.Body).ReadToEnd();
+        var previewDocument = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(previewHtml);
+        Assert.AreEqual("Home|reader-parent|reader-preview", string.Join("|", previewDocument.QuerySelectorAll(".breadcrumb-item").Select(item => item.TextContent.Trim())));
+        Assert.AreEqual("/Admin/Spages/(Preview)/" + parent,
+            previewDocument.QuerySelector(".breadcrumb-item:nth-child(2) a")?.GetAttribute("href"));
+        Assert.AreEqual(1, previewDocument.QuerySelectorAll(".spage-breadcrumbs.alert-warning").Length);
+        Assert.IsNull(previewDocument.QuerySelector(".spage-navigation"));
         Assert.AreEqual("private, no-store", allowedFw.response.Headers.CacheControl.ToString());
         Assert.AreEqual("noindex, nofollow", allowedFw.response.Headers["X-Robots-Tag"].ToString());
         Assert.IsTrue(allowedFw.model<Spages>().isAttachmentVisible(123, page));
@@ -329,6 +386,8 @@ public partial class SpagesCmsTests
                 Assert.AreEqual(id == snippet, field.Closest("fieldset")?.HasAttribute("disabled") == true, selector);
             }
             Assert.AreEqual(id == snippet, document.QuerySelector("#spages-snippet-help") != null);
+            if (id == snippet)
+                Assert.IsFalse(document.QuerySelector(".page-header")!.TextContent.Contains("View page", StringComparison.Ordinal));
             Assert.IsNull(document.QuerySelector("#spages-image-pane .fw-fieldset-legend, #spages-custom-pane .fw-fieldset-legend"));
             Assert.IsNull(document.QuerySelector("#spages-access-level")?.Closest("fieldset[disabled]"));
             if (id == page)
@@ -337,6 +396,38 @@ public partial class SpagesCmsTests
                 Assert.AreEqual("/old-settings-page", document.QuerySelector("#spages-url-aliases")?.TextContent);
             }
         }
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(100)]
+    public void PublicPageHasOneBreadcrumbRowWithPublishedAncestry(int audience)
+    {
+        int parent = create("public-parent");
+        int child = create("public-child", parent);
+        cms.saveDraft(parent, new FwDict { ["iname"] = "public-parent" });
+        cms.saveDraft(child, new FwDict { ["iname"] = "public-child" });
+        publish(parent);
+        publish(child);
+        cms.saveDraft(parent, new FwDict { ["iname"] = "Private parent title" });
+        var reader = request(audience).model<Spages>();
+        var page = reader.onePublishedByPath("/public-parent/public-child");
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root(), "osafw-app/App_Data/template"), IsLangUpdate = false,
+            GlobalsGetter = () => new FwDict { ["ROOT_URL"] = "/portal" }
+        });
+        var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(
+            parser.parse_page("/home/spage", "main.html", reader.buildPageState(page)));
+        Assert.AreEqual(1, document.QuerySelectorAll(".spage-breadcrumbs nav[aria-label='Breadcrumb']").Length);
+        Assert.AreEqual("Home|public-parent|public-child", string.Join("|", document.QuerySelectorAll(".breadcrumb-item").Select(item => item.TextContent.Trim())));
+        Assert.AreEqual("/portal/public-parent", document.QuerySelector(".breadcrumb-item:nth-child(2) a")?.GetAttribute("href"));
+        Assert.IsNull(document.QuerySelector(".spage-navigation, .alert-warning"));
+        Assert.IsFalse(document.Body!.TextContent.Contains("Private parent title", StringComparison.Ordinal));
+        var edit = document.QuerySelector(".spage-breadcrumbs .btn");
+        Assert.AreEqual(audience > 0, edit != null);
+        if (edit != null)
+            Assert.AreEqual("/portal/Admin/Spages/" + child + "/edit", edit.GetAttribute("href"));
     }
 
     [TestMethod]

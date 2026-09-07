@@ -1,3 +1,7 @@
+<~page_view unless="i[is_snippet]" inline>
+  <~published_link if="view_url" inline><a class="btn btn-default" href="<~ROOT_URL><~view_url>" target="_blank" rel="noopener" title="Open published page in a new tab"><~/common/icons/box-arrow-up-right><span class="btn-label">View page</span></a></~published_link>
+  <~unpublished_link unless="view_url" inline><span title="<~restricted if="is_live" inline>Published page requires higher access</~restricted><~unpublished unless="is_live" inline>Not published yet</~unpublished>"><button class="btn btn-default" type="button" disabled><~/common/icons/box-arrow-up-right><span class="btn-label">View page</span></button></span></~unpublished_link>
+</~page_view>
 <button class="btn btn-default" type="button" data-preview><~/common/icons/eye><span class="btn-label">Preview</span></button>
 <button class="btn btn-primary" type="submit" form="spages-editor" <~/common/attr/disabled unless="is_author">><~/common/icons/floppy><span class="btn-label">Save draft</span></button>
 <~publish if="is_publisher" inline><button class="btn btn-success" type="button" data-status-action="Publish" data-publish-now title="Publish now" <~/common/attr/disabled unless="is_author">><~/common/icons/journal-arrow-up><span class="btn-label">Publish Now</span></button></~publish>

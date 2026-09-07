@@ -347,13 +347,18 @@ public class Spages : FwModel<Spages.Row>
         if (isAuthor())
             return;
 
-        string readAction = fw.route.action is "QuickSearch" or "Go" ? FW.ACTION_INDEX : fw.route.action;
+        string readAction = fw.route.action switch
+        {
+            "QuickSearch" or "Go" => FW.ACTION_INDEX,
+            "Preview" => FW.ACTION_SHOW,
+            _ => fw.route.action
+        };
         string actionMore = fw.route.action_more;
         if (fw.route.action == FW.ACTION_SHOW_FORM && Utils.isEmpty(fw.route.id))
             actionMore = FW.ACTION_MORE_NEW;
 
         if (fw.userId <= 0 || fw.userAccessLevel < AUTHOR_LEVEL
-            || fw.route.controller != "AdminSpages" || fw.route.action is not ("Index" or "ShowForm" or "QuickSearch" or "Go" or "Next")
+            || fw.route.controller != "AdminSpages" || fw.route.action is not ("Index" or "ShowForm" or "QuickSearch" or "Go" or "Next" or "Preview")
             || (fw.userAccessLevel < Users.ACL_SITEADMIN && !fw.model<Users>()
                 .isAccessByRolesResourceAction(fw.userId, "AdminSpages", readAction, actionMore)))
         {
@@ -735,7 +740,7 @@ public class Spages : FwModel<Spages.Row>
         var seen = new HashSet<int>();
         while (parentId > 0 && seen.Count < 20 && seen.Add(parentId))
         {
-            var parent = db.rowp($"SELECT id, parent_id, iname FROM {qTable()} WHERE id=@id AND status<>@deleted AND is_snippet=0",
+            var parent = db.rowp($"SELECT id, parent_id, iname, is_home FROM {qTable()} WHERE id=@id AND status<>@deleted AND is_snippet=0",
                 new FwDict { ["id"] = parentId, ["deleted"] = STATUS_DELETED });
             if (parent.Count == 0)
                 break;

@@ -252,7 +252,8 @@ public class AdminSpagesController : FwDynamicController
         ps["is_site_admin"] = fw.model<Users>().isAccessLevel(Users.ACL_SITEADMIN);
         ps["is_author"] = model.isAuthor() && item["status"].toInt() != Spages.STATUS_DELETED;
         ps["is_scheduled"] = id > 0 && model.isScheduled(id);
-        ps["is_live"] = id > 0 && model.onePublished(id, 100).Count > 0;
+        ps["is_live"] = id > 0 && model.onePublished(id, Users.ACL_SITEADMIN).Count > 0;
+        ps["view_url"] = id > 0 ? model.onePublished(id)["full_url"].toStr() : "";
         ps["is_in_review"] = item["status"].toInt() == Spages.STATUS_IN_REVIEW;
         setAddUpdUser(ps, item);
         setPSReturnContext(ps);
@@ -338,6 +339,18 @@ public class AdminSpagesController : FwDynamicController
 
         int revisionId = reqi("revision_id");
         var item = revisionId > 0 ? model.oneRevisionOrFail(id, revisionId) : model.oneDraftOrFail(id);
+        var breadcrumbs = new FwList(model.listDraftParents(item["parent_id"].toInt())
+            .Where(parent => !parent["is_home"].toBool())
+            .Select(parent => new FwDict
+            {
+                ["iname"] = parent["iname"],
+                ["url"] = base_url + "/(Preview)/" + parent["id"]
+            }));
+        if (!item["is_home"].toBool())
+        {
+            breadcrumbs.Add(new FwDict { ["iname"] = item["iname"], ["is_current"] = true });
+        }
+        item["breadcrumbs"] = breadcrumbs;
         fw.G["PAGE_LAYOUT"] = fw.config("PAGE_LAYOUT_PUBLIC");
         fw.cache_control = "private, no-store";
         fw.response.Headers.CacheControl = fw.cache_control;

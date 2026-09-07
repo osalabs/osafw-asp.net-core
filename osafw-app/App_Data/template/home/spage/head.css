@@ -23,11 +23,10 @@ body.spage { min-height:100dvh; display:flex; flex-direction:column; }
 body.spage .main-container { flex:1; width:100%; }
 body.spage .site-footer { margin-top:4rem; }
 .spage-breadcrumbs { margin:.75rem 0 1.5rem; font-size:.875rem; }
-.spage-document, .spage-breadcrumbs, .spage-navigation, .spage-related { --spage-text:color-mix(in srgb,var(--bs-body-color) 80%,var(--bs-emphasis-color)); color:var(--spage-text); }
-.spage-breadcrumbs .btn-default { color:var(--spage-text); background:var(--bs-body-bg); border:1px solid var(--bs-border-color); }
-.spage-navigation { display:flex; flex-wrap:wrap; gap:.65rem 1.5rem; padding:1rem 0; margin-bottom:2.5rem; border-block:1px solid var(--bs-border-color); font-size:.95rem; }
-.spage-navigation a { text-decoration:none; color:var(--spage-text); }
-.spage-breadcrumbs a { color:var(--spage-text); }
+.spage-document, .spage-related { --spage-text:color-mix(in srgb,var(--bs-body-color) 80%,var(--bs-emphasis-color)); color:var(--spage-text); }
+.spage-breadcrumbs .breadcrumb { --bs-breadcrumb-divider:'/'; overflow-wrap:anywhere; }
+.spage-breadcrumbs .breadcrumb-item + .breadcrumb-item::before { color:inherit; }
+.spage-breadcrumbs a:not(.btn) { color:inherit; }
 .spage-document { margin-inline:auto; }
 .spage-layout-article { max-width:48rem; }
 .spage-intro { margin-bottom:2.5rem; }
@@ -66,6 +65,6 @@ body.spage .spage-layout-landing h1 { font-size:clamp(2.6rem,6vw,5.25rem); max-w
 .spage-cta .btn-primary:hover { text-decoration:underline; }
 .spage-cta .btn-primary:focus-visible { outline:3px solid var(--bs-body-color); outline-offset:4px; }
 .spage-layout-landing .spage-main > p:first-child { max-width:48rem; font-size:clamp(1.2rem,2vw,1.5rem); color:var(--bs-secondary-color); }
-@media(max-width:767px) { .spage-layout-sidebar-left .spage-columns, .spage-layout-sidebar-right .spage-columns, .spage-layout-three-column .spage-columns { grid-template-columns:1fr; } .spage-main { grid-row:1; } .spage-navigation { margin-bottom:1.5rem; } }
+@media(max-width:767px) { .spage-layout-sidebar-left .spage-columns, .spage-layout-sidebar-right .spage-columns, .spage-layout-three-column .spage-columns { grid-template-columns:1fr; } .spage-main { grid-row:1; } }
 
 <~page[custom_css] noescape>

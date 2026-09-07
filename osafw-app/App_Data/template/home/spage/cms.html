@@ -1,6 +1,17 @@
-<~preview if="is_preview" inline><div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="status"><span><strong>Editor preview</strong> — this view may include unpublished changes.</span><a class="btn btn-sm btn-default" href="<~/admin/spages/url>/<~page[id]>/edit">Return to editor</a></div></~preview>
-<nav aria-label="breadcrumb" class="spage-breadcrumbs"><~admin_edit><ol class="breadcrumb"><li class="breadcrumb-item"><a href="<~ROOT_URL>/">Home</a></li><~page[breadcrumbs] repeat inline><li class="breadcrumb-item"><~current if="is_current" inline><span aria-current="page"><~iname></span></~current><~ancestor unless="is_current" inline><a href="<~ROOT_URL><~url>"><~iname></a></~ancestor></li></~page[breadcrumbs]></ol></nav>
-<~page_navigation if="pages" inline><nav class="spage-navigation" aria-label="Website pages"><~pages repeat inline><a href="<~ROOT_URL><~full_url>"><~nav_title if="nav_title"><~iname unless="nav_title"></a></~pages></nav></~page_navigation>
+<div class="spage-breadcrumbs d-flex flex-wrap align-items-center justify-content-between gap-2 <~preview_style if="is_preview" inline>alert alert-warning</~preview_style>">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><~home_current if="page[is_home]" inline><span aria-current="page">Home</span></~home_current><~home_link unless="page[is_home]" inline><a href="<~ROOT_URL>/">Home</a></~home_link></li>
+      <~page[breadcrumbs] repeat inline>
+        <li class="breadcrumb-item"><~current if="is_current" inline><span aria-current="page"><~iname></span></~current><~ancestor unless="is_current" inline><a href="<~ROOT_URL><~url>"><~iname></a></~ancestor></li>
+      </~page[breadcrumbs]>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center gap-2 ms-auto d-print-none">
+    <~preview_label if="is_preview" inline><span class="small fw-semibold" role="status">Unpublished preview</span></~preview_label>
+    <~admin_edit>
+  </div>
+</div>
 <article class="spage-document spage-layout-<~page[template]>">
   <header class="spage-intro"><h1><~page[iname]></h1><~hero if="page[head_att_id_url]" inline><img src="<~page[head_att_id_url]>" alt="" class="spage-hero img-fluid"></~hero></header>
   <div class="spage-columns">
