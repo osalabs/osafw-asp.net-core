@@ -1,0 +1,5 @@
+<h1>Search pages</h1>
+<form method="get" class="d-flex gap-2 my-4" role="search"><label class="visually-hidden" for="page-search">Search pages</label><input id="page-search" class="form-control" name="s" value="<~s>" maxlength="200" placeholder="What are you looking for?"><button class="btn btn-primary">Search</button></form>
+<~search_summary if="is_searched" inline><p class="text-body-secondary"><~count> matching pages</p></~search_summary>
+<~results repeat inline><article class="border-bottom py-4"><h2 class="h4"><a href="<~ROOT_URL><~full_url>"><~iname></a></h2><p class="mb-0"><~excerpt></p></article></~results>
+<nav aria-label="Search results pages" class="d-flex justify-content-between my-4"><a href="<~prev_url>" <~/common/attr/display_none unless="prev_url">>Previous</a><a href="<~next_url>" <~/common/attr/display_none unless="next_url">>Next</a></nav>

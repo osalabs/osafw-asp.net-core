@@ -29,6 +29,10 @@ public class HomeController : FwController
     {
         fw.model<FwUpdates>().checkApplyIfDev();
 
+        // Uncomment these two lines to serve the CMS Home page instead of this application homepage.
+        //fw.model<Spages>().showCmsPage("/");
+        //return null!;
+
         //fw.redirect("/Login"); // uncomment to always redirect to login page instead of Home
 
         FwDict ps = FwCache.getValue("home_page") as FwDict ?? [];
@@ -63,7 +67,7 @@ public class HomeController : FwController
     // called if fw.dispatch can't find controller
     public void NotFoundAction()
     {
-        fw.model<Spages>().showPageByFullUrl(fw.request_url);
+        fw.model<Spages>().showCmsPage(fw.request_url);
     }
 
     public void TestAction(string id = "")

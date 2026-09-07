@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS user_lists;
 DROP TABLE IF EXISTS user_views;
 DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS log_types;
+DROP TABLE IF EXISTS spages_revisions;
 DROP TABLE IF EXISTS spages;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS users_cookies;
@@ -283,11 +284,11 @@ INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, al
 CREATE TABLE spages (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   parent_id             INTEGER NOT NULL DEFAULT 0,
+  head_att_id           INTEGER NULL REFERENCES att(id),
 
   url                   TEXT NOT NULL DEFAULT '',
   iname                 TEXT NOT NULL DEFAULT '',
   idesc                 TEXT,
-  head_att_id           INTEGER NULL REFERENCES att(id),
 
   idesc_left            TEXT,
   idesc_right           TEXT,
@@ -304,7 +305,18 @@ CREATE TABLE spages (
   custom_css            TEXT,
   custom_js             TEXT,
 
-  status                INTEGER NOT NULL DEFAULT 0,
+  is_snippet            TINYINT NOT NULL DEFAULT 0,                                  -- 1 for a reusable snippet; url is its stable key
+  content_json          TEXT,                                                        -- Converted block document; draft and revision snapshots are authoritative
+  draft_json            TEXT,                                                        -- Editable snapshot of all content fields; content_json remains a JSON string
+  review_note           TEXT,                                                        -- Current editorial review feedback
+  access_level          INT NOT NULL DEFAULT 0,                                      -- Minimum framework access level required to view this page
+  is_nav_visible        TINYINT NOT NULL DEFAULT 1,                                  -- 1 to include the published page in navigation
+  nav_title             TEXT NOT NULL DEFAULT '',                                    -- Optional navigation label; empty uses the page title
+  meta_title            TEXT NOT NULL DEFAULT '',                                    -- Optional browser and search title; empty uses the page title
+  is_noindex            TINYINT NOT NULL DEFAULT 0,                                  -- 1 to exclude the published page from search indexing
+  url_aliases           TEXT,                                                        -- Manual app-local URL aliases, one per line
+
+  status                INTEGER NOT NULL DEFAULT 0,                                  -- 0 Published, 10 Draft, 20 In review, 30 Changes requested, 40 Scheduled, 127 Deleted
   add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   add_users_id          INTEGER DEFAULT 0,
   upd_time              DATETIME,
@@ -313,10 +325,22 @@ CREATE TABLE spages (
 CREATE INDEX IX_spages_parent_id ON spages (parent_id, prio);
 CREATE INDEX IX_spages_url ON spages (url);
 
-INSERT INTO spages (parent_id, url, iname) VALUES
-(0,'','Home'),
-(0,'test-page','Test  page');
-UPDATE spages SET is_home=1 WHERE id=1;
+/* Immutable page snapshots and publication history */
+CREATE TABLE spages_revisions (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,                           -- Revision identity
+  spages_id             INT NOT NULL REFERENCES spages(id),                          -- Page or snippet owning this revision
+
+  kind                  TINYINT NOT NULL DEFAULT 0,                                  -- 0 Saved, 10 Submitted, 20 Changes requested, 30 Published, 40 Withdrawn, 50 Original
+  snapshot_json         TEXT NOT NULL,                                               -- Immutable content-field snapshot; content_json remains a JSON string
+  snippet_versions      TEXT,                                                        -- Pinned snippet revision IDs keyed by the snippet url
+  effective_time        DATETIME NOT NULL,                                           -- Effective instant in DB timezone; reads normalize to UTC
+  note                  TEXT,                                                        -- Editorial note for this revision
+
+  status                TINYINT NOT NULL DEFAULT 0,                                  -- 0 retained/eligible, 127 cancelled scheduled release
+  add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,                 -- Creation instant in DB timezone; reads normalize to UTC
+  add_users_id          INT NOT NULL DEFAULT 0                                       -- User who created this revision; 0 for system seeds
+);
+CREATE INDEX IX_spages_revisions_release ON spages_revisions (spages_id, kind, status, effective_time, id);
 
 /* Logs types */
 CREATE TABLE log_types (

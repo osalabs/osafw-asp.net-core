@@ -162,7 +162,7 @@ IF LEN(@sql) > 0
         int sql_ctr = 0;
         var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
         dropExistingForeignKeys();
-        string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
+        string[] files = ["fwdatabase.sql", "spages.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
         foreach (string file in files)
         {
             var sql_file = Path.Combine(sql_root, file);
@@ -176,6 +176,7 @@ IF LEN(@sql) > 0
 
         // This bootstrap request may have cached tables as missing before the DDL scripts created them.
         db.clearSchemaCache();
+        copyDemoFiles();
 
         logger("Executed SQL count:", sql_ctr);
         if (sql_ctr > 0)
@@ -187,6 +188,59 @@ IF LEN(@sql) > 0
         }
 
         return ps;
+    }
+
+    /// <summary>
+    /// Copy trusted bundled demo media for matching SQL-seeded attachment rows after development initialization.
+    /// Only pending seed rows are installed. Occupied paths fail without exposing or overwriting old uploads.
+    /// Activate each row only after its original and thumbnails exist; no external storage is contacted.
+    /// </summary>
+    private void copyDemoFiles()
+    {
+        string sourceDirectory = Path.Combine(fw.config("site_root").toStr(), "App_Data", "demo");
+        if (!Directory.Exists(sourceDirectory))
+            return;
+
+        var att = fw.model<Att>();
+        foreach (string source in Directory.EnumerateFiles(sourceDirectory))
+        {
+            string extension = Path.GetExtension(source);
+            var row = db.row(att.table_name, new FwDict
+            {
+                ["icode"] = Path.GetFileNameWithoutExtension(source),
+                ["fname"] = Path.GetFileName(source),
+                ["ext"] = extension,
+                ["status"] = FwModel.STATUS_INACTIVE,
+                ["is_s3"] = 0
+            });
+            if (row.Count == 0)
+                continue;
+
+            string destination = att.getUploadImgPath(row["id"].toInt(), "", extension);
+            string[] sizes = row["is_image"].toBool() ? ["", "s", "m", "l"] : [""];
+            foreach (string size in sizes)
+            {
+                if (File.Exists(att.getUploadImgPath(row["id"].toInt(), size, extension)))
+                    throw new UserException("Demo media storage is occupied. Upload " + Path.GetFileName(source)
+                        + " into its pending record in Manage Uploads to finish setup. Existing files were preserved.");
+            }
+
+            File.Copy(source, destination);
+            if (row["is_image"].toBool())
+            {
+                // Match the standard attachment picker and public image sizes.
+                foreach (var (size, pixels) in new[] { ("s", 180), ("m", 512), ("l", 1200) })
+                {
+                    string thumbnail = att.getUploadImgPath(row["id"].toInt(), size, extension);
+                    ImageUtils.resize(source, thumbnail, pixels, pixels);
+                }
+            }
+            db.update(att.table_name, new FwDict
+            {
+                ["status"] = FwModel.STATUS_ACTIVE,
+                ["fsize"] = new FileInfo(destination).Length
+            }, DB.h("id", row["id"]));
+        }
     }
 
     public FwDict? PendingUpdatesAction()

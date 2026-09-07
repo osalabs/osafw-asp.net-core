@@ -1,37 +1,4 @@
-<form class="fw-list-card" action="<~../url>" method="post">
-<input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-<input type="hidden" name="_method" value="PUT">
+<~publisher_list if="is_publisher" inline><~/common/list/form_list></~publisher_list>
+<~author_list unless="is_publisher" inline><~/common/list/form_list is_readonly="1"></~author_list>
 
-<table class="table table-sm table-hover list">
-    <thead>
-        <tr data-sortby="<~f[sortby]>" data-sortdir="<~f[sortdir]>">
-            <th><input type="checkbox" name="all" value="1" class="on-list-chkall"></th>
-            <th data-sort="url">`URL`</th>
-            <th data-sort="iname">`Title`</th>
-            <th data-sort="pub_time">`Published on`</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody class="table-group-divider">
-<~list_rows repeat inline>
-        <tr data-url="<~row_click_url>">
-            <td><input class="multicb" type="checkbox" name="cb[<~id>]" value="1"></td>
-            <td><a href="<~full_url>" target="_blank"><~full_url></a>
-                <~redir if="redirect_url" inline><span class="label label-info">redirect &rarr; <~redirect_url truncate="8"></span></~redir>
-            </td>
-            <td><~leveler repeat inline if="leveler">&#8212; </~leveler><~iname><~home_page if="is_home" inline> <strong class="text-muted"> - home page</strong></~home_page></td>
-            <td><~pub_time unless="status"><~/admin/spages/status.sel selvalue="status" if="status"></td>
-            <td class="text-nowrap d-print-none text-end">
-                <a href="<~full_url>" target="_blank">`View`</a>
-                <~/common/dot><a href="<~row_click_url>">`Edit`</a>
-                <~/common/list/row_btn_del unless="is_home">
-            </td>
-        </tr>
-</~list_rows>
-    </tbody>
-</table>
-<~/common/list/empty unless="list_rows">
-<~/common/list/table_under if="list_rows">
-
-</form>
 <~/common/list/form_delete>

@@ -19,4 +19,52 @@ body.spage .main .blockquote {
  line-height: 2rem;
 }
 
+body.spage { min-height:100dvh; display:flex; flex-direction:column; }
+body.spage .main-container { flex:1; width:100%; }
+body.spage .site-footer { margin-top:4rem; }
+.spage-breadcrumbs { margin:.75rem 0 1.5rem; font-size:.875rem; }
+.spage-document, .spage-related { --spage-text:color-mix(in srgb,var(--bs-body-color) 80%,var(--bs-emphasis-color)); color:var(--spage-text); }
+.spage-breadcrumbs .breadcrumb { --bs-breadcrumb-divider:'/'; overflow-wrap:anywhere; }
+.spage-breadcrumbs .breadcrumb-item + .breadcrumb-item::before { color:inherit; }
+.spage-breadcrumbs a:not(.btn) { color:inherit; }
+.spage-document { margin-inline:auto; }
+.spage-layout-article { max-width:48rem; }
+.spage-intro { margin-bottom:2.5rem; }
+body.spage .spage-intro h1 { font-size:clamp(2.25rem,4.4vw,4rem); line-height:1.1; letter-spacing:-.035em; margin:0 0 1.5rem; max-width:20ch; text-wrap:balance; }
+.spage-layout-landing .spage-intro { padding:clamp(1.5rem,5vw,4rem) 0 1rem; }
+body.spage .spage-layout-landing h1 { font-size:clamp(2.6rem,6vw,5.25rem); max-width:17ch; }
+.spage-region { font-size:1.08rem; line-height:1.8; overflow-wrap:anywhere; min-width:0; }
+.spage-region > :first-child { margin-top:0; }
+.spage-region p, .spage-region ul, .spage-region ol, .spage-region figure { margin-bottom:1.5rem; }
+.spage-region h2 { font-size:clamp(1.7rem,2.5vw,2.25rem); line-height:1.2; margin:2.8rem 0 1.2rem; letter-spacing:-.02em; }
+.spage-region h3 { font-size:1.4rem; margin:2rem 0 1rem; }
+.spage-region a:not(.btn) { color:var(--spage-text); text-underline-offset:.2em; text-decoration-thickness:.1em; }
+.spage-region li + li { margin-top:.35rem; }
+.spage-region blockquote { border-left:4px solid var(--bs-primary); padding:1rem 1.5rem; margin:2rem 0; background:var(--bs-tertiary-bg); border-radius:0 var(--bs-border-radius) var(--bs-border-radius) 0; }
+.spage-region blockquote p { font-size:1.35rem; margin:0 0 .75rem; }
+.spage-region blockquote footer, .spage-region figcaption { color:var(--bs-secondary-color); font-size:.9rem; }
+.spage-region pre { padding:1.5rem; background:var(--bs-tertiary-bg); border:1px solid var(--bs-border-color); border-radius:var(--bs-border-radius-lg); }
+.spage-region hr { margin:3rem 0; }
+.spage-region img, .spage-hero { border-radius:var(--bs-border-radius-lg); max-width:100%; height:auto; }
+.spage-columns { display:grid; gap:clamp(1.5rem,4vw,3.5rem); }
+.spage-layout-sidebar-left .spage-columns { grid-template-columns:minmax(13rem,1fr) minmax(0,2.8fr); }
+.spage-layout-sidebar-right .spage-columns { grid-template-columns:minmax(0,2.8fr) minmax(13rem,1fr); }
+.spage-layout-three-column .spage-columns { grid-template-columns:minmax(11rem,1fr) minmax(0,2.5fr) minmax(11rem,1fr); }
+.spage-left, .spage-right { font-size:.95rem; }
+.spage-left h2, .spage-right h2 { font-size:1.4rem; }
+.spage-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:1.5rem; margin:2rem 0 3rem; }
+.spage-card { padding:1.75rem; border:1px solid var(--bs-border-color); border-radius:var(--bs-border-radius-lg); background:var(--bs-tertiary-bg); }
+.spage-card h2 { margin:0 0 1rem; font-size:1.4rem; }
+.spage-card p { font-size:1rem; }
+.spage-callout { border-left:4px solid var(--bs-primary); padding:1.5rem 1.75rem; background:var(--bs-tertiary-bg); border-radius:var(--bs-border-radius); margin:2rem 0; }
+.spage-callout p { margin:.5rem 0 0; }
+.spage-after { margin-top:3rem; }
+.spage-related { border-top:1px solid var(--bs-border-color); margin-top:3rem; padding-top:2rem; }
+.spage-cta .btn { padding:.75rem 1.5rem; }
+.spage-cta .btn-primary, .spage-cta .btn-primary:hover, .spage-cta .btn-primary:focus-visible { color:var(--bs-body-bg); background:var(--bs-body-color); border-color:var(--bs-body-color); }
+.spage-cta .btn-primary:hover { text-decoration:underline; }
+.spage-cta .btn-primary:focus-visible { outline:3px solid var(--bs-body-color); outline-offset:4px; }
+.spage-layout-landing .spage-main > p:first-child { max-width:48rem; font-size:clamp(1.2rem,2vw,1.5rem); color:var(--bs-secondary-color); }
+@media(max-width:767px) { .spage-layout-sidebar-left .spage-columns, .spage-layout-sidebar-right .spage-columns, .spage-layout-three-column .spage-columns { grid-template-columns:1fr; } .spage-main { grid-row:1; } }
+
 <~page[custom_css] noescape>

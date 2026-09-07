@@ -163,25 +163,23 @@ public class RagSources : FwModel<RagSources.Row>
         if (!isSourceQueueReady() || spageId <= 0)
             return false;
 
-        var page = fw.model<Spages>().one(spageId);
-        if (page.Count == 0)
-            return false;
-
-        if (!fw.model<Spages>().isPublished(page))
+        var pages = fw.model<Spages>();
+        var page = pages.onePublished(spageId, 100);
+        if (page.Count == 0 || page["is_snippet"].toBool())
         {
             deleteByEntity(FwEntities.ICODE_SPAGE, spageId);
             return true;
         }
 
         int spageEntityId = fw.model<FwEntities>().idByIcodeOrAdd(FwEntities.ICODE_SPAGE);
-        string text = SpageText(page);
+        string text = pages.publishedText(page);
         queueSource(
             SOURCE_TYPE_SPAGE,
             spageEntityId,
             spageId,
             0,
             page["iname"].toStr(),
-            fw.model<Spages>().getFullUrl(spageId),
+            pages.publishedUrl(spageId),
             HashText(text),
             string.Empty,
             Utils.jsonEncode(DB.h("template", page["template"].toStr(), "url", page["url"].toStr()))

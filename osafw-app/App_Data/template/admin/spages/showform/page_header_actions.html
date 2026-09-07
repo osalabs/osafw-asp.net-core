@@ -1,9 +1,3 @@
-<~/common/form/btn_std>
-<div class="btn-group">
-  <a class="btn btn-default <~/common/cl/disabled unless="i[parent_id]">" href="<~../url>/<~i[parent_id]>/edit"><~/common/icons/journal-arrow-up>`Up`</a>
-  <~add_sub if="id" inline>
-    <~add_sub2 unless="i[is_home]" inline>
-      <a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/attr/disabled if="is_readonly">><~/common/icons/file-earmark-plus><span class="d-none d-lg-inline"> `Add Sub-Page`</span><span class="d-inline d-lg-none"> `Sub`</span></a>
-    </~add_sub2>
-  </~add_sub>
-</div>
+<a class="btn btn-default" href="<~../url>/new" <~/common/attr/disabled unless="is_author">><~/common/icons/plus-lg><span class="btn-label">Add New</span></a>
+<~add_sub if="id" inline><~page unless="i[is_snippet]" inline><a class="btn btn-default" href="<~../url>/new?parent_id=<~id>" <~/common/attr/disabled unless="is_author">><~/common/icons/node-plus><span class="btn-label">Add Subpage</span></a>
+<a class="btn btn-default" href="<~../url>/new?snippet=1&amp;parent_id=<~id>" <~/common/attr/disabled unless="is_author">><~/common/icons/puzzle><span class="btn-label">Add Snippet</span></a></~page></~add_sub>

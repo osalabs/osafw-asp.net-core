@@ -1,3 +1,15 @@
 <~/common/list/page_header>
+
+<~migration_notice if="is_needs_migration" inline>
+  <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert">
+    <span class="flex-grow-1">Some existing pages still need conversion to editable content blocks.</span>
+    <~migration_action if="is_site_admin" inline><button type="button" class="btn btn-warning" data-cms-action="Migrate">Convert pages</button></~migration_action>
+  </div>
+</~migration_notice>
+
 <~/common/list/filter_std>
 <~list_table>
+
+<p id="cms-action-result" role="status" aria-live="polite"></p>
+<form id="cms-actions" hidden data-base="<~../url>"><input name="XSS" value="<~SESSION[XSS]>"></form>
+<script src="<~ROOT_URL>/assets/js/spages-editor.js?v=8" defer></script>

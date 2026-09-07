@@ -3,7 +3,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-    <form class="row row-cols-auto g-3 mb-3" method="post" action="<~../url>" enctype="multipart/form-data">
+    <form class="row row-cols-auto g-3 mb-3" method="post" action="<~upload_target if="upload_url" inline><~upload_url></~upload_target><~default_target unless="upload_url" inline><~../url></~default_target>" enctype="multipart/form-data">
         <input type="hidden" name="XSS" value="<~session[XSS]>">
         <input type="hidden" name="mode" value="select">
 
@@ -11,7 +11,7 @@
           <span role="button" class="btn btn-success btn-fileinput me-3">
             <span class="msg-button"><~/common/icons/cloud-upload-fill><span> Upload new file...</span></span>
             <span class="msg-uploading d-none"><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> uploading...</span>
-            <input name="file1" type="file">
+            <input name="file1" type="file" <~accept if="file_accept" inline>accept="<~file_accept>"</~accept>>
           </span>
         </div>
         <label class="col col-form-label me-3">`or choose from existing uploads, category`:</label>

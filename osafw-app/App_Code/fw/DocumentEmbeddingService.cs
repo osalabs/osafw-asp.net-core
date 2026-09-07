@@ -204,11 +204,13 @@ public class DocumentEmbeddingService
 
     private async Task<List<RagChunks.ChunkEmbedding>> buildSpageSourceChunksAsync(RagSources.Row source, CancellationToken cancellationToken)
     {
-        var page = fw.model<Spages>().one(source.item_id);
-        if (page.Count == 0 || !fw.model<Spages>().isPublished(page))
+        var pages = fw.model<Spages>();
+        var page = pages.onePublished(source.item_id, 100);
+        if (page.Count == 0 || page["is_snippet"].toBool())
             return [];
 
-        string text = htmlToPlainText(RagSources.SpageText(page));
+        string text = pages.publishedText(page);
+        if (RagSources.HashText(text) != source.content_hash) return [];
         return string.IsNullOrWhiteSpace(text)
             ? []
             : await buildTextChunksAsync(source, text, page["iname"].toStr(), "Static Page", cancellationToken).ConfigureAwait(false);

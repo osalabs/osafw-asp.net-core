@@ -4,6 +4,12 @@
   "defaultDestination": "wwwroot/assets/lib",
   "libraries": [
     {
+      "library": "@editorjs/editorjs@2.31.6",
+      "provider": "unpkg",
+      "destination": "wwwroot/assets/lib/editorjs",
+      "files": ["dist/editorjs.umd.js"]
+    },
+    {
       "library": "bootstrap@5.3.6",
       "destination": "wwwroot/assets/lib/bootstrap",
       "files": [

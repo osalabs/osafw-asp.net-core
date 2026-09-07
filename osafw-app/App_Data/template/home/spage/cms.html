@@ -1,0 +1,24 @@
+<div class="spage-breadcrumbs d-flex flex-wrap align-items-center justify-content-between gap-2 <~preview_style if="is_preview" inline>alert alert-warning</~preview_style>">
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><~home_current if="page[is_home]" inline><span aria-current="page">Home</span></~home_current><~home_link unless="page[is_home]" inline><a href="<~ROOT_URL>/">Home</a></~home_link></li>
+      <~page[breadcrumbs] repeat inline>
+        <li class="breadcrumb-item"><~current if="is_current" inline><span aria-current="page"><~iname></span></~current><~ancestor unless="is_current" inline><a href="<~ROOT_URL><~url>"><~iname></a></~ancestor></li>
+      </~page[breadcrumbs]>
+    </ol>
+  </nav>
+  <div class="d-flex align-items-center gap-2 ms-auto d-print-none">
+    <~preview_label if="is_preview" inline><span class="small fw-semibold" role="status">Unpublished preview</span></~preview_label>
+    <~admin_edit>
+  </div>
+</div>
+<article class="spage-document spage-layout-<~page[template]>">
+  <header class="spage-intro"><h1><~page[iname]></h1><~hero if="page[head_att_id_url]" inline><img src="<~page[head_att_id_url]>" alt="" class="spage-hero img-fluid"></~hero></header>
+  <div class="spage-columns">
+    <~left if="page[html_left]" inline><aside class="spage-region spage-left" aria-label="Related information"><~page[html_left] noescape></aside></~left>
+    <div class="spage-region spage-main"><~page[html_main] noescape></div>
+    <~right if="page[html_right]" inline><aside class="spage-region spage-right" aria-label="More information"><~page[html_right] noescape></aside></~right>
+  </div>
+  <div class="spage-region spage-after"><~page[html_after_content] noescape></div>
+</article>
+<~related if="subpages" inline><nav class="spage-related" aria-label="Related pages"><h2 class="h5">Explore more</h2><ul><~subpages repeat inline><li><a href="<~ROOT_URL><~full_url>"><~iname></a></li></~subpages></ul></nav></~related>

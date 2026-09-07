@@ -1,0 +1,6 @@
+<span id="spages-published-badge" class="badge text-bg-success" title="A published version is available; access restrictions still apply." <~hidden_attr unless="is_published" inline>hidden</~hidden_attr>>Published</span>
+<span id="spages-status-badge" class="badge <~/admin/spages/status_class.sel selvalue="i[status]">" role="status" <~published if="is_published" inline><~hidden_attr ifeq="i[status]" value="0" inline>hidden</~hidden_attr></~published>>
+  <span class="visually-hidden">Working status: </span>
+  <span id="spages-status"><~i[status_label]></span>
+</span>
+<span id="spages-save-state" role="status" aria-live="polite" class="small text-body-secondary"><~published_state if="is_published" inline><~clean ifeq="i[status]" value="0" inline>Published version</~clean><~working ifne="i[status]" value="0" inline>Unpublished changes</~working></~published_state><~draft_state unless="is_published" inline>Draft ready</~draft_state></span>
