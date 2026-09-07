@@ -160,6 +160,18 @@ Inline HTML and Markdown pass through server sanitizers, and raw Markdown HTML i
 
 Files uploaded in the editor belong to that page. Restricted content requires page-owned attachments. Shared unbound library files are public and should contain only public material. Attachment access follows the current publication, ancestor access, and actual references; image blocks accept decoded image files.
 
-Each provider's `demo.sql` seeds three unpublished drafts: one reusable help snippet and two example pages. The seeds do not replace or claim the application homepage.
+Each provider's `demo.sql` seeds five unpublished example pages and the `demo-help` snippet. Together the pages cover all five layouts and every built-in block. They contain illustrative workplace content that developers can adapt; they do not replace or claim the application homepage.
+
+| Page | Layout | Blocks demonstrated |
+| --- | --- | --- |
+| `/demo-services` — Good work starts with a clear plan | Landing page | Paragraph, heading, button, cards, quote, snippet |
+| `/demo-start-here` — Your first week, made simpler | Left sidebar | Paragraph, headings with anchors, ordered/unordered lists, callout, file, after-content snippet slot |
+| `/demo-department` — People, resources, and a place to start | Right sidebar | Paragraph, heading, cards, table with caption/headers, callout, snippet |
+| `/demo-bulletin` — Around the workplace | Three columns | Paragraph, heading, lists, quote, cards, divider, callout, snippet |
+| `/demo-field-notes` — A practical guide to a calmer project kickoff | Article | Paragraph, heading, image with alt text/caption, quote, ordered list, code, Markdown, divider, button, after-content snippet slot |
+
+The SQL seeds create the two bundled attachment records as Inactive with no file size. Development database initialization copies their files from `App_Data/demo` into normal storage, generates image thumbnails, and activates each record only after its files are installed. The files use normal attachment URLs and access checks; no external image or download service is required. Publish `demo-help` first so page previews can include it, then preview or publish the pages individually.
+
+To add these examples to an existing development app, run only the **CMS demonstration drafts** section of the selected provider's `demo.sql`; the earlier demo-table setup is destructive. This section skips existing URLs, working-draft URLs, and attachment codes. In Manage Uploads, open the seeded Planning workshop and First-week checklist records and upload their matching bundled files. Existing content and stored files are not overwritten by seeding. If initialization encounters an occupied original or thumbnail path, media setup stops and the pending record stays Inactive. Finish that record through Manage Uploads with the matching bundled file; do not rerun destructive database initialization to repair media.
 
 Spages is intended for small page collections. It has one review step, no anonymous preview links, no nested snippets, no translation workflow, and no background scheduler requirement.

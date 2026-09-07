@@ -82,4 +82,4 @@ To roll back content after migration, restore the desired original or historical
 
 Do not roll back only application binaries after authors begin using the new workflow. Database and application rollback requires the coordinated backup and recovery procedure prepared before the upgrade.
 
-Fresh demo data contains three unpublished Spages drafts and does not replace the application homepage. The demo rows are seed data; they are not installed by `MigrateAction`.
+Fresh demo data contains five unpublished example pages covering all layouts, plus a shared snippet, and does not replace the application homepage. See [sample drafts and bundled media](spages.md#attachments-and-sample-drafts). The demo rows are seed data; they are not installed by `MigrateAction`.

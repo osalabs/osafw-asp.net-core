@@ -1,0 +1,11 @@
+# Demo attachment files
+
+These public sample files accompany the CMS section of each provider's `demo.sql`.
+Development database initialization copies them into normal attachment storage by matching the file stem to `att.icode`, and generates image thumbnails. The seed SQL obtains attachment IDs from these stable codes rather than assuming fixed numeric IDs. Seeded attachment records start Inactive with no file size and become Active only after their original and thumbnails are installed. Application pages remain drafts.
+
+- `demo-spages-checklist.txt`: original illustrative first-week checklist.
+- `demo-spages-workshop.png`: AI-generated fictional workshop image, created with the built-in image generation tool for these examples. It depicts no named organization or real event.
+
+Image prompt: Create one photorealistic editorial website image, wide landscape aspect ratio about 3:2, for a fictional small workplace consultancy's services page. A candid collaborative planning workshop: four adult colleagues gathered around a generous oak table in an airy contemporary studio, reviewing a simple paper project map and writing on blank colorful sticky notes. Natural afternoon window light, warm wood, muted sage plants, slate blue clothing accents, calm neutral palette that complements both light and dark Bootstrap website themes. Real natural textures, realistic hands and proportions, relaxed engaged expressions, professionally composed but not glossy staged stock photography. Medium-wide framing with all people comfortably inside frame, no cropped faces. Image will be shown as a full-width figure in a 1100px web page. No text overlay, no logos, no visible readable words or brands, no border, no watermarks. This is illustrative fictional sample website content.
+
+The image is used in the project-kickoff article. For existing apps loading the CMS SQL section manually, upload these files into the matching seeded records through Manage Uploads. If initialization encounters an occupied original or thumbnail path, it preserves those files and leaves the pending record Inactive. Upload the matching bundled file through Manage Uploads to finish that record; do not rerun destructive database initialization to repair media. See `docs/spages.md` for the full sample coverage map and publication order.
