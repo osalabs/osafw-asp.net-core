@@ -26,14 +26,45 @@ public static class FwConfig
     /// <summary>Get specific setting from the current bucket.</summary>
     public static object? GetCurrentSetting(string name) => GetSettingsForHost()[name];
 
-    // internals
-    private static readonly AsyncLocal<string?> _currentHostKey = new();          // per-async-flow cache key
-    private static readonly ConcurrentDictionary<string, Lazy<FwDict>> _hostCache = new();
-    private static readonly object _configLock = new();
-    private static IConfiguration? configuration;                                   // appsettings.* provider
-    private static FwDict? _baseSettings;
-    private static string? _trustedRootHost;
-    private static string[]? _trustedHostPatterns;
+    // The ordinary application shares state; explicit scopes get independent settings and caches.
+    private sealed class ConfigurationState
+    {
+        internal readonly AsyncLocal<string?> _currentHostKey = new();
+        internal readonly ConcurrentDictionary<string, Lazy<FwDict>> _hostCache = new();
+        internal readonly object _configLock = new();
+        internal IConfiguration? configuration;
+        internal FwDict? _baseSettings;
+        internal string? _trustedRootHost;
+        internal string[]? _trustedHostPatterns;
+    }
+
+    private static readonly ConfigurationState defaultState = new();
+    private static readonly AsyncLocal<ConfigurationState?> scopedState = new();
+    private static ConfigurationState currentState => scopedState.Value ?? defaultState;
+
+    /// <summary>Starts an empty, isolated configuration lifetime for the current async flow.</summary>
+    /// <remarks>Initialize with init or an FW constructor inside the scope. Static configuration
+    /// consumers use the same isolated settings. Dispose in nesting order after all dependent work
+    /// and FW instances finish. Child tasks inherit the scope; use separate scopes for independent
+    /// mutable settings. Environment variables and caller-owned IConfiguration providers remain shared.</remarks>
+    public static IDisposable beginScope()
+    {
+        var scope = new ConfigurationScope(scopedState.Value);
+        scopedState.Value = scope.State;
+        return scope;
+    }
+
+    private sealed class ConfigurationScope(ConfigurationState? previous) : IDisposable
+    {
+        internal readonly ConfigurationState State = new();
+
+        public void Dispose()
+        {
+            if (!ReferenceEquals(scopedState.Value, State))
+                throw new InvalidOperationException("Configuration scopes must be disposed in nesting order in their creating flow.");
+            scopedState.Value = previous;
+        }
+    }
 
     private const string DEFAULT_HOST_KEY = "__default__";
     private const int GIT_COMMIT_DISPLAY_LENGTH = 8;
@@ -58,20 +89,20 @@ public static class FwConfig
         var cacheKey = resolveHostKey(host);
 
         GetSettingsForHost(host, ctx); // ensure host bucket built
-        _currentHostKey.Value = cacheKey;
+        currentState._currentHostKey.Value = cacheKey;
     }
 
     // clears cache entry for request's host.
     public static void reload(FW fw)
     {
-        var cacheKey = _currentHostKey.Value ?? getHostCacheKey(hostname);
+        var cacheKey = currentState._currentHostKey.Value ?? getHostCacheKey(hostname);
 
-        _hostCache.TryRemove(cacheKey, out _);     // force re-build on next request
+        currentState._hostCache.TryRemove(cacheKey, out _);     // force re-build on next request
 
-        if (configuration == null)
+        if (currentState.configuration == null)
             throw new InvalidOperationException("FwConfig.init must be called before reload");
 
-        init(fw.context, configuration, fw.context?.Request.Host.ToString());
+        init(fw.context, currentState.configuration, fw.context?.Request.Host.ToString());
     }
 
     /// <summary>
@@ -82,13 +113,13 @@ public static class FwConfig
         if (string.IsNullOrWhiteSpace(host))
             return false;
 
-        var patterns = Volatile.Read(ref _trustedHostPatterns);
-        var rootHost = Volatile.Read(ref _trustedRootHost);
+        var patterns = Volatile.Read(ref currentState._trustedHostPatterns);
+        var rootHost = Volatile.Read(ref currentState._trustedRootHost);
         if (patterns == null || rootHost == null)
         {
             _ = getBaseSettings();
-            patterns = Volatile.Read(ref _trustedHostPatterns) ?? [];
-            rootHost = Volatile.Read(ref _trustedRootHost) ?? string.Empty;
+            patterns = Volatile.Read(ref currentState._trustedHostPatterns) ?? [];
+            rootHost = Volatile.Read(ref currentState._trustedRootHost) ?? string.Empty;
         }
 
         var hostText = host.Trim();
@@ -110,39 +141,39 @@ public static class FwConfig
 
     private static void setConfiguration(IConfiguration cfg)
     {
-        if (ReferenceEquals(configuration, cfg))
+        if (ReferenceEquals(currentState.configuration, cfg))
             return;
 
-        lock (_configLock)
+        lock (currentState._configLock)
         {
-            if (ReferenceEquals(configuration, cfg))
+            if (ReferenceEquals(currentState.configuration, cfg))
                 return;
 
-            configuration = cfg;
-            Volatile.Write(ref _baseSettings, null);
-            Volatile.Write(ref _trustedRootHost, null);
-            Volatile.Write(ref _trustedHostPatterns, null);
-            _hostCache.Clear();
-            _currentHostKey.Value = null;
+            currentState.configuration = cfg;
+            Volatile.Write(ref currentState._baseSettings, null);
+            Volatile.Write(ref currentState._trustedRootHost, null);
+            Volatile.Write(ref currentState._trustedHostPatterns, null);
+            currentState._hostCache.Clear();
+            currentState._currentHostKey.Value = null;
         }
     }
 
     // One-time base (read-only) initialisation shared by all hosts for the active configuration.
     private static FwDict getBaseSettings()
     {
-        var cached = Volatile.Read(ref _baseSettings);
+        var cached = Volatile.Read(ref currentState._baseSettings);
         if (cached != null)
             return cached;
 
-        lock (_configLock)
+        lock (currentState._configLock)
         {
-            if (_baseSettings != null)
-                return _baseSettings;
+            if (currentState._baseSettings != null)
+                return currentState._baseSettings;
 
             var tmp = new FwDict();
             initDefaults(null, "", ref tmp);
-            if (configuration != null)
-                applyAppSettings(configuration, tmp);
+            if (currentState.configuration != null)
+                applyAppSettings(currentState.configuration, tmp);
             tmp["app_version_stamp"] = resolveGitFetchHeadVersion(tmp["site_root"].toStr());
             var patterns = new List<string>();
             if (tmp["override"] is FwDict overs)
@@ -157,9 +188,9 @@ public static class FwConfig
                         patterns.Add(pattern);
                 }
             }
-            Volatile.Write(ref _trustedRootHost, hostNameOnly(tmp["ROOT_DOMAIN"].toStr()));
-            Volatile.Write(ref _trustedHostPatterns, patterns.ToArray());
-            Volatile.Write(ref _baseSettings, tmp);
+            Volatile.Write(ref currentState._trustedRootHost, hostNameOnly(tmp["ROOT_DOMAIN"].toStr()));
+            Volatile.Write(ref currentState._trustedHostPatterns, patterns.ToArray());
+            Volatile.Write(ref currentState._baseSettings, tmp);
             return tmp;
         }
     }
@@ -412,11 +443,11 @@ public static class FwConfig
         if (host != null)
             host = host.Trim();
 
-        var cacheKey = host != null ? resolveHostKey(host) : (_currentHostKey.Value ?? resolveHostKey(null));
+        var cacheKey = host != null ? resolveHostKey(host) : (currentState._currentHostKey.Value ?? resolveHostKey(null));
         var overrideName = getOverrideName(host ?? string.Empty, cacheKey);
         var isHostProvided = !string.IsNullOrEmpty(host);
 
-        var hostSettings = _hostCache.GetOrAdd(cacheKey,
+        var hostSettings = currentState._hostCache.GetOrAdd(cacheKey,
             _ => new Lazy<FwDict>(() => buildForHost(ctx, overrideName, isHostProvided), LazyThreadSafetyMode.ExecutionAndPublication)
         );
 

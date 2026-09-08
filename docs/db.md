@@ -26,6 +26,64 @@ var db = new DB("Server=(local);Database=demo;Trusted_Connection=True;", DB.DBTY
 
 You rarely call `connect()`/`disconnect()` yourself – the first query opens the connection automatically.
 
+### Database lifetime and explicit dependencies
+
+Ordinary `fw.getDB(name)` calls create fresh wrappers; `fw.db` is the initial main wrapper. Wrapper timeouts and transaction handles are separate. With an HTTP context, wrappers using the same connection string can still share a physical connection. Offline wrappers normally open separate connections.
+
+FW disposes every distinct wrapper it obtains, including named/repeated calls and a replacement assigned to `fw.db`. Keep those wrappers within the FW lifetime; use a directly constructed, caller-owned `DB` for a longer lifetime. Disposal attempts every wrapper and the logger even if one fails, then throws an `AggregateException`. Calls to `getDB` after FW disposal throw `ObjectDisposedException`. Constructor failures also clean up returned dependencies.
+
+For an explicit dependency source, use the constructor overload:
+
+```csharp
+using var settingsScope = FwConfig.beginScope();
+var configuration = new ConfigurationBuilder()
+    .AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["appSettings:log_level"] = "0",
+    }).Build();
+
+using var fw = new FW(null, configuration, name => name switch
+{
+    "main" => new RejectingDb(), // test-owned fake; see FwTestScope.cs
+    "archive" => new DB(new FwDict
+    {
+        ["type"] = DB.DBTYPE_SQLITE,
+        ["connection_string"] = disposableConnectionString,
+        ["timezone"] = "UTC",
+    }, name),
+    _ => throw new InvalidOperationException("Unexpected DB name."),
+});
+```
+
+The factory receives every requested name, starting with `main` during base construction. It must return a DB or throw; a null result fails and never falls back to configured credentials. Pass dependencies through the constructor arguments rather than a virtual FW creation override. FW binds the context (null offline), logger, and `log_pii` policy. Returned instances transfer to FW ownership; allocations never returned remain the factory/caller's responsibility. A factory can return the same instance repeatedly to explicitly share its timeout/transaction state within one FW. Do not reuse an instance across FW lifetimes.
+
+For tests, keep configuration in memory and allow only explicit names. [FwTestScope.cs](../osafw-tests/App_Code/fw/FwTestScope.cs) combines configuration and FW disposal. [FwDependencyTests.cs](../osafw-tests/App_Code/fw/FwDependencyTests.cs) demonstrates synthetic models and small strict fakes. [SQLiteFwTests.cs](../osafw-tests/App_Code/fw/SQLiteFwTests.cs) demonstrates a unique local SQLite file, typed mapping, missing rows, CRUD, rollback, and connection lifetime; it closes connections before deleting only its own file and sidecars.
+
+### Small DB substitutes
+
+Dictionary and typed `row`/`rowp` and `array`/`arrayp`, `col`/`colp`, `value`/`valuep`, `insert`, `update`, and `del` expose virtual operation boundaries. `query` is a lower-level read hook when an explicit ADO.NET reader is useful; its returned reader must be owned by the caller, which closes it through `closeQuery`. Existing conversion and missing-row semantics still apply: dictionary reads return an empty row, typed single-row reads return null.
+
+A query override alone does not replace schema discovery or the connection work done before table queries. `loadTableSchemaFull` and `schemaFieldType` are virtual metadata boundaries; `connect` and `createConnection` are virtual connection boundaries. A strict fake should reject connection creation and unexpected operations, overriding only the behavior needed by the test. Do not return success by default or emulate a SQL engine. Use disposable SQLite when testing relational behavior.
+
+`setLogger(null)` suppresses logging while preserving its existing void signature, including method-group assignments. `swapLogger(callback)` returns the previous delegate, so `swapLogger(null)` can be paired with restoration in a `finally` block. Neither method changes PII redaction.
+
+### Isolated configuration scopes
+
+`FwConfig.beginScope()` creates empty settings/cache state for the current async flow. Initialize it with `FwConfig.init` or an FW constructor. All static `FwConfig` consumers and `fw.config()` use the active scope, including host trust, route prefixes, reload, and configuration reinitialization. Nested scopes restore the prior state when disposed, including after exceptions. Dispose scopes in nesting order, after their FW instances and dependent async work finish.
+
+Child tasks inherit a scope and its mutable settings; independently initialized scopes have separate host buckets, nested dictionaries, base settings, and trusted-host caches, even with the same configuration provider. FW configuration is still ambient: use an FW only inside its intended active scope. This is not a per-instance configuration snapshot. Outside a scope, the existing shared application behavior remains.
+
+Scopes do not isolate environment variables, caller-owned configuration-provider mutations, `FwCache.MemoryCache`, DB schema caches, or static SQL diagnostics. Do not mutate process environment variables for parallel tests. The existing suite retains its assembly-level parallelism restriction; targeted concurrent scope tests prove the narrower configuration guarantee.
+
+For the current Debug defaults, run the safe suites with:
+
+```powershell
+dotnet test osafw-tests/osafw-tests.csproj --filter 'FullyQualifiedName!~osafw.Tests.DBTests'
+dotnet test osafw-tests/osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite' --filter 'FullyQualifiedName!~osafw.Tests.DBTests'
+```
+
+The excluded legacy class connects to a configured SQL Server database and mutates a test table. Do not include it without separate resource authority. Preserve any additional project constants when selecting the SQLite variant. SQLite evidence does not prove other providers' SQL, locking, precision, mapping, or deployment behavior.
+
 ### SQLite provider
 SQLite is optional and intended for embedded single-node deployments or disposable provider-neutral local/integration tests. It is the preferred database for parallel worktree isolation when the task does not depend on SQL Server-specific SQL, types, locking, or deployment behavior. SQL Server is the production-primary provider.
 

@@ -23,7 +23,7 @@ public abstract class FwModel : IDisposable
 
     protected FW fw = null!;
     protected DB db = null!;
-    protected string db_config = ""; // if empty(default) - fw.db used, otherwise - new db connection created based on this config name
+    protected string db_config = ""; // if empty(default) - fw.db used, otherwise - fw.getDB(db_config) supplies an FW-owned wrapper
 
     public string table_name = ""; // must be assigned in child class
     protected FwDict? table_schema; // table schema cache (fields, types, etc) - filled on demand

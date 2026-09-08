@@ -6,6 +6,10 @@ Both flows share the same routing, permissions, and caching behaviour, so you ca
 
 For model helper names, follow the framework naming guide in [naming.md](naming.md).
 
+## Testing model behavior
+
+Models initialized through `fw.model<T>()`, `fw.model(Type)`, or `FwModel.init(fw)` resolve their DB through that FW: the main `fw.db` or the model's named `db_config`. Use the [explicit DB factory and configuration scope](db.md#database-lifetime-and-explicit-dependencies) to run unchanged model flows with disposable SQLite or a strict fake. Model lookup caching is unchanged; no reflection into private caches is needed. Keep model behavior/data fixtures in the test project. The existing internal model-registration helper remains available when the collaborator itself must be replaced.
+
 ## FwDict workflow
 
 ### Why use FwDict?
