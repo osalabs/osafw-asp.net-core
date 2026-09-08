@@ -11,17 +11,18 @@ public class FwCronServiceTests
 {
     private class TestCronService : FwCronService
     {
+        private readonly CancellationTokenSource cancellation;
         public int Calls;
 
-        public TestCronService() : base(new ConfigurationBuilder().Build())
+        public TestCronService(CancellationTokenSource cancellation) : base(new ConfigurationBuilder().Build())
         {
+            this.cancellation = cancellation;
         }
-
-        protected override TimeSpan PollingInterval => TimeSpan.FromMilliseconds(10);
 
         protected override void ProcessJobs(CancellationToken ct)
         {
             Calls++;
+            cancellation.Cancel();
         }
 
         public Task RunAsync(CancellationToken ct) => base.ExecuteAsync(ct);
@@ -30,18 +31,12 @@ public class FwCronServiceTests
     [TestMethod]
     public async Task ExecuteAsync_StopsOnCancellation()
     {
-        var service = new TestCronService();
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(40));
+        using var cts = new CancellationTokenSource();
+        using var service = new TestCronService(cts);
 
-        try
-        {
-            await service.RunAsync(cts.Token);
-            Assert.Fail("Expected cancellation");
-        }
-        catch (TaskCanceledException)
-        {
-        }
-
-        Assert.IsGreaterThan(0, service.Calls);
+        var error = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => service.RunAsync(cts.Token));
+        Assert.AreEqual(cts.Token, error.CancellationToken);
+        Assert.AreEqual(1, service.Calls);
     }
 }

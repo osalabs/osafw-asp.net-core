@@ -776,9 +776,13 @@ public class DB : IDisposable
             quotes = "[]"; // for SQL Server, Access
     }
 
-    public void setLogger(LoggerDelegate logger)
+    /// <summary>Replaces the logger and returns the prior delegate for restoration; null suppresses logging.</summary>
+    /// <remarks>Does not alter parameter redaction or the is_log_pii policy.</remarks>
+    public LoggerDelegate? setLogger(LoggerDelegate? logger)
     {
-        this.ext_logger = logger;
+        var previous = ext_logger;
+        ext_logger = logger;
+        return previous;
     }
 
     public void logger(LogLevel level, params object?[] args)
@@ -893,7 +897,7 @@ public class DB : IDisposable
     /// <summary>
     /// Opens or reuses the configured provider connection and initializes database timezone handling.
     /// </summary>
-    public DbConnection connect()
+    public virtual DbConnection connect()
     {
         var cache_key = "DB#" + connstr;
 
@@ -948,7 +952,7 @@ public class DB : IDisposable
         return conn!;
     }
 
-    public DbConnection createConnection(string connstr, string dbtype = "SQL")
+    public virtual DbConnection createConnection(string connstr, string dbtype = "SQL")
     {
         DbConnection result;
 
@@ -1146,7 +1150,7 @@ public class DB : IDisposable
     /// Runs SQL with optional parameters and returns an open reader; list values expand for <c>IN</c> clauses.
     /// </summary>
     /// <param name="params">Parameter map; values may be lists, for example <c>id IN (@ids)</c>.</param>
-    public DbDataReader query(string sql, FwDict? in_params = null)
+    public virtual DbDataReader query(string sql, FwDict? in_params = null)
     {
         connect();
 
@@ -1201,7 +1205,7 @@ public class DB : IDisposable
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
-            var mySqlCommand = new MySqlCommand(sql, (MySqlConnection)conn)
+            var mySqlCommand = new MySqlCommand(sql, (MySqlConnection)conn!)
             {
                 CommandTimeout = sql_command_timeout
             };
@@ -1426,7 +1430,7 @@ public class DB : IDisposable
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
-            using var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn)
+            using var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn!)
             {
                 CommandTimeout = sql_command_timeout
             };
@@ -1599,7 +1603,7 @@ public class DB : IDisposable
     /// <summary>
     /// Reads the first row from a helper-built table query.
     /// </summary>
-    public DBRow row(string table, FwDict where, string order_by = "")
+    public virtual DBRow row(string table, FwDict where, string order_by = "")
     {
         var qp = buildSelect(table, where, order_by, limit: 1);
         return rowp(qp.sql, qp.@params);
@@ -1613,7 +1617,7 @@ public class DB : IDisposable
     /// <param name="where">Column filters used to build the query.</param>
     /// <param name="order_by">Optional SQL order clause used before the first row is selected.</param>
     /// <returns>A populated DTO when a record exists; otherwise, <see langword="null"/>.</returns>
-    public T? row<T>(string table, FwDict where, string order_by = "") where T : class, new()
+    public virtual T? row<T>(string table, FwDict where, string order_by = "") where T : class, new()
     {
         var qp = buildSelect(table, where, order_by, limit: 1);
         return rowp<T>(qp.sql, qp.@params);
@@ -1622,7 +1626,7 @@ public class DB : IDisposable
     /// <summary>
     /// Reads the first row from a parameterized SQL query.
     /// </summary>
-    public DBRow rowp(string sql, FwDict? @params = null)
+    public virtual DBRow rowp(string sql, FwDict? @params = null)
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
@@ -1638,7 +1642,7 @@ public class DB : IDisposable
     /// <param name="sql">SQL query expected to return zero or more rows.</param>
     /// <param name="params">Optional query parameters keyed by parameter name.</param>
     /// <returns>A populated DTO when the query returns a record; otherwise, <see langword="null"/>.</returns>
-    public T? rowp<T>(string sql, FwDict? @params = null) where T : class, new()
+    public virtual T? rowp<T>(string sql, FwDict? @params = null) where T : class, new()
     {
         DbDataReader dbread = query(sql, @params);
         var hasRow = dbread.Read();
@@ -1701,7 +1705,7 @@ public class DB : IDisposable
     /// <summary>
     /// Reads typed rows from a parameterized SQL query.
     /// </summary>
-    public List<T> arrayp<T>(string sql, FwDict? @params = null) where T : new()
+    public virtual List<T> arrayp<T>(string sql, FwDict? @params = null) where T : new()
     {
         DbDataReader dbread = query(sql, @params);
         return readArray<T>(dbread);
@@ -1861,7 +1865,7 @@ public class DB : IDisposable
     /// <param name="offset">optional number of ordered rows to skip before returning results</param>
     /// <param name="limit">optional maximum number of rows to return, or -1 for no limit</param>
     /// <returns>Typed DTO rows matching the query and paging constraints.</returns>
-    public List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1) where T : new()
+    public virtual List<T> array<T>(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1) where T : new()
     {
         validatePaging(order_by, offset, limit);
         if (limit == 0)
@@ -2867,7 +2871,7 @@ public class DB : IDisposable
     /// Updates records using a typed object converted to column values.
     /// </summary>
     /// <param name="where">Where predicates keyed by field name or operator expression.</param>
-    public int update<T>(string table, T data, IDictionary where)
+    public virtual int update<T>(string table, T data, IDictionary where)
     {
         if (data == null)
             throw new ArgumentNullException(nameof(data));
@@ -2901,7 +2905,7 @@ public class DB : IDisposable
     /// </summary>
     /// <param name="where">Where predicates; empty means delete all records in the table.</param>
     /// <returns>Number of affected rows.</returns>
-    public int del(string table, FwDict? where = null)
+    public virtual int del(string table, FwDict? where = null)
     {
         where ??= [];
         var qp = buildDelete(table, where);
@@ -3051,7 +3055,7 @@ public class DB : IDisposable
         return result;
     }
 
-    public string schemaFieldType(string table, string field_name)
+    public virtual string schemaFieldType(string table, string field_name)
     {
         connect();
         loadTableSchema(table);
@@ -3140,7 +3144,7 @@ public class DB : IDisposable
         return result;
     }
 
-    public FwList loadTableSchemaFull(string table)
+    public virtual FwList loadTableSchemaFull(string table)
     {
         // check if full schema already there
         var cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, FwList>());

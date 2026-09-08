@@ -2,6 +2,13 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-09-08
+
+- Source compatibility: `DB.setLogger(LoggerDelegate? logger)` now returns the previous delegate and accepts null for temporary suppression. Ordinary calls can ignore the result. Existing `Action<DB.LoggerDelegate?>` method-group assignments must use `logger => { db.setLogger(logger); }`, or change to a matching `Func` to consume the result. PII redaction is unchanged.
+- Updated both projects' direct and optional NuGet dependencies to compatible stable releases. Optional Sentry now uses SDK 6.10.0 and its `Fatal` breadcrumb level. SQLite now resolves SQLitePCLRaw 2.1.12; the prior dependency advisory is cleared in the normal, SQLite, and all-feature audits.
+- Lifetime change: `FW.Dispose()` now closes all DB wrappers obtained from `getDB()`, including named and repeated calls, as well as the current `fw.db`. Copied apps that retain one after its FW lifetime must construct and own a separate `DB`. Fresh-wrapper defaults and existing HTTP connection sharing remain unchanged; no wrapper cache or force-new overload was added.
+- Additive: an explicit DB factory constructor and `FwConfig.beginScope()` support isolated dependency/configuration lifetimes. Factories transfer returned DB ownership to FW and never fall back on null results. Disposal attempts all resources and aggregates failures; post-disposal `getDB()` calls throw. Keep ambient scopes active for all dependent work; see [DB lifetime and test isolation](db.md#database-lifetime-and-explicit-dependencies).
+
 ## 2026-09-02
 
 - Breaking for custom sign-in routes: anonymous browser GETs to protected pages now use `/Login?gourl=...` instead of `UNLOGGED_DEFAULT_URL`. Copied apps that used `UNLOGGED_DEFAULT_URL` to select a different sign-in route must adapt the destination in `FW.dispatch()` and carry the validated `gourl` through their login form. Logout and non-page requests still use `UNLOGGED_DEFAULT_URL`.

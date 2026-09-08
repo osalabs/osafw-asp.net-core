@@ -47,6 +47,8 @@ public class FW : IDisposable
     public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
     internal const string GENERIC_SERVER_ERROR_MESSAGE = "Server Error. Please, contact site administrator!";
 
+    private readonly Func<string, DB>? dbFactory; // optional explicit source for every named DB, including main
+    private readonly HashSet<DB> dbInstances = new(ReferenceEqualityComparer.Instance); // FW-owned wrappers, deduplicated by identity
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = new(StringComparer.OrdinalIgnoreCase); // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
@@ -189,18 +191,30 @@ public class FW : IDisposable
         get { return userId > 0; }
     }
 
-    // helper to initialize DB instance based on configuration name
+    /// <summary>
+    /// Obtains an FW-owned DB wrapper. The default creates a fresh wrapper on every call;
+    /// a supplied factory may explicitly reuse a wrapper within this FW.
+    /// </summary>
+    /// <remarks>Fresh wrappers can still share a physical connection through HttpContext.
+    /// Do not share factory results across FW lifetimes. Calls after disposal throw.</remarks>
     public DB getDB(string config_name = "main")
     {
-        var dbconfig = config("db") as FwDict ?? [];
-        FwDict conf = dbconfig[config_name] as FwDict ?? [];
+        ObjectDisposedException.ThrowIf(disposedValue, this);
+        DB db;
+        if (dbFactory != null)
+            db = dbFactory(config_name) ?? throw new InvalidOperationException("The DB factory returned null.");
+        else
+        {
+            var dbconfig = config("db") as FwDict ?? [];
+            FwDict conf = dbconfig[config_name] as FwDict ?? [];
+            db = new DB(conf, config_name);
+        }
 
-        var db = new DB(conf, config_name);
+        dbInstances.Add(db);
         db.is_log_pii = config("log_pii").toBool();
         // Wrap the logger to match DB.LoggerDelegate (object?[])
         db.setLogger((level, args) => this.logger(level, args!));
-        if (!isOffline)
-            db.setContext(context);
+        db.setContext(isOffline ? null : context);
 
         return db;
     }
@@ -221,8 +235,18 @@ public class FW : IDisposable
         return fw;
     }
 
-    public FW(HttpContext? context, IConfiguration configuration)
+    public FW(HttpContext? context, IConfiguration configuration) : this(context, configuration, null) { }
+
+    /// <summary>Creates an FW with an optional explicit database source, including the initial main DB.</summary>
+    /// <param name="context">Request context, or null for offline use.</param>
+    /// <param name="configuration">Explicit application settings provider.</param>
+    /// <param name="dbFactory">Receives every requested config name, starting with main.
+    /// Null uses configured DB creation. A supplied factory must return a DB or throw for unknown names;
+    /// there is no configured fallback. FW binds context, logger and PII policy and owns disposal of
+    /// each distinct returned instance, including repeated or named results.</param>
+    public FW(HttpContext? context, IConfiguration configuration, Func<string, DB>? dbFactory)
     {
+        this.dbFactory = dbFactory;
         // DefaultHttpContext keeps offline runs usable without null checks while still matching the runtime request surface
         isOffline = context == null;
         var currentContext = context ?? new DefaultHttpContext();
@@ -239,34 +263,44 @@ public class FW : IDisposable
         flogger = new FwLogger(logLevel, config("log").toStr(), config("site_root").toStr(), config("log_max_size").toLong());
         flogger.setScope(env, config("log_pii").toBool() ? Session("login") : "");
 
-        db = getDB();
-        DB.SQL_QUERY_CTR = 0; // reset query counter
-
-        G = Utils.cloneHashDeep(config())!; // by default G contains conf
-
-        // per request settings
-        G["request_url"] = request?.GetDisplayUrl() ?? "";
-        G["current_time"] = DateTime.UtcNow;
-
-        // override default lang with user's lang
-        if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
-
-        // override default ui_theme/ui_mode with user's settings
-        if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
-        if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
-        // timezone/date/time format
-        if (!string.IsNullOrEmpty(Session("date_format"))) G["date_format"] = Session("date_format");
-        if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
-        if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
-
-        parseForm();
-
-        // Flash is single-use; avoid writing to session on every request so parallel requests cannot overwrite login state.
-        FwDict? _flash = SessionDict("_flash");
-        if (_flash != null)
+        try
         {
-            G["_flash"] = _flash;
-            SessionRemove("_flash");
+            db = getDB();
+            DB.SQL_QUERY_CTR = 0; // reset query counter
+
+            G = Utils.cloneHashDeep(config())!; // by default G contains conf
+
+            // per request settings
+            G["request_url"] = request?.GetDisplayUrl() ?? "";
+            G["current_time"] = DateTime.UtcNow;
+
+            // override default lang with user's lang
+            if (!string.IsNullOrEmpty(Session("lang"))) G["lang"] = Session("lang");
+
+            // override default ui_theme/ui_mode with user's settings
+            if (!string.IsNullOrEmpty(Session("ui_theme"))) G["ui_theme"] = Session("ui_theme");
+            if (!string.IsNullOrEmpty(Session("ui_mode"))) G["ui_mode"] = Session("ui_mode");
+            // timezone/date/time format
+            if (!string.IsNullOrEmpty(Session("date_format"))) G["date_format"] = Session("date_format");
+            if (!string.IsNullOrEmpty(Session("time_format"))) G["time_format"] = Session("time_format");
+            if (!string.IsNullOrEmpty(Session("timezone"))) G["timezone"] = Session("timezone");
+
+            parseForm();
+
+            // Flash is single-use; avoid writing to session on every request so parallel requests cannot overwrite login state.
+            FwDict? _flash = SessionDict("_flash");
+            if (_flash != null)
+            {
+                G["_flash"] = _flash;
+                SessionRemove("_flash");
+            }
+        }
+        catch
+        {
+            // Preserve the initialization error while attempting all owned cleanup.
+            try { disposeResources(); }
+            catch { }
+            throw;
         }
     }
 
@@ -1876,22 +1910,33 @@ public class FW : IDisposable
 
     private bool disposedValue; // To detect redundant calls
 
-    // IDisposable
+    // Kept non-virtual so construction failure cleanup cannot invoke a derived override.
+    private void disposeResources()
+    {
+        disposedValue = true;
+        // Preserve ownership of a replacement assigned to the public main DB field.
+        if (db != null)
+            dbInstances.Add(db);
+        List<Exception> errors = [];
+        foreach (var instance in dbInstances)
+        {
+            try { instance.Dispose(); }
+            catch (Exception ex) { errors.Add(ex); }
+        }
+        dbInstances.Clear();
+        try { flogger.Dispose(); }
+        catch (Exception ex) { errors.Add(ex); }
+        if (errors.Count > 0)
+            throw new AggregateException("Failed to dispose FW resources.", errors);
+    }
+
     protected virtual void Dispose(bool disposing)
     {
-        if (!disposedValue)
-        {
-            if (disposing)
-            {
-                // dispose managed state (managed objects).
-                db.Dispose(); // this will return db connections to pool
-                flogger.Dispose();
-            }
-
-            // free unmanaged resources (unmanaged objects) and override Finalize() below.
-            // TODO: set large fields to null.
-        }
+        if (disposedValue)
+            return;
         disposedValue = true;
+        if (disposing)
+            disposeResources();
     }
 
     // override Finalize() only if Dispose(disposing As Boolean) above has code to free unmanaged resources.

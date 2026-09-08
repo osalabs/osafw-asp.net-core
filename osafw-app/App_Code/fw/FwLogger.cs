@@ -219,7 +219,7 @@ public class FwLogger : IDisposable
             if (level == LogLevel.FATAL)
             {
                 sentryLevel = Sentry.SentryLevel.Fatal;
-                breadcrumbLevel = Sentry.BreadcrumbLevel.Critical;
+                breadcrumbLevel = Sentry.BreadcrumbLevel.Fatal;
             }
             else if (level == LogLevel.ERROR)
             {

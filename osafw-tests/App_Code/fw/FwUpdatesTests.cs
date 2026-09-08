@@ -1,5 +1,4 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -9,47 +8,26 @@ namespace osafw.Tests;
 public class FwUpdatesTests
 {
     [TestMethod]
-    public void SqlScriptRoot_UsesProviderSpecificSqlFolders()
+    [DataRow(DB.DBTYPE_SQLSRV, "", false)]
+    [DataRow(DB.DBTYPE_MYSQL, "mysql", true)]
+    [DataRow(DB.DBTYPE_SQLITE, "sqlite", false)]
+    public void SqlScriptRoot_UsesProviderSpecificSqlFolders(string provider, string subfolder, bool includesSharedUpdates)
     {
-        var fw = TestHelpers.CreateFw();
-        var settings = FwConfig.GetCurrentSettings();
-        var oldSiteRoot = settings["site_root"];
-
-        try
+        var siteRoot = Path.GetFullPath("synthetic-site");
+        using var scope = new FwTestScope(_ => new RejectingDb { dbtype = provider }, new Dictionary<string, string?>
         {
-            settings["site_root"] = @"C:\site";
-            var updates = new FwUpdates();
+            ["appSettings:site_root"] = siteRoot,
+        });
+        var updates = scope.Fw.model<FwUpdates>();
+        var sqlRoot = Path.Combine(siteRoot, "App_Data", "sql");
+        var providerRoot = subfolder.Length == 0 ? sqlRoot : Path.Combine(sqlRoot, subfolder);
+        var updateRoot = Path.Combine(providerRoot, "updates");
 
-            fw.db = new DB("", DB.DBTYPE_SQLSRV);
-            updates.init(fw);
-            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql"), updates.sqlScriptRoot());
-            CollectionAssert.AreEqual(
-                new[] { Path.Combine(@"C:\site", "App_Data", "sql", "updates") },
-                updates.sqlUpdateRoots());
-
-            fw.db = new DB("", DB.DBTYPE_MYSQL);
-            updates.init(fw);
-            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "mysql"), updates.sqlScriptRoot());
-            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "mysql", "updates"), updates.sqlUpdatesRoot());
-            CollectionAssert.AreEqual(
-                new[]
-                {
-                    Path.Combine(@"C:\site", "App_Data", "sql", "updates"),
-                    Path.Combine(@"C:\site", "App_Data", "sql", "mysql", "updates")
-                },
-                updates.sqlUpdateRoots());
-
-            fw.db = new DB("", DB.DBTYPE_SQLITE);
-            updates.init(fw);
-            Assert.AreEqual(Path.Combine(@"C:\site", "App_Data", "sql", "sqlite"), updates.sqlScriptRoot());
-            CollectionAssert.AreEqual(
-                new[] { Path.Combine(@"C:\site", "App_Data", "sql", "sqlite", "updates") },
-                updates.sqlUpdateRoots());
-        }
-        finally
-        {
-            settings["site_root"] = oldSiteRoot;
-        }
+        Assert.AreEqual(providerRoot, updates.sqlScriptRoot());
+        Assert.AreEqual(updateRoot, updates.sqlUpdatesRoot());
+        CollectionAssert.AreEqual(
+            includesSharedUpdates ? new[] { Path.Combine(sqlRoot, "updates"), updateRoot } : new[] { updateRoot },
+            updates.sqlUpdateRoots());
     }
 
     [TestMethod]
@@ -77,111 +55,51 @@ public class FwUpdatesTests
     [TestMethod]
     public void IsAutoApplyEnabledForDev_ReturnsFalseWhenDeveloperFlagDisabled()
     {
-        var updates = CreateUpdatesModel();
-        var settings = FwConfig.GetCurrentSettings();
-        var oldIsDev = settings["IS_DEV"];
-        var oldAutoApply = settings["is_fwupdates_auto_apply"];
-
-        try
-        {
-            settings["IS_DEV"] = true;
-            settings["is_fwupdates_auto_apply"] = false;
-
-            Assert.IsFalse(updates.isAutoApplyEnabledForDev());
-        }
-        finally
-        {
-            settings["IS_DEV"] = oldIsDev;
-            settings["is_fwupdates_auto_apply"] = oldAutoApply;
-        }
+        using var scope = CreateScope(autoApply: false);
+        Assert.IsFalse(scope.Fw.model<FwUpdates>().isAutoApplyEnabledForDev());
     }
 
     [TestMethod]
     public void IsAutoApplyEnabledForDev_ReturnsTrueWhenDevAndFlagEnabled()
     {
-        var updates = CreateUpdatesModel();
-        var settings = FwConfig.GetCurrentSettings();
-        var oldIsDev = settings["IS_DEV"];
-        var oldAutoApply = settings["is_fwupdates_auto_apply"];
-
-        try
-        {
-            settings["IS_DEV"] = true;
-            settings["is_fwupdates_auto_apply"] = true;
-
-            Assert.IsTrue(updates.isAutoApplyEnabledForDev());
-        }
-        finally
-        {
-            settings["IS_DEV"] = oldIsDev;
-            settings["is_fwupdates_auto_apply"] = oldAutoApply;
-        }
+        using var scope = CreateScope(autoApply: true);
+        Assert.IsTrue(scope.Fw.model<FwUpdates>().isAutoApplyEnabledForDev());
     }
 
     [TestMethod]
     public void CheckApplyIfDev_LoadsUpdatesButSkipsRedirectWhenAutoApplyDisabled()
     {
-        var fw = TestHelpers.CreateFw();
+        using var scope = CreateScope(autoApply: false);
         var updates = new SpyFwUpdates();
-        updates.init(fw);
-        var settings = FwConfig.GetCurrentSettings();
-        var oldIsDev = settings["IS_DEV"];
-        var oldAutoApply = settings["is_fwupdates_auto_apply"];
+        updates.init(scope.Fw);
 
-        try
-        {
-            settings["IS_DEV"] = true;
-            settings["is_fwupdates_auto_apply"] = false;
+        updates.checkApplyIfDev();
 
-            updates.checkApplyIfDev();
-
-            Assert.IsTrue(updates.LoadUpdatesCalled);
-            Assert.IsFalse(updates.CountPendingCalled);
-        }
-        finally
-        {
-            settings["IS_DEV"] = oldIsDev;
-            settings["is_fwupdates_auto_apply"] = oldAutoApply;
-        }
+        Assert.IsTrue(updates.LoadUpdatesCalled);
+        Assert.IsFalse(updates.CountPendingCalled);
     }
 
     [TestMethod]
     public void CheckApplyIfDev_RedirectsToPendingNoticeWhenDevUpdatesPending()
     {
-        var fw = TestHelpers.CreateFw();
+        using var scope = CreateScope(autoApply: true);
         var updates = new SpyFwUpdates();
-        updates.init(fw);
-        var settings = FwConfig.GetCurrentSettings();
-        var oldIsDev = settings["IS_DEV"];
-        var oldAutoApply = settings["is_fwupdates_auto_apply"];
+        updates.init(scope.Fw);
 
-        try
-        {
-            settings["IS_DEV"] = true;
-            settings["is_fwupdates_auto_apply"] = true;
+        Assert.ThrowsExactly<RedirectException>(() => updates.checkApplyIfDev());
 
-            Assert.ThrowsExactly<RedirectException>(() => updates.checkApplyIfDev());
-
-            Assert.IsTrue(updates.LoadUpdatesCalled);
-            Assert.IsTrue(updates.CountPendingCalled);
-            var location = fw.response.Headers["Location"].ToString();
-            Assert.AreEqual("/Dev/Configure/(PendingUpdates)", location);
-            Assert.IsFalse(location.Contains("ApplyUpdates"));
-        }
-        finally
-        {
-            settings["IS_DEV"] = oldIsDev;
-            settings["is_fwupdates_auto_apply"] = oldAutoApply;
-        }
+        Assert.IsTrue(updates.LoadUpdatesCalled);
+        Assert.IsTrue(updates.CountPendingCalled);
+        var location = scope.Fw.response.Headers["Location"].ToString();
+        Assert.AreEqual("/Dev/Configure/(PendingUpdates)", location);
+        Assert.IsFalse(location.Contains("ApplyUpdates"));
     }
 
-    private static FwUpdates CreateUpdatesModel()
+    private static FwTestScope CreateScope(bool autoApply) => new(_ => new RejectingDb(), new Dictionary<string, string?>
     {
-        var fw = TestHelpers.CreateFw();
-        var updates = new FwUpdates();
-        updates.init(fw);
-        return updates;
-    }
+        ["appSettings:IS_DEV"] = "true",
+        ["appSettings:is_fwupdates_auto_apply"] = autoApply.ToString(),
+    });
 
     private sealed class SpyFwUpdates : FwUpdates
     {

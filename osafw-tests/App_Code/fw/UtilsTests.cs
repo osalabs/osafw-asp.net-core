@@ -326,22 +326,29 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void ImportSpreadsheetNotSupportedWithoutPackage()
+        public void ImportSpreadsheet_UsesOptionalReaderOrReportsUnsupportedFeature()
         {
 #if isExcelDataReader
-            Assert.Inconclusive("ExcelDataReader should not be available in this test environment");
-#else
-            var thrown = false;
+            var path = Path.Combine(Path.GetTempPath(), "osafw-import-" + Guid.NewGuid().ToString("N") + ".csv");
             try
             {
-                Utils.ImportSpreadsheet("missing.csv", (_, _) => true);
-            }
-            catch (NotSupportedException)
-            {
-                thrown = true;
-            }
+                File.WriteAllText(path, "iname,quantity\r\nsample,3\r\nsecond,5\r\n", new UTF8Encoding(false));
+                var rows = new List<FwDict>();
+                Utils.ImportSpreadsheet(path, (_, row) => { rows.Add(row); return true; });
+                Assert.HasCount(2, rows);
+                Assert.AreEqual("sample", rows[0]["iname"]);
+                Assert.AreEqual(3, rows[0]["quantity"].toInt());
 
-            Assert.IsTrue(thrown);
+                var calls = 0;
+                Utils.ImportSpreadsheet(path, (_, _) => { calls++; return false; });
+                Assert.AreEqual(1, calls);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+#else
+            Assert.ThrowsExactly<NotSupportedException>(() => Utils.ImportSpreadsheet("missing.csv", (_, _) => true));
 #endif
         }
 
