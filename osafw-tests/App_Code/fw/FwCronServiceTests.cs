@@ -38,7 +38,7 @@ public class FwCronServiceTests
             await service.RunAsync(cts.Token);
             Assert.Fail("Expected cancellation");
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException ex) when (ex.CancellationToken == cts.Token)
         {
         }
 

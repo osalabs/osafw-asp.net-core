@@ -58,30 +58,30 @@
   -->
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="4.0.3.15" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.18.7" />
-    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
-    <PackageReference Include="DocumentFormat.OpenXml" Version="3.4.1" />
-    <PackageReference Include="Markdig" Version="1.0.0" />
-    <PackageReference Include="Microsoft.Agents.AI" Version="1.10.0" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.10.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSQLite($|;)'))" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.58.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.10" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isWindowsAuth($|;)'))" />
-    <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.71" />
-    <PackageReference Include="OpenAI" Version="2.10.0" />
+    <PackageReference Include="AWSSDK.Core" Version="4.0.102.3" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.102.5" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.1" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.20.0" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.20.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSQLite($|;)'))" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.11" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isWindowsAuth($|;)'))" />
+    <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.114" />
+    <PackageReference Include="OpenAI" Version="2.13.0" />
     <PackageReference Include="Otp.NET" Version="1.4.1" />
-    <PackageReference Include="QRCoder" Version="1.7.0" />
-    <PackageReference Include="System.Data.Odbc" Version="10.0.3" />
-    <PackageReference Include="System.Data.OleDb" Version="10.0.3" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.3" />
-    <PackageReference Include="Cronos" Version="0.11.1" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
+    <PackageReference Include="System.Data.Odbc" Version="10.0.11" />
+    <PackageReference Include="System.Data.OleDb" Version="10.0.11" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.11" />
+    <PackageReference Include="Cronos" Version="0.13.0" />
 
-    <PackageReference Include="Sentry.AspNetCore" Version="5.0.1" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSentry($|;)'))" />
-    <PackageReference Include="ExcelDataReader" Version="3.7.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isExcelDataReader($|;)'))" />
-    <PackageReference Include="MySqlConnector" Version="2.3.7" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
-    <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
+    <PackageReference Include="Sentry.AspNetCore" Version="6.10.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSentry($|;)'))" />
+    <PackageReference Include="ExcelDataReader" Version="3.9.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isExcelDataReader($|;)'))" />
+    <PackageReference Include="MySqlConnector" Version="2.6.2" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
+    <PackageReference Include="Pomelo.Extensions.Caching.MySql" Version="2.2.1" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isMySQL($|;)'))" />
   </ItemGroup>
 
   <!-- no need to publish App_Data -->

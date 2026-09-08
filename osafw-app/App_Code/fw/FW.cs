@@ -47,8 +47,8 @@ public class FW : IDisposable
     public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
     internal const string GENERIC_SERVER_ERROR_MESSAGE = "Server Error. Please, contact site administrator!";
 
-    private readonly Func<string, DB>? dbFactory;
-    private readonly HashSet<DB> dbInstances = new(ReferenceEqualityComparer.Instance);
+    private readonly Func<string, DB>? dbFactory; // optional explicit source for every named DB, including main
+    private readonly HashSet<DB> dbInstances = new(ReferenceEqualityComparer.Instance); // FW-owned wrappers, deduplicated by identity
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = new(StringComparer.OrdinalIgnoreCase); // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";

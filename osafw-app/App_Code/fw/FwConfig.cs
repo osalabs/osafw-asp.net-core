@@ -57,12 +57,16 @@ public static class FwConfig
     private sealed class ConfigurationScope(ConfigurationState? previous) : IDisposable
     {
         internal readonly ConfigurationState State = new();
+        private bool disposed;
 
         public void Dispose()
         {
+            if (disposed)
+                return;
             if (!ReferenceEquals(scopedState.Value, State))
                 throw new InvalidOperationException("Configuration scopes must be disposed in nesting order in their creating flow.");
             scopedState.Value = previous;
+            disposed = true;
         }
     }
 

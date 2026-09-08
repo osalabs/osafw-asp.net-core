@@ -776,17 +776,12 @@ public class DB : IDisposable
             quotes = "[]"; // for SQL Server, Access
     }
 
-    public void setLogger(LoggerDelegate? logger)
-    {
-        this.ext_logger = logger;
-    }
-
     /// <summary>Replaces the logger and returns the prior delegate for restoration; null suppresses logging.</summary>
     /// <remarks>Does not alter parameter redaction or the is_log_pii policy.</remarks>
-    public LoggerDelegate? swapLogger(LoggerDelegate? logger)
+    public LoggerDelegate? setLogger(LoggerDelegate? logger)
     {
         var previous = ext_logger;
-        setLogger(logger);
+        ext_logger = logger;
         return previous;
     }
 
@@ -1210,7 +1205,7 @@ public class DB : IDisposable
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
-            var mySqlCommand = new MySqlCommand(sql, (MySqlConnection)conn)
+            var mySqlCommand = new MySqlCommand(sql, (MySqlConnection)conn!)
             {
                 CommandTimeout = sql_command_timeout
             };
@@ -1435,7 +1430,7 @@ public class DB : IDisposable
 #if isMySQL
         else if (dbtype == DBTYPE_MYSQL)
         {
-            using var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn)
+            using var dbcomm = new MySqlCommand(sql, (MySqlConnection)conn!)
             {
                 CommandTimeout = sql_command_timeout
             };

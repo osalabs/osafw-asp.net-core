@@ -7,15 +7,13 @@ namespace osafw.Tests;
 [TestClass]
 public class FwControllersModelTests
 {
-    private class FakeDb : DB
+    private class FakeDb : RejectingDb
     {
         public FwDict? LastWhere;
         public string? LastOrderBy;
         public int LastOffset;
         public int LastLimit;
         public int UpdateCount;
-
-        public FakeDb() : base("", DB.DBTYPE_SQLSRV) { }
 
         public override DBList array(string table, FwDict where, string order_by = "", ICollection? aselect_fields = null, int offset = 0, int limit = -1)
         {
@@ -33,23 +31,15 @@ public class FwControllersModelTests
         }
     }
 
-    private class TestFwControllers : FwControllers
-    {
-        public TestFwControllers(FW fw, FakeDb db)
-        {
-            init(fw);
-            this.db = db;
-        }
-    }
-
-    private class CachedFwControllers : TestFwControllers
+    private class CachedFwControllers : FwControllers
     {
         private readonly Queue<DBRow> rows = new();
 
         public int ReadCount { get; private set; }
 
-        public CachedFwControllers(FW fw, FakeDb db) : base(fw, db)
+        public CachedFwControllers(FW fw)
         {
+            init(fw);
             is_log_changes = false;
         }
 
@@ -74,11 +64,11 @@ public class FwControllersModelTests
     public void ListGrouped_FiltersByStatusAndAccessLevel()
     {
         var db = new FakeDb();
-        var fw = TestHelpers.CreateFw();
-        fw.db = db;
+        using var scope = new FwTestScope(_ => db);
+        var fw = scope.Fw;
         fw.Session("access_level", Users.ACL_MANAGER.toStr());
 
-        var model = new TestFwControllers(fw, db);
+        var model = fw.model<FwControllers>();
 
         var rows = model.listGrouped();
 
@@ -95,9 +85,9 @@ public class FwControllersModelTests
     public void OneByIcode_CachesCaseInsensitivelyAndUpdateInvalidates()
     {
         var db = new FakeDb();
-        var fw = TestHelpers.CreateFw();
-        fw.db = db;
-        var model = new CachedFwControllers(fw, db);
+        using var scope = new FwTestScope(_ => db);
+        var fw = scope.Fw;
+        var model = new CachedFwControllers(fw);
         model.removeCacheAll();
         try
         {

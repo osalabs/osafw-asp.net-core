@@ -134,6 +134,20 @@ public class FwDependencyTests
     }
 
     [TestMethod]
+    public void Dispose_OwnsOriginalAndReplacementMainDb_ExactlyOnce()
+    {
+        var original = new NoteDb("original");
+        var replacement = new NoteDb("replacement");
+        using var scope = new FwTestScope(_ => original);
+        scope.Fw.db = replacement;
+
+        scope.Dispose();
+        scope.Dispose();
+        Assert.AreEqual(1, original.Disposals);
+        Assert.AreEqual(1, replacement.Disposals);
+    }
+
+    [TestMethod]
     public void Dispose_AttemptsEveryOwnedWrapper_WhenOneFails()
     {
         var main = new NoteDb("main") { FailDispose = true };
@@ -232,17 +246,16 @@ public class FwDependencyTests
     }
 
     [TestMethod]
-    public void Logger_CanBeSuppressedAndRestored_WithoutChangingExistingSetterSignature()
+    public void Logger_ReturnsPreviousDelegate_ForSuppressionAndRestoration()
     {
         using var db = new RejectingDb();
         var calls = 0;
         DB.LoggerDelegate callback = (_, _) => calls++;
-        Action<DB.LoggerDelegate?> setter = db.setLogger;
-        setter(callback);
-        Assert.AreSame(callback, db.swapLogger(null));
+        Assert.IsNull(db.setLogger(callback));
+        Assert.AreSame(callback, db.setLogger(null));
         db.logger(LogLevel.ERROR, "suppressed");
         Assert.AreEqual(0, calls);
-        Assert.IsNull(db.swapLogger(callback));
+        Assert.IsNull(db.setLogger(callback));
         db.logger(LogLevel.ERROR, "visible");
         Assert.AreEqual(1, calls);
         Assert.IsFalse(db.is_log_pii);

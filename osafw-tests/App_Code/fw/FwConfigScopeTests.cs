@@ -99,6 +99,40 @@ public class FwConfigScopeTests
     }
 
     [TestMethod]
+    public void ScopeDisposal_CanBeRepeated_WithoutChangingTheActiveParentOrNewScope()
+    {
+        using var parent = FwConfig.beginScope();
+        var parentSettings = FwConfig.GetCurrentSettings();
+        using var scope = FwConfig.beginScope();
+
+        scope.Dispose();
+        scope.Dispose();
+        Assert.AreSame(parentSettings, FwConfig.GetCurrentSettings());
+
+        using var next = FwConfig.beginScope();
+        var nextSettings = FwConfig.GetCurrentSettings();
+        scope.Dispose();
+        Assert.AreSame(nextSettings, FwConfig.GetCurrentSettings());
+    }
+
+    [TestMethod]
+    public void TestScope_RepeatedDisposal_DoesNotMaskAnException()
+    {
+        var original = FwConfig.GetCurrentSettings();
+        var expected = new InvalidOperationException("Controlled operation failure.");
+        var actual = Assert.ThrowsExactly<InvalidOperationException>(() =>
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb());
+            scope.Dispose();
+            scope.Dispose();
+            throw expected;
+        });
+
+        Assert.AreSame(expected, actual);
+        Assert.AreSame(original, FwConfig.GetCurrentSettings());
+    }
+
+    [TestMethod]
     public void Scopes_RejectOutOfOrderDisposal()
     {
         var outer = FwConfig.beginScope();
