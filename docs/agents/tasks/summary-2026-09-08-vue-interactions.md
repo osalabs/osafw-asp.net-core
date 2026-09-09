@@ -90,3 +90,9 @@ The failed-tab correction retains errors per captured form and tab, including th
 After this correction, the exact combined integration command above passed 75 tests, zero failures/skips, including all 24 browser cases.
 
 Final independent review and supplemental summary/index audit completed after the correction. Independent read-only checks also covered multiple outstanding tab failures, selective clearing and restored navigation. No blocking findings. Review loop can stop.
+
+## Lean review follow-up (2026-09-09)
+
+Synced with master after the four approved framework updates and with the simplified calculated-column prerequisite. The merge preserved both changelog/index additions. No further Vue runtime redesign was warranted by the independent lean review; existing save coordination and customization hooks remain.
+
+The combined integration command above passed 75 tests again, including all 24 browser cases, with zero failures or skips and the same isolated browser/assets prerequisites. No live application database or external service was used.
