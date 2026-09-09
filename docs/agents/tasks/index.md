@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-08-r01-email-delivery.md` - Made email delivery failures observable and added database-backed test-recipient precedence with provider migrations.
 - `summary-2025-05-07-001.md` - Converted legacy VB-style comment snippets to idiomatic C# equivalents across controllers, framework helpers, and models.
 - `summary-2025-10-08-bootstrap.md` - Completed bootstrap: documented project in `AGENTS.md`, created `docs/agents/{heuristics,domain,glossary}.md`.
 - `summary-2025-10-21-typed-conversion-rename.md` - Renamed the generic conversion helpers to the `to`/`toList` naming pattern and updated docs and code samples accordingly.
@@ -188,3 +189,6 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-08-framework-testability.md` - Added explicit DB factories and scoped configuration; verified repeatable disposal, logger restoration, SQLite ownership, simpler fixtures, deterministic cron cancellation, and current stable dependencies with clean NuGet audits.
 - `summary-2026-09-08-schema-codegen-metadata.md` - Added neutral schema comments, schema-qualified SQL Server and cold OLE metadata handling, safer typed-row generation, and current framework-table exclusions.
 - `summary-2026-09-08-typed-row-regeneration.md` - Added explicit preview/apply typed Row regeneration for selected model sources with Roslyn parsing, stale-preview rejection, and Developer Tools write guards.
+- `summary-2026-09-08-template-selector-cache.md` - Bounded select-template label caching preserves first-match behavior and reloads changed files.
+- `summary-2026-09-08-configured-environment.md` - Consistent host-resolved environment selection with scoped override state and offline fallbacks.
+- `summary-2026-09-08-nullable-conversion-contracts.md` - Nullable conversion inputs and schema-aligned optional Row descriptions and audit IDs.

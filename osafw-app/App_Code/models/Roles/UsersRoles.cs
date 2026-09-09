@@ -15,9 +15,9 @@ public class UsersRoles : FwModel<UsersRoles.Row>
         public int roles_id { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }
-        public int add_users_id { get; set; }
+        public int? add_users_id { get; set; } = 0;
         public DateTime? upd_time { get; set; }
-        public int upd_users_id { get; set; }
+        public int? upd_users_id { get; set; } = 0;
     }
 
     public UsersRoles() : base()
