@@ -80,6 +80,7 @@ public class ConfigJsonConverter : System.Text.Json.Serialization.JsonConverter<
         "list_view",
         "view_list_defaults",
         "view_list_map",
+        "list_calculated_fields",
         "view_list_custom",
         "is_dynamic_index_edit",
         "list_edit",

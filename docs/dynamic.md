@@ -26,6 +26,7 @@ Common config keys include:
 - `is_dynamic_index` – enable dynamic list with `view_list_defaults` and `view_list_map`
 - `is_dynamic_index_edit` – allow inline editing (`list_edit`, `edit_list_defaults`)
 - `view_list_custom` – fields visible by default
+- `list_calculated_fields` – virtual list fields and the source columns needed to calculate them
 - `list_column_filters` – optional typed per-column filters for dynamic/Vue list tables
 - `view_list_custom_trusted` - subset of `view_list_custom` fields allowed to render `cellFormatter` HTML in Vue lists; other custom cells are escaped text by default
 - `is_dynamic_show` and `is_dynamic_showform` – enable dynamic screens
@@ -68,6 +69,29 @@ pick a `type`, set the required keys, and copy an example you can paste into `co
 - **lookup_by_value**: for `autocomplete` fields, store the typed value instead of id.
 - **lookup_id / admin_url**: build links for `plaintext_link`.
 
+### Calculated list columns
+
+Use `list_calculated_fields` when a name in `view_list_map` is populated by controller or model code after the list query instead of coming from `list_view`. Map each calculated field to the simple source column names needed to calculate it:
+
+```json
+"view_list_defaults": "title full_name",
+"view_list_map": {
+  "title": "Title",
+  "full_name": "Full name"
+},
+"list_calculated_fields": {
+  "full_name": ["first_name", "last_name"]
+}
+```
+
+Dependency values may be a space-separated string or an array. Use an empty array for a calculated field that needs no source columns. Calculated names must exist in `view_list_map`; names and dependencies must be simple identifiers. Unknown or unsafe metadata is ignored rather than added to SQL.
+
+For existing Vue configurations, when the top-level key is absent, `store.list_calculated_fields` dictionaries retain their previous source-column-to-calculated-name meaning and are adapted on the server. New top-level dictionaries always mean calculated-name-to-dependencies. When neither configuration key exists, init does not overwrite a client-only `fwStoreState` calculated-field setting; move that setting into controller metadata to gain server projection and query protection.
+
+For both Dynamic and Vue lists, populate the calculated value in a controller `getListRows()` override after calling `base.getListRows()`. Vue lists can also use the model's `filterForJson()` implementation; classic Dynamic lists do not call that hook. The framework excludes calculated names from SELECT clauses, keyword search, per-column filters, search hints, and the automatically generated sort map. An explicit `list_sortmap` entry may map a calculated UI name to a real database sort field when the application can support that ordering safely.
+
+Only dependencies for calculated fields in the active user view are selected. The record id is still selected for list actions. Dependencies added only for calculation are removed from Vue JSON after controller and model row shaping; a dependency that is itself a visible list field remains in the response. CSV/XLS exports use the same calculation and pruning path and export the selected calculated values.
+
 ### List column filters
 
 `list_column_filters.enabled` opts a Dynamic or Vue list into typed per-column filters. The default is disabled, and plain `FwController` screens keep the legacy text-only `search[field]` behavior.
@@ -101,7 +125,7 @@ Supported types are `text`, `date_range`, `multi_select`, `autocomplete`, `numbe
 
 Text filters preserve the legacy `search[field]` syntax (`abc`, `=abc`, `!=abc`, `!abc`, `^abc` for starts-with, `$abc` for ends-with, `!^abc` for does-not-start-with, and `!$abc` for does-not-end-with) and also accept JSON such as `{"type":"text","op":"starts_with","value":"abc"}`. Number conditions support `equal`, `not_equal`, `gte`, `lte`, inclusive `from`/`to`, and strict `not_between_from`/`not_between_to`. Typed filters submit JSON through the same `search[field]` key and are converted to parameterized SQL server-side.
 
-`fields` is optional. When it is omitted, Dynamic infers typed filters for visible simple fields from form definitions and table schema. Calculated fields, aliases, dotted fields, and expressions need an explicit entry. `filter_field` can point a visible list alias to the real simple list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
+`fields` is optional. When it is omitted, Dynamic infers typed filters for visible simple fields from form definitions and table schema. Fields declared in `list_calculated_fields` are always non-filterable. Other aliases, dotted fields, and expressions need an explicit entry. `filter_field` can point a visible list alias to the real simple list column used in SQL predicates. `lookup_model`, `lookup_tpl`, and inline `options` reuse the same option conventions as form fields; lookup models load active rows by default, so use explicit `type: "autocomplete"` for large lookup tables. Date range filters use user-local date input and apply the framework timezone rules for real datetime columns; set `is_date_only: true` when a datetime-backed field is semantically a date-only UI value.
 
 To customize an inferred filter, add the field under `list_column_filters.fields` and override only the parts that differ:
 

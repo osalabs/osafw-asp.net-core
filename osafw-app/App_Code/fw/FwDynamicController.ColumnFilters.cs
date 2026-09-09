@@ -42,7 +42,7 @@ public partial class FwDynamicController
         {
             var rawValue = list_filter_search[fieldname];
             string value = listColumnFilterSearchString(rawValue);
-            if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
+            if (string.IsNullOrEmpty(value) || isListCalculatedField(fieldname) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
             if (is_list_column_filters && applyListColumnFilterSearch(fieldname, rawValue))
@@ -106,7 +106,7 @@ public partial class FwDynamicController
 
         foreach (var field in Utils.qw(getViewListUserFields()))
         {
-            if (string.IsNullOrWhiteSpace(field) || !view_list_map.ContainsKey(field))
+            if (string.IsNullOrWhiteSpace(field) || isListCalculatedField(field) || !view_list_map.ContainsKey(field))
                 continue;
 
             var def = buildListColumnFilterDef(field, view_list_map[field], formDefs, overrides, overrides.ContainsKey(field));
@@ -117,7 +117,7 @@ public partial class FwDynamicController
         foreach (var entry in overrides)
         {
             var field = entry.Key;
-            if (string.IsNullOrWhiteSpace(field) || result.ContainsKey(field))
+            if (string.IsNullOrWhiteSpace(field) || isListCalculatedField(field) || result.ContainsKey(field))
                 continue;
 
             var label = view_list_map[field] ?? field;

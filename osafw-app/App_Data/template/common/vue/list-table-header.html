@@ -60,7 +60,8 @@
                 },
             },
             listCalculatedFields(){
-                return Object.values(this.fwStore.list_calculated_fields ?? {});
+                const fields = this.fwStore.list_calculated_fields ?? [];
+                return Array.isArray(fields) ? fields : Object.values(fields);
             }
         },
         methods: {

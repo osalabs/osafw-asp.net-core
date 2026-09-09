@@ -111,6 +111,7 @@ let state = {
     field_id: 'id', // model's id field name
     view_list_custom: [], // used for cellFormatter
     view_list_custom_trusted: [], // custom list fields allowed to render cellFormatter HTML
+    list_calculated_fields: [], // calculated list fields; source dependencies remain server-side
     list_headers: [], // list headers, array of {field_name:"", field_name_visible:"", is_sortable:bool, is_checked:bool, search_value:null|"", is_ro:bool, input_type:"input|select|date"}
     is_list_search_open: false, // true if list search is open by user
     count: 0, // total list rows count
