@@ -277,7 +277,6 @@ public class DevCodeGenTests
         var result = InvokeBuildRowPropertyType(field);
 
         Assert.AreEqual("ulong?", result);
-        Assert.AreEqual("18446744073709551615", ulong.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     [TestMethod]
