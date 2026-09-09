@@ -105,6 +105,18 @@ min|1 max|100 step|1
 
 Credential controls are masking/editing controls only. They do not encrypt the stored value; administrators with database access can still read `settings.ivalue`.
 
+## Test Email Recipient
+
+The framework seeds the editable text setting `test_email` in the `Email` category. When `appSettings.is_test=true`, `FW.sendEmail()` selects its delivery recipient in this order:
+
+1. Trim and use the database-backed `test_email` Site Setting when it is non-empty.
+2. Otherwise, trim and use `appSettings.test_email`.
+3. If the selected value is empty or `current_user`, use the logged-in user's session email.
+
+An explicit Site Setting value of `current_user` therefore overrides a configured application-level address. Administrators can clear the text setting to restore the application-config fallback. The settings lookup uses the normal database path; a database failure fails the send rather than being treated as a missing setting.
+
+Test mode continues to replace the original To address and suppress original CC/BCC delivery. The original To value is appended to the test message body for diagnostics under the existing email logging and PII controls.
+
 ## Adding A Setting
 
 For a new framework setting, update every provider's from-scratch schema and add an idempotent update script for existing databases when needed.
@@ -147,3 +159,11 @@ When choosing metadata:
 - `is_user_edit` is not an authorization check. Restrict sensitive settings by route access, controller changes, or a dedicated configuration path.
 - A blank credential save preserves the old value. Add a dedicated clear control if a setting needs administrator-driven clearing.
 - If changing settings affects cached UI or derived state, clear the relevant cache keys after writes. The built-in admin save path only clears `main_menu`.
+
+## Environment selection
+
+Startup passes `builder.Environment.EnvironmentName` to `FwConfig.setDefaultOverrideName` before reading framework settings or running the developer CLI. This uses the host's actual resolved environment, including its hosting and command-line rules.
+
+Outside the built-in startup, set the default override before initializing FW when the host has already resolved its environment. Otherwise the framework checks trimmed `ASPNETCORE_ENVIRONMENT`, then trimmed `DOTNET_ENVIRONMENT`, then uses no named environment override. Passing null or whitespace to the setter restores that fallback. Call the setter during initialization, before concurrent requests begin.
+
+The selection belongs to the active `FwConfig.beginScope()` lifetime; nested scopes start independently and restore their parent's selection on disposal. Changing the selection clears that scope's host settings cache. Do not change the selection while dependent FW instances are in use: their configuration reads use the active scope, while their globals were cloned at construction. Explicit trusted hostname overrides and host validation continue to work as before.

@@ -400,3 +400,9 @@ Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD
 `Att.listByCategory(categoryCode, item_id: null, is_image: -1)` reads active attachments in an existing category. An omitted/null item filter means all item IDs; explicitly passing zero selects item zero. Unknown categories return an empty list. `Att.listAllByEntity(entityCode, is_image: -1)` explicitly reads across all items of an existing entity. Neither helper creates entity metadata. Both authorize every attachment through `checkAccess` before returning; if one parent is denied, the whole lookup fails. These helpers are for bounded result sets, not paginated attachment browsing.
 
 `AttLinks.listByAtt(attachmentId)` first authorizes the attachment, then reads active links and authorizes every linked parent record. It returns no partial result on denied/missing parent access. Existing `listByEntity` and `listByEntityCategory` keep their exact zero/default filters; use `listByEntity` to read all categories for one item. URL creation and file delivery retain their existing access rules.
+
+### Nullable conversion and shared Row fields
+
+The string overloads of `toDate`, `toDateOrNull`, `toDecimal`, `toDouble`, `toFloat`, `toInt` and `toLong` accept `string?`. Null and whitespace retain their existing fallback result; parsing rules have not changed.
+
+In the attachment, attachment-category, demo-dictionary and role-related Row classes, optional `idesc` fields use `string?` and nullable audit user IDs use `int?` to match the schema. New rows retain their previous empty-description and zero-user defaults. Database NULL is preserved during materialization. Callers that require an integer can use `GetValueOrDefault()`; handle a missing description before dereferencing it. Required names, IDs and timestamps keep their existing declarations, and `Att.Row.fsize` remains `long`.

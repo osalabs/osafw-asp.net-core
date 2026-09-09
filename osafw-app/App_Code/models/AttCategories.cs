@@ -14,13 +14,13 @@ public class AttCategories : FwModel<AttCategories.Row>
         public int id { get; set; }
         public string icode { get; set; } = "";
         public string iname { get; set; } = "";
-        public string idesc { get; set; } = "";
+        public string? idesc { get; set; } = "";
         public int prio { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }
-        public int add_users_id { get; set; }
+        public int? add_users_id { get; set; } = 0;
         public DateTime? upd_time { get; set; }
-        public int upd_users_id { get; set; }
+        public int? upd_users_id { get; set; } = 0;
     }
 
     public const string CAT_GENERAL = "general";
