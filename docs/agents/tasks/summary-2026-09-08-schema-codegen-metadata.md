@@ -22,7 +22,7 @@ Reviewed the full-schema provider branches and caches in `DB`, entity conversion
 - Kept `comments` additive and provider-neutral. Providers without native column comments return an empty value.
 - Kept existing `desc` on OLE rows for compatibility while adding `comments`.
 - Kept full-schema caches keyed and returned exactly as before; connection creation occurs only after a miss.
-- Used the SQL Server fresh schema as the primary framework table inventory and included the framework RBAC tables from the shipped roles schema. Provider-specific legacy application tables were not added.
+- Used the SQL Server fresh schema as the primary framework table inventory and included the framework RBAC tables from the shipped roles schema. Obsolete provider-specific tables outside the current primary schema inventory were not added.
 - Applied framework-table exclusion at the model picker. Existing/external database analysis continues to inspect the full database, and explicit browser or CLI model requests can still regenerate a framework model `Row` when deliberately requested.
 - Did not regenerate existing model source. Future explicit regeneration can consume this metadata foundation.
 
@@ -58,3 +58,5 @@ The existing public scaffolding entry and disposable provider tests made the gen
 ## Integration review follow-up
 
 Independent review found that MySQL unsigned bigint was not discovered from the provider's COLUMN_TYPE. The final integration reads and normalizes that metadata, verifies the discovery-to-generator path, and uses DATABASE() inside the query so cold MySQL connections select their configured database. Final targeted command: `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~DBOperationTests|FullyQualifiedName~DevCodeGenTests|FullyQualifiedName~DevEntityBuilderTests' --verbosity quiet`: 41 passed. Earlier broader and SQLite results above precede this final provider correction; no live MySQL query was run.
+
+Independent review also found that nullable database text was emitted as non-nullable `string`. The generator now emits `string?` for nullable text and keeps `string.Empty` for required text. The actual create-model fixture asserts nullable ordinary, mapped, and computed text declarations. After this correction, `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~DBOperationTests|FullyQualifiedName~DevCodeGenTests|FullyQualifiedName~DevEntityBuilderTests' --verbosity quiet` passed 41 tests, none skipped. The dependent Row regeneration classifier must recognize the new `string?` output as generated source.
