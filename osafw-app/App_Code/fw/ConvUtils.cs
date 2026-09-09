@@ -113,7 +113,7 @@ public class ConvUtils
     // margin_right = "10mm"
     // margin_bottom = "5mm"
     // margin_left = "10mm"
-    /// <summary>Renders HTML to a PDF, replacing the destination only after successful rendering.</summary>
+    /// <summary>Renders HTML to a PDF. Local asset mode replaces the destination only after successful rendering.</summary>
     /// <remarks>Set options.local_assets_root to a trusted directory of public CSS, images and fonts to
     /// enable isolated local asset rendering. In that mode, URLs resolve under a synthetic origin, scripts
     /// and external requests are blocked, missing assets fail rendering, and linked paths are rejected.</remarks>
@@ -128,7 +128,7 @@ public class ConvUtils
         var assetRoot = options["local_assets_root"].toStr();
         var assets = string.IsNullOrWhiteSpace(assetRoot) ? null : new PdfLocalAssets(assetRoot);
         var outputPath = Path.GetFullPath(filename);
-        var temporaryPdf = outputPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var temporaryPdf = assets == null ? null : outputPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
         try
         {
@@ -199,7 +199,7 @@ public class ConvUtils
 
             var pdfOptions = new PagePdfOptions
             {
-                Path = temporaryPdf,
+                Path = temporaryPdf ?? outputPath,
                 Format = "Letter",
                 PrintBackground = true,
                 Margin = new Margin
@@ -221,7 +221,8 @@ public class ConvUtils
             await page.PdfAsync(pdfOptions);
             if (!failures.IsEmpty)
                 throw new InvalidOperationException("A PDF resource was rejected.");
-            File.Move(temporaryPdf, outputPath, true);
+            if (temporaryPdf != null)
+                File.Move(temporaryPdf, outputPath, true);
         }
         catch (Exception ex)
         {
@@ -230,7 +231,7 @@ public class ConvUtils
         }
         finally
         {
-            if (File.Exists(temporaryPdf))
+            if (temporaryPdf != null && File.Exists(temporaryPdf))
                 File.Delete(temporaryPdf);
         }
     }

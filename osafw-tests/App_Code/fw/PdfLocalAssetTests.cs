@@ -38,6 +38,30 @@ public class PdfLocalAssetTests
     }
 
     [TestMethod, TestCategory("PdfBrowser")]
+    public async Task LegacyRendererWritesExistingDestinationInPlace()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        if (!File.Exists(playwright.Chromium.ExecutablePath))
+            Assert.Inconclusive("Install matching Chromium for PDF integration tests.");
+        var root = Path.Combine(Path.GetTempPath(), "pdf-legacy-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var output = Path.Combine(root, "report.pdf");
+        using var scope = new FwTestScope(_ => new RejectingDb());
+        try
+        {
+            File.WriteAllText(output, "previous report");
+            // Existing readers permit writes but do not grant delete/replace access on Windows.
+            using var reader = new FileStream(output, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            await ConvUtils.html2pdf(scope.Fw, "<p>Legacy report</p>", output);
+            var signature = new byte[5];
+            reader.ReadExactly(signature);
+            Assert.AreEqual("%PDF-", Encoding.ASCII.GetString(signature), "Existing readers must see the updated file.");
+            Assert.IsEmpty(Directory.GetFiles(root, "*.tmp"));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [TestMethod, TestCategory("PdfBrowser")]
     public async Task ReportRenderSelectsLocalLayoutAndUsesConfiguredAssets()
     {
         using var playwright = await Playwright.CreateAsync();
@@ -68,6 +92,7 @@ public class PdfLocalAssetTests
         }
         finally { Directory.Delete(root, true); }
     }
+
     [TestMethod, TestCategory("PdfBrowser")]
     public async Task RendererLoadsLocalStylesAndImagesWithoutExternalConnectionsAndPreservesOutputOnFailure()
     {
