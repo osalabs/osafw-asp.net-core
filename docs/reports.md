@@ -151,3 +151,17 @@ Running a custom report checks:
 2. optional roles access for resource `{icode}Report` when roles are enabled.
 
 When a custom report is saved and roles are enabled, the matching resource is created or updated automatically. Role grants are intentionally manual. When a report is deleted, the resource is marked deleted rather than hard-deleted.
+
+## PDFs with approved local assets
+
+Local rendering is opt-in. In a report class, set `render_options["local_assets_root"] = Path.Combine(fw.config("site_root").toStr(), "wwwroot", "assets")` during initialization. `FwReportsBase` then uses `layout_print_local.html`, which loads the framework Bootstrap and site CSS from that directory without scripts. The ordinary print layout remains the default.
+
+The same option is available on `ConvUtils.html2pdf` and `parsePagePdf`. Supply it only from trusted server code or Site Admin-managed custom report `render_options_json`, never from an ordinary request parameter. Use a dedicated directory containing only public static assets; do not include uploads, secrets or configuration files, and do not allow untrusted processes to replace its files or directories during rendering.
+
+In local mode, `/css/site.css` and relative asset URLs resolve inside the approved directory. CSS imports and image/font URLs follow the same rule. Supported files are CSS, PNG, JPEG, GIF, WebP, SVG, WOFF/WOFF2, TTF and OTF, with a 10 MiB limit per resource and a 50 MiB total read budget per rendering. Linked files/directories, parent-path escapes, unsupported types and other URL origins are rejected. The browser context is offline; scripts, service workers and downloads are disabled. External requests are never forwarded. Inline data images/fonts can be embedded by trusted templates. Print headers and footers must remain self-contained, as required by Chromium.
+
+The renderer selects print media, loads lazy images eagerly and waits for image/font readiness. A requested asset that fails loading aborts generation. Use root-relative URLs for local images, not app-domain or file URLs. Header/footer resource loading has Chromium's normal limitations; inline their styles and resources.
+
+In local asset mode, PDFs are staged beside the destination and replace it only after successful rendering; failed renders preserve existing files and delete their own partial output. Browser-download temporary PDFs are deleted after `fileResponse` finishes. No temporary HTML file is needed. Existing callers without the option retain normal HTML rendering and write directly to the destination, including existing files.
+
+To run local browser checks, install matching Chromium using the generated `playwright.ps1 install chromium --no-shell` script and set `PLAYWRIGHT_BROWSERS_PATH` if using an isolated browser directory. Run `dotnet test osafw-tests/osafw-tests.csproj --filter 'FullyQualifiedName~PdfLocalAssetTests|FullyQualifiedName~ConvUtilsTests'`. Browser tests report inconclusive if matching Chromium is unavailable; policy tests do not require it.
