@@ -105,6 +105,18 @@ min|1 max|100 step|1
 
 Credential controls are masking/editing controls only. They do not encrypt the stored value; administrators with database access can still read `settings.ivalue`.
 
+## Test Email Recipient
+
+The framework seeds the editable text setting `test_email` in the `Email` category. When `appSettings.is_test=true`, `FW.sendEmail()` selects its delivery recipient in this order:
+
+1. Trim and use the database-backed `test_email` Site Setting when it is non-empty.
+2. Otherwise, trim and use `appSettings.test_email`.
+3. If the selected value is empty or `current_user`, use the logged-in user's session email.
+
+An explicit Site Setting value of `current_user` therefore overrides a configured application-level address. Administrators can clear the text setting to restore the application-config fallback. The settings lookup uses the normal database path; a database failure fails the send rather than being treated as a missing setting.
+
+Test mode continues to replace the original To address and suppress original CC/BCC delivery. The original To value is appended to the test message body for diagnostics under the existing email logging and PII controls.
+
 ## Adding A Setting
 
 For a new framework setting, update every provider's from-scratch schema and add an idempotent update script for existing databases when needed.

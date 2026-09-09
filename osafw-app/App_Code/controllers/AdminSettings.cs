@@ -128,7 +128,8 @@ public class AdminSettingsController : FwAdminController
             throw new UserException("Wrong Settings ID");
 
         int input = setting["input"].toInt();
-        if (requiresSubmittedValue(input) && !hasSubmittedValue(item))
+        bool isClearableTestEmail = setting["icode"].toStr() == Settings.ICODE_TEST_EMAIL;
+        if (requiresSubmittedValue(input) && !isClearableTestEmail && !hasSubmittedValue(item))
         {
             fw.FormErrors["ivalue"] = true;
             fw.FormErrors["REQUIRED"] = true;
