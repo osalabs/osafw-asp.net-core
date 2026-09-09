@@ -26,7 +26,7 @@ Reviewed `FwController` list config, sort, keyword/advanced search, projection, 
 
 ## Changed contracts
 
-`list_calculated_fields` is an additive Dynamic/Vue `config.json` contract. Vue initial page state now includes `list_calculated_fields` as a list of normalized calculated names. Apps that opt in should declare every non-visible stored field required by their calculation and populate calculated values in an established row-shaping override.
+`list_calculated_fields` is an additive Dynamic/Vue `config.json` contract. Vue initial page state includes `list_calculated_fields` as normalized names only when controller or legacy store configuration supplies it. Absent metadata leaves client-only state unchanged. Apps that opt in should declare every non-visible stored field required by their calculation and populate calculated values in an established row-shaping override.
 
 ## Commands used / verification
 
@@ -51,3 +51,9 @@ The reusable configuration and extension-point contract was promoted to `docs/dy
 ## Reflection
 
 The existing shared Vue header contained a calculated-field check without a matching server contract. Tracing history and current row-shaping hooks early avoided inventing a second calculation API. A useful workflow improvement would be to require incomplete frontend state keys to name their expected server payload shape in an adjacent comment or canonical document.
+
+## Review correction
+
+Independent review found that the legacy source-to-calculated adapter was applied ambiguously to the new top-level map while the actual old store configuration was overwritten. Top-level parsing is now strict. The legacy adapter applies only to store.list_calculated_fields when the explicit top-level key is absent; absent server metadata does not overwrite client-only state. Added the unknown-key/known-visible-value negative control and initial-page-state legacy/absent configuration controls.
+
+Final correction command: `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~FwDynamicControllerColumnFilterTests' --logger 'console;verbosity=normal'`: 37 passed. Earlier 44/721 counts apply to the pre-correction broader filters; they were not repeated after this bounded correction. Browser state merging remains inspected rather than browser-tested in this packet.
