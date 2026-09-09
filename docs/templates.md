@@ -844,3 +844,9 @@ Used for the add/edit (form) page. Typical files:
 `FW.errMsg` adds safe presentation fields under `error`: `title`, `description`, `display_message`, `show_login` and `login_url`. Titles and explanations distinguish bad input (400), denied access (403), missing pages (404) and server errors (500). `display_message` uses the same production-masked or intentionally user-facing value as `error.message`. Existing JSON message fields and `error.details` remain available.
 
 The common error templates escape all dynamic values. The sign-in link appears only for an anonymous access-denied response and carries a validated app-local return URL, preserving a configured URL prefix. Normal authentication redirects and HTTP status classification are unchanged. Debug dumps remain behind the existing development gate. Copied applications can keep their custom templates or adopt `error/message.html` and the added presentation fields.
+
+## Select-template label lookups
+
+`FormUtils.selectTplName` caches parsed labels for up to 128 canonical template paths. Each lookup checks the file's UTC modification time and length; replacing a file must change at least one of these values. Deleted files invalidate their cached labels. A temporary read failure retains the last successful parse until the file can be read again. A file with no successful parse returns an empty label on failure.
+
+Lines use `value|description`. Malformed lines and empty descriptions are skipped, language markers are removed, and the first nonempty description for a duplicate value wins. Values match exactly, including whitespace and case. Relative template paths still require a base path. Resolved paths must remain under the configured template directory. Cache entries are shared by path across configuration scopes and contain only the unlocalized template labels.

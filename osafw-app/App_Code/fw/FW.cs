@@ -1483,6 +1483,7 @@ public class FW : IDisposable
         bool result = true;
         MailMessage? message = null;
         options ??= [];
+        last_error_send_email = "";
 
         try
         {
@@ -1503,110 +1504,118 @@ public class FW : IDisposable
             logger(LogLevel.INFO, "Sending email. From=[", mail_from, "], ReplyTo=[", reply_to, "], To=[", mail_to, "], Subj=[", mail_subject, "]");
             logger(LogLevel.DEBUG, "Email body:", config("log_pii").toBool() ? mail_body : "length=" + mail_body.Length);
 
-            if (!string.IsNullOrEmpty(mail_to))
+            if (string.IsNullOrWhiteSpace(mail_to))
+                throw new InvalidOperationException("Email recipient is required.");
+
+            message = new MailMessage();
+            if (options.ContainsKey("read-receipt"))
+                message.Headers.Add("Disposition-Notification-To", mail_from);
+
+            // detect HTML body - if it's started with <!DOCTYPE or <html tags
+            if (Regex.IsMatch(mail_body, @"^\s*<(!DOCTYPE|html)[^>]*>", RegexOptions.IgnoreCase))
+                message.IsBodyHtml = true;
+
+            message.From = new MailAddress(mail_from);
+            message.Subject = mail_subject;
+            message.Body = mail_body;
+            // If reply_to > "" Then message.ReplyTo = New MailAddress(reply_to) '.net<4
+            if (!string.IsNullOrEmpty(reply_to))
+                message.ReplyToList.Add(reply_to); // .net>=4
+
+            // mail_to may contain several emails delimited by ;
+            StrList amail_to = Utils.splitEmails(mail_to);
+            foreach (string email1 in amail_to)
             {
-                message = new MailMessage();
-                if (options.ContainsKey("read-receipt"))
-                    message.Headers.Add("Disposition-Notification-To", mail_from);
+                string email = email1.Trim();
+                if (string.IsNullOrEmpty(email))
+                    continue;
+                message.To.Add(new MailAddress(email));
+            }
 
-                // detect HTML body - if it's started with <!DOCTYPE or <html tags
-                if (Regex.IsMatch(mail_body, @"^\s*<(!DOCTYPE|html)[^>]*>", RegexOptions.IgnoreCase))
-                    message.IsBodyHtml = true;
+            if (message.To.Count == 0)
+                throw new InvalidOperationException("Email recipient is required.");
 
-                message.From = new MailAddress(mail_from);
-                message.Subject = mail_subject;
-                message.Body = mail_body;
-                // If reply_to > "" Then message.ReplyTo = New MailAddress(reply_to) '.net<4
-                if (!string.IsNullOrEmpty(reply_to))
-                    message.ReplyToList.Add(reply_to); // .net>=4
-
-                // mail_to may contain several emails delimited by ;
-                StrList amail_to = Utils.splitEmails(mail_to);
-                foreach (string email1 in amail_to)
+            // add CC if any
+            if (aCC != null)
+            {
+                if (is_test)
                 {
-                    string email = email1.Trim();
-                    if (string.IsNullOrEmpty(email))
-                        continue;
-                    message.To.Add(new MailAddress(email));
-                }
-
-                // add CC if any
-                if (aCC != null)
-                {
-                    if (is_test)
+                    foreach (string cc in aCC)
                     {
-                        foreach (string cc in aCC)
+                        logger(LogLevel.INFO, "TEST SEND. PASSED CC=[", cc, "]");
+                        foreach (string email1 in amail_to)
                         {
-                            logger(LogLevel.INFO, "TEST SEND. PASSED CC=[", cc, "]");
-                            foreach (string email1 in amail_to)
-                            {
-                                string email = email1.Trim();
-                                if (string.IsNullOrEmpty(email))
-                                    continue;
-                                message.CC.Add(new MailAddress(email));
-                            }
-                        }
-                    }
-                    else
-                        foreach (string cc1 in aCC)
-                        {
-                            string cc = cc1.Trim();
-                            if (string.IsNullOrEmpty(cc))
+                            string email = email1.Trim();
+                            if (string.IsNullOrEmpty(email))
                                 continue;
-                            message.CC.Add(new MailAddress(cc));
+                            message.CC.Add(new MailAddress(email));
                         }
+                    }
                 }
-
-                // add BCC if any
-                if (options["bcc"] is StrList options_bcc && !is_test)
-                {
-                    foreach (string bcc1 in options_bcc)
+                else
+                    foreach (string cc1 in aCC)
                     {
-                        string bcc = bcc1.Trim();
-                        if (string.IsNullOrEmpty(bcc))
+                        string cc = cc1.Trim();
+                        if (string.IsNullOrEmpty(cc))
                             continue;
-                        message.Bcc.Add(new MailAddress(bcc));
+                        message.CC.Add(new MailAddress(cc));
                     }
-                }
+            }
 
-                // attach attachments if any
-                if (filenames != null)
+            // add BCC if any
+            if (options["bcc"] is StrList options_bcc && !is_test)
+            {
+                foreach (string bcc1 in options_bcc)
                 {
-                    // sort by human name
-                    StrList fkeys = new(filenames.Keys.Cast<string>());
-                    fkeys.Sort();
-                    foreach (string human_filename in fkeys)
-                    {
-                        string filename = filenames[human_filename].toStr();
-                        System.Net.Mail.Attachment att = new(filename, Utils.ext2mime(Path.GetExtension(filename)))
-                        {
-                            Name = human_filename,
-                            NameEncoding = System.Text.Encoding.UTF8
-                        };
-                        // att.ContentDisposition.FileName = human_filename
-                        logger(LogLevel.DEBUG, "attachment ", human_filename, " => ", filename);
-                        message.Attachments.Add(att);
-                    }
-                }
-
-                using (SmtpClient client = new())
-                {
-                    FwDict mailSettings = this.config("mail") as FwDict ?? [];
-                    if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
-                    {
-                        //override mailSettings from smtp options
-                        Utils.mergeHash(mailSettings, smtpOptions);
-                    }
-                    if (mailSettings.Count > 0)
-                    {
-                        client.Host = mailSettings["host"].toStr();
-                        client.Port = mailSettings["port"].toInt();
-                        client.EnableSsl = mailSettings["is_ssl"].toBool();
-                        client.Credentials = new System.Net.NetworkCredential(mailSettings["username"].toStr(), mailSettings["password"].toStr());
-                        client.Send(message);
-                    }
+                    string bcc = bcc1.Trim();
+                    if (string.IsNullOrEmpty(bcc))
+                        continue;
+                    message.Bcc.Add(new MailAddress(bcc));
                 }
             }
+
+            // attach attachments if any
+            if (filenames != null)
+            {
+                // sort by human name
+                StrList fkeys = new(filenames.Keys.Cast<string>());
+                fkeys.Sort();
+                foreach (string human_filename in fkeys)
+                {
+                    string filename = filenames[human_filename].toStr();
+                    System.Net.Mail.Attachment att = new(filename, Utils.ext2mime(Path.GetExtension(filename)))
+                    {
+                        Name = human_filename,
+                        NameEncoding = System.Text.Encoding.UTF8
+                    };
+                    // att.ContentDisposition.FileName = human_filename
+                    logger(LogLevel.DEBUG, "attachment ", human_filename, " => ", filename);
+                    message.Attachments.Add(att);
+                }
+            }
+
+            FwDict mailSettings = Utils.cloneHashDeep(this.config("mail") as FwDict) ?? [];
+            if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
+            {
+                // Per-send overrides must not mutate the shared configuration dictionary.
+                Utils.mergeHash(mailSettings, smtpOptions);
+            }
+
+            string smtpHost = mailSettings["host"].toStr().Trim();
+            int smtpPort = mailSettings["port"].toInt();
+            if (smtpHost.Length == 0)
+                throw new InvalidOperationException("SMTP host is required.");
+            if (smtpPort < 1 || smtpPort > 65535)
+                throw new InvalidOperationException("SMTP port must be between 1 and 65535.");
+
+            using SmtpClient client = new()
+            {
+                Host = smtpHost,
+                Port = smtpPort,
+                EnableSsl = mailSettings["is_ssl"].toBool(),
+                Credentials = new System.Net.NetworkCredential(mailSettings["username"].toStr(), mailSettings["password"].toStr())
+            };
+            client.Send(message);
         }
         catch (Exception ex)
         {
@@ -1624,16 +1633,20 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// Resolves the test-mode recipient, preferring explicit configuration over the current session login.
+    /// Resolves the test-mode recipient from Site Settings, application configuration, or the logged-in user.
     /// </summary>
-    /// <returns>Configured test recipient, current session login fallback, or an empty string.</returns>
+    /// <remarks>A database read failure is allowed to propagate so callers do not mistake an outage for a missing setting.</remarks>
+    /// <returns>The selected address, or the current session login for an empty value or the <c>current_user</c> sentinel.</returns>
     public string resolveTestEmailRecipient()
     {
-        string test_email = config("test_email").toStr().Trim();
-        if (test_email.Length > 0)
-            return test_email;
+        string test_email = model<Settings>().read(Settings.ICODE_TEST_EMAIL).Trim();
+        if (test_email.Length == 0)
+            test_email = config("test_email").toStr().Trim();
 
-        return Session("login").Trim();
+        if (test_email.Length == 0 || test_email.Equals("current_user", StringComparison.OrdinalIgnoreCase))
+            return Session("login").Trim();
+
+        return test_email;
     }
 
     // shortcut for send_email from template from the /emails template dir
