@@ -436,10 +436,10 @@ public static class FwExtensions
     /// Converts a string to <see cref="DateTime"/> using the specified <paramref name="format"/> if provided.
     /// If conversion fails, returns <see cref="DateTime.MinValue"/>.
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="format">If provided, <see cref="DateTime.TryParseExact(string,string[],IFormatProvider,DateTimeStyles,out DateTime)"/> is used.</param>
     /// <returns>A <see cref="DateTime"/>, or <see cref="DateTime.MinValue"/> on failure.</returns>
-    public static DateTime toDate(this string s, string format = "")
+    public static DateTime toDate(this string? s, string format = "")
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -483,10 +483,10 @@ public static class FwExtensions
     /// Converts a string to a nullable <see cref="DateTime"/> using the specified <paramref name="format"/> if provided.
     /// If conversion fails, returns <c>null</c>.
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="format">If provided, <see cref="DateTime.TryParseExact(string,string[],IFormatProvider,DateTimeStyles,out DateTime)"/> is used.</param>
     /// <returns>A <see cref="DateTime"/> value, or <c>null</c> on failure.</returns>
-    public static DateTime? toDateOrNull(this string s, string format = "")
+    public static DateTime? toDateOrNull(this string? s, string format = "")
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -532,10 +532,10 @@ public static class FwExtensions
     /// Converts a string to a <see cref="decimal"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A decimal, or <paramref name="defaultValue"/> if parsing fails.</returns>
-    public static decimal toDecimal(this string s, decimal defaultValue = decimal.Zero)
+    public static decimal toDecimal(this string? s, decimal defaultValue = decimal.Zero)
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -573,10 +573,10 @@ public static class FwExtensions
     /// Converts a string to a <see cref="double"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A double, or <paramref name="defaultValue"/> if parsing fails.</returns>
-    public static double toDouble(this string s, double defaultValue = 0.0)
+    public static double toDouble(this string? s, double defaultValue = 0.0)
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -614,10 +614,10 @@ public static class FwExtensions
     /// Converts a string to a <see cref="float"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A float, or <paramref name="defaultValue"/> if parsing fails.</returns>
-    public static float toFloat(this string s, float defaultValue = 0.0f)
+    public static float toFloat(this string? s, float defaultValue = 0.0f)
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -659,10 +659,10 @@ public static class FwExtensions
     /// Converts a string to an <see cref="int"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/> (default is 0).
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>An integer, or <paramref name="defaultValue"/> if parsing fails.</returns>
-    public static int toInt(this string s, int defaultValue = 0)
+    public static int toInt(this string? s, int defaultValue = 0)
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -700,10 +700,10 @@ public static class FwExtensions
     /// Converts a string to a <see cref="long"/>.
     /// If conversion fails, returns the specified <paramref name="defaultValue"/>.
     /// </summary>
-    /// <param name="s">The string to convert.</param>
+    /// <param name="s">The string to convert; null and whitespace use the failure/default result.</param>
     /// <param name="defaultValue">The value returned if conversion fails.</param>
     /// <returns>A long, or <paramref name="defaultValue"/> if parsing fails.</returns>
-    public static long toLong(this string s, long defaultValue = 0)
+    public static long toLong(this string? s, long defaultValue = 0)
     {
         if (string.IsNullOrWhiteSpace(s))
         {
