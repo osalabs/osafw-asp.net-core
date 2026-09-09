@@ -5,6 +5,8 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -114,48 +116,68 @@ public class FormUtils
     /// <param name="base_path">Template-root-relative base path required for relative template paths.</param>
     public static string selectTplName(string tpl_path, string sel_id, string base_path = "")
     {
-        string result = "";
         sel_id ??= "";
-
         if (!tpl_path.StartsWith('/'))
         {
             if (string.IsNullOrEmpty(base_path))
-                return ""; // base_path required for relative tpl_path
-
+                return "";
             tpl_path = base_path + "/" + tpl_path;
         }
 
-        var template = FwConfig.GetCurrentSetting("template").toStr();
-
-        // translate to absolute path, without any ../
-        var path = System.IO.Path.GetFullPath(template + tpl_path);
-
-        // path traversal validation - check if path is a subpath of FwConfig template root
-        if (!path.StartsWith(template))
+        var root = Path.GetFullPath(FwConfig.GetCurrentSetting("template").toStr());
+        var path = Path.GetFullPath(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + tpl_path);
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!path.StartsWith((Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar), comparison))
             return "";
 
-
-        string[] lines = Utils.getFileLines(path);
-        foreach (string line in lines)
-        {
-            if (line.Length < 2)
-                continue;
-
-            string[] arr = line.Split("|", 2);
-            string value = arr[0];
-            string desc = arr[1];
-
-            if (desc.Length < 1 | value != sel_id)
-                continue;
-
-            // result = ParsePage.RX_LANG.Replace(desc, "$1")
-            result = new Regex("`(.+?)`", RegexOptions.Compiled).Replace(desc, "$1");
-            break;
-        }
-
-        return result;
+        var labels = getSelectTplLabels(path);
+        return labels.TryGetValue(sel_id, out var label) ? label : "";
     }
 
+    private static readonly Regex selectLanguageMarker = new("`(.+?)`", RegexOptions.Compiled);
+    private sealed record SelectLabels(DateTime Modified, long Length, Dictionary<string, string> Labels);
+    private static readonly object selectLabelsLock = new();
+    private static readonly Dictionary<string, SelectLabels> selectLabelsCache = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private const int MaxSelectLabelTemplates = 128;
+
+    // Publish complete snapshots only. Read failures retain a cached parse; deletion invalidates it.
+    private static Dictionary<string, string> getSelectTplLabels(string path)
+    {
+        lock (selectLabelsLock)
+        {
+            selectLabelsCache.TryGetValue(path, out var cached);
+            try
+            {
+                var file = new FileInfo(path);
+                var length = file.Length;
+                var modified = file.LastWriteTimeUtc;
+                if (cached != null && cached.Modified == modified && cached.Length == length)
+                    return cached.Labels;
+
+                var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var line in File.ReadAllLines(path))
+                {
+                    var separator = line.IndexOf('|');
+                    if (separator < 0 || separator == line.Length - 1)
+                        continue;
+                    labels.TryAdd(line[..separator], selectLanguageMarker.Replace(line[(separator + 1)..], "$1"));
+                }
+                file.Refresh();
+                if (file.Length == length && file.LastWriteTimeUtc == modified)
+                {
+                    if (cached == null && selectLabelsCache.Count >= MaxSelectLabelTemplates)
+                        selectLabelsCache.Remove(selectLabelsCache.Keys.First());
+                    selectLabelsCache[path] = new SelectLabels(modified, length, labels);
+                }
+                return labels;
+            }
+            catch (FileNotFoundException) { selectLabelsCache.Remove(path); return []; }
+            catch (DirectoryNotFoundException) { selectLabelsCache.Remove(path); return []; }
+            catch (IOException) { return cached?.Labels ?? []; }
+            catch (UnauthorizedAccessException) { return cached?.Labels ?? []; }
+        }
+    }
     /// <summary>
     /// Reads select options from a template whose lines use <c>value|description</c>.
     /// </summary>
@@ -194,7 +216,7 @@ public class FormUtils
             string desc = arr[1];
 
             // desc = ParsePage.RX_LANG.Replace(desc, "$1")
-            desc = new Regex("`(.+?)`", RegexOptions.Compiled).Replace(desc, "$1");
+            desc = selectLanguageMarker.Replace(desc, "$1");
             result.Add(new FwDict() { { "id", value }, { "iname", desc } });
         }
 

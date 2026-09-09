@@ -27,6 +27,23 @@ namespace osafw.Tests
             });
         }
 
+        private sealed class StubSettings : Settings
+        {
+            public string TestEmail { get; init; } = "";
+
+            public override DBRow oneByIcode(string icode)
+            {
+                return icode == Settings.ICODE_TEST_EMAIL
+                    ? new DBRow(new FwDict { ["ivalue"] = TestEmail })
+                    : [];
+            }
+        }
+
+        private sealed class ThrowingSettings : Settings
+        {
+            public override DBRow oneByIcode(string icode) => throw new System.InvalidOperationException("settings unavailable");
+        }
+
         public sealed class RuntimeTypeModel : FwModel
         {
             public int InitCalls { get; private set; }
@@ -171,6 +188,7 @@ namespace osafw.Tests
         public void ResolveTestEmailRecipient_PrefersConfiguredTestEmail()
         {
             var fw = CreateFwForHost("test-email-configured");
+            TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
             fw.config()["test_email"] = " configured@example.test ";
             fw.Session("login", "session@example.test");
 
@@ -181,10 +199,45 @@ namespace osafw.Tests
         public void ResolveTestEmailRecipient_FallsBackToSessionLoginWhenConfigBlank()
         {
             var fw = CreateFwForHost("test-email-session-fallback");
+            TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
             fw.config()["test_email"] = " ";
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
+        }
+
+        [TestMethod]
+        public void ResolveTestEmailRecipient_PrefersTrimmedSiteSetting()
+        {
+            var fw = CreateFwForHost("test-email-site-setting");
+            TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " site@example.test " });
+            fw.config()["test_email"] = "configured@example.test";
+            fw.Session("login", "session@example.test");
+
+            Assert.AreEqual("site@example.test", fw.resolveTestEmailRecipient());
+        }
+
+        [TestMethod]
+        public void ResolveTestEmailRecipient_CurrentUserSiteSettingOverridesConfig()
+        {
+            var fw = CreateFwForHost("test-email-current-user");
+            TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " current_user " });
+            fw.config()["test_email"] = "configured@example.test";
+            fw.Session("login", " session@example.test ");
+
+            Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
+        }
+
+        [TestMethod]
+        public void ResolveTestEmailRecipient_DoesNotHideSettingsReadFailure()
+        {
+            var fw = CreateFwForHost("test-email-settings-failure");
+            TestHelpers.RegisterModel(fw, (Settings)new ThrowingSettings());
+            fw.config()["test_email"] = "configured@example.test";
+
+            var error = Assert.ThrowsExactly<System.InvalidOperationException>(() => fw.resolveTestEmailRecipient());
+
+            Assert.AreEqual("settings unavailable", error.Message);
         }
 
         [TestMethod]
