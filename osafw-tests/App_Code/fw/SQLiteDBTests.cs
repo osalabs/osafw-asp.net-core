@@ -51,6 +51,11 @@ public class SQLiteDBTests
         CollectionAssert.Contains(tables, "roles");
         CollectionAssert.Contains(tables, "demos");
         Assert.AreEqual("Website Admin", db.value("users", DB.h("id", 1), "iname").toStr());
+        var testEmail = db.row("settings", DB.h("icode", Settings.ICODE_TEST_EMAIL));
+        Assert.AreEqual("", testEmail["ivalue"]);
+        Assert.AreEqual(Settings.INPUT_TEXT, testEmail["input"].toInt());
+        Assert.AreEqual(1, testEmail["is_user_edit"].toInt());
+        StringAssert.Contains(testEmail["idesc"], "current_user");
 
         var userSchema = db.tableSchemaFull("users");
         Assert.IsTrue(userSchema.ContainsKey("iname"));
@@ -88,6 +93,32 @@ public class SQLiteDBTests
         Assert.IsTrue(db.tableSchemaFull("user_views").ContainsKey("widths"));
         db.insert("user_views", DB.h("icode", "/Legacy"));
         Assert.AreEqual("{}", db.value("user_views", DB.h("icode", "/Legacy"), "widths").toStr());
+    }
+
+    [TestMethod]
+    public void TestEmailUpdate_IsIdempotentAndPreservesExistingValue()
+    {
+        db.exec(@"CREATE TABLE settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  icat TEXT NOT NULL DEFAULT '',
+  icode TEXT NOT NULL DEFAULT '',
+  ivalue TEXT NOT NULL DEFAULT '',
+  iname TEXT NOT NULL DEFAULT '',
+  idesc TEXT,
+  input INTEGER NOT NULL DEFAULT 0,
+  allowed_values TEXT,
+  is_user_edit INTEGER DEFAULT 0
+)");
+        db.exec("CREATE UNIQUE INDEX UX_settings_icode ON settings (icode)");
+        db.exec("INSERT INTO settings (icode, ivalue) VALUES ('test_email', 'existing@example.test')");
+        string update = File.ReadAllText(Path.Combine(
+            repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "updates", "upd2026-09-08-test-email.sql"));
+
+        db.execMultipleSQL(update);
+        db.execMultipleSQL(update);
+
+        Assert.AreEqual(1, db.valuep("SELECT COUNT(*) FROM settings WHERE icode='test_email'").toInt());
+        Assert.AreEqual("existing@example.test", db.value("settings", DB.h("icode", "test_email"), "ivalue").toStr());
     }
 
     [TestMethod]

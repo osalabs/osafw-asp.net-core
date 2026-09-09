@@ -268,6 +268,7 @@ CREATE INDEX IX_settings_icat ON settings (icat);
 
 INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc, allowed_values) VALUES
 (1, 10, '', 'test', 'novalue', 'test settings', 'description', ''),
+(1, 0, 'Email', 'test_email', '', 'Test Email Recipient', 'Test-mode delivery address. Leave blank or enter current_user to use the logged-in user''s email.', ''),
 (1, 90, 'AI', 'OPENAI_API_KEY', '', 'OpenAI API Key', 'API key used by Assistant and LLM features.', ''),
 (1, 70, 'AI', 'ASSISTANT_ENABLED', '0', 'Assistant Enabled', 'Set to 1 to enable the assistant UI and queued runs.', ''),
 (1, 20, 'AI', 'ASSISTANT_VECTOR_MODE', 'auto', 'Assistant Vector Mode', 'Use auto, json, or native. Auto uses SQL Server native vectors when available.', 'auto|Auto json|JSON native|Native'),

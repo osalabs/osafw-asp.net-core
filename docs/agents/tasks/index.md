@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-08-r01-email-delivery.md` - Made email delivery failures observable and added database-backed test-recipient precedence with provider migrations.
 - `summary-2025-05-07-001.md` - Converted legacy VB-style comment snippets to idiomatic C# equivalents across controllers, framework helpers, and models.
 - `summary-2025-10-08-bootstrap.md` - Completed bootstrap: documented project in `AGENTS.md`, created `docs/agents/{heuristics,domain,glossary}.md`.
 - `summary-2025-10-21-typed-conversion-rename.md` - Renamed the generic conversion helpers to the `to`/`toList` naming pattern and updated docs and code samples accordingly.
@@ -188,3 +189,6 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-08-framework-testability.md` - Added explicit DB factories and scoped configuration; verified repeatable disposal, logger restoration, SQLite ownership, simpler fixtures, deterministic cron cancellation, and current stable dependencies with clean NuGet audits.
 - `summary-2026-09-08-r02-calculated-list-columns.md` - Added dependency-aware calculated list columns across Dynamic/Vue selection, search, filtering, sorting, JSON, and export paths.
 - `summary-2026-09-08-vue-interactions.md` - Saved Vue widths, neutral validation issues, scoped filter visibility, action capabilities, immutable fields, and optional quick-edit context retention.
+- `summary-2026-09-08-template-selector-cache.md` - Bounded select-template label caching preserves first-match behavior and reloads changed files.
+- `summary-2026-09-08-configured-environment.md` - Consistent host-resolved environment selection with scoped override state and offline fallbacks.
+- `summary-2026-09-08-nullable-conversion-contracts.md` - Nullable conversion inputs and schema-aligned optional Row descriptions and audit IDs.
