@@ -1698,12 +1698,31 @@ public class FW : IDisposable
         if (code > 0 && !this.response.HasStarted)
             this.response.StatusCode = code;
 
+        var (errorTitle, description) = code switch
+        {
+            400 => ("Check your request", "Some information could not be accepted. Review the message below, correct the information and try again."),
+            403 => ("Access denied", isLogged
+                ? "Your account does not have permission to access this page or perform this action. Contact the site administrator if you need access."
+                : "You may need to sign in before accessing this page or performing this action."),
+            404 => ("Page not found", "This page may have moved, been removed, or the address may be incorrect."),
+            _ => ("Something went wrong", "The server could not complete your request. Try again later. If the problem continues, contact site support.")
+        };
+        var loginUrl = config("ROOT_URL").toStr() + "/Login";
+        var returnUrl = request.Path.ToUriComponent() + request.QueryString.ToUriComponent();
+        if (Utils.isAppUrl(returnUrl, config("ROOT_DOMAIN").toStr()))
+            loginUrl = Utils.addUrlQueryParam(loginUrl, "gourl", returnUrl);
+
         ps["_json"] = true;
         ps["title"] = publicMsg;
         ps["error"] = new FwDict
         {
             ["code"] = code,
             ["message"] = publicMsg,
+            ["display_message"] = publicMsg,
+            ["title"] = errorTitle,
+            ["description"] = description,
+            ["show_login"] = code == 403 && !isLogged,
+            ["login_url"] = code == 403 && !isLogged ? loginUrl : string.Empty,
             ["time"] = DateTime.Now,
             //optional:
             //["category"] = Ex?.GetType().Name,

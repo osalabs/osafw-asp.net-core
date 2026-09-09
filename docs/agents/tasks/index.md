@@ -186,3 +186,4 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-05-model-profile-selection.md` - Added optional Astra profiles, cross-generation selection, dated starting-model advice, and lightweight catalog/behavior calibration.
 - `summary-2026-09-05-pr279-review-followup.md` - Simplified runtime model construction, expanded cache-sharing and invalid-type coverage, and refreshed PR #279 against master.
 - `summary-2026-09-08-framework-testability.md` - Added explicit DB factories and scoped configuration; verified repeatable disposal, logger restoration, SQLite ownership, simpler fixtures, deterministic cron cancellation, and current stable dependencies with clean NuGet audits.
+- `summary-2026-09-08-error-page-guidance.md` - Safe status-specific error explanations and validated sign-in return links for HTML and JSON.

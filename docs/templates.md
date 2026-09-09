@@ -838,3 +838,9 @@ Used for the add/edit (form) page. Typical files:
 - Use these files to customize the look, layout, or logic for a specific entity's list, view, or form screens.
 
 **Example:** See `template/admin/demosdynamic` for a real-world structure and customizations.
+
+## Error presentation
+
+`FW.errMsg` adds safe presentation fields under `error`: `title`, `description`, `display_message`, `show_login` and `login_url`. Titles and explanations distinguish bad input (400), denied access (403), missing pages (404) and server errors (500). `display_message` uses the same production-masked or intentionally user-facing value as `error.message`. Existing JSON message fields and `error.details` remain available.
+
+The common error templates escape all dynamic values. The sign-in link appears only for an anonymous access-denied response and carries a validated app-local return URL, preserving a configured URL prefix. Normal authentication redirects and HTTP status classification are unchanged. Debug dumps remain behind the existing development gate. Copied applications can keep their custom templates or adopt `error/message.html` and the added presentation fields.
