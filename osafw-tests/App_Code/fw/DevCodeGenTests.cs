@@ -362,12 +362,12 @@ public class DevCodeGenTests
             StringAssert.Contains(generated, "public decimal? amount { get; set; }");
             StringAssert.Contains(generated, "public string @class { get; set; } = string.Empty;");
             StringAssert.Contains(generated, "[DBName(\"2fa\")]");
-            StringAssert.Contains(generated, "public string _2fa { get; set; }");
+            StringAssert.Contains(generated, "public string? _2fa { get; set; }");
             StringAssert.Contains(generated, "[DBName(\"quote\\\"slash\\\\name\")]");
             StringAssert.Contains(generated, "[DBName(\"safe name\")]");
-            StringAssert.Contains(generated, "public string safe_name_2 { get; set; }");
+            StringAssert.Contains(generated, "public string? safe_name_2 { get; set; }");
             StringAssert.Contains(generated, "public DateTimeOffset? event_time { get; set; }");
-            StringAssert.Contains(generated, "public string display_name { get; set; }");
+            StringAssert.Contains(generated, "public string? display_name { get; set; }");
             Assert.IsFalse(generated.Contains("old_field", StringComparison.Ordinal));
         }
         finally

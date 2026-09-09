@@ -2074,8 +2074,7 @@ END" + Environment.NewLine;
             _ => "string",
         };
 
-        bool isValueType = baseType != "string";
-        if (isNullable && isValueType)
+        if (isNullable)
             return baseType + "?";
 
         return baseType;
