@@ -1,0 +1,51 @@
+<~/common/form/msg>
+
+<h4><a href="<~/dev/manage/url>" class="btn btn-light btn-sm px-3"><~/common/icons/arrow-left-circle></a> <~title></h4>
+
+<p>Select model source files to compare their typed <code>Row</code> classes with current database metadata. Preview does not write source. Customized or ambiguous <code>Row</code> classes are refused.</p>
+
+<form method="post" action="<~../url>/(ModelRows)">
+    <input type="hidden" name="XSS" value="<~session[XSS]>">
+
+    <div class="border rounded p-3 mb-3">
+        <~models repeat inline>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="item[<~model_name>]" value="1" id="model-row-<~model_name>">
+                <label class="form-check-label" for="model-row-<~model_name>">
+                    <strong><~model_name></strong> <code class="ms-2"><~source_file></code>
+                </label>
+            </div>
+        </~models>
+    </div>
+
+    <button class="btn btn-primary">Preview selected Rows</button>
+</form>
+
+<~if_previews if="previews" inline>
+    <hr>
+    <h5>Preview</h5>
+    <p>Review every diff before applying. A source or schema change invalidates the preview.</p>
+
+    <~previews repeat inline>
+        <section class="mb-4">
+            <h6><~model_name> <code class="ms-2"><~source_file></code></h6>
+            <~if_changed if="is_changed" inline>
+                <pre class="border rounded bg-light p-3 overflow-auto"><~diff></pre>
+            </~if_changed>
+            <~if_unchanged unless="is_changed" inline>
+                <div class="alert alert-secondary">No typed Row changes.</div>
+            </~if_unchanged>
+        </section>
+    </~previews>
+</~if_previews>
+
+<~if_changes if="changes" inline>
+    <form method="post" action="<~../url>/(ApplyModelRows)">
+        <input type="hidden" name="XSS" value="<~session[XSS]>">
+        <~changes repeat inline>
+            <input type="hidden" name="item[<~model_name>]" value="1">
+            <input type="hidden" name="hash[<~model_name>]" value="<~preview_hash>">
+        </~changes>
+        <button class="btn btn-danger">Apply reviewed Row changes</button>
+    </form>
+</~if_changes>

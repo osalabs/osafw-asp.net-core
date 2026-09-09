@@ -65,6 +65,7 @@
     <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.20.0" />
     <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.20.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSQLite($|;)'))" />
     <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.11" />

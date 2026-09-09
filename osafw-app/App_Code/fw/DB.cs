@@ -3146,11 +3146,19 @@ public class DB : IDisposable
 
     public virtual FwList loadTableSchemaFull(string table)
     {
-        // check if full schema already there
-        var cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, FwList>());
+        return loadTableSchemaFullCore(table, useCache: true);
+    }
 
-        if (cache.TryGetValue(table, out FwList? value) && value != null)
-            return value;
+    private FwList loadTableSchemaFullCore(string table, bool useCache)
+    {
+        ConcurrentDictionary<string, FwList>? cache = null;
+        if (useCache)
+        {
+            // check if full schema already there
+            cache = schemafull_cache.GetOrAdd(connstr ?? string.Empty, _ => new ConcurrentDictionary<string, FwList>());
+            if (cache.TryGetValue(table, out FwList? value) && value != null)
+                return value;
+        }
 
         // cache miss
         FwList result = [];
@@ -3336,7 +3344,15 @@ public class DB : IDisposable
         }
 
         // save to cache
-        return cache.GetOrAdd(table, result);
+        return useCache ? cache!.GetOrAdd(table, result) : result;
+    }
+
+    /// <summary>
+    /// Reads current provider metadata without consuming or publishing a full-schema cache entry.
+    /// </summary>
+    internal FwList reloadTableSchemaFull(string table)
+    {
+        return loadTableSchemaFullCore(table, useCache: false);
     }
 
     // return database foreign keys, optionally filtered by table (that contains foreign keys)

@@ -46,6 +46,18 @@ After generation, inspect the generated diff, customize the controller and `conf
 
 In local development, Home can automatically redirect to a pending FwUpdates notice when update scripts exist. Set `appSettings.is_fwupdates_auto_apply` to `false` when you want to review and apply `/Admin/FwUpdates` manually.
 
+### Refresh existing typed Rows
+
+The **Regenerate typed model Rows** tool under `/Dev/Manage` updates selected existing model sources from current database metadata. It is available only when `IS_DEV=true` and through the Site Admin Developer Tools controller. Preview and apply both use POST with the current XSS token; preview reads metadata and source without writing, while apply is a separate explicit action.
+
+The tool lists compiled models that have exactly one matching `.cs` file under `App_Code/models`. Select only the sources you intend to update, submit a preview, and review the complete old/new `Row` diff for every selected model before applying. Preview and apply each read current provider metadata through an uncached path that neither consumes nor publishes the shared table-schema cache entry. Apply regenerates the preview from the current source and current schema and refuses the entire batch when a hash is missing or stale.
+
+Only a direct nested `public class Row` containing generated-style public auto-properties is eligible. A Row with methods, non-auto accessors, inheritance, class attributes, directives, ordinary comments, or other custom members is rejected for manual review. C# parse errors, duplicate model/Row declarations, invalid UTF-8 source, files reached through reparse points, and sources outside the model directory are also rejected. The replacement changes only the nested Row syntax span, so custom model base classes, constructors, methods, and other source stay in place. A plain auto-property can be either generated or manually curated; the preview is the required review boundary before apply.
+
+This source tool depends on `Microsoft.CodeAnalysis.CSharp` 5.9.0. Copied applications that bring over the controller, model helper, and template must add the same package reference to their application project. It does not add or update that dependency automatically, and it does not modify customized or ambiguous Rows automatically.
+
+Apply serializes regeneration in the current application process and opens every selected source with exclusive sharing before validating or writing any file. It writes and flushes through those held streams and attempts to restore already-written sources through the same handles if a later write fails. Windows enforces the sharing exclusion for other file opens; processes and filesystems on other platforms must honor the corresponding .NET sharing mode. Because writes are in place, an application, operating-system, or filesystem failure during a write can still leave partial source; keep model source in version control and inspect or restore it after such a failure.
+
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.
 - `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`; lookup scaffolding registers `fwcontrollers` metadata instead of writing a controller class.
