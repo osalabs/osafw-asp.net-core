@@ -113,7 +113,8 @@ public class FwVueController : FwDynamicController
         ps["field_id"] = model0.field_id;
         ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
         ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
-        ps["list_calculated_fields"] = getListCalculatedFieldNames();
+        if (config.ContainsKey("list_calculated_fields") || (config["store"] is FwDict legacyStore && legacyStore.ContainsKey("list_calculated_fields")))
+            ps["list_calculated_fields"] = getListCalculatedFieldNames();
 
         // add form tabs with tab-specific field definitions if configured
         if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)

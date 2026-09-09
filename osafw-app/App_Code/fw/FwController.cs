@@ -267,7 +267,24 @@ public abstract partial class FwController
         //common for both dynamic index and index_edit
         if (is_dynamic_index || is_dynamic_index_edit && is_list_edit)
         {
-            list_calculated_fields = normalizeListCalculatedFields(config["list_calculated_fields"]);
+            object? calculated = config["list_calculated_fields"];
+            if (!config.ContainsKey("list_calculated_fields") && config["store"] is FwDict store)
+            {
+                // Only the old client-store dictionary uses source => calculated names.
+                calculated = store["list_calculated_fields"];
+                if (calculated is IDictionary legacy)
+                {
+                    FwDict adapted = [];
+                    foreach (DictionaryEntry entry in legacy)
+                    {
+                        var field = entry.Value.toStr();
+                        if (!adapted.ContainsKey(field)) adapted[field] = new StrList();
+                        ((StrList)adapted[field]!).Add(entry.Key.toStr());
+                    }
+                    calculated = adapted;
+                }
+            }
+            list_calculated_fields = normalizeListCalculatedFields(calculated);
             if (list_sortmap.Count == 0)
                 list_sortmap = getViewListSortmap(); // just add all fields from view_list_map if no list_sortmap in config
             if (search_fields == "")
@@ -967,13 +984,6 @@ public abstract partial class FwController
                 {
                     var field = definition["field"].toStr(key);
                     Add(field, definition["dependencies"] ?? definition["fields"]);
-                }
-                else if (!view_list_map.ContainsKey(key)
-                    && entry.Value is string legacyField
-                    && view_list_map.ContainsKey(legacyField))
-                {
-                    // Compatibility with the earlier source-field => calculated-field shape.
-                    Add(legacyField, key);
                 }
                 else
                 {
