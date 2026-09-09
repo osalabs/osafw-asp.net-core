@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-08-r01-email-delivery.md` - Made email delivery failures observable and added database-backed test-recipient precedence with provider migrations.
 - `summary-2025-05-07-001.md` - Converted legacy VB-style comment snippets to idiomatic C# equivalents across controllers, framework helpers, and models.
 - `summary-2025-10-08-bootstrap.md` - Completed bootstrap: documented project in `AGENTS.md`, created `docs/agents/{heuristics,domain,glossary}.md`.
 - `summary-2025-10-21-typed-conversion-rename.md` - Renamed the generic conversion helpers to the `to`/`toList` naming pattern and updated docs and code samples accordingly.

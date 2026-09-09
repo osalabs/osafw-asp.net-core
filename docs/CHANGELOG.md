@@ -4,6 +4,7 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-09-08
 
+- Compatibility: test-mode email delivery now reads the editable `settings.test_email` value before `appSettings.test_email`; blank values retain the configuration fallback, while `current_user` explicitly routes to the logged-in user's email. Apply `upd2026-09-08-test-email.sql` for the active provider to add the admin-editable setting. `FW.sendEmail()` now returns false for missing recipients or unusable SMTP host/port settings, clears stale `last_error_send_email` state before each attempt, and keeps per-send SMTP overrides isolated from shared configuration.
 - Environment selection: built-in startup uses the host-resolved environment for framework overrides, including offline CLI startup. Standalone callers can set `FwConfig.setDefaultOverrideName`; without it, the fallback is trimmed `ASPNETCORE_ENVIRONMENT`, then `DOTNET_ENVIRONMENT`. Check deployments that previously relied on these disagreeing. See [environment selection](settings.md#environment-selection).
 - Typed models: optional audit user IDs in `Att`, `AttCategories`, `DemoDicts` and role-related Rows now use `int?`, preserving database NULL; optional descriptions are annotated `string?`. Adapt callers that assign audit IDs to `int` or dereference descriptions without checking null. New-row zero/empty defaults remain. See [nullable declarations](db.md#nullable-conversion-and-shared-row-fields).
 
