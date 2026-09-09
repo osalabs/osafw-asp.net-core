@@ -838,3 +838,9 @@ Used for the add/edit (form) page. Typical files:
 - Use these files to customize the look, layout, or logic for a specific entity's list, view, or form screens.
 
 **Example:** See `template/admin/demosdynamic` for a real-world structure and customizations.
+
+## Select-template label lookups
+
+`FormUtils.selectTplName` caches parsed labels for up to 128 canonical template paths. Each lookup checks the file's UTC modification time and length; replacing a file must change at least one of these values. Deleted files invalidate their cached labels. A temporary read failure retains the last successful parse until the file can be read again. A file with no successful parse returns an empty label on failure.
+
+Lines use `value|description`. Malformed lines and empty descriptions are skipped, language markers are removed, and the first nonempty description for a duplicate value wins. Values match exactly, including whitespace and case. Relative template paths still require a base path. Resolved paths must remain under the configured template directory. Cache entries are shared by path across configuration scopes and contain only the unlocalized template labels.

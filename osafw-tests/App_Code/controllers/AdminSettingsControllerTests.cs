@@ -148,6 +148,22 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
+    public void TextSetting_BlankSubmissionClearsExistingValue()
+    {
+        var (_, model, controller) = BuildController(
+            new FwDict(Setting(Settings.INPUT_TEXT, "configured@example.test"))
+            {
+                ["icode"] = Settings.ICODE_TEST_EMAIL,
+            },
+            new FwDict { ["ivalue"] = "" });
+
+        controller.SaveAction(1);
+
+        Assert.AreEqual(1, model.UpdateCalls);
+        Assert.AreEqual("", model.LastUpdate["ivalue"]);
+    }
+
+    [TestMethod]
     public void Switch_UncheckedSavesZero()
     {
         var (_, model, controller) = BuildController(

@@ -10,6 +10,7 @@ namespace osafw;
 public class Settings : FwModel<Settings.Row>
 {
     public const string ICAT_AI = "AI";
+    public const string ICODE_TEST_EMAIL = "test_email";
     public const int INPUT_TEXT = 0;
     public const int INPUT_TEXTAREA = 10;
     public const int INPUT_SELECT = 20;

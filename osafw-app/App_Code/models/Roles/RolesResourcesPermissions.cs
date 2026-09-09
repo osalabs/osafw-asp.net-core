@@ -17,9 +17,9 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
         public int permissions_id { get; set; }
         public int status { get; set; }
         public DateTime add_time { get; set; }
-        public int add_users_id { get; set; }
+        public int? add_users_id { get; set; } = 0;
         public DateTime? upd_time { get; set; }
-        public int upd_users_id { get; set; }
+        public int? upd_users_id { get; set; } = 0;
     }
 
     public const string CACHE_KEY_UPDATED = "roles_resources_permissions_updated";
