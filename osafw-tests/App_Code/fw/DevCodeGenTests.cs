@@ -268,6 +268,117 @@ public class DevCodeGenTests
     }
 
     [TestMethod]
+    public void BuildRowPropertyType_PreservesUnsignedBigIntRange()
+    {
+        var field = Field("unsigned_count", "int", 0, isNullable: true);
+        field["fw_subtype"] = "unsignedbigint";
+        field["numeric_precision"] = 20;
+
+        var result = InvokeBuildRowPropertyType(field);
+
+        Assert.AreEqual("ulong?", result);
+        Assert.AreEqual("18446744073709551615", ulong.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [TestMethod]
+    public void CreateModel_GeneratesTypedDocumentedAndMappedRowProperties()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "osafw-codegen-" + Guid.NewGuid().ToString("N"));
+        var modelDir = Path.Combine(tempRoot, "App_Code", "models");
+        Directory.CreateDirectory(modelDir);
+
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(modelDir, "DemoDicts.cs"),
+                """
+                namespace osafw;
+
+                public class DemoDicts : FwModel
+                {
+                    public class Row
+                    {
+                        public int old_field { get; set; }
+                    }
+
+                    public DemoDicts() : base()
+                    {
+                        db_config = "";
+                        table_name = "demo_dicts";
+                        //###CODEGEN
+                    }
+                }
+                """);
+
+            var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+            {
+                ["appSettings:site_root"] = tempRoot,
+                ["appSettings:log"] = Path.Combine(tempRoot, "main.log")
+            });
+            var bigintField = Field("total_count", "int", 0, isNullable: false);
+            bigintField["fw_subtype"] = "bigint";
+            bigintField["comments"] = "Count <all> & active\r\nSecond line";
+            var unsignedBigintField = Field("unsigned_count", "int", 0, isNullable: false);
+            unsignedBigintField["fw_subtype"] = "unsignedbigint";
+            unsignedBigintField["numeric_precision"] = 20;
+            var numericField = Field("amount", "decimal", 0, isNullable: true);
+            numericField["fw_subtype"] = "numeric";
+            numericField["numeric_precision"] = 18;
+            numericField["numeric_scale"] = 4;
+            var keywordField = Field("class", "varchar", 80, isNullable: false);
+            var leadingDigitField = Field("2fa", "varchar", 80, isNullable: true);
+            var escapedNameField = Field("quote\"slash\\name", "varchar", 80, isNullable: true);
+            escapedNameField["fw_name"] = "safe_name";
+            var duplicateNameField = Field("safe name", "varchar", 80, isNullable: true);
+            duplicateNameField["fw_name"] = "safe_name";
+            var offsetField = Field("event_time", "datetimeoffset", 0, isNullable: true);
+            var computedField = Field("display_name", "varchar", 80, isNullable: true, isComputed: true);
+            var entity = new FwDict
+            {
+                ["model_name"] = "GeneratedMetadata",
+                ["table"] = "generated_metadata",
+                ["is_fw"] = true,
+                ["fields"] = new FwList
+                {
+                    Field("id", "int", 0, isNullable: false, isIdentity: true),
+                    bigintField,
+                    unsignedBigintField,
+                    numericField,
+                    keywordField,
+                    leadingDigitField,
+                    escapedNameField,
+                    duplicateNameField,
+                    offsetField,
+                    computedField
+                }
+            };
+
+            InvokeCreateModel(fw, entity);
+
+            var generated = File.ReadAllText(Path.Combine(modelDir, "GeneratedMetadata.cs"));
+            StringAssert.Contains(generated, "/// Count &lt;all&gt; &amp; active");
+            StringAssert.Contains(generated, "/// Second line");
+            StringAssert.Contains(generated, "public long total_count { get; set; }");
+            StringAssert.Contains(generated, "public ulong unsigned_count { get; set; }");
+            StringAssert.Contains(generated, "public decimal? amount { get; set; }");
+            StringAssert.Contains(generated, "public string @class { get; set; } = string.Empty;");
+            StringAssert.Contains(generated, "[DBName(\"2fa\")]");
+            StringAssert.Contains(generated, "public string _2fa { get; set; }");
+            StringAssert.Contains(generated, "[DBName(\"quote\\\"slash\\\\name\")]");
+            StringAssert.Contains(generated, "[DBName(\"safe name\")]");
+            StringAssert.Contains(generated, "public string safe_name_2 { get; set; }");
+            StringAssert.Contains(generated, "public DateTimeOffset? event_time { get; set; }");
+            StringAssert.Contains(generated, "public string display_name { get; set; }");
+            Assert.IsFalse(generated.Contains("old_field", StringComparison.Ordinal));
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+                Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public void AddToFormColumns_PlacesWideTextInPrimaryColumn()
     {
         var showFieldsTabs = new Dictionary<string, List<List<FwDict>>>();

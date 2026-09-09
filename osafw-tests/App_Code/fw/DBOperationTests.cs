@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Data.Common;
 
 namespace osafw.Tests
 {
@@ -10,6 +11,7 @@ namespace osafw.Tests
         {
             public DBList Rows { get; set; } = [];
             public string LastSql { get; private set; } = "";
+            public FwDict LastParams { get; private set; } = [];
 
             public PagingDb(string dbtype, string connstr = "")
                 : base(connstr, dbtype)
@@ -24,7 +26,19 @@ namespace osafw.Tests
             public override DBList arrayp(string sql, FwDict? @params = null)
             {
                 LastSql = sql;
+                LastParams = @params ?? [];
                 return Rows;
+            }
+        }
+
+        private sealed class ColdOleDb(string connstr) : DB(connstr, DBTYPE_OLE)
+        {
+            public int ConnectCalls { get; private set; }
+
+            public override DbConnection connect()
+            {
+                ConnectCalls++;
+                throw new InvalidOperationException("cold OLE metadata connection requested");
             }
         }
 
@@ -166,7 +180,7 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void LoadTableSchemaFull_RequestsSqlServerComputedMetadata()
+        public void LoadTableSchemaFull_RequestsQualifiedSqlServerMetadataAndComments()
         {
             var db = new PagingDb(DB.DBTYPE_SQLSRV)
             {
@@ -176,15 +190,21 @@ namespace osafw.Tests
                     {
                         ["name"] = "display_name",
                         ["type"] = "nvarchar",
-                        ["is_computed"] = 1
+                        ["is_computed"] = 1,
+                        ["comments"] = "Computed display label"
                     })
                 ]
             };
 
-            var fields = db.loadTableSchemaFull("schema_sql_computed");
+            var fields = db.loadTableSchemaFull("reporting.schema_sql_computed");
 
-            StringAssert.Contains(db.LastSql, "'IsComputed') as is_computed");
+            StringAssert.Contains(db.LastSql, "t.table_schema = c.table_schema");
+            StringAssert.Contains(db.LastSql, "sc.is_computed");
+            StringAssert.Contains(db.LastSql, "ep.name = N'MS_Description'");
+            Assert.AreEqual("schema_sql_computed", db.LastParams["@table_name"]);
+            Assert.AreEqual("reporting", db.LastParams["@table_schema"]);
             Assert.AreEqual(1, ((FwDict)fields[0]!)["is_computed"].toInt());
+            Assert.AreEqual("Computed display label", ((FwDict)fields[0]!)["comments"]);
         }
 
         [TestMethod]
@@ -207,7 +227,45 @@ namespace osafw.Tests
 
             StringAssert.Contains(db.LastSql, "c.GENERATION_EXPRESSION");
             StringAssert.Contains(db.LastSql, "as is_computed");
+            StringAssert.Contains(db.LastSql, "c.column_comment as comments");
             Assert.AreEqual(1, ((FwDict)fields[0]!)["is_computed"].toInt());
+        }
+
+        [TestMethod]
+        public void LoadTableSchemaFull_ColdOleMetadataConnectsOnWindows()
+        {
+            var db = new ColdOleDb("cold-ole-" + Guid.NewGuid().ToString("N"));
+
+            if (OperatingSystem.IsWindows())
+            {
+                var ex = Assert.ThrowsExactly<InvalidOperationException>(() => db.loadTableSchemaFull("cold_table"));
+                Assert.AreEqual("cold OLE metadata connection requested", ex.Message);
+                Assert.AreEqual(1, db.ConnectCalls);
+            }
+            else
+            {
+                Assert.HasCount(0, db.loadTableSchemaFull("cold_table"));
+                Assert.AreEqual(0, db.ConnectCalls);
+            }
+        }
+
+        [TestMethod]
+        public void LoadTableSchemaFull_CachedOleMetadataDoesNotReconnectAfterDispose()
+        {
+            var cacheKey = "cached-ole-" + Guid.NewGuid().ToString("N");
+            var cachedRows = new DBList
+            {
+                new DBRow(new FwDict { ["name"] = "id", ["type"] = "int", ["comments"] = "Cached" })
+            };
+            var source = new PagingDb(DB.DBTYPE_SQLSRV, cacheKey) { Rows = cachedRows };
+            var expected = source.loadTableSchemaFull("cached_table");
+            var db = new ColdOleDb(cacheKey);
+            db.Dispose();
+
+            var actual = db.loadTableSchemaFull("cached_table");
+
+            Assert.AreSame(expected, actual);
+            Assert.AreEqual(0, db.ConnectCalls);
         }
 
         [TestMethod]

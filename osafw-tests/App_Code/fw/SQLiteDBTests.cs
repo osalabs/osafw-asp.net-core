@@ -82,6 +82,7 @@ public class SQLiteDBTests
         Assert.AreEqual(0, ((FwDict)schema["base_value"]!)["is_computed"].toInt());
         Assert.AreEqual(1, ((FwDict)schema["virtual_value"]!)["is_computed"].toInt());
         Assert.AreEqual(1, ((FwDict)schema["stored_value"]!)["is_computed"].toInt());
+        Assert.AreEqual("", ((FwDict)schema["base_value"]!)["comments"]);
     }
 
     [TestMethod]
