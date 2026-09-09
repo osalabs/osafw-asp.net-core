@@ -176,7 +176,9 @@ dotnet test osafw-tests/osafw-tests.csproj -p:DefineConstants=isSQLite
 - `schemaField(table, field)`
 - `listForeignKeys([table])`
 
-`loadTableSchemaFull(table)` and `tableSchemaFull(table)` expose provider-normalized `is_computed` metadata for SQL Server computed columns, SQLite stored/virtual generated columns, and MySQL generated columns. The value is `1` for a computed/generated column and `0` otherwise.
+`loadTableSchemaFull(table)` and `tableSchemaFull(table)` expose provider-normalized `is_computed` metadata for SQL Server computed columns, SQLite stored/virtual generated columns, and MySQL generated columns. The value is `1` for a computed/generated column and `0` otherwise. MySQL schema discovery selects the active database inside the query, so cold connections work, and reads `COLUMN_TYPE` to preserve unsigned-bigint metadata for typed generation. Full schema rows also include an optional neutral `comments` value: SQL Server reads `MS_Description`, MySQL reads the column comment, OLE reads the provider description, and SQLite returns an empty value because SQLite has no native column-comment catalog.
+
+SQL Server accepts either `table` or `schema.table` metadata names. Qualified names select that exact schema; unqualified names follow SQL Server object resolution and do not merge same-named tables from other schemas. OLE metadata opens its configured connection on a cold schema-cache miss, while a warm full-schema cache hit remains connection-free.
 
 The bundled `demos` schema provides a provider-specific example: editable `icode` and `iname` columns produce the computed `display_name` value `CODE — Title`.
 

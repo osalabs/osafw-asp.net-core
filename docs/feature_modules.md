@@ -48,8 +48,10 @@ In local development, Home can automatically redirect to a pending FwUpdates not
 
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.
+- The *Create Model* picker lists application tables and views and omits the framework persistence tables. Explicit CLI model scaffolding remains available when deliberate framework `Row` regeneration is required.
 - `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`; lookup scaffolding registers `fwcontrollers` metadata instead of writing a controller class.
 - The built-in `scaffold` command initializes `FW` in offline mode and calls the same entity-builder and code-generator layer without constructing an HTTP request or bypassing the browser actions' POST/XSS protections.
+- Generated model `Row` properties use `long` for signed database `bigint`, `ulong` for unsigned `bigint`, `decimal` for decimal/numeric metadata, and `DateTimeOffset` for offset-aware columns. The generator emits `[DBName]` when it must normalize a column into a safe, unique C# property identifier and escapes both attribute strings and database column comments used as XML documentation. Nullable text columns use `string?`; required text uses `string` initialized to `string.Empty`. Identity and computed columns remain present in the typed read shape; computed fields stay excluded from generated save fields.
 
 ## Manual creation from the demo module
 Use this fallback only under the conditions above; otherwise use the built-in CLI. To proceed manually, replicate what the generators do:
