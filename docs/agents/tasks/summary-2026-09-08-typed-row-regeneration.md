@@ -54,3 +54,12 @@ Run the focused regeneration tests above. In a development-only local app with c
 ## Reflection
 
 Reusing current typed Row generation prevented a second mapping contract. The useful safety boundary came from syntax classification plus exact source/output hashing; a text-block pattern would not have preserved surrounding C# reliably.
+
+## Lean review follow-up (2026-09-09)
+
+Synced with master after the four approved framework updates and with the corrected schema-tooling prerequisite. The application scaffolding picker now excludes framework tables; explicit Row regeneration still lists existing models for deliberate preview/apply. Existing Row parsing and write safeguards remain; the independent lean review found no required redesign.
+
+- `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~Dev|FullyQualifiedName~DBOperationTests' --verbosity quiet`: 94 passed, none skipped.
+- `dotnet test osafw-tests/osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite' --filter 'FullyQualifiedName~DevRowRegeneratorTests|FullyQualifiedName~SQLiteDBTests.DevManage' --verbosity quiet`: 11 passed, none skipped, including the real picker output against disposable SQLite.
+
+No live provider database or existing model source was regenerated.
