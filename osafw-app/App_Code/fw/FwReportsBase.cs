@@ -33,6 +33,7 @@ public class FwReportsBase
     public const string TPL_BASE_DIR = "/admin/reports";
     //public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html"; //this is simplified template for wkhtmltopdf
     public const string TPL_EXPORT_PDF = "/layout_print.html"; // normal print template with latest bootstrap styles, good with Playwright
+    public const string TPL_EXPORT_PDF_LOCAL = "/layout_print_local.html";
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 
     public const string TO_BROWSER = "";
@@ -335,7 +336,8 @@ public class FwReportsBase
                     if (isFileRender())
                         out_filename = render_to;
 
-                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, out_filename, render_options);
+                    var pdfLayout = string.IsNullOrWhiteSpace(render_options["local_assets_root"].toStr()) ? TPL_EXPORT_PDF : TPL_EXPORT_PDF_LOCAL;
+                    ConvUtils.parsePagePdf(fw, base_dir, pdfLayout, ps, out_filename, render_options);
                     break;
                 }
 
