@@ -17,6 +17,7 @@ public partial class FwDynamicController : FwController
 
     protected FwModel? model_related;
     protected FwDict subtable_save_row_ids = [];
+    private bool is_new_model_save;
 
     protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header", "fieldset", "fieldset_end"];
 
@@ -231,13 +232,24 @@ public partial class FwDynamicController : FwController
 
     public override int modelAddOrUpdate(int id, FwDict fields)
     {
+        var isNew = id == 0;
         if (is_dynamic_showform)
             processSaveShowFormFields(id, fields);
 
         id = base.modelAddOrUpdate(id, fields);
 
         if (is_dynamic_showform)
-            processSaveShowFormFieldsAfter(id, fields);
+        {
+            is_new_model_save = isNew;
+            try
+            {
+                processSaveShowFormFieldsAfter(id, fields);
+            }
+            finally
+            {
+                is_new_model_save = false;
+            }
+        }
 
         return id;
     }
@@ -268,12 +280,14 @@ public partial class FwDynamicController : FwController
         var success = true;
         var is_new = (id == 0);
 
+        removeImmutableOnEditFields(id, item);
         Validate(id, item);
         // load old record if necessary
         // var itemOld = modelOne(id);
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        removeImmutableOnEditFields(id, itemdb);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -457,8 +471,10 @@ public partial class FwDynamicController : FwController
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
+            removeImmutableSubtableFields(row_id, row_item, def);
             FwDict itemdb = FormUtils.filter(row_item, save_fields);
             FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
+            removeImmutableSubtableFields(row_id, itemdb, def);
 
             if (row_id.StartsWith("new-"))
                 itemdb[sub_model.junction_field_main_id] = id;
@@ -498,6 +514,65 @@ public partial class FwDynamicController : FwController
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Removes configured immutable values from an existing main-row payload before validation or persistence.
+    /// New rows retain these values so a field can be set once during creation.
+    /// </summary>
+    /// <param name="id">Existing row id, or zero for a new row.</param>
+    /// <param name="item">Submitted main-row values.</param>
+    protected virtual void removeImmutableOnEditFields(int id, FwDict item)
+    {
+        if (id == 0 || item.Count == 0)
+            return;
+
+        foreach (FwDict def in collectFormFields("showform_fields"))
+        {
+            if (!def["immutable_on_edit"].toBool() || def["type"].toStr() == "subtable_edit")
+                continue;
+
+            removeSubmittedFieldValue(item, def["field"].toStr());
+        }
+    }
+
+    /// <summary>
+    /// Removes immutable child-field values from existing subtable rows. Child field definitions are supplied
+    /// through the subtable definition's optional <c>showform_fields</c> list.
+    /// </summary>
+    /// <param name="row_id">Existing numeric child id or a <c>new-</c> temporary id.</param>
+    /// <param name="item">Submitted child-row values.</param>
+    /// <param name="def">The parent <c>subtable_edit</c> field definition.</param>
+    protected virtual void removeImmutableSubtableFields(string row_id, FwDict item, FwDict def)
+    {
+        if (row_id.StartsWith("new-", StringComparison.Ordinal) || item.Count == 0)
+            return;
+
+        foreach (FwDict childDef in getSubtableFormFields(def))
+        {
+            if (childDef["immutable_on_edit"].toBool())
+                removeSubmittedFieldValue(item, childDef["field"].toStr());
+        }
+    }
+
+    /// <summary>
+    /// Returns optional child field metadata for a dynamic subtable.
+    /// </summary>
+    protected virtual FwList getSubtableFormFields(FwDict def)
+    {
+        return def["showform_fields"] is IList fields ? new FwList(fields) : [];
+    }
+
+    private static void removeSubmittedFieldValue(FwDict item, string field)
+    {
+        if (string.IsNullOrEmpty(field))
+            return;
+
+        item.Remove(field);
+        item.Remove(field + "_iname");
+        item.Remove(field + "_day");
+        item.Remove(field + "_mon");
+        item.Remove(field + "_year");
     }
     #endregion
 
@@ -705,19 +780,33 @@ public partial class FwDynamicController : FwController
 
     public virtual FwDict? SaveUserViewsAction()
     {
+        enforcePost();
+
         var fld = reqh("fld");
         var load_id = reqi("load_id");
         var is_reset = reqb("is_reset");
         var density = reqs("density");
+        var has_widths = req("widths") != null;
         var is_list_edit = reqb("is_list_edit");
         var icode = base_url + (is_list_edit ? "/edit" : "");
 
         if (load_id > 0)
-            // set fields from specific view
-            fw.model<UserViews>().setViewForIcode(icode, load_id);
+        {
+            // set fields and normalized widths from a specific available view
+            var views = fw.model<UserViews>();
+            var selected = views.oneByIcodeId(icode, load_id);
+            if (selected.Count > 0)
+            {
+                views.updateByIcode(icode, DB.h(
+                    "fields", selected["fields"],
+                    "widths", Utils.jsonEncode(normalizeUserViewWidths(selected["widths"]))));
+            }
+        }
         else if (is_reset)
             // reset fields to defaults
-            fw.model<UserViews>().updateByIcodeFields(icode, view_list_defaults);
+            fw.model<UserViews>().updateByIcode(icode, DB.h(
+                "fields", view_list_defaults,
+                "widths", Utils.jsonEncode(new FwDict())));
         else if (density.Length > 0)
         {
             // save density
@@ -725,6 +814,11 @@ public partial class FwDynamicController : FwController
             if (!"table-sm table-dense table-normal".Contains(density))
                 density = "";
             fw.model<UserViews>().updateByIcode(icode, DB.h("density", density));
+        }
+        else if (has_widths)
+        {
+            var widths = normalizeUserViewWidths(req("widths"));
+            fw.model<UserViews>().updateByIcode(icode, DB.h("widths", Utils.jsonEncode(widths)));
         }
         else
         {
@@ -743,13 +837,22 @@ public partial class FwDynamicController : FwController
             if (!string.IsNullOrEmpty(iname))
             {
                 // create new view by name or update if this name exists
-                fw.model<UserViews>().addOrUpdateByUK(icode, fields, iname);
+                var widths = normalizeUserViewWidths(getListUserView()["widths"]);
+                fw.model<UserViews>().addOrUpdateByUK(icode, fields, iname, Utils.jsonEncode(widths));
             }
             // update default view with fields
             fw.model<UserViews>().updateByIcodeFields(icode, fields);
         }
 
         return afterSave(true, null, false, "no_action", return_url);
+    }
+
+    /// <summary>
+    /// Normalizes saved widths against this controller's configured list columns.
+    /// </summary>
+    protected virtual FwDict normalizeUserViewWidths(object? raw)
+    {
+        return UserViews.normalizeWidths(raw, view_list_map.Keys);
     }
     #endregion
 
@@ -1402,6 +1505,9 @@ public partial class FwDynamicController : FwController
         {
             string field = def["field"].toStr();
             string type = def["type"].toStr();
+            if (!is_new_model_save && def["immutable_on_edit"].toBool())
+                continue;
+
             if (type == "att_links_edit")
             {
                 var att_post_prefix = "att";
@@ -1555,8 +1661,10 @@ public partial class FwDynamicController : FwController
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
+            removeImmutableSubtableFields(row_id, row_item, def);
             FwDict itemdb = FormUtils.filter(row_item, save_fields);
             FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
+            removeImmutableSubtableFields(row_id, itemdb, def);
 
             itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 

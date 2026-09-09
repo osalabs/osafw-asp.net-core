@@ -1,0 +1,11 @@
+<div v-if="fwStore.formIssues().length" class="mb-3" aria-live="polite">
+    <p class="fw-semibold mb-1">Please review these fields:</p>
+    <ul>
+        <li v-for="(issue,index) in fwStore.formIssues()" :key="index" :class="issue.severity === 'warning' ? 'text-warning-emphasis' : 'text-danger'">
+            <span>{{issue.severity === 'warning' ? 'Warning: ' : 'Error: '}}</span>
+            <button v-if="issue.field" type="button" class="btn btn-link p-0 text-start" @click="fwStore.focusFormIssue(issue, $event.currentTarget.closest('form'))">{{issue.message}}</button>
+            <span v-else>{{issue.message}}</span>
+            <span v-if="issue.value !== undefined" class="d-block small">Entered value: {{issue.value}}</span>
+        </li>
+    </ul>
+</div>

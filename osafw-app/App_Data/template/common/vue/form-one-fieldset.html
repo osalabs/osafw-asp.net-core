@@ -1,5 +1,5 @@
 <script type="text/x-template" id="form-one-fieldset-template">
-    <div :class="['fw-fieldset', def.class ? def.class : '', { 'is-collapsed': isCollapsed }]">
+    <div @fw-reveal-field="isCollapsed = false" :class="['fw-fieldset', def.class ? def.class : '', { 'is-collapsed': isCollapsed }]">
         <div v-if="def.label"
              :class="['fw-fieldset-legend', def.class_label ? def.class_label : '']"
              role="button"

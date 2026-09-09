@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -14,12 +15,15 @@ public class FwVueController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
+    protected FwList validation_issues = [];
+
     // list of keys from fw.G to pass to Vue
     protected string global_keys = "ROOT_URL is_list_btn_left date_format time_format timezone";
 
     public override void init(FW fw)
     {
         base.init(fw);
+        validation_issues = [];
         fw.G["PAGE_LAYOUT"] = fw.config("PAGE_LAYOUT_VUE"); // layout for Vue pages
     }
 
@@ -29,6 +33,56 @@ public class FwVueController : FwDynamicController
     protected override void setListFields()
     {
         list_fields = buildListFields(list_headers.Select(header => ((FwDict)header)["field_name"].toStr()));
+    }
+
+    /// <summary>
+    /// Returns the current request's create, edit, and delete capabilities from read-only and RBAC checks.
+    /// </summary>
+    protected virtual FwDict getCapabilities()
+    {
+        return new FwDict
+        {
+            ["create"] = !is_readonly && rbac[Permissions.PERMISSION_ADD].toBool(),
+            ["edit"] = !is_readonly && rbac[Permissions.PERMISSION_EDIT].toBool(),
+            ["delete"] = !is_readonly && rbac[Permissions.PERMISSION_DELETE].toBool(),
+        };
+    }
+
+    /// <summary>
+    /// Returns optional server-produced restrictions for one row. Overrides may return false values to narrow
+    /// the page capabilities; true values never grant an action denied at page level.
+    /// </summary>
+    protected virtual FwDict getListRowCapabilities(FwDict row)
+    {
+        return row["_capabilities"] as FwDict ?? [];
+    }
+
+    /// <summary>
+    /// Sanitizes and intersects one row's capability metadata with the page capability boundary.
+    /// </summary>
+    protected virtual void applyListRowCapabilities(FwDict row)
+    {
+        var restrictions = getListRowCapabilities(row);
+        var hasRestrictions = restrictions.Count > 0 || row.ContainsKey("_capabilities");
+        var capabilities = getCapabilities();
+
+        foreach (var action in new[] { "create", "edit", "delete" })
+        {
+            if (restrictions.ContainsKey(action) && !restrictions[action].toBool())
+                capabilities[action] = false;
+        }
+
+        if (row["_meta"] is FwDict meta && meta["is_ro"].toBool())
+        {
+            capabilities["edit"] = false;
+            capabilities["delete"] = false;
+            hasRestrictions = true;
+        }
+
+        if (hasRestrictions)
+            row["_capabilities"] = capabilities;
+        else
+            row.Remove("_capabilities");
     }
 
     /// <summary>
@@ -105,6 +159,8 @@ public class FwVueController : FwDynamicController
         ps["global"] = global;
 
         setViewList(false); // initialize list_headers and related
+        list_user_view ??= [];
+        list_user_view["widths"] = normalizeUserViewWidths(list_user_view["widths"]);
 
         // userviews customization support
         ps["all_list_columns"] = getViewListArr(getViewListUserFields(), true); // list all fields
@@ -132,6 +188,7 @@ public class FwVueController : FwDynamicController
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
+        ps["capabilities"] = getCapabilities();
 
         // other static params
         ps["related_id"] = this.related_id;
@@ -166,6 +223,9 @@ public class FwVueController : FwDynamicController
         // if export - no need further processing - just return asap
         if (export_format.Length > 0)
             return;
+
+        foreach (FwDict row in list_rows)
+            applyListRowCapabilities(row);
 
         ps["list_rows"] = this.list_rows;
         ps["count"] = this.list_count;
@@ -515,6 +575,7 @@ public class FwVueController : FwDynamicController
         }
 
         model0.filterForJson(item);
+        applyListRowCapabilities(item);
 
         ps["id"] = id;
         ps["i"] = item;
@@ -562,18 +623,198 @@ public class FwVueController : FwDynamicController
         var success = true;
         var is_new = (id == 0);
 
+        removeImmutableOnEditFields(id, item);
         Validate(id, item);
+        if (validation_issues.Any(issue => issue["severity"].toStr() == "error"))
+        {
+            foreach (FwDict issue in validation_issues.Where(issue => issue["severity"].toStr() == "error"))
+            {
+                var field = issue["field"].toStr();
+                if (!fw.FormErrors.ContainsKey(field))
+                    fw.FormErrors[field] = issue["message"];
+            }
+            validateCheckResult(false);
+        }
         // load old record if necessary
         // var itemOld = modelOne(id);
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        removeImmutableOnEditFields(id, itemdb);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
         var moreJson = buildSubtableSavePayload(id);
+        if (validation_issues.Count > 0)
+            moreJson["validation_issues"] = new FwList(validation_issues);
 
         return this.afterSave(success, id, is_new, FW.ACTION_SHOW_FORM, "", moreJson.Count > 0 ? moreJson : null);
+    }
+
+    /// <summary>
+    /// Adds a neutral validation issue. Attempted values are included only when the matching field definition
+    /// explicitly sets <c>validation_show_value</c> to JSON boolean <c>true</c>. Password, hidden,
+    /// credential, secret, token, and API-key control types never expose attempted values.
+    /// </summary>
+    protected virtual void addValidationIssue(
+        string severity,
+        string field,
+        string message,
+        string? tab = null,
+        string? row_id = null,
+        object? attempted_value = null)
+    {
+        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(message))
+            return;
+
+        var resolved = resolveValidationField(field);
+        row_id ??= resolved.rowId;
+        tab ??= resolved.tab;
+        if (validation_issues.Any(existing =>
+            existing["severity"].toStr() == (severity == "warning" ? "warning" : "error")
+            && existing["field"].toStr() == field
+            && existing["row_id"].toStr() == row_id.toStr()))
+            return;
+
+        var issue = new FwDict
+        {
+            ["severity"] = severity == "warning" ? "warning" : "error",
+            ["field"] = field,
+            ["message"] = message,
+        };
+        if (!string.IsNullOrEmpty(tab))
+            issue["tab"] = tab;
+        if (!string.IsNullOrEmpty(row_id))
+            issue["row_id"] = row_id;
+        if (attempted_value != null && isValidationValueAllowed(resolved.definition))
+            issue["value"] = attempted_value;
+
+        validation_issues.Add(issue);
+    }
+
+    /// <summary>
+    /// Converts legacy field-error details into neutral Vue validation issues without echoing submitted values by default.
+    /// </summary>
+    protected virtual void addFormErrorValidationIssues()
+    {
+        foreach (var entry in fw.FormErrors)
+        {
+            if (entry.Key is "REQUIRED" or "INVALID")
+                continue;
+
+            var resolved = resolveValidationField(entry.Key);
+            object? attemptedValue = null;
+            if (isValidationValueAllowed(resolved.definition))
+            {
+                attemptedValue = resolved.subtable.Length > 0
+                    ? reqh($"item-{resolved.subtable}#{resolved.rowId}")[resolved.logicalField]
+                    : reqh("item")[resolved.logicalField];
+            }
+
+            addValidationIssue(
+                "error",
+                entry.Key,
+                validationIssueMessage(entry.Value),
+                resolved.tab,
+                resolved.rowId,
+                attemptedValue);
+        }
+    }
+
+    private static string validationIssueMessage(object? code)
+    {
+        if (code is true)
+            return "Required field";
+
+        return code.toStr() switch
+        {
+            "REQUIRED" => "Required field",
+            "EXISTS" => "This name already exists in our database",
+            "EMAIL" => "Invalid Email",
+            "WRONG" => "Invalid",
+            var message when message.Length > 0 => message,
+            _ => "Invalid value",
+        };
+    }
+
+    private static bool isValidationValueAllowed(FwDict? definition)
+    {
+        if (definition?["validation_show_value"] is not true)
+            return false;
+
+        return definition["type"].toStr().ToLowerInvariant() switch
+        {
+            "password" or "hidden" or "credential" or "secret" or "token" or "api_key" => false,
+            _ => true,
+        };
+    }
+
+    private (FwDict? definition, string logicalField, string subtable, string? rowId, string? tab) resolveValidationField(string issueField)
+    {
+        var match = Regex.Match(issueField, @"^item-(?<subtable>.+?)#(?<row>[^\[]+)\[(?<field>[^\]]+)\]$");
+        var logicalField = match.Success ? match.Groups["field"].Value : issueField;
+        var subtable = match.Success ? match.Groups["subtable"].Value : string.Empty;
+        var rowId = match.Success ? match.Groups["row"].Value : null;
+
+        foreach (var candidate in validationFieldDefinitions())
+        {
+            var def = candidate.definition;
+            if (subtable.Length == 0)
+            {
+                if (def["field"].toStr() == logicalField || def["issue_field"].toStr() == issueField)
+                    return (def, logicalField, subtable, rowId, candidate.tab);
+                continue;
+            }
+
+            if (def["type"].toStr() != "subtable_edit" || def["field"].toStr() != subtable)
+                continue;
+
+            foreach (FwDict childDef in getSubtableFormFields(def))
+                if (childDef["field"].toStr() == logicalField)
+                    return (childDef, logicalField, subtable, rowId, candidate.tab);
+
+            return (null, logicalField, subtable, rowId, candidate.tab);
+        }
+
+        return (null, logicalField, subtable, rowId, null);
+    }
+
+    private IEnumerable<(FwDict definition, string? tab)> validationFieldDefinitions()
+    {
+        if (config["showform_fields"] is IList baseFields)
+            foreach (FwDict def in new FwList(baseFields))
+                yield return (def, null);
+
+        if (config["form_tabs"] is not IList tabs)
+            yield break;
+
+        foreach (FwDict tabDef in new FwList(tabs))
+        {
+            var tab = tabDef["tab"].toStr();
+            if (tab.Length == 0)
+                continue;
+            foreach (FwDict def in getConfigShowFormFieldsByTab("showform_fields", tab))
+                yield return (def, tab);
+        }
+    }
+
+    /// <summary>
+    /// Returns a structured 400 response for Vue validation failures while preserving the legacy error details map.
+    /// </summary>
+    public override FwDict? actionError(Exception? ex, object[] args)
+    {
+        if (fw.isJsonExpected() && ex is ValidationException validationException)
+        {
+            addFormErrorValidationIssues();
+            fw.G["err_msg"] = validationException.Message;
+            if (!fw.response.HasStarted)
+                fw.response.StatusCode = 400;
+
+            var moreJson = new FwDict { ["validation_issues"] = new FwList(validation_issues) };
+            return afterSave(false, args.Length > 0 ? args[0] : null, more_json: moreJson);
+        }
+
+        return base.actionError(ex, args);
     }
 
     /// <summary>

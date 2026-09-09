@@ -338,6 +338,7 @@ public class FwVueControllerTests
         Assert.IsFalse(db.SelectSql.Contains("calcuated_name", StringComparison.OrdinalIgnoreCase));
         StringAssert.Contains(db.SelectSql, "[title]");
     }
+
     [TestMethod]
     public void LegacyStoreMetadataIsAdoptedAndAbsentMetadataDoesNotOverwriteClientState()
     {

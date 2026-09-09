@@ -41,6 +41,7 @@
 </script>
 
 <script type="module">
+    import { mapStores } from 'pinia';
     fwApp.component('list-row-btn', {
         template: '#list-row-btn-template',
         props: {
@@ -62,8 +63,13 @@
         },
         emits: ['view', 'edit', 'quickedit', 'delete', 'custom'],
         computed: {
+            ...mapStores(fwStore),
             co_buttons() {
-                return this.buttons === undefined ? false : this.buttons;
+                if (!this.buttons) return false;
+                return { ...this.buttons,
+                    edit: this.buttons.edit && this.fwStore.canAction('edit', this.row),
+                    quickedit: this.buttons.quickedit && this.fwStore.canAction('edit', this.row),
+                    delete: this.buttons.delete && this.fwStore.canAction('delete', this.row) };
             }
         },
     });

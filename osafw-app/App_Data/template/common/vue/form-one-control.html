@@ -1,4 +1,6 @@
 <script type="text/x-template" id="form-one-control-template">
+    <p v-if="isImmutableOnEdit" class="form-control-plaintext" style="white-space:pre-wrap">{{def.type === 'password' ? '••••••' : value}}</p>
+    <template v-else>
     <p v-if="def.type=='id'" class="form-control-plaintext">
         {{value}}
         <template v-if="!value">
@@ -383,6 +385,7 @@
         <form-control-help-block :text="def.help_text" />
     </template>
 
+    </template>
     <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
 </script>
 
@@ -504,8 +507,11 @@
             is_invalid_true() {
                 return this.error === true;
             },
+            isImmutableOnEdit() {
+                return !!this.def.immutable_on_edit && !this.form.i?.is_new && Number(this.form.i?.id ?? this.form.id ?? this.fwStore.current_id) > 0;
+            },
             isReadonlyControl() {
-                return this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
+                return this.isImmutableOnEdit || this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
             },
             isTrustedMarkdown() {
                 return this.def.trusted === true || this.def.trusted === 1 || this.def.trusted === '1' || this.def.trusted === 'true';

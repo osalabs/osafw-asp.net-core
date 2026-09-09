@@ -49,11 +49,11 @@
                        :href="fwStore.return_url"><~/common/icons/arrow-left-circle><span v-if="fwStore.return_title">`Return to` {{fwStore.return_title}}</span><span v-else>`Return Back`</span>
                     </a>
 
-                    <button v-if="uioptions.btnAddNew"
+                    <button v-if="uioptions.btnAddNew && fwStore.canAction('create')"
                             type="button"
                             class="btn btn-default"
                             @click="onAddNew"
-                            :disabled="fwStore.is_readonly"><~/common/icons/plus-lg>`Add New`</button>
+                            :disabled="!fwStore.canSaveForm() || fwStore.is_saving_edit"><~/common/icons/plus-lg>`Add New`</button>
                 </div>
 
                 <button v-if="current_id"
@@ -71,8 +71,8 @@
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
                 <span class="form-saved-status-global"></span>
                 <template v-if="!current_id">
-                    <button type="button" class="btn btn-primary" :disabled="fwStore.is_readonly" @click="saveChanges">`Save`</button>
-                    <button type="button" class="btn btn-secondary" :disabled="fwStore.is_readonly" @click="saveChanges('New')">`Save and Add New`</button>
+                    <button type="button" class="btn btn-primary" :disabled="!fwStore.canSaveForm() || fwStore.is_saving_edit" @click="saveChanges">`Save`</button>
+                    <button type="button" class="btn btn-secondary" :disabled="!fwStore.canSaveForm() || fwStore.is_saving_edit" @click="saveChanges('New')">`Save and Add New`</button>
                     <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
                 </template>
                 <slot name="actions-right"></slot>

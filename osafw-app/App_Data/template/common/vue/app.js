@@ -18,6 +18,7 @@ let mainApp = {
         this.fwStore.initApi();
 
         await this.fwStore.loadInitial();
+        this.fwStore.restoreFilterVisibility();
         if (this.fwStore.current_screen) {
             await this.fwStore.setCurrentScreen(this.fwStore.current_screen, this.fwStore.current_id, { replace: true });
         } else {
