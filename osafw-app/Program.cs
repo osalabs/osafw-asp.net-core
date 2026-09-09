@@ -33,6 +33,7 @@ public static class Program
 
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
         var builder = WebApplication.CreateBuilder(isCliCommand ? [] : args);
+        FwConfig.setDefaultOverrideName(builder.Environment.EnvironmentName);
 
         if (isCliCommand)
         {

@@ -33,6 +33,7 @@ public static class FwConfig
         internal readonly ConcurrentDictionary<string, Lazy<FwDict>> _hostCache = new();
         internal readonly object _configLock = new();
         internal IConfiguration? configuration;
+        internal string? environmentName;
         internal FwDict? _baseSettings;
         internal string? _trustedRootHost;
         internal string[]? _trustedHostPatterns;
@@ -70,6 +71,33 @@ public static class FwConfig
         }
     }
 
+    /// <summary>Sets the host-resolved default override for this configuration lifetime.</summary>
+    /// <remarks>Call before startup settings or requests are created. Null or whitespace restores
+    /// the ASPNETCORE_ENVIRONMENT, then DOTNET_ENVIRONMENT fallback. An explicit scope keeps its
+    /// selection separate from other scopes. Do not change this input while dependent FW instances are in use.</remarks>
+    public static void setDefaultOverrideName(string? environmentName)
+    {
+        var selected = string.IsNullOrWhiteSpace(environmentName) ? null : environmentName.Trim();
+        var state = currentState;
+        lock (state._configLock)
+        {
+            if (state.environmentName == selected)
+                return;
+            state.environmentName = selected;
+            state._hostCache.Clear();
+            state._currentHostKey.Value = null;
+        }
+    }
+
+    private static string getConfiguredEnvironmentName()
+    {
+        if (currentState.environmentName is string selected)
+            return selected;
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.Trim();
+        if (string.IsNullOrEmpty(environment))
+            environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")?.Trim();
+        return environment ?? string.Empty;
+    }
     private const string DEFAULT_HOST_KEY = "__default__";
     private const int GIT_COMMIT_DISPLAY_LENGTH = 8;
 
@@ -407,7 +435,7 @@ public static class FwConfig
     }
 
     /// <summary>
-    /// Builds startup settings for the current ASP.NET Core environment with environment overrides applied.
+    /// Builds startup settings using the configured environment selection and named overrides.
     /// </summary>
     /// <param name="cfg">Application configuration provider containing the appSettings section.</param>
     /// <returns>A flat settings dictionary whose keys are direct children of appSettings.</returns>
@@ -415,7 +443,7 @@ public static class FwConfig
     {
         setConfiguration(cfg);
 
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "";
+        var environment = getConfiguredEnvironmentName();
         FwDict st = [];
         applyAppSettings(cfg, st);
 
@@ -430,7 +458,7 @@ public static class FwConfig
         var trimmed = host?.Trim() ?? string.Empty;
         if (!string.IsNullOrEmpty(trimmed)) return trimmed;
 
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
+        var environment = getConfiguredEnvironmentName();
         return string.IsNullOrEmpty(environment) ? DEFAULT_HOST_KEY : environment;
     }
 
