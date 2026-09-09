@@ -396,3 +396,9 @@ DBList fkeys = db.listForeignKeys("orders");
 ```
 
 Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD examples using both FwDict-based and typed models see [`docs/crud.md`](./crud.md).
+
+### Nullable conversion and shared Row fields
+
+The string overloads of `toDate`, `toDateOrNull`, `toDecimal`, `toDouble`, `toFloat`, `toInt` and `toLong` accept `string?`. Null and whitespace retain their existing fallback result; parsing rules have not changed.
+
+In the attachment, attachment-category, demo-dictionary and role-related Row classes, optional `idesc` fields use `string?` and nullable audit user IDs use `int?` to match the schema. New rows retain their previous empty-description and zero-user defaults. Database NULL is preserved during materialization. Callers that require an integer can use `GetValueOrDefault()`; handle a missing description before dereferencing it. Required names, IDs and timestamps keep their existing declarations, and `Att.Row.fsize` remains `long`.
