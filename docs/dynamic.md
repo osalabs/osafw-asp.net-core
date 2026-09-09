@@ -84,11 +84,11 @@ Use `list_calculated_fields` when a name in `view_list_map` is populated by cont
 }
 ```
 
-Dependency values may be a space-separated string or an array. A string or array of calculated field names is also accepted when those fields need no source columns. For definition lists, use `{ "field": "full_name", "dependencies": ["first_name", "last_name"] }`. Calculated names must exist in `view_list_map`; names and dependencies must be simple identifiers. Unknown or unsafe metadata is ignored rather than added to SQL.
+Dependency values may be a space-separated string or an array. Use an empty array for a calculated field that needs no source columns. Calculated names must exist in `view_list_map`; names and dependencies must be simple identifiers. Unknown or unsafe metadata is ignored rather than added to SQL.
 
 For existing Vue configurations, when the top-level key is absent, `store.list_calculated_fields` dictionaries retain their previous source-column-to-calculated-name meaning and are adapted on the server. New top-level dictionaries always mean calculated-name-to-dependencies. When neither configuration key exists, init does not overwrite a client-only `fwStoreState` calculated-field setting; move that setting into controller metadata to gain server projection and query protection.
 
-Populate the calculated value in a controller `getListRows()` override after calling `base.getListRows()`, or in the model's `filterForJson()` implementation. The framework excludes calculated names from SELECT clauses, keyword search, per-column filters, search hints, and the automatically generated sort map. An explicit `list_sortmap` entry may map a calculated UI name to a real database sort field when the application can support that ordering safely.
+For both Dynamic and Vue lists, populate the calculated value in a controller `getListRows()` override after calling `base.getListRows()`. Vue lists can also use the model's `filterForJson()` implementation; classic Dynamic lists do not call that hook. The framework excludes calculated names from SELECT clauses, keyword search, per-column filters, search hints, and the automatically generated sort map. An explicit `list_sortmap` entry may map a calculated UI name to a real database sort field when the application can support that ordering safely.
 
 Only dependencies for calculated fields in the active user view are selected. The record id is still selected for list actions. Dependencies added only for calculation are removed from Vue JSON after controller and model row shaping; a dependency that is itself a visible list field remains in the response. CSV/XLS exports use the same calculation and pruning path and export the selected calculated values.
 

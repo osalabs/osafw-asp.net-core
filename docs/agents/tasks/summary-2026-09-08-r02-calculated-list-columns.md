@@ -6,7 +6,7 @@ Add an explicit Dynamic/Vue list contract for virtual columns calculated after d
 
 ## What changed
 
-- Added normalized `list_calculated_fields` controller metadata. The preferred map is calculated field to dependency string/list; definition lists and dependency-free field strings/lists are also accepted. Unsafe names and calculated fields absent from `view_list_map` are ignored.
+- Added normalized `list_calculated_fields` controller metadata. The map is calculated field to dependency string/list; an empty list declares a dependency-free field. Unsafe names and calculated fields absent from `view_list_map` are ignored.
 - Added the key to canonical generated controller-config ordering.
 - Removed calculated names from automatic sort maps, keyword search, legacy/typed column filters, search hints, and SQL projections. Explicit `list_sortmap` entries remain authoritative for database-backed calculated-column ordering.
 - Built list projections from visible stored fields, dependencies for selected calculated fields, and the model id. Dynamic lists retain their established `SELECT *` behavior unless calculated metadata opts them into the dependency-aware projection.
@@ -19,7 +19,7 @@ Reviewed `FwController` list config, sort, keyword/advanced search, projection, 
 
 ## Requirements / decisions
 
-- Calculation continues through `getListRows()` overrides or `FwModel.filterForJson()` so existing row authorization, model filtering, and trusted renderer behavior remain unchanged.
+- Calculation continues through `getListRows()` overrides in both Dynamic and Vue controllers. Vue additionally supports `FwModel.filterForJson()`; classic Dynamic lists do not invoke that hook. Existing row authorization and trusted renderer behavior remain unchanged.
 - Dependency metadata remains server-side. The Vue state contains calculated field names only.
 - Dependencies use simple identifier names. This supports stored fields and subquery aliases without accepting SQL expressions as projection metadata.
 - A calculated field is automatically non-sortable. An explicit `list_sortmap` entry can safely map its UI name to a stored field or existing approved ordering expression.
@@ -57,3 +57,9 @@ The existing shared Vue header contained a calculated-field check without a matc
 Independent review found that the legacy source-to-calculated adapter was applied ambiguously to the new top-level map while the actual old store configuration was overwritten. Top-level parsing is now strict. The legacy adapter applies only to store.list_calculated_fields when the explicit top-level key is absent; absent server metadata does not overwrite client-only state. Added the unknown-key/known-visible-value negative control and initial-page-state legacy/absent configuration controls.
 
 Final correction command: `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~FwDynamicControllerColumnFilterTests' --logger 'console;verbosity=normal'`: 37 passed. Earlier 44/721 counts apply to the pre-correction broader filters; they were not repeated after this bounded correction. Browser state merging remains inspected rather than browser-tested in this packet.
+
+## Lean review follow-up (2026-09-09)
+
+Synced with master after the approved framework updates. Reduced new top-level metadata to a calculated-name-to-dependencies map, removing definition lists, aliases, and name-only forms. Dependency strings and arrays remain supported, including empty arrays. The existing inverse Vue store map adapter and absent-metadata client-state behavior remain intact. Canonical documentation now identifies `getListRows()` as the common calculation hook and `filterForJson()` as Vue-only.
+
+`dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~FwDynamicControllerColumnFilterTests|FullyQualifiedName~FwControllerBehaviorTests' --verbosity quiet` passed 45 tests. Updated public-controller fixtures exercise canonical arrays, dependency-free maps, and the retained string and legacy store forms. No configured database or live service was used.

@@ -954,59 +954,32 @@ public abstract partial class FwController
     private FwDict normalizeListCalculatedFields(object? raw)
     {
         FwDict result = [];
+        if (raw is not IDictionary dictionary)
+            return result;
 
-        void Add(string field, object? dependencies)
+        foreach (DictionaryEntry entry in dictionary)
         {
-            field = field.Trim();
+            var field = entry.Key.toStr().Trim();
             if (!isSafeListFieldName(field) || !view_list_map.ContainsKey(field))
-                return;
+                continue;
 
-            StrList normalizedDependencies = [];
-            if (dependencies is IList dependencyList && dependencies is not string)
+            StrList dependencies = [];
+            if (entry.Value is IList list)
             {
-                foreach (var dependency in dependencyList)
-                    addListCalculatedDependency(normalizedDependencies, dependency);
+                foreach (var dependency in list)
+                    addListCalculatedDependency(dependencies, dependency);
+            }
+            else if (entry.Value is string names)
+            {
+                foreach (var dependency in Utils.qw(names))
+                    addListCalculatedDependency(dependencies, dependency);
             }
             else
             {
-                foreach (var dependency in Utils.qw(dependencies.toStr()))
-                    addListCalculatedDependency(normalizedDependencies, dependency);
+                continue;
             }
-            result[field] = normalizedDependencies;
+            result[field] = dependencies;
         }
-
-        if (raw is IDictionary dictionary)
-        {
-            foreach (DictionaryEntry entry in dictionary)
-            {
-                var key = entry.Key.toStr().Trim();
-                if (entry.Value is FwDict definition)
-                {
-                    var field = definition["field"].toStr(key);
-                    Add(field, definition["dependencies"] ?? definition["fields"]);
-                }
-                else
-                {
-                    Add(key, entry.Value);
-                }
-            }
-        }
-        else if (raw is IList list && raw is not string)
-        {
-            foreach (var item in list)
-            {
-                if (item is FwDict definition)
-                    Add(definition["field"].toStr(), definition["dependencies"] ?? definition["fields"]);
-                else
-                    Add(item.toStr(), null);
-            }
-        }
-        else
-        {
-            foreach (var field in Utils.qw(raw.toStr()))
-                Add(field, null);
-        }
-
         return result;
     }
 

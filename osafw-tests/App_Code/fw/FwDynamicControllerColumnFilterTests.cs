@@ -217,7 +217,7 @@ public class FwDynamicControllerColumnFilterTests
         var config = BuildConfig(fields: ExplicitFilterFields());
         config["view_list_defaults"] = config["view_list_defaults"].toStr() + " calculated_total";
         ((FwDict)config["view_list_map"]!)["calculated_total"] = "Calculated total";
-        config["list_calculated_fields"] = "calculated_total";
+        config["list_calculated_fields"] = new FwDict { ["calculated_total"] = new StrList() };
         var controller = BuildController(config: config);
 
         controller.ApplySearch(new FwDict { ["calculated_total"] = "=100" });

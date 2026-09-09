@@ -188,13 +188,9 @@ public class FwVueControllerTests
         using var scope = new FwTestScope(_ => db);
         TestHelpers.RegisterModel(scope.Fw, (Users)new StubUsers());
         var controller = new CalculatedVueController();
-        controller.Configure(scope.Fw, new ObjList
+        controller.Configure(scope.Fw, new FwDict
         {
-            new FwDict
-            {
-                ["field"] = "calculated_name",
-                ["dependencies"] = new ObjList { "first_name", "last_name" },
-            },
+            ["calculated_name"] = new ObjList { "first_name", "last_name" },
         }, "title calculated_name");
 
         var ps = controller.RunList();
