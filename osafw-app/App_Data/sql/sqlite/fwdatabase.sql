@@ -372,6 +372,7 @@ CREATE TABLE user_views (
   is_system             INTEGER NOT NULL DEFAULT 0,
   is_shared             INTEGER NOT NULL DEFAULT 0,
   density               TEXT NOT NULL DEFAULT '',
+  widths                TEXT NOT NULL DEFAULT '{}',
 
   status                INTEGER NOT NULL DEFAULT 0,
   add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

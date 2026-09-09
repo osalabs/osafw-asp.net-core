@@ -8,7 +8,13 @@
                     <~/common/icons/info-circle-fill>use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
                 </div>
 
-                <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
+                <table :style="tableWidthStyle" :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
+                    <colgroup v-if="Object.keys(fwStore.columnWidths()).length">
+                        <col style="width:40px">
+                        <col v-if="uioptions.isButtonsLeft && uioptions.rowButtons !== false" style="width:160px">
+                        <col v-for="header in fwStore.list_headers" :key="header.field_name" :style="{width: (fwStore.columnWidths()[header.field_name] || 160) + 'px'}">
+                        <col v-if="!uioptions.isButtonsLeft && uioptions.rowButtons !== false" style="width:160px">
+                    </colgroup>
                     <list-table-header />
 
                     <tbody class="table-group-divider" :class="uioptions.nl2br ? 'nl2br' :'' ">
@@ -85,6 +91,12 @@
         }),
         computed: {
             ...mapStores(fwStore),
+            tableWidthStyle() {
+                const widths = this.fwStore.columnWidths();
+                if (!Object.keys(widths).length) return null;
+                const width = this.fwStore.list_headers.reduce((total, header) => total + (widths[header.field_name] || 160), 40 + (this.uioptions.rowButtons === false ? 0 : 160));
+                return { tableLayout: 'fixed', width: width + 'px' };
+            },
             uioptions() {
                 return this.fwStore.uioptions.list.table ?? {};
             }

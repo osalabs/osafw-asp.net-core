@@ -28,6 +28,7 @@
             </ul>
             <hr>
         </div>
+        <~/common/vue/form-issues>
         <fieldset>
             <form-one-def v-for="(def,index) in preparedDefs"
                           :key="index"
@@ -47,7 +48,7 @@
                     </p>
                 </div>
                 <div class="col">
-                    <button type="submit" class="btn btn-primary me-1" :disabled="fwStore.is_readonly">`Save`</button>
+                    <button type="submit" class="btn btn-primary me-1" :disabled="!fwStore.canSaveForm() || fwStore.is_saving_edit">`Save`</button>
                     <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
                 </div>
             </div>

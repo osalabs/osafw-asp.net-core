@@ -66,6 +66,28 @@ public class SQLiteDBTests
         db.update("demos", DB.h("iname", "Renamed Demo"), DB.h("id", 1));
 
         Assert.AreEqual("DEMO-1 — Renamed Demo", db.value("demos", DB.h("id", 1), "display_name").toStr());
+
+        var userViewSchema = db.tableSchemaFull("user_views");
+        Assert.IsTrue(userViewSchema.ContainsKey("widths"));
+        db.insert("user_views", DB.h("icode", "/Demo", "add_users_id", 7));
+        Assert.AreEqual("{}", db.value("user_views", DB.h("icode", "/Demo"), "widths").toStr());
+    }
+
+    [TestMethod]
+    public void SQLiteUserViewWidthsUpdate_AddsColumnToLegacySchema()
+    {
+        db.exec(@"CREATE TABLE user_views (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  icode TEXT NOT NULL,
+  fields TEXT
+)");
+        var update = Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "updates", "upd2026-09-08-user-view-widths.sql");
+
+        db.execMultipleSQL(File.ReadAllText(update));
+
+        Assert.IsTrue(db.tableSchemaFull("user_views").ContainsKey("widths"));
+        db.insert("user_views", DB.h("icode", "/Legacy"));
+        Assert.AreEqual("{}", db.value("user_views", DB.h("icode", "/Legacy"), "widths").toStr());
     }
 
     [TestMethod]

@@ -36,7 +36,7 @@
                 <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots['group-prepend']">
                     <slot name="group-prepend"></slot>
 
-                    <button v-if="uioptions.btnAddNew"
+                    <button v-if="uioptions.btnAddNew && fwStore.canAction('create')"
                             type="button"
                             class="btn btn-primary"
                             @click="onAddNew"
@@ -56,6 +56,7 @@
             </div>
 
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
+                <button v-if="fwStore.uioptions.list.filters" type="button" class="btn btn-default" :aria-expanded="fwStore.is_filter_panel_open" @click="fwStore.toggleFilterPanel()">{{fwStore.is_filter_panel_open ? 'Hide filters' : 'Show filters'}}</button>
                 <slot name="actions-right"></slot>
             </div>
         </div>
@@ -73,9 +74,13 @@
         }),
         computed: {
             ...mapStores(fwStore), //accessible via this.fwStore
+            visibilityKey() { return this.fwStore.filterVisibilityKey(); },
             uioptions() {
                 return this.fwStore.uioptions.list.header ?? false;
             }
+        },
+        watch: {
+            visibilityKey: { immediate: true, handler() { this.fwStore.restoreFilterVisibility(); } }
         },
         methods: {
             onAddNew(e) {

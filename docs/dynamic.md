@@ -1586,3 +1586,46 @@ Configuration example:
 Each entry defines the tab code (`tab`) and the text shown on the tab (`label`).
 Fields for a tab should be placed in `show_fields_TAB` and `showform_fields_TAB` arrays where `TAB` is the value from `form_tabs`. If only one tab is defined the tab bar is hidden.
 Active tab is set by `tab` parameter in the URL, e.g. `/Admin/DemosDynamic/123?tab=advanced`. If no tab is specified, the default tab is active.
+
+## Vue interaction behavior
+
+### Saved column widths
+
+Vue list headers support dragging the right-edge resize control, pressing Left/Right for ten-pixel steps, Home/End for the limits, and double-clicking to fit visible text. Widths are rounded and limited to 60–800 pixels. The `user_views.widths` JSON map stores up to 100 configured columns, alongside the existing fields and density. Unknown columns and invalid widths are discarded. Resizing saves the current default view; saving a named view copies the current widths, loading a view restores them, and resetting a view clears them. Hidden configured columns retain their widths; removed columns are ignored.
+
+Apply the provider's additive `upd2026-09-08-user-view-widths.sql` update before copying these model/controller changes into an existing application. Fresh SQL Server, SQLite, and MySQL schemas include the column. The saved-view action still requires POST and the current XSS token, and existing owner/system authorization remains in force.
+
+### Validation issues
+
+`FwVueController` supports neutral issues alongside the existing `FormErrors` response. In an application validation override, call:
+
+```csharp
+addValidationIssue("error", "title", "Check this value.");
+addValidationIssue("warning", "title", "Review this value before continuing.");
+```
+
+The save response adds `validation_issues`, an array with `severity`, `field`, and `message`; optional `tab` identifies a form tab and `row_id` identifies a repeated row. Errors block the save and retain HTTP 400 plus legacy `error.details`. Warnings do not block a successful save. The UI renders messages as text, shows field messages and a summary, and lets a summary button select the tab, open containing fieldsets, and focus the control. Failed saves retain entered form values and do not reload or navigate the list.
+
+An optional attempted `value` is included only for a field definition with JSON boolean `validation_show_value: true`. Leave that setting absent for sensitive values. Password and hidden controls do not expose attempted values. Messages themselves must also avoid sensitive data; the framework cannot determine which application text is confidential.
+
+Repeated-row issues use the exact posted field key, for example `item-lines#22[quantity]`, and `row_id: "22"`. A custom subtable field wrapper should provide matching `data-fw-field` and `data-fw-row` attributes and `tabindex="-1"`. If it uses the common form group, pass `def.issue_field` with the posted key and `form.row_id` with the row id. `fwStore.fieldIssues(def, form)` provides matching messages. The supplied editable subtable examples demonstrate the same contract.
+
+### Action availability and immutable fields
+
+Initial Vue state contains `capabilities: { create, edit, delete }`. It reflects controller/user restrictions. Per-row `_capabilities` can further restrict actions; it cannot widen the controller's permissions. `getCapabilities()` and `getListRowCapabilities(row)` are the server extension points. Read-only rows and virtual controllers participate in the same shape. Common action controls use this metadata, while actual actions retain server authorization checks. Missing metadata in an older custom frontend retains its previous defaults.
+
+Set `immutable_on_edit: true` on a form field to allow entry when creating a row and display its value without an editable control afterward. Existing-row updates ignore submitted changes to that field, including forged requests; ordinary full-form submissions remain usable. New rows retain the field. Editable subtables can declare child fields in their nested `showform_fields`, using the same metadata. Custom subtable controls must also honor those child definitions for presentation. This metadata governs the standard controller save paths; model writes and custom actions must enforce any application-wide immutability requirement separately.
+
+### Filter visibility and quick edit
+
+The filter panel starts open and remembers its visibility in browser storage. Keys include origin, application/controller URL, list/edit mode, and related-record context. Hiding the panel preserves its filter values. If storage is unavailable, the panel remains usable with an open default.
+
+Quick-edit context retention is opt-in:
+
+```json
+"store": {
+  "quick_edit_keep_context": true
+}
+```
+
+After a successful quick edit, the client fetches current list rows, count, paging, filtering and ordering from the server while preserving the open pane, input focus and selection. The server remains responsible for whether an edited row still matches the list. A refresh failure reports that the save succeeded but the list needs reloading. Existing save triggers remain unchanged; this option adds no new autosave trigger. Identical simultaneous saves are suppressed, while a changed form submitted during an active save is queued once afterward. Explicit failed deletions do not clear selection or reload the list.

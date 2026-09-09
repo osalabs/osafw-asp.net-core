@@ -6,7 +6,8 @@
 
             <template v-for="header in fwStore.list_headers" :key="header.field_name">
                 <th :class="'rotate'+(header.is_sortable && fwStore.f.sortby==header.field_name ? ' active-sort' : '')"
-                    :style="header.list_min_width ? 'min-width:'+header.list_min_width: null"
+                    :style="{ position: 'relative', minWidth: header.list_min_width || null }"
+                    :data-fw-column="header.field_name"
                     :data-sort="header.is_sortable"
                     @click="(event) => onSortHeader(event, header)">
                     <div>
@@ -15,6 +16,12 @@
                             <span v-if="fwStore.f.sortdir=='desc'"><~/common/icons/arrow-up></span><span v-else><~/common/icons/arrow-down></span>
                         </span>
                     </div>
+                    <button type="button" class="fw-column-resize" style="position:absolute;right:0;top:0;height:100%;width:8px;cursor:col-resize;border:0;border-right:2px solid #adb5bd;background:transparent;touch-action:none"
+                            :aria-label="'Resize ' + header.field_name_visible"
+                            :title="'Drag or use arrow keys to resize; double-click to fit'"
+                            @click.stop @pointerdown.stop.prevent="startResize($event, header)"
+                            @dblclick.stop.prevent="autoFit($event, header)"
+                            @keydown.stop="resizeKey($event, header)"></button>
                 </th>
             </template>
 
@@ -64,7 +71,58 @@
                 return Array.isArray(fields) ? fields : Object.values(fields);
             }
         },
+        beforeUnmount() { this.finishResize(false); },
         methods: {
+            startResize(event, header) {
+                if (event.button !== 0) return;
+                this.finishResize(false);
+                const cell = event.currentTarget.closest('th');
+                const initial = cell.getBoundingClientRect().width;
+                const startX = event.clientX;
+                const previous = this.fwStore.list_user_view.widths;
+                const move = e => {
+                    const width = Math.max(60, Math.min(800, Math.round(initial + e.clientX - startX)));
+                    this.fwStore.list_user_view.widths = { ...this.fwStore.columnWidths(), [header.field_name]: width };
+                };
+                const stop = () => this.finishResize(true);
+                const cancel = () => this.finishResize(false);
+                this.resizeSession = { field: header.field_name, move, stop, cancel, previous };
+                window.addEventListener('pointermove', move);
+                window.addEventListener('pointerup', stop);
+                window.addEventListener('pointercancel', cancel);
+                window.addEventListener('blur', cancel);
+            },
+            finishResize(save) {
+                const session = this.resizeSession;
+                if (!session) return;
+                window.removeEventListener('pointermove', session.move);
+                window.removeEventListener('pointerup', session.stop);
+                window.removeEventListener('pointercancel', session.cancel);
+                window.removeEventListener('blur', session.cancel);
+                const width = this.fwStore.columnWidths()[session.field];
+                this.fwStore.list_user_view.widths = session.previous;
+                this.resizeSession = null;
+                if (save && width) this.fwStore.saveColumnWidth(session.field, width);
+            },
+            resizeKey(event, header) {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const current = this.fwStore.columnWidths()[header.field_name] ?? event.currentTarget.closest('th').getBoundingClientRect().width;
+                const width = event.key === 'Home' ? 60 : event.key === 'End' ? 800 : current + (event.key === 'ArrowRight' ? 10 : -10);
+                this.fwStore.saveColumnWidth(header.field_name, width);
+            },
+            autoFit(event, header) {
+                const table = event.currentTarget.closest('table');
+                const cells = Array.from(table.querySelectorAll('[data-fw-column]')).filter(cell => cell.dataset.fwColumn === header.field_name);
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                let width = 60;
+                cells.forEach(cell => {
+                    context.font = getComputedStyle(cell).font;
+                    width = Math.max(width, ...cell.innerText.split('\n').map(line => context.measureText(line).width + 32));
+                });
+                this.fwStore.saveColumnWidth(header.field_name, width);
+            },
             // Sorting handler
             onSortHeader(e, header) {
                 if (!header.is_sortable) return;

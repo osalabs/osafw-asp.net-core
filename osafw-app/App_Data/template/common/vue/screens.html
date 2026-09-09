@@ -1,7 +1,7 @@
 <script type="text/x-template" id="screens">
     <template v-if="fwStore.current_screen=='list'">
         <list-header v-if="fwStore.uioptions.list.header"></list-header>
-        <list-filters v-if="fwStore.uioptions.list.filters"></list-filters>
+        <list-filters v-if="fwStore.uioptions.list.filters" v-show="fwStore.is_filter_panel_open"></list-filters>
         <list-table v-if="fwStore.uioptions.list.table">
             <!--template #list-row-btn-prepend="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template>
             <template #list-row-btn-append="props"><button class="btn btn-sm btn-default" @click.prevent="console.log(props.row)">Custom Button</button></template-->

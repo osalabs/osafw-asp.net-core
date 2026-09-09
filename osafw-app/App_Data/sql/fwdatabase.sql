@@ -402,6 +402,7 @@ CREATE TABLE user_views (
   is_system             TINYINT NOT NULL DEFAULT 0, -- 1 - system - visible for all
   is_shared             TINYINT NOT NULL DEFAULT 0, -- 1 if shared/published
   density               NVARCHAR(16) NOT NULL DEFAULT '', -- list table density class: table-sm(or empty - default), table-dense, table-normal
+  widths                NVARCHAR(MAX) NOT NULL DEFAULT '{}', -- JSON map of configured list column names to pixel widths
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              DATETIME2 NOT NULL DEFAULT getdate(),

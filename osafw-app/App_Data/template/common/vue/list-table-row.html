@@ -25,7 +25,7 @@
         </list-row-btn>
 
         <template v-for="header in fwStore.list_headers" :key="header.field_name">
-            <td v-if="!fwStore.is_list_edit">
+            <td v-if="!fwStore.is_list_edit" :data-fw-column="header.field_name" style="overflow-wrap:anywhere;overflow:hidden">
                 <slot :name="'cell-'+header.field_name"
                       :row="row"
                       :col="header">
@@ -34,9 +34,9 @@
                     <list-cell-ro v-else :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
                 </slot>
             </td>
-            <td v-else
+            <td v-else :data-fw-column="header.field_name" style="overflow:hidden"
                 :class="(fwStore.cells_saving[id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[id+'-'+header.field_name]?' cell-invalid':'')">
-                <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
+                <list-cell-ro v-if="header.is_ro || !fwStore.canAction('edit', row) || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
 
                 <list-cell-input v-else-if="['input','email','number','range','date_popup','datetime_popup','datetime_local','time','textarea'].includes(header.input_type)"
                                  :rowId="id" :row="row" :col="header"
@@ -138,15 +138,14 @@
                 this.fwStore.openViewScreen(this.id);
             },
             onRowEdit(row) {
-                this.fwStore.openEditScreen(this.id);
+                if (this.fwStore.canAction('edit', row)) this.fwStore.openEditScreen(this.id);
             },
             async onRowQuickEdit(row) {
-                await this.fwStore.openEditPane(this.id);
+                if (this.fwStore.canAction('edit', row)) await this.fwStore.openEditPane(this.id);
             },
             async onRowDelete(row) {
                 console.log("TODO confirm modal onRowDelete", this.id);
-                await this.fwStore.deleteRow(this.id);
-                await this.fwStore.loadIndexDebounced(); //reload list to show changes
+                if (this.fwStore.canAction('delete', row) && await this.fwStore.deleteRow(this.id)) await this.fwStore.loadIndexDebounced();
             },
             async onRowCustom(row, e) {
                 this.fwStore.onRowBtnCustomClick(row, e);

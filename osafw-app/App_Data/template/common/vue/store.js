@@ -8,6 +8,7 @@ window.fwConst = {
     },
 };
 <~/common/vue/store_core.js>
+<~/common/vue/interaction_helpers.js>
 
 let state = {
     global: {}, //global config
@@ -22,6 +23,12 @@ let state = {
     edit_title: '',
     add_new_title: '',
     is_readonly: false,
+    capabilities: {},
+    is_filter_panel_open: true,
+    quick_edit_keep_context: false,
+    is_saving_edit: false,
+    active_save_signature: '',
+    pending_edit_save: false,
     is_activity_logs: false, //true if activity logs enabled
 
     // default UI options, override in specific controller via store.js
@@ -318,7 +325,7 @@ let getters = {
     savedStatus: (state) => {
         let sr = state.edit_data?.save_result ?? null;
         if (!sr) return null; // no save initiated yet
-        return !(!sr.id || sr.error); //saved when we have id and no error
+        return !!sr.id && sr.success !== false && !sr.error && !(sr.validation_issues ?? []).some(issue => issue.severity !== 'warning');
     },
     savedErrorMessage: (state) => {
         return state.edit_data?.save_result?.error?.message ?? '';
@@ -485,7 +492,7 @@ let actions = {
 
             let def_type = def.type;
             header.input_type = def_type;
-            if (!this.list_editable_def_types.includes(def_type)) header.is_ro = true;
+            if (!this.list_editable_def_types.includes(def_type) || def.immutable_on_edit) header.is_ro = true;
 
             //add all other def attributes to header (if not exists in header yet)
             Object.keys(def).forEach(attr => {
@@ -726,10 +733,12 @@ let actions = {
             const req = { XSS: this.XSS };
             //console.log('deleteRow req', req);
             const response = await this.api.delete(id, { query: req });
-            //console.log('deleteRow response', response);
+            if (response?.error || response?.success === false) return false;
+            return true;
 
         } catch (error) {
             this.handleError(error, 'deleteRow');
+            return false;
         }
     },
     async deleteCheckedRows() {
@@ -740,17 +749,17 @@ let actions = {
 
             //console.log('deleteCheckedRows req', req);
             const response = await this.api.put(req);
-            //console.log('deleteCheckedRows response', response);
+            if (response?.error || response?.success === false) return false;
 
             //clear checked rows
             this.hchecked_rows = {};
 
         } catch (error) {
             this.handleError(error, 'deleteCheckedRows');
-        } finally {
-            //reload list to show changes
-            this.loadIndex();
+            return false;
         }
+        await this.loadIndex();
+        return true;
     },
 
     async customCheckedRows(url) {
@@ -795,14 +804,24 @@ let actions = {
     async saveEditDataDebounced(delay) {
         if (!delay) delay = 500;
         // debounce saveEditData
-        if (this.edit_data) this.edit_data.save_result = {};
+        const form = this.edit_data;
+        if (form) form.save_result = {};
         if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
         this.saveEditDataDebouncedTimeout = setTimeout(() => {
-            this.saveEditData();
+            if (form && this.edit_data === form) this.saveEditData();
         }, delay);
     },
     //save edit form data
     async saveEditData() {
+        if (!this.edit_data || !this.canSaveForm()) return false;
+        const signature = JSON.stringify([this.edit_data.id, this.edit_data.i, this.edit_data.subtables, this.edit_data.multi_rows, this.edit_data.att_links, this.edit_data.att_files]);
+        if (this.is_saving_edit) {
+            if (this.active_save_signature !== signature) this.pending_edit_save = true;
+            return false;
+        }
+        this.active_save_signature = signature;
+        const form = this.edit_data;
+        this.is_saving_edit = true;
         try {
             const req = { item: this.edit_data.i, XSS: this.XSS };
             const activeTab = this.activeFormTab;
@@ -870,14 +889,23 @@ let actions = {
             //console.log('saveEditData req', req);
             const response = await this.api.post(this.edit_data.id, req);
             //console.log('saveEditData response', response);
+            if (this.edit_data !== form) return false;
             this.edit_data.save_result = response;
+            if (response?.error || response?.success === false || this.formIssues().some(issue => issue.severity === 'error')) return false;
             if (!response?.error) {
                 this.applySubtableSaveResult(response);
             }
 
             if (this.current_screen == 'list') {
                 //reload list to show changes
-                await this.loadIndex();
+                if (this.quick_edit_keep_context && this.is_list_edit_pane) {
+                    try { await this.refreshQuickEditList(); }
+                    catch (error) {
+                        response.validation_issues = [...(response.validation_issues ?? []), { severity: 'warning', message: 'Saved, but the list could not refresh. Reload the list to see current values.' }];
+                        this.handleError(error, 'refreshQuickEditList');
+                    }
+                }
+                else await this.loadIndex();
             } else {
                 //after edit form saved - process route_return
                 const rr = this.edit_data.route_return ?? '';
@@ -897,12 +925,18 @@ let actions = {
             }
 
         } catch (error) {
-            this.edit_data.save_result = error.body ?? { error: 'server error' };
+            if (this.edit_data === form) form.save_result = error.body ?? { error: { message: 'Server error' } };
             if (error.response >= 500) {
                 this.handleError(error, 'saveEditData');
                 return error;
             }
             //400 errors are user validation
+        } finally {
+            this.is_saving_edit = false;
+            if (this.pending_edit_save && this.edit_data === form) {
+                this.pending_edit_save = false;
+                await this.saveEditData();
+            } else this.pending_edit_save = false;
         }
     },
     applySubtableSaveResult(response) {
@@ -1072,6 +1106,7 @@ let actions = {
     }
 };
 
+actions = { ...actions, ...createInteractionActions() };
 //merge in fwStoreActions if defined
 actions = mergeStoreDefaults(actions, fwStoreActions);
 

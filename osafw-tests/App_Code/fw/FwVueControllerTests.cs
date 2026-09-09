@@ -75,18 +75,18 @@ public class FwVueControllerTests
 
         public void Configure(
             FW fw,
-            object calculatedFields,
+            object? calculatedFields,
             string visibleFields,
             string searchFields = "title calculated_name",
             FwDict? sortMap = null,
-            string sortDefault = "title asc")
+            string sortDefault = "title asc", bool legacyStore = false)
         {
             init(fw);
             base_url = "/Calculated";
             model0 = new CalculatedModel();
             model0.init(fw);
             db = fw.db;
-            loadControllerConfig(new FwDict
+            var definition = new FwDict
             {
                 ["is_dynamic_index"] = true,
                 ["view_list_defaults"] = visibleFields,
@@ -99,9 +99,13 @@ public class FwVueControllerTests
                 ["search_fields"] = searchFields,
                 ["list_sortdef"] = sortDefault,
                 ["list_sortmap"] = sortMap ?? new FwDict { ["title"] = "title" },
-            });
+            };
+            if (legacyStore || calculatedFields == null) definition.Remove("list_calculated_fields");
+            if (legacyStore) definition["store"] = new FwDict { ["list_calculated_fields"] = calculatedFields };
+            loadControllerConfig(definition);
         }
 
+        public FwDict InitState() { FwDict ps = []; setScopeInitial(ps); return ps; }
         protected override FwDict getListUserView() => [];
 
         public FwDict RunList(string keyword = "", FwDict? columnSearch = null, string sortBy = "title")
@@ -325,6 +329,7 @@ public class FwVueControllerTests
         {
             ["calculated_name"] = new ObjList { "first_name", "last_name]; DROP TABLE users;--" },
             ["unknown_calculated"] = "secret",
+            ["calcuated_name"] = "title",
             ["bad]; DROP TABLE users;--"] = "title",
         }, "title calculated_name");
 
@@ -334,5 +339,24 @@ public class FwVueControllerTests
         Assert.IsFalse(db.SelectSql.Contains("DROP TABLE", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(db.SelectSql.Contains("secret", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(db.SelectSql.Contains("unknown_calculated", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(db.SelectSql.Contains("calcuated_name", StringComparison.OrdinalIgnoreCase));
+        StringAssert.Contains(db.SelectSql, "[title]");
+    }
+
+    [TestMethod]
+    public void LegacyStoreMetadataIsAdoptedAndAbsentMetadataDoesNotOverwriteClientState()
+    {
+        var db = new RecordingDb();
+        using var scope = new FwTestScope(_ => db);
+        TestHelpers.RegisterModel(scope.Fw, (Users)new StubUsers());
+        var controller = new CalculatedVueController();
+        controller.Configure(scope.Fw, new FwDict { ["first_name"] = "calculated_name" }, "title calculated_name", legacyStore: true);
+        var initial = controller.InitState();
+        CollectionAssert.AreEqual(new[] { "calculated_name" }, ((StrList)initial["list_calculated_fields"]!).ToArray());
+        controller.RunList();
+        StringAssert.Contains(db.SelectSql, "[first_name]");
+        Assert.IsFalse(db.SelectSql.Split(" FROM ")[0].Contains("[calculated_name]"));
+        controller.Configure(scope.Fw, null, "title");
+        Assert.IsFalse(controller.InitState().ContainsKey("list_calculated_fields"));
     }
 }
