@@ -51,3 +51,7 @@ No live SQL Server, MySQL, or OLE catalog was available, so those provider queri
 ## Reflection
 
 The existing public scaffolding entry and disposable provider tests made the generated-output and cache contracts observable without adding production test seams or touching a configured database. A reusable provider-metadata fixture would improve future exact SQL Server/MySQL/OLE integration evidence, but it should be introduced only with isolated provider resources rather than embedded deployment configuration.
+
+## Integration review follow-up
+
+Independent review found that MySQL unsigned bigint was not discovered from the provider's COLUMN_TYPE. The final integration reads and normalizes that metadata, verifies the discovery-to-generator path, and uses DATABASE() inside the query so cold MySQL connections select their configured database. Final targeted command: `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~DBOperationTests|FullyQualifiedName~DevCodeGenTests|FullyQualifiedName~DevEntityBuilderTests' --verbosity quiet`: 41 passed. Earlier broader and SQLite results above precede this final provider correction; no live MySQL query was run.

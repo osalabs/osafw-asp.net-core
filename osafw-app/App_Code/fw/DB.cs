@@ -3212,6 +3212,7 @@ public class DB : IDisposable
         {
             string sql = @"SELECT c.column_name as name,
                       c.data_type as type,
+                      c.column_type as column_type,
                       CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS is_nullable,
                       c.column_default as `default`,
                       c.character_maximum_length as maxlen,
@@ -3229,14 +3230,16 @@ public class DB : IDisposable
                         AND t.table_schema = c.table_schema
                         AND t.table_catalog = c.table_catalog
                         AND t.table_name = @table_name
-                        AND t.table_schema = @db_name
+                        AND t.table_schema = DATABASE()
                       order by c.ORDINAL_POSITION";
-            result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn?.Database ?? string.Empty));
+            result = arrayp(sql, DB.h("@table_name", table));
             foreach (FwDict row in result)
             {
                 var subtype = row["type"].toStr();
                 row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
-                row["fw_subtype"] = subtype.ToLowerInvariant();
+                row["fw_subtype"] = subtype.Equals("bigint", StringComparison.OrdinalIgnoreCase)
+                    && Regex.IsMatch(row["column_type"].toStr(), @"\bunsigned\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+                    ? "unsignedbigint" : subtype.ToLowerInvariant();
             }
         }
 #if isSQLite

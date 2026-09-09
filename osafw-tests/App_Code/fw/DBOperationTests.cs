@@ -232,6 +232,26 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void LoadTableSchemaFull_MySqlDiscoversUnsignedBigIntForGeneratedRowsOnColdConnection()
+        {
+            using var db = new PagingDb(DB.DBTYPE_MYSQL)
+            {
+                Rows = [new DBRow(new FwDict
+                {
+                    ["name"] = "large_number", ["type"] = "bigint", ["column_type"] = "bigint unsigned",
+                    ["is_nullable"] = 1, ["is_identity"] = 0, ["is_computed"] = 0
+                })]
+            };
+            var fields = db.loadTableSchemaFull("unsigned_metadata_" + Guid.NewGuid().ToString("N"));
+            StringAssert.Contains(db.LastSql, "c.column_type as column_type");
+            StringAssert.Contains(db.LastSql, "t.table_schema = DATABASE()");
+            Assert.IsFalse(db.LastParams.ContainsKey("@db_name"));
+            var field = (FwDict)fields[0];
+            Assert.AreEqual("int", field["fw_type"]);
+            Assert.AreEqual("unsignedbigint", field["fw_subtype"]);
+            Assert.AreEqual("ulong?", DevCodeGen.buildRowPropertyType(field));
+        }
+        [TestMethod]
         public void LoadTableSchemaFull_ColdOleMetadataConnectsOnWindows()
         {
             var db = new ColdOleDb("cold-ole-" + Guid.NewGuid().ToString("N"));
