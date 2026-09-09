@@ -1,11 +1,8 @@
-<div align="center">
-
-<img src="<~GLOBAL[ASSETS_URL]>/img/<~error[code] default="500">.png" style="max-width:128px">
-<h2>`Server Error Occured`</h2>
-As of <~error[time] date="sql"> we know the following:
-<div class="alert alert-danger">
-    <~error[message] nl2br>
-</div>
+<section class="text-center my-4 mx-auto" style="max-width:42rem" aria-labelledby="error-title">
+    <h1 id="error-title">`Something went wrong`</h1>
+    <p class="lead">`The server could not complete your request. Try again later. If the problem continues, contact site support.`</p>
+    <~/error/message>
+</section>
 
 <~dump if="is_dump" inline>
 <div class="text-start">
@@ -30,28 +27,3 @@ As of <~error[time] date="sql"> we know the following:
     </div>
 </div>
 </~dump>
-
-<div style="margin:auto;width:400px">
-    <p>
-    Try the following:<br>
-    <ol style="text-align:left">
-        <~links unless="_IS_PJAX" inline>
-        <!--li>
-            <a href="#" onclick="window.locaiton.reload()">`Reload or re-submit the page`</a><br>
-        </li-->
-        <li>
-            <a href="#" onclick="window.history.go(-1)">`Return to previous page and try last action again`</a>
-        </li>
-        </~links>
-        <li>
-            <a href="<~/login/url_logoff>">`Logoff and Re-login to the site`</a>
-        </li>
-        <li>
-            If nothing helps - contact site support
-        </li>
-    </ol>
-    </p>
-</div>
-
-
-</div>

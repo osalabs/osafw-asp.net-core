@@ -839,6 +839,12 @@ Used for the add/edit (form) page. Typical files:
 
 **Example:** See `template/admin/demosdynamic` for a real-world structure and customizations.
 
+## Error presentation
+
+`FW.errMsg` classifies bad input (400), denied access (403), missing pages (404) and server errors (500). The HTML guidance is owned by the corresponding templates under `error/400`, `error/403`, `error/404` and `error`; their backtick-delimited text uses the normal ParsePage translation files. The existing `error/4xx` entry delegates 400, 403 and 404 responses to their status-specific templates. Exception-based and static-page 404 responses share `error/404` content; existing application overrides of the `error/4xx` entry still apply.
+
+`error/message.html` escapes `error.message` and supplies the shared actions. A direct anonymous 403 rendered through `FW.errMsg` adds `error.login_url`, so the template can offer sign-in with a validated app-local return URL and preserve a configured URL prefix. Normal anonymous page dispatch redirects before `errMsg`; those redirects keep their existing behavior. Existing JSON messages, legacy fields and `error.details` remain available, production exception masking is unchanged, and debug dumps remain behind the existing development gate. Copied applications can override the status templates and shared fragment without replacing framework error classification.
+
 ## Select-template label lookups
 
 `FormUtils.selectTplName` caches parsed labels for up to 128 canonical template paths. Each lookup checks the file's UTC modification time and length; replacing a file must change at least one of these values. Deleted files invalidate their cached labels. A temporary read failure retains the last successful parse until the file can be read again. A file with no successful parse returns an empty label on failure.

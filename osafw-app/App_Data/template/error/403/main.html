@@ -1,0 +1,10 @@
+<section class="text-center my-4 mx-auto" style="max-width:42rem" aria-labelledby="error-title">
+    <h1 id="error-title">`Access denied`</h1>
+    <~anonymous if="error[login_url]" inline>
+    <p class="lead">`You may need to sign in before accessing this page or performing this action.`</p>
+    </~anonymous>
+    <~authenticated unless="error[login_url]" inline>
+    <p class="lead">`Your account does not have permission to access this page or perform this action. Contact the site administrator if you need access.`</p>
+    </~authenticated>
+    <~/error/message>
+</section>
