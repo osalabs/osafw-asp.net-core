@@ -246,6 +246,54 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
+    /// <summary>
+    /// Lists explicitly selectable model sources and previews schema-driven typed Row replacements.
+    /// </summary>
+    public FwDict ModelRowsAction()
+    {
+        enforceDevelopmentSourceTools();
+        if (!isGet())
+            enforcePost();
+
+        var regenerator = new DevRowRegenerator(fw);
+        var ps = new FwDict
+        {
+            ["models"] = regenerator.listCandidates(),
+        };
+
+        if (!isGet())
+        {
+            var previews = regenerator.preview(reqh("item").Keys);
+            ps["previews"] = previews;
+            ps["changes"] = new FwList(previews.Where(x => x["is_changed"].toBool()));
+        }
+
+        return ps;
+    }
+
+    /// <summary>
+    /// Applies only unchanged, explicitly reviewed typed Row previews.
+    /// </summary>
+    public void ApplyModelRowsAction()
+    {
+        enforceDevelopmentSourceTools();
+        enforcePost();
+
+        var selected = reqh("item");
+        var postedHashes = reqh("hash")
+            .ToDictionary(x => x.Key, x => x.Value.toStr(), StringComparer.Ordinal);
+        var changedCount = new DevRowRegenerator(fw).apply(selected.Keys, postedHashes);
+
+        fw.flash("success", $"Updated typed Row source for {changedCount} model(s).");
+        fw.redirect(base_url + "/(ModelRows)");
+    }
+
+    private void enforceDevelopmentSourceTools()
+    {
+        if (!fw.config("IS_DEV").toBool())
+            throw new AuthException("Model source regeneration is available only in development mode.");
+    }
+
     public void CreateControllerAction()
     {
         enforcePost();

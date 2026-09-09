@@ -1929,7 +1929,7 @@ END" + Environment.NewLine;
             db.insert("menu_items", fields);
     }
 
-    private static string buildRowClass(IDictionary entity)
+    internal static string buildRowClass(IDictionary entity)
     {
         if (entity == null || !entity.Contains("fields"))
             return string.Empty;
