@@ -78,8 +78,9 @@ function createInteractionActions() {
             const details = response.error?.details;
             if (details && typeof details === 'object') {
                 Object.entries(details).forEach(([field, code]) => {
+                    if (field === 'REQUIRED' || field === 'INVALID') return;
                     if (result.some(issue => issue.field === field && issue.severity === 'error')) return;
-                    result.push({ field, severity: 'error', message: window.fwConst.ERR_CODES_MAP[code] ?? 'Invalid value' });
+                    result.push({ field, severity: 'error', message: code === true ? 'Required field' : (window.fwConst.ERR_CODES_MAP[code] ?? 'Invalid value') });
                 });
             }
             return result;

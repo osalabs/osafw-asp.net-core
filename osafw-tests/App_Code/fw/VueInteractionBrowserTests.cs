@@ -190,6 +190,15 @@ public class VueInteractionBrowserTests
         await page.WaitForFunctionAsync("() => !document.querySelector('.fw-fieldset.is-collapsed')");
         await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',immutable_on_edit:true}]; }");
         await page.Locator("[data-fw-field='code'] input").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                testStore.edit_data.save_result={error:{details:{title:true,REQUIRED:true,other:true,INVALID:true}},
+                    validation_issues:[{severity:'error',field:'title',message:'Structured title'}]};
+                const issues=testStore.formIssues();
+                return issues.length===2 && issues[0].field==='title' && issues[0].message==='Structured title'
+                    && issues[1].field==='other' && issues[1].message==='Required field';
+            }
+            """));
         await AssertNoClientErrors(page);
     }
 
@@ -306,6 +315,368 @@ public class VueInteractionBrowserTests
         Assert.AreEqual("First draft", await page.EvaluateAsync<string>("() => payloads[0].item.title"));
         Assert.AreEqual("Changed while saving", await page.EvaluateAsync<string>("() => payloads[1].item.title"));
         Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.is_saving_edit || testStore.pending_edit_save"));
+        await AssertNoClientErrors(page);
+    }
+
+    private static async Task<IPage> TabbedSavePage(IBrowser browser)
+    {
+        var page = await Page(browser, "<edit-form></edit-form><button id='explicit-save' @click='fwStore.saveEditData'>Save current tab</button>");
+        await page.EvaluateAsync("""
+            () => {
+                fwApp.component('subtable_lines', fwApp.component('subtable_demos_items'));
+                fwApp.component('subtable_links', fwApp.component('subtable_demos_items'));
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.form_tabs=[{tab:'',label:'Details'},{tab:'relations',label:'Relations'},{tab:'audit',label:'Audit'}];
+                testStore.showform_fields=[{field:'lines',type:'subtable_edit'}];
+                testStore.showform_fields_tabs={'':testStore.showform_fields,relations:[{field:'links',type:'subtable_edit'}],audit:[]};
+                testStore.lookups={DemoDicts:[]};
+                window.databaseRows={lines:[{id:11,iname:'Detail',idesc:'Original detail'}],links:[{id:21,iname:'Relation',idesc:'Original relation'}]};
+                testStore.edit_data={id:7,i:{id:7},subtables:JSON.parse(JSON.stringify(databaseRows)),save_result:{}};
+                window.originalDetail=testStore.edit_data.subtables.lines[0];
+                window.originalRelation=testStore.edit_data.subtables.links[0];
+                window.payloads=[];
+                testStore.api.post=async (_, req) => {
+                    payloads.push(JSON.parse(JSON.stringify(req)));
+                    if (payloads.length===1) await new Promise(resolve => window.releaseFirst=resolve);
+                    const failure = await window.tabSaveFailure?.(req);
+                    if (failure) return failure;
+                    // FwDynamicController processes only the tab's definitions. FwVueController's
+                    // response still includes every submitted subtable, including ignored tabs.
+                    const field=req.tab==='relations' ? 'links' : req.tab ? null : 'lines';
+                    if (field) databaseRows[field]=Object.keys(req['item-'+field]).map(id =>
+                        ({id:Number(id),...req['item-'+field+'#'+id],iname:'Saved '+field}));
+                    return {id:7,subtables:JSON.parse(JSON.stringify(databaseRows))};
+                };
+            }
+            """);
+        return page;
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task InflightSaveUsesTheTabOfTheRequestedExplicitOrAutosave(bool autosave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("() => { window.firstSave=testStore.saveEditData(); }");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        await page.Locator("[data-fw-row='21'] textarea").FillAsync("Requested relation");
+        if (autosave) await page.Locator("[data-fw-row='21'] textarea").DispatchEventAsync("change");
+        else await page.Locator("#explicit-save").DispatchEventAsync("click");
+        await page.WaitForFunctionAsync("() => testStore.pending_edit_save");
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        CollectionAssert.AreEqual(new[] { "", "relations" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.links[0].idesc==='Requested relation' && originalRelation===testStore.edit_data.subtables.links[0] && originalRelation.idesc==='Requested relation' && originalRelation.iname==='Saved links'"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task TabIdentityAndIgnoredSubtableResponsesPreserveAnUnchangedDraft(bool requestRelationSave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("() => { originalRelation.idesc='Draft before first request'; window.firstSave=testStore.saveEditData(); }");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        if (requestRelationSave) await page.EvaluateAsync("() => testStore.saveEditData()");
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        CollectionAssert.AreEqual(requestRelationSave ? new[] { "", "relations" } : new[] { "" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
+        Assert.AreEqual("Draft before first request", await page.EvaluateAsync<string>("() => originalRelation.idesc"));
+        Assert.AreEqual(requestRelationSave ? "Draft before first request" : "Original relation", await page.EvaluateAsync<string>("() => databaseRows.links[0].idesc"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => originalDetail.iname==='Saved lines' && originalRelation===testStore.edit_data.subtables.links[0] && !testStore.is_saving_edit"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task MultipleRequestedTabsCoalesceInOrderAndSurviveLaterNavigation(bool autosave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            () => {
+                originalRelation.idesc='Pending relation';
+                window.firstSave=testStore.saveEditData();
+                originalDetail.idesc='Pending detail';
+            }
+            """);
+        await page.EvaluateAsync("autosave => { if(autosave) testStore.saveEditDataDebounced(20); else testStore.saveEditData(); }", autosave);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        await page.EvaluateAsync("autosave => { if(autosave) { testStore.saveEditDataDebounced(100); testStore.saveEditDataDebounced(100); } else { testStore.saveEditData(); testStore.saveEditData(); } }", autosave);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Audit", Exact = true }).ClickAsync();
+        if (autosave) await page.WaitForTimeoutAsync(150);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        CollectionAssert.AreEqual(new[] { "", "", "relations" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Pending detail' && databaseRows.links[0].idesc==='Pending relation' && originalDetail.idesc==='Pending detail' && originalRelation.idesc==='Pending relation' && testStore.current_form_tab==='audit' && !testStore.pending_edit_save && !testStore.is_saving_edit"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("structured")]
+    [DataRow("legacy")]
+    [DataRow("transport")]
+    public async Task FailedTabSaveSurvivesOtherTabSuccessUntilItsOwnSuccessfulRetry(string failureKind)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            kind => {
+                originalDetail.idesc='Invalid detail'; originalRelation.idesc='Requested relation';
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=() => navigations++;
+                window.tabSaveFailure=req => {
+                    if(req.tab || req['item-lines#11'].idesc!=='Invalid detail') return;
+                    if(kind==='transport') throw new Error('Connection lost');
+                    const failure={success:false,error:{message:'Details failed',details:{'item-lines#11[idesc]':'WRONG'}}};
+                    if(kind==='structured') failure.validation_issues=[{severity:'error',field:'item-lines#11[idesc]',row_id:'11',message:'Correct detail'}];
+                    return failure;
+                };
+                window.firstSave=testStore.saveEditData();
+            }
+            """, failureKind);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        await page.EvaluateAsync("() => testStore.saveEditData()");
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Original detail' && databaseRows.links[0].idesc==='Requested relation' && originalDetail.idesc==='Invalid detail'"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='') && navigations===0"), "A successful Relations save cannot resolve the failed Details tab or navigate away.");
+
+        await page.EvaluateAsync("async () => { originalRelation.idesc='Later relation'; await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0 && databaseRows.links[0].idesc==='Later relation'"), "The failure must outlive the original request queue.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.saveEditDataDebounced(20); return testStore.savedStatus===false && testStore.formIssues().some(issue=>issue.severity==='error'); }"), "Debouncing must not hide an unresolved failure.");
+        await page.WaitForFunctionAsync("() => payloads.length===4 && !testStore.is_saving_edit");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0"));
+
+        await page.EvaluateAsync("""
+            async () => {
+                const formA=testStore.edit_data, apiA=testStore.api;
+                testStore.edit_data={id:8,i:{id:8},save_result:{}}; testStore.current_id=8;
+                testStore.api={post:async () => ({id:8})};
+                await testStore.saveEditData();
+                window.otherFormSucceeded=testStore.savedStatus===true;
+                testStore.edit_data=formA; testStore.current_id=7; testStore.api=apiA;
+            }
+            """);
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherFormSucceeded && testStore.savedStatus===false && navigations===0"), "Failures belong to the captured form.");
+
+        if (failureKind == "transport") await page.GetByRole(AriaRole.Link, new() { Name = "Details", Exact = true }).ClickAsync();
+        else
+        {
+            await page.GetByRole(AriaRole.Button, new() { Name = failureKind == "structured" ? "Correct detail" : "Invalid", Exact = true }).ClickAsync();
+            await page.WaitForFunctionAsync("() => testStore.activeFormTab==='' && document.activeElement?.closest('[data-fw-row]')?.dataset.fwRow==='11'");
+        }
+        await page.Locator("[data-fw-row='11'] textarea").FillAsync("Corrected detail");
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Corrected detail' && databaseRows.links[0].idesc==='Later relation' && testStore.savedStatus===true && !testStore.formIssues().some(issue=>issue.severity==='error') && navigations===1"), "A successful retry of Details clears its failure and restores normal navigation.");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task SubtableInflightEditsAdditionsAndRemovalsSurviveServerReconciliation()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, """
+            <form v-if="fwStore.edit_data">
+                <subtable_demos_items :def="{field:'lines',type:'subtable_edit'}" :lookups="fwStore.lookups" :form="fwStore.edit_data"></subtable_demos_items>
+            </form>
+            """);
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.lookups={DemoDicts:[]};
+                testStore.edit_data={id:7,i:{id:7},subtables:{lines:[
+                    {id:11,iname:'Original',idesc:'First'}, {id:22,iname:'Remove existing',idesc:'Remove'},
+                    {id:'new-submitted',is_new:true,iname:'Submitted',idesc:'New first'},
+                    {id:'new-removed',is_new:true,iname:'Remove submitted',idesc:'Remove new'}
+                ]},save_result:{}};
+                window.originalRow=testStore.edit_data.subtables.lines[0];
+                window.submittedRow=testStore.edit_data.subtables.lines[2];
+                window.payloads=[];
+                testStore.api.post=async (_, req) => {
+                    payloads.push(JSON.parse(JSON.stringify(req)));
+                    if (payloads.length===1) {
+                        await new Promise(resolve => window.releaseFirst=resolve);
+                        return {id:7,subtable_row_ids:{lines:{'new-submitted':101,'new-removed':102}},subtables:{lines:[
+                            {id:11,iname:'Server title',idesc:'First'}, {id:22,iname:'Remove existing',idesc:'Remove'},
+                            {id:101,iname:'Submitted',idesc:'New first'}, {id:102,iname:'Remove submitted',idesc:'Remove new'},
+                            {id:200,iname:'Server-added',idesc:'Fresh server value'}
+                        ]}};
+                    }
+                    const map={};
+                    const rows=Object.keys(req['item-lines']).map(id => {
+                        const savedId=id.startsWith('new-') ? (map[id]=103) : Number(id);
+                        return {id:savedId,...req['item-lines#'+id]};
+                    });
+                    return {id:7,subtable_row_ids:{lines:map},subtables:{lines:rows}};
+                };
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.Locator("[data-fw-row='11'] textarea").FillAsync("Changed while saving");
+        await page.Locator("[data-fw-row='new-submitted'] textarea").FillAsync("New changed while saving");
+        await page.Locator("tr").Filter(new() { Has = page.Locator("[data-fw-row='22']") }).Locator("button[title='Delete']").ClickAsync();
+        await page.Locator("tr").Filter(new() { Has = page.Locator("[data-fw-row='new-removed']") }).Locator("button[title='Delete']").ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add More", Exact = true }).ClickAsync();
+        await page.Locator("tbody tr:last-child textarea").FillAsync("Added while saving");
+        await page.EvaluateAsync("async () => { testStore.saveEditData(); testStore.saveEditData(); releaseFirst(); await firstSave; }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => payloads.length"));
+        Assert.AreEqual("First", await page.EvaluateAsync<string>("() => payloads[0]['item-lines#11'].idesc"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const req=payloads[1], ids=Object.keys(req['item-lines']), rows=testStore.edit_data.subtables.lines;
+                return req['item-lines#11'].idesc==='Changed while saving' && req['item-lines#11'].iname==='Server title'
+                    && req['item-lines#101'].idesc==='New changed while saving'
+                    && !ids.includes('22') && !ids.includes('102') && !ids.includes('new-submitted') && !ids.includes('new-removed')
+                    && ids.filter(id => id.startsWith('new-')).length===1
+                    && req['item-lines#'+ids.find(id => id.startsWith('new-'))].idesc==='Added while saving'
+                    && rows.length===4 && rows.find(row=>row.id===11)===originalRow && rows.find(row=>row.id===101)===submittedRow
+                    && rows.some(row=>row.id===103 && !row.is_new) && rows.some(row=>row.id===200 && row.idesc==='Fresh server value');
+            }
+            """));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const rows=testStore.edit_data.subtables.lines;
+                testStore.applySubtableSaveResult({subtables:{lines:[{id:11,iname:'Explicit refresh',idesc:'Refreshed'}]}});
+                return rows===testStore.edit_data.subtables.lines && rows.length===1 && rows[0]===originalRow && rows[0].idesc==='Refreshed';
+            }
+            """));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task InflightSaveKeepsOtherFormsSaveEntryAndResultsIndependent(bool autosave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<edit-form></edit-form>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'A'},subtables:{},save_result:{}};
+                window.formA=testStore.edit_data; window.payloads=[]; window.releases={};
+                testStore.api.post=async (id, req) => {
+                    payloads.push({id,item:JSON.parse(JSON.stringify(req.item))});
+                    await new Promise(resolve => releases[id]=resolve);
+                    return {id,validation_issues:[{severity:'warning',field:'title',message:'Saved '+req.item.title}]};
+                };
+                window.firstSave=testStore.saveEditData();
+                testStore.current_id=8; testStore.edit_data={id:8,i:{id:8,title:'B'},subtables:{},save_result:{}};
+                window.formB=testStore.edit_data;
+            }
+            """);
+        Assert.IsFalse(await page.Locator("button[type='submit']").IsDisabledAsync(), "A pending save must not disable B's save button.");
+        if (autosave) await page.EvaluateAsync("() => testStore.saveEditDataDebounced(20)");
+        else await page.Locator("button[type='submit']").ClickAsync();
+        await page.WaitForFunctionAsync("() => payloads.length===2");
+        await page.EvaluateAsync("async () => { testStore.edit_data=formA; testStore.current_id=7; releases[8](); await new Promise(resolve=>setTimeout(resolve,0)); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => formB.save_result.id===8 && !formA.save_result.id && testStore.is_saving_edit"));
+        await page.EvaluateAsync("async () => { releases[7](); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => formA.save_result.id===7 && formB.save_result.id===8 && !testStore.is_saving_edit"));
+        CollectionAssert.AreEqual(new[] { "A", "B" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.item.title)"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task RequestedFollowupStaysWithCapturedFormAndApiAfterNavigation()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'First'},subtables:{},save_result:{}};
+                window.formA=testStore.edit_data; window.payloads=[]; window.otherPosts=0; window.loads=0;
+                testStore.loadIndex=async () => loads++;
+                testStore.api={post:async (id,req) => {
+                    payloads.push({id,item:JSON.parse(JSON.stringify(req.item))});
+                    if(payloads.length===1) await new Promise(resolve=>window.releaseFirst=resolve);
+                    return {id};
+                }};
+                window.firstSave=testStore.saveEditData();
+                formA.i.title='Requested followup'; testStore.saveEditData();
+                testStore.edit_data={id:8,i:{id:8,title:'Not requested'},save_result:{}};
+                testStore.current_screen='list'; testStore.current_id=8;
+                testStore.api={post:async () => { otherPosts++; return {id:8}; }};
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => payloads.length===2 && payloads[1].id===7 && payloads[1].item.title==='Requested followup' && otherPosts===0 && loads===0 && !testStore.edit_data.save_result.id && formA.save_result.id===7 && testStore.edit_save_states.length===0"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task NavigationAloneNeverSavesANewFormAndStaleResponseKeepsItsDraftIds()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'A'},subtables:{lines:[{id:'new-1',is_new:true,idesc:'First'}]},save_result:{}};
+                window.formA=testStore.edit_data; window.posts=0; window.mergeCalls=0;
+                const apply=testStore.applySubtableSaveResult;
+                testStore.applySubtableSaveResult=(...args) => { mergeCalls++; apply(...args); };
+                testStore.api.post=async () => {
+                    posts++; await new Promise(resolve=>window.releaseFirst=resolve);
+                    return {id:7,subtable_row_ids:{lines:{'new-1':101}},subtables:{lines:[{id:101,idesc:'First'}]}};
+                };
+                window.firstSave=testStore.saveEditData();
+                formA.subtables.lines[0].idesc='Unsaved edit';
+                testStore.edit_data={id:8,i:{id:8,title:'B'},subtables:{},save_result:{}}; testStore.current_id=8;
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => posts===1 && mergeCalls===0 && !testStore.edit_data.save_result.id && formA.subtables.lines[0].id===101 && formA.subtables.lines[0].idesc==='Unsaved edit'"));
+        await page.EvaluateAsync("async () => { testStore.edit_data=formA; testStore.current_id=7; testStore.api.post=async (_,req) => { posts++; window.returnPayload=req; return {id:7}; }; await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => posts===2 && mergeCalls===1 && !('new-1' in returnPayload['item-lines']) && returnPayload['item-lines#101'].idesc==='Unsaved edit'"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task QueuedCreateUsesAssignedIdAndLastChildRemovalStaysRemoved(bool requestFollowup)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            queue => {
+                testStore.current_screen='edit'; testStore.current_id=0;
+                testStore.edit_data={id:0,i:{title:'First'},subtables:{lines:[{id:'new-1',is_new:true,idesc:'Remove'}]},save_result:{}};
+                window.payloads=[]; window.opened=[]; testStore.openEditScreen=async id => opened.push(id);
+                testStore.api.post=async (id,req) => {
+                    payloads.push({id,req:JSON.parse(JSON.stringify(req))});
+                    if(payloads.length===1) { await new Promise(resolve=>window.releaseFirst=resolve); return {id:70,subtable_row_ids:{lines:{'new-1':101}},subtables:{lines:[{id:101,idesc:'Remove'}]}}; }
+                    return {id:70,subtables:{lines:[]}};
+                };
+                window.firstSave=testStore.saveEditData();
+                testStore.edit_data.i.title='Second'; testStore.edit_data.subtables.lines=[];
+                if (queue) testStore.saveEditData();
+            }
+            """, requestFollowup);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        if (requestFollowup)
+        {
+            Assert.IsTrue(await page.EvaluateAsync<bool>("() => payloads.length===2 && payloads[0].id===0 && payloads[1].id===70 && payloads[1].req.item.title==='Second' && ('item-lines' in payloads[1].req) && Object.keys(payloads[1].req['item-lines']).length===0 && testStore.edit_data.subtables.lines.length===0"));
+            CollectionAssert.AreEqual(new[] { 70 }, await page.EvaluateAsync<int[]>("() => opened"));
+            }
+        else
+        {
+            Assert.IsTrue(await page.EvaluateAsync<bool>("() => payloads.length===1 && testStore.edit_data.id===70 && testStore.current_id===70 && location.pathname==='/70/edit' && testStore.edit_data.i.title==='Second' && testStore.edit_data.subtables.lines.length===0"));
+            Assert.AreEqual(0, await page.EvaluateAsync<int>("() => opened.length"));
+        }
         await AssertNoClientErrors(page);
     }
 
