@@ -24,7 +24,7 @@ internal sealed class DevRowRegenerator
     {
         "int", "int?", "long", "long?", "ulong", "ulong?", "bool", "bool?",
         "decimal", "decimal?", "double", "double?", "DateTime", "DateTime?",
-        "DateTimeOffset", "DateTimeOffset?", "string",
+        "DateTimeOffset", "DateTimeOffset?", "string", "string?",
     };
     private readonly FW fw;
     private readonly string siteRoot;

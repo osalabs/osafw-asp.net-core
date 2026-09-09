@@ -108,6 +108,9 @@ public class DevRowRegeneratorTests
         StringAssert.Contains(updated, "[DBName(\"display name\")]");
         StringAssert.Contains(updated, "public ulong? total { get; set; }");
         Assert.IsFalse(updated.Contains("legacy_id", StringComparison.Ordinal));
+        StringAssert.Contains(updated, "public string? ");
+        var unchanged = regenerator.preview(["DemoDicts"]);
+        Assert.IsFalse(unchanged[0]["is_changed"].toBool(), "Generated nullable text must be accepted on the next preview.");
     }
 
     [TestMethod]
