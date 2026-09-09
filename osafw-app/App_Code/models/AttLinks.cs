@@ -60,6 +60,26 @@ public class AttLinks : FwModel<AttLinks.Row>
         db.del(table_name, where);
     }
 
+    /// <summary>Lists active links for a readable attachment after authorizing every linked parent record.</summary>
+    /// <remarks>No partial result is returned when a linked parent is missing or access is denied.
+    /// This read never creates entity metadata and does not change existing lookup filter semantics.</remarks>
+    public virtual FwList listByAtt(int att_id)
+    {
+        var att = fw.model<Att>();
+        att.checkAccess(att_id, Att.ACCESS_ACTION_VIEW);
+        var where = DB.h(junction_field_main_id, att_id);
+        if (!string.IsNullOrEmpty(field_status))
+            where[field_status] = STATUS_ACTIVE;
+        var rows = db.array(table_name, where);
+        foreach (var row in rows)
+        {
+            var entityId = row[field_entity].toInt();
+            var itemId = row[junction_field_linked_id].toInt();
+            if (!att.isParentBindingAccessAllowed(att_id, entityId, itemId, Att.ACCESS_ACTION_VIEW))
+                throw new AuthException("Access denied to a linked record");
+        }
+        return rows;
+    }
     public virtual void setUnderUpdate(int fwentities_id, int item_id)
     {
         is_under_bulk_update = true;
