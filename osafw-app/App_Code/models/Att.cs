@@ -414,6 +414,23 @@ public class Att : FwModel<Att.Row>
         return false;
     }
 
+    /// <summary>Applies the attachment parent policy to an explicit linked-parent binding.</summary>
+    /// <remarks>This bridge keeps reverse-link reads aligned with copied-app overrides of <see cref="isParentAccessAllowed"/>.</remarks>
+    internal bool isParentBindingAccessAllowed(int att_id, int fwentities_id, int item_id, string action)
+    {
+        if (fwentities_id <= 0 || item_id <= 0)
+            return false;
+
+        var attachment = oneActive(att_id);
+        if (attachment.Count == 0)
+            return false;
+
+        var binding = new FwDict(attachment);
+        binding["fwentities_id"] = fwentities_id;
+        binding["item_id"] = item_id;
+        return isParentAccessAllowed(binding, action);
+    }
+
     private static string filenameForPolicy(FwDict item)
     {
         var filename = item["fname"].toStr();

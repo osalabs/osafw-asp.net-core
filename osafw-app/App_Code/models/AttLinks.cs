@@ -65,25 +65,18 @@ public class AttLinks : FwModel<AttLinks.Row>
     /// This read never creates entity metadata and does not change existing lookup filter semantics.</remarks>
     public virtual FwList listByAtt(int att_id)
     {
-        fw.model<Att>().checkAccess(att_id, Att.ACCESS_ACTION_VIEW);
+        var att = fw.model<Att>();
+        att.checkAccess(att_id, Att.ACCESS_ACTION_VIEW);
         var where = DB.h(junction_field_main_id, att_id);
         if (!string.IsNullOrEmpty(field_status))
             where[field_status] = STATUS_ACTIVE;
         var rows = db.array(table_name, where);
         foreach (var row in rows)
         {
-            var entity = fw.model<FwEntities>().one(row[field_entity].toInt());
-            var code = entity["icode"].toStr();
+            var entityId = row[field_entity].toInt();
             var itemId = row[junction_field_linked_id].toInt();
-            if (string.IsNullOrEmpty(code) || itemId <= 0)
+            if (!att.isParentBindingAccessAllowed(att_id, entityId, itemId, Att.ACCESS_ACTION_VIEW))
                 throw new AuthException("Access denied to a linked record");
-            try
-            {
-                var parent = fw.model(DevEntityBuilder.tablenameToModel(Utils.name2fw(code)));
-                parent.checkAccess(itemId, Att.ACCESS_ACTION_VIEW);
-            }
-            catch (NotFoundException) { throw new AuthException("Access denied to a linked record"); }
-            catch (NotImplementedException) { throw new AuthException("Access denied to a linked record"); }
         }
         return rows;
     }
