@@ -1,1 +1,3 @@
-<~/error/message>
+<~bad_request ifeq="error[code]" value="400" inline><~/error/400/main></~bad_request>
+<~access_denied ifeq="error[code]" value="403" inline><~/error/403/main></~access_denied>
+<~not_found ifeq="error[code]" value="404" inline><~/error/404/main></~not_found>

@@ -841,9 +841,9 @@ Used for the add/edit (form) page. Typical files:
 
 ## Error presentation
 
-`FW.errMsg` adds safe presentation fields under `error`: `title`, `description`, `display_message`, `show_login` and `login_url`. Titles and explanations distinguish bad input (400), denied access (403), missing pages (404) and server errors (500). `display_message` uses the same production-masked or intentionally user-facing value as `error.message`. Existing JSON message fields and `error.details` remain available.
+`FW.errMsg` classifies bad input (400), denied access (403), missing pages (404) and server errors (500). The HTML guidance is owned by the corresponding templates under `error/400`, `error/403`, `error/404` and `error`; their backtick-delimited text uses the normal ParsePage translation files. The existing `error/4xx` entry delegates 400, 403 and 404 responses to their status-specific templates. Exception-based and static-page 404 responses share `error/404` content; existing application overrides of the `error/4xx` entry still apply.
 
-The common error templates escape all dynamic values. The sign-in link appears only for an anonymous access-denied response and carries a validated app-local return URL, preserving a configured URL prefix. Normal authentication redirects and HTTP status classification are unchanged. Debug dumps remain behind the existing development gate. Copied applications can keep their custom templates or adopt `error/message.html` and the added presentation fields.
+`error/message.html` escapes `error.message` and supplies the shared actions. A direct anonymous 403 rendered through `FW.errMsg` adds `error.login_url`, so the template can offer sign-in with a validated app-local return URL and preserve a configured URL prefix. Normal anonymous page dispatch redirects before `errMsg`; those redirects keep their existing behavior. Existing JSON messages, legacy fields and `error.details` remain available, production exception masking is unchanged, and debug dumps remain behind the existing development gate. Copied applications can override the status templates and shared fragment without replacing framework error classification.
 
 ## Select-template label lookups
 
