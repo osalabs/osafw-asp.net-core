@@ -32,9 +32,13 @@ public class AdminSpagesController : FwAdminController
 
     public override void getListRows()
     {
+        var statusValues = getStatusFilterValues();
+        var isStatusAll = statusValues.Count == 0;
+        var isStatusActiveOnly = statusValues.Count == 1 && statusValues[0] == FwModel.STATUS_ACTIVE;
+
         if (list_filter["sortby"].toStr() == "iname"
             && list_filter["s"].toStr() == ""
-            && (this.list_filter["status"].toStr() == "" || this.list_filter["status"].toStr() == "0"))
+            && (isStatusAll || isStatusActiveOnly))
         {
             // show tree only if sort by title and no search and status by all or active
             this.list_count = db.valuep("select count(*) from " + db.qid(model.table_name) +

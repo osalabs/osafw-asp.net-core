@@ -8,9 +8,9 @@
   </div>
   <label class="col-form-label col-sm-1" for="fstatus">`Status`</label>
   <div class="col-sm-2">
-    <select id="fstatus" name="f[status]" class="form-select">
+    <select id="fstatus" name="f[status]" class="form-select select2" multiple size="1" data-placeholder="- all -">
       <option value="">- all -</option>
-      <~/common/sel/statusf.sel select="f[status]">
+      <~/common/sel/statusf.sel select="f[status]" multi=",">
     </select>
   </div>
   <~/common/list/filter_table_buttons_static>
