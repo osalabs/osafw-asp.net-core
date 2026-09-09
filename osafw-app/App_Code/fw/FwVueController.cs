@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace osafw;
 
@@ -27,20 +28,7 @@ public class FwVueController : FwDynamicController
     /// </summary>
     protected override void setListFields()
     {
-        var quoted_fields = new StrList();
-        var is_id_in_fields = false;
-        foreach (FwDict header in list_headers)
-        {
-            var field_name = header["field_name"].toStr();
-            quoted_fields.Add(db.qid(field_name));
-            if (field_name == model0.field_id)
-                is_id_in_fields = true;
-        }
-        //always include id field
-        if (!is_id_in_fields && !Utils.isEmpty(model0.field_id))
-            quoted_fields.Add(db.qid(model0.field_id));
-        //join quoted_fields arraylist into comma-separated string
-        list_fields = string.Join(",", quoted_fields.ToArray());
+        list_fields = buildListFields(list_headers.Select(header => ((FwDict)header)["field_name"].toStr()));
     }
 
     /// <summary>
@@ -125,6 +113,7 @@ public class FwVueController : FwDynamicController
         ps["field_id"] = model0.field_id;
         ps["view_list_custom"] = Utils.qh(this.view_list_custom, "1");
         ps["view_list_custom_trusted"] = Utils.qh(this.view_list_custom_trusted, "1");
+        ps["list_calculated_fields"] = getListCalculatedFieldNames();
 
         // add form tabs with tab-specific field definitions if configured
         if (config["form_tabs"] is IList form_tabs && form_tabs.Count > 1)
@@ -171,6 +160,7 @@ public class FwVueController : FwDynamicController
 
         getListRows();
         filterListForJson();
+        pruneListCalculatedDependenciesForJson();
 
         // if export - no need further processing - just return asap
         if (export_format.Length > 0)
@@ -179,6 +169,19 @@ public class FwVueController : FwDynamicController
         ps["list_rows"] = this.list_rows;
         ps["count"] = this.list_count;
         ps["pager"] = this.list_pager;
+    }
+
+    /// <summary>
+    /// Removes source fields fetched only to calculate selected list columns after all row-shaping overrides have run.
+    /// </summary>
+    protected virtual void pruneListCalculatedDependenciesForJson()
+    {
+        if (list_calculated_dependency_fields_added.Count == 0)
+            return;
+
+        foreach (FwDict row in list_rows)
+            foreach (var field in list_calculated_dependency_fields_added.Keys)
+                row.Remove(field);
     }
 
     /// <summary>

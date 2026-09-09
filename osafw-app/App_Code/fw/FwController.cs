@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
@@ -65,6 +66,8 @@ public abstract partial class FwController
     protected FwDict view_list_map = [];           // list of all available columns fieldname|visiblename
     protected string view_list_custom = "";      // qw list of custom-formatted fields for the list_table
     protected string view_list_custom_trusted = ""; // qw list of custom fields allowed to render trusted raw HTML
+    protected FwDict list_calculated_fields = []; // calculated field => source fields required to calculate it
+    protected FwDict list_calculated_dependency_fields_added = []; // source fields added only for the current list projection
 
     protected bool is_dynamic_show = false;      // true if controller has dynamic ShowAction, requires "show_fields" to be defined in config.json
     protected bool is_dynamic_showform = false;  // true if controller has dynamic ShowFormAction, requires "showform_fields" to be defined in config.json
@@ -259,9 +262,12 @@ public abstract partial class FwController
             }
         }
 
+        list_calculated_fields = [];
+
         //common for both dynamic index and index_edit
         if (is_dynamic_index || is_dynamic_index_edit && is_list_edit)
         {
+            list_calculated_fields = normalizeListCalculatedFields(config["list_calculated_fields"]);
             if (list_sortmap.Count == 0)
                 list_sortmap = getViewListSortmap(); // just add all fields from view_list_map if no list_sortmap in config
             if (search_fields == "")
@@ -643,13 +649,19 @@ public abstract partial class FwController
             string like_s = "%" + s + "%";
 
             string[] afields = Utils.qw(this.search_fields); // OR fields delimited by space
+            StrList searchGroups = [];
             for (int i = 0; i <= afields.Length - 1; i++)
             {
                 string[] afieldsand = afields[i].Split(","); // AND fields delimited by comma
+                StrList searchFieldsAnd = [];
 
                 for (int j = 0; j <= afieldsand.Length - 1; j++)
                 {
                     string fand = afieldsand[j];
+                    var fieldname = fand.TrimStart('!');
+                    if (fieldname.Length == 0 || isListCalculatedField(fieldname))
+                        continue;
+
                     string param_name = "list_search_" + i + "_" + j;
                     if (fand.StartsWith('!'))
                     {
@@ -672,18 +684,20 @@ public abstract partial class FwController
                             else
                                 list_where_params[param_name] = s;
                         }
-                        afieldsand[j] = db.qid(fand) + " = @" + param_name;
+                        searchFieldsAnd.Add(db.qid(fand) + " = @" + param_name);
                     }
                     else
                     {
                         // like match
-                        afieldsand[j] = db.qid(fand) + " LIKE @" + param_name;
+                        searchFieldsAnd.Add(db.qid(fand) + " LIKE @" + param_name);
                         list_where_params[param_name] = like_s;
                     }
                 }
-                afields[i] = string.Join(" and ", afieldsand);
+                if (searchFieldsAnd.Count > 0)
+                    searchGroups.Add(string.Join(" and ", searchFieldsAnd));
             }
-            list_where += " and (" + string.Join(" or ", afields) + ")";
+            if (searchGroups.Count > 0)
+                list_where += " and (" + string.Join(" or ", searchGroups) + ")";
         }
 
         setListSearchUserList();
@@ -718,7 +732,7 @@ public abstract partial class FwController
         foreach (string fieldname in hsearch.Keys)
         {
             string value = hsearch[fieldname].toStr();
-            if (string.IsNullOrEmpty(value) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
+            if (string.IsNullOrEmpty(value) || isListCalculatedField(fieldname) || (is_dynamic_index && !view_list_map.ContainsKey(fieldname)))
                 continue;
 
             appendListSearchAdvancedField(fieldname, value);
@@ -878,6 +892,122 @@ public abstract partial class FwController
     {
         // default is "*", override in controller
     }
+
+    /// <summary>
+    /// Builds a lean list projection from visible database fields, dependencies of selected calculated fields, and the row id.
+    /// </summary>
+    protected virtual string buildListFields(IEnumerable<string> selectedFields)
+    {
+        var selected = selectedFields.Where(field => !string.IsNullOrWhiteSpace(field)).Distinct().ToList();
+        var projectedFields = selected.Where(field => !isListCalculatedField(field)).ToList();
+        list_calculated_dependency_fields_added = [];
+
+        foreach (var calculatedField in selected.Where(isListCalculatedField))
+        {
+            if (list_calculated_fields[calculatedField] is not StrList dependencies)
+                continue;
+
+            foreach (var dependency in dependencies)
+            {
+                if (projectedFields.Contains(dependency) || isListCalculatedField(dependency))
+                    continue;
+
+                projectedFields.Add(dependency);
+                if (dependency != model0.field_id)
+                    list_calculated_dependency_fields_added[dependency] = true;
+            }
+        }
+
+        if (!Utils.isEmpty(model0.field_id) && !projectedFields.Contains(model0.field_id))
+            projectedFields.Add(model0.field_id);
+
+        return string.Join(",", projectedFields.Select(field => db.qid(field)));
+    }
+
+    /// <summary>
+    /// Returns true when a configured list field is calculated after the database query.
+    /// </summary>
+    protected bool isListCalculatedField(string fieldname) => list_calculated_fields.ContainsKey(fieldname);
+
+    /// <summary>
+    /// Returns calculated field names without exposing their server-side source dependencies.
+    /// </summary>
+    protected StrList getListCalculatedFieldNames() => new(list_calculated_fields.Keys);
+
+    private FwDict normalizeListCalculatedFields(object? raw)
+    {
+        FwDict result = [];
+
+        void Add(string field, object? dependencies)
+        {
+            field = field.Trim();
+            if (!isSafeListFieldName(field) || !view_list_map.ContainsKey(field))
+                return;
+
+            StrList normalizedDependencies = [];
+            if (dependencies is IList dependencyList && dependencies is not string)
+            {
+                foreach (var dependency in dependencyList)
+                    addListCalculatedDependency(normalizedDependencies, dependency);
+            }
+            else
+            {
+                foreach (var dependency in Utils.qw(dependencies.toStr()))
+                    addListCalculatedDependency(normalizedDependencies, dependency);
+            }
+            result[field] = normalizedDependencies;
+        }
+
+        if (raw is IDictionary dictionary)
+        {
+            foreach (DictionaryEntry entry in dictionary)
+            {
+                var key = entry.Key.toStr().Trim();
+                if (entry.Value is FwDict definition)
+                {
+                    var field = definition["field"].toStr(key);
+                    Add(field, definition["dependencies"] ?? definition["fields"]);
+                }
+                else if (!view_list_map.ContainsKey(key)
+                    && entry.Value is string legacyField
+                    && view_list_map.ContainsKey(legacyField))
+                {
+                    // Compatibility with the earlier source-field => calculated-field shape.
+                    Add(legacyField, key);
+                }
+                else
+                {
+                    Add(key, entry.Value);
+                }
+            }
+        }
+        else if (raw is IList list && raw is not string)
+        {
+            foreach (var item in list)
+            {
+                if (item is FwDict definition)
+                    Add(definition["field"].toStr(), definition["dependencies"] ?? definition["fields"]);
+                else
+                    Add(item.toStr(), null);
+            }
+        }
+        else
+        {
+            foreach (var field in Utils.qw(raw.toStr()))
+                Add(field, null);
+        }
+
+        return result;
+    }
+
+    private static void addListCalculatedDependency(StrList dependencies, object? raw)
+    {
+        var field = raw.toStr().Trim();
+        if (isSafeListFieldName(field) && !dependencies.Contains(field))
+            dependencies.Add(field);
+    }
+
+    private static bool isSafeListFieldName(string fieldname) => Regex.IsMatch(fieldname, @"^[A-Za-z_][A-Za-z0-9_]*$");
 
     /// <summary>
     /// Loads list count, rows, and pager state for the current filters, with export-specific page sizing.
@@ -1292,7 +1422,7 @@ public abstract partial class FwController
             foreach (var search_field in search_group.Split(','))
             {
                 var field = search_field.Trim().TrimStart('!');
-                if (field.Length == 0 || fieldsSeen.ContainsKey(field))
+                if (field.Length == 0 || isListCalculatedField(field) || fieldsSeen.ContainsKey(field))
                     continue;
 
                 fieldsSeen[field] = true;
@@ -1418,7 +1548,8 @@ public abstract partial class FwController
     {
         FwDict result = [];
         foreach (var fieldname in view_list_map.Keys)
-            result[fieldname] = fieldname;
+            if (!isListCalculatedField(fieldname))
+                result[fieldname] = fieldname;
         return result;
     }
 

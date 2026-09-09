@@ -211,6 +211,26 @@ public class FwDynamicControllerColumnFilterTests
         return header["filter"] as FwDict ?? throw new InvalidOperationException("Expected column filter metadata.");
     }
 
+    [TestMethod]
+    public void CalculatedColumn_IsNotFilterableSearchableOrAutomaticallySortable()
+    {
+        var config = BuildConfig(fields: ExplicitFilterFields());
+        config["view_list_defaults"] = config["view_list_defaults"].toStr() + " calculated_total";
+        ((FwDict)config["view_list_map"]!)["calculated_total"] = "Calculated total";
+        config["list_calculated_fields"] = "calculated_total";
+        var controller = BuildController(config: config);
+
+        controller.ApplySearch(new FwDict { ["calculated_total"] = "=100" });
+        controller.BuildHeaders(new FwDict { ["calculated_total"] = "=100" });
+
+        Assert.AreEqual(" 1=1 ", controller.WhereSql);
+        var header = controller.HeaderFor("calculated_total");
+        Assert.IsFalse(header["is_sortable"].toBool());
+        var filter = FilterFor(header);
+        Assert.AreEqual("none", filter["type"]);
+        Assert.IsFalse(filter["filterable"].toBool());
+    }
+
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
