@@ -621,6 +621,47 @@ public class Att : FwModel<Att.Row>
         return db.array(table_name, where, "id");
     }
 
+    /// <summary>Lists active attachments in a category, authorizing each attachment's parent before returning rows.</summary>
+    /// <param name="category_icode">Exact category code. Missing or unknown categories return no rows.</param>
+    /// <param name="item_id">Null selects all item IDs; zero explicitly selects item zero.</param>
+    /// <param name="is_image">-1 selects all attachments, 0 files, and 1 images.</param>
+    /// <exception cref="AuthException">An attachment is not readable by the current user.</exception>
+    public virtual DBList listByCategory(string category_icode, int? item_id = null, int is_image = -1)
+    {
+        if (string.IsNullOrEmpty(category_icode))
+            return [];
+        var category = fw.model<AttCategories>().oneByIcode(category_icode);
+        if (category.Count == 0)
+            return [];
+        var where = DB.h("att_categories_id", category["id"], field_status, STATUS_ACTIVE);
+        if (item_id.HasValue)
+            where["item_id"] = item_id.Value;
+        if (is_image >= 0)
+            where["is_image"] = is_image;
+        var rows = db.array(table_name, where, field_id);
+        foreach (var row in rows)
+            checkAccess(row[field_id].toInt(), ACCESS_ACTION_VIEW);
+        return rows;
+    }
+
+    /// <summary>Lists active attachments across all items of an existing entity, authorizing every returned attachment.</summary>
+    /// <remarks>Unlike listByEntity, this deliberately omits the item-ID filter. It never creates entity metadata.
+    /// The whole lookup fails if any attachment's parent is not readable.</remarks>
+    public virtual DBList listAllByEntity(string entity_icode, int is_image = -1)
+    {
+        if (string.IsNullOrEmpty(entity_icode))
+            return [];
+        var entity = fw.model<FwEntities>().oneByIcode(entity_icode);
+        if (entity.Count == 0)
+            return [];
+        var where = DB.h("fwentities_id", entity["id"], field_status, STATUS_ACTIVE);
+        if (is_image >= 0)
+            where["is_image"] = is_image;
+        var rows = db.array(table_name, where, field_id);
+        foreach (var row in rows)
+            checkAccess(row[field_id].toInt(), ACCESS_ACTION_VIEW);
+        return rows;
+    }
     // return one att record with additional check by entity
     public FwDict oneWithEntityCheck(int id, string entity_icode)
     {

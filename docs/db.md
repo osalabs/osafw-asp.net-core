@@ -394,3 +394,9 @@ DBList fkeys = db.listForeignKeys("orders");
 ```
 
 Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD examples using both FwDict-based and typed models see [`docs/crud.md`](./crud.md).
+
+### Attachment lookup helpers
+
+`Att.listByCategory(categoryCode, item_id: null, is_image: -1)` reads active attachments in an existing category. An omitted/null item filter means all item IDs; explicitly passing zero selects item zero. Unknown categories return an empty list. `Att.listAllByEntity(entityCode, is_image: -1)` explicitly reads across all items of an existing entity. Neither helper creates entity metadata. Both authorize every attachment through `checkAccess` before returning; if one parent is denied, the whole lookup fails. These helpers are for bounded result sets, not paginated attachment browsing.
+
+`AttLinks.listByAtt(attachmentId)` first authorizes the attachment, then reads active links and authorizes every linked parent record. It returns no partial result on denied/missing parent access. Existing `listByEntity` and `listByEntityCategory` keep their exact zero/default filters; use `listByEntity` to read all categories for one item. URL creation and file delivery retain their existing access rules.
