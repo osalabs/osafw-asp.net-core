@@ -4,6 +4,9 @@ This changelog records breaking upgrade changes for end-user apps based on this 
 
 ## 2026-09-08
 
+- Environment selection: built-in startup uses the host-resolved environment for framework overrides, including offline CLI startup. Standalone callers can set `FwConfig.setDefaultOverrideName`; without it, the fallback is trimmed `ASPNETCORE_ENVIRONMENT`, then `DOTNET_ENVIRONMENT`. Check deployments that previously relied on these disagreeing. See [environment selection](settings.md#environment-selection).
+- Typed models: optional audit user IDs in `Att`, `AttCategories`, `DemoDicts` and role-related Rows now use `int?`, preserving database NULL; optional descriptions are annotated `string?`. Adapt callers that assign audit IDs to `int` or dereference descriptions without checking null. New-row zero/empty defaults remain. See [nullable declarations](db.md#nullable-conversion-and-shared-row-fields).
+
 - Source compatibility: `DB.setLogger(LoggerDelegate? logger)` now returns the previous delegate and accepts null for temporary suppression. Ordinary calls can ignore the result. Existing `Action<DB.LoggerDelegate?>` method-group assignments must use `logger => { db.setLogger(logger); }`, or change to a matching `Func` to consume the result. PII redaction is unchanged.
 - Updated both projects' direct and optional NuGet dependencies to compatible stable releases. Optional Sentry now uses SDK 6.10.0 and its `Fatal` breadcrumb level. SQLite now resolves SQLitePCLRaw 2.1.12; the prior dependency advisory is cleared in the normal, SQLite, and all-feature audits.
 - Lifetime change: `FW.Dispose()` now closes all DB wrappers obtained from `getDB()`, including named and repeated calls, as well as the current `fw.db`. Copied apps that retain one after its FW lifetime must construct and own a separate `DB`. Fresh-wrapper defaults and existing HTTP connection sharing remain unchanged; no wrapper cache or force-new overload was added.

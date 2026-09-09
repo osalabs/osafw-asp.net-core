@@ -147,3 +147,11 @@ When choosing metadata:
 - `is_user_edit` is not an authorization check. Restrict sensitive settings by route access, controller changes, or a dedicated configuration path.
 - A blank credential save preserves the old value. Add a dedicated clear control if a setting needs administrator-driven clearing.
 - If changing settings affects cached UI or derived state, clear the relevant cache keys after writes. The built-in admin save path only clears `main_menu`.
+
+## Environment selection
+
+Startup passes `builder.Environment.EnvironmentName` to `FwConfig.setDefaultOverrideName` before reading framework settings or running the developer CLI. This uses the host's actual resolved environment, including its hosting and command-line rules.
+
+Outside the built-in startup, set the default override before initializing FW when the host has already resolved its environment. Otherwise the framework checks trimmed `ASPNETCORE_ENVIRONMENT`, then trimmed `DOTNET_ENVIRONMENT`, then uses no named environment override. Passing null or whitespace to the setter restores that fallback. Call the setter during initialization, before concurrent requests begin.
+
+The selection belongs to the active `FwConfig.beginScope()` lifetime; nested scopes start independently and restore their parent's selection on disposal. Changing the selection clears that scope's host settings cache. Do not change the selection while dependent FW instances are in use: their configuration reads use the active scope, while their globals were cloned at construction. Explicit trusted hostname overrides and host validation continue to work as before.
