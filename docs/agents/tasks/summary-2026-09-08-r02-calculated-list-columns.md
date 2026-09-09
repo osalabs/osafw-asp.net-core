@@ -30,18 +30,19 @@ Reviewed `FwController` list config, sort, keyword/advanced search, projection, 
 
 ## Commands used / verification
 
-- `dotnet test osafw-tests\osafw-tests.csproj --no-restore --filter "FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~FwDynamicControllerColumnFilterTests|FullyQualifiedName~FwControllerBehaviorTests"` - passed 44 tests.
-- `dotnet test osafw-tests\osafw-tests.csproj --no-restore --filter "FullyQualifiedName!~DBTests"` - passed 721 tests.
-- Focused tests use a rejecting fake DB and recorded production count/select SQL. No configured or external database, mail, or network resource was used.
+- Final focused command: `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~CalculatedDynamicListTests|FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~FwDynamicControllerColumnFilterTests|FullyQualifiedName~FwControllerBehaviorTests' --verbosity quiet` - 47 passed, none skipped.
+- Classic Dynamic controls enter `IndexAction`, verify the actual SELECT projection, run the controller calculation hook, assert the displayed cell, and export CSV. Both a source dependency and an empty dependency array are covered. Vue controls cover pruning, search/filter/sort behavior, legacy metadata, and absent configuration.
+- The dependent Vue PR was synchronized with the simplified parser and passed its 75-test backend/browser filter, including 24 actual offline browser cases. That cross-branch integration evidence is recorded in its own active summary; this branch's 47-test command is server-side.
+- Earlier pre-correction focused/broad commands passed 44/721 tests. Those historical counts are not final-state broad-suite evidence.
+- Tests use rejecting/recording fake databases. No configured database, mail, or live service was used.
 
 ## Testing instructions
 
-Run the two commands above from the repository root. The focused suite covers mixed and calculated-only views, unselected dependency omission, keyword and advanced column-search exclusion, automatic and explicit sorting, CSV export, hidden dependency removal, dependency string/list shapes, and malicious or unknown metadata.
-
+Run the final focused command above. No browser installation or application database is required for it. Browser integration prerequisites and the exact dependent-branch command are recorded with the Vue interaction change.
 ## Risks / follow-ups
 
 - Metadata validates identifier syntax and calculated-name membership in `view_list_map`; the configured `list_view` remains the authority for whether a syntactically valid hidden dependency exists. A missing stored field fails through the normal database query error path.
-- No browser automation was run. The server page-state shape, Vue store default, and shared header consumption were inspected directly; focused tests cover the server list/search/export boundaries.
+- This branch verifies server list/search/export boundaries. Browser execution is separate integration evidence from the dependent Vue branch, not a standalone browser run on this branch.
 - Independent consumer-contract review is routed to the integrating owner before merge.
 
 ## Knowledge-promotion candidates
@@ -62,4 +63,4 @@ Final correction command: `dotnet test osafw-tests/osafw-tests.csproj --no-resto
 
 Synced with master after the approved framework updates. Reduced new top-level metadata to a calculated-name-to-dependencies map, removing definition lists, aliases, and name-only forms. Dependency strings and arrays remain supported, including empty arrays. The existing inverse Vue store map adapter and absent-metadata client-state behavior remain intact. Canonical documentation now identifies `getListRows()` as the common calculation hook and `filterForJson()` as Vue-only.
 
-`dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~FwDynamicControllerColumnFilterTests|FullyQualifiedName~FwControllerBehaviorTests' --verbosity quiet` passed 45 tests. Updated public-controller fixtures exercise canonical arrays, dependency-free maps, and the retained string and legacy store forms. No configured database or live service was used.
+The parser correction first passed 45 focused checks. Independent review then identified missing classic Dynamic entry coverage; the final 47-test command above includes both new IndexAction/export cases and all prior focused controls. No production change was needed for those cases.
