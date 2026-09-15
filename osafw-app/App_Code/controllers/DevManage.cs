@@ -32,7 +32,10 @@ public class DevManageController : FwController
         var select_tables = new FwList();
         ps["select_tables"] = select_tables;
         foreach (string table in tables)
-            select_tables.Add(new FwDict() { { "id", table }, { "iname", table } });
+        {
+            if (!DevEntityBuilder.isFwTableName(table))
+                select_tables.Add(new FwDict() { { "id", table }, { "iname", table } });
+        }
 
         // models list - all clasess inherited from FwModel
         var select_models = new FwList();

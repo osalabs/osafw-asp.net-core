@@ -3156,6 +3156,10 @@ public class DB : IDisposable
         FwList result = [];
         if (dbtype == DBTYPE_SQLSRV)
         {
+            string[] tableParts = table.Split('.', 2);
+            string tableSchema = tableParts.Length > 1 ? tableParts[0] : "";
+            string tableName = tableParts.Length > 1 ? tableParts[1] : table;
+
             // fw.logger("cache MISS " & current_db & "." & table)
             // get information about all columns in the table
             // default = ((0)) ('') (getdate())
@@ -3170,14 +3174,33 @@ public class DB : IDisposable
                       c.character_set_name as 'charset',
                       c.collation_name as 'collation',
                       c.ORDINAL_POSITION as 'pos',
-                      COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsIdentity') as is_identity,
-                      COLUMNPROPERTY(object_id(c.table_name), c.column_name, 'IsComputed') as is_computed
-                      FROM INFORMATION_SCHEMA.TABLES t,
-                        INFORMATION_SCHEMA.COLUMNS c
-                      WHERE t.table_name = c.table_name
-                        AND t.table_name = @table_name
+                      sc.is_identity,
+                      sc.is_computed,
+                      CAST(ep.value AS nvarchar(max)) as comments
+                      FROM INFORMATION_SCHEMA.COLUMNS c
+                      INNER JOIN INFORMATION_SCHEMA.TABLES t
+                        ON t.table_catalog = c.table_catalog
+                       AND t.table_schema = c.table_schema
+                       AND t.table_name = c.table_name
+                      LEFT JOIN sys.schemas s
+                        ON s.name = c.table_schema
+                      LEFT JOIN sys.objects o
+                        ON o.schema_id = s.schema_id
+                       AND o.name = c.table_name
+                       AND o.type IN ('U', 'V')
+                      LEFT JOIN sys.columns sc
+                        ON sc.object_id = o.object_id
+                       AND sc.name = c.column_name
+                      LEFT JOIN sys.extended_properties ep
+                        ON ep.class = 1
+                       AND ep.major_id = sc.object_id
+                       AND ep.minor_id = sc.column_id
+                       AND ep.name = N'MS_Description'
+                      WHERE c.table_name = @table_name
+                        AND c.table_schema = COALESCE(NULLIF(@table_schema, ''),
+                            ISNULL(OBJECT_SCHEMA_NAME(OBJECT_ID(QUOTENAME(@table_name))), SCHEMA_NAME()))
                       order by c.ORDINAL_POSITION";
-            result = arrayp(sql, DB.h("@table_name", table));
+            result = arrayp(sql, DB.h("@table_name", tableName, "@table_schema", tableSchema));
             foreach (FwDict row in result)
             {
                 var subtype = row["type"].toStr();
@@ -3189,6 +3212,7 @@ public class DB : IDisposable
         {
             string sql = @"SELECT c.column_name as name,
                       c.data_type as type,
+                      c.column_type as column_type,
                       CASE c.is_nullable WHEN 'YES' THEN 1 ELSE 0 END AS is_nullable,
                       c.column_default as `default`,
                       c.character_maximum_length as maxlen,
@@ -3198,21 +3222,24 @@ public class DB : IDisposable
                       c.collation_name as collation,
                       c.ORDINAL_POSITION as pos,
                       LOCATE('auto_increment',EXTRA)>0 as is_identity,
-                      CASE WHEN COALESCE(c.GENERATION_EXPRESSION, '') <> '' THEN 1 ELSE 0 END as is_computed
+                      CASE WHEN COALESCE(c.GENERATION_EXPRESSION, '') <> '' THEN 1 ELSE 0 END as is_computed,
+                      c.column_comment as comments
                       FROM INFORMATION_SCHEMA.TABLES t,
                            INFORMATION_SCHEMA.COLUMNS c
                       WHERE t.table_name = c.table_name
                         AND t.table_schema = c.table_schema
                         AND t.table_catalog = c.table_catalog
                         AND t.table_name = @table_name
-                        AND t.table_schema = @db_name
+                        AND t.table_schema = DATABASE()
                       order by c.ORDINAL_POSITION";
-            result = arrayp(sql, DB.h("@table_name", table, "@db_name", conn?.Database ?? string.Empty));
+            result = arrayp(sql, DB.h("@table_name", table));
             foreach (FwDict row in result)
             {
                 var subtype = row["type"].toStr();
                 row["fw_type"] = mapTypeSQL2Fw(subtype); // meta type
-                row["fw_subtype"] = subtype.ToLowerInvariant();
+                row["fw_subtype"] = subtype.Equals("bigint", StringComparison.OrdinalIgnoreCase)
+                    && Regex.IsMatch(row["column_type"].toStr(), @"\bunsigned\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+                    ? "unsignedbigint" : subtype.ToLowerInvariant();
             }
         }
 #if isSQLite
@@ -3242,11 +3269,12 @@ public class DB : IDisposable
                 row["pos"] = row["cid"].toInt() + 1;
                 row["is_identity"] = row["name"].toStr() == identityColumn && subtype.Equals("INTEGER", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
                 row["is_computed"] = row["hidden"].toInt() is 2 or 3 ? 1 : 0;
+                row["comments"] = "";
                 result.Add(row);
             }
         }
 #endif
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        else if (dbtype == DBTYPE_OLE && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // OLE DB (Access or other providers)
             string[] tableParts = table.Split('.');
@@ -3254,8 +3282,8 @@ public class DB : IDisposable
             string tableName = tableParts.Length > 1 ? tableParts[1] : table;
 
             //restritcitons array: [TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME]
-            var oleConn = (OleDbConnection?)conn;
-            DataTable? schemaTable = oleConn?.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, [null, schemaName, tableName, null]);
+            var oleConn = (OleDbConnection)connect();
+            DataTable? schemaTable = oleConn.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, [null, schemaName, tableName, null]);
             if (schemaTable == null)
                 return result;
 
@@ -3283,6 +3311,8 @@ public class DB : IDisposable
                 h["collation"] = row["COLLATION_NAME"];
                 h["pos"] = row["ORDINAL_POSITION"].toInt();
                 h["is_identity"] = 0;
+                h["is_computed"] = 0;
+                h["comments"] = row["DESCRIPTION"];
                 h["desc"] = row["DESCRIPTION"];
                 h["column_flags"] = row["COLUMN_FLAGS"].toInt();
                 fieldslist.Add(h);
