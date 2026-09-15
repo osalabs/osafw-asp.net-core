@@ -1,65 +1,39 @@
-# Typed Row Regeneration
+# Opt-in Model Row Regeneration
 
 ## Objective / acceptance
 
-Add a usable Developer Tools flow that previews and explicitly applies current schema-driven typed `Row` output to selected existing model source files. Preserve all source outside a safely recognizable generated Row, reject ambiguous or customized Rows and stale previews, and keep browser writes behind development, Site Admin, POST, and XSS boundaries. Bulk regeneration of framework model sources is outside this task.
-
-Acceptance requires offline tests through the DevManage preview/apply actions with a task-owned source directory and controlled metadata DB. Negative controls cover non-development use, GET, a missing XSS token, a stale preview, a customized Row, and an unknown selection. The preserved-positive control verifies custom model inheritance, methods, and string content outside Row remain intact.
+Provide a rarely used local development action that regenerates all existing model Row classes from current schema metadata. Keep Roslyn out of normal builds. Use Git diff/revert for review instead of selection, preview, or apply pages. Entire Row contents, including custom members, may be replaced; retain surrounding model code.
 
 ## What changed
 
-- Added a Roslyn-based regeneration service that inventories matching compiled model sources without following reparse points, parses each selected file, and replaces only one direct nested generated-style Row syntax span.
-- Added review hashes over the full source and regenerated output. Preview and apply read provider metadata through an uncached path that cannot consume or publish a competing full-schema cache result, so an intervening schema change invalidates the reviewed output even when an older cached read completes concurrently.
-- Apply replans the whole selection, rejects any stale or missing hash, serializes in-process, and acquires every selected source with exclusive sharing before validating or writing. It writes and flushes in place, and restores already-written files through their held handles if a later write fails.
-- Added a Developer Tools page with explicit file selection, escaped old/new Row diffs, and a separate apply form.
-- Documented the copied-application package requirement and the boundary that plain auto-properties still require human preview review.
+- Added the disabled-by-default `isRowRegeneration` compile constant and a conditional `Microsoft.CodeAnalysis.CSharp` package reference.
+- Added one POST action at `/Dev/Manage/(RegenerateModelRows)`, requiring `IS_DEV`, Site Admin access, and the current XSS token. Removed the earlier preview/apply actions and templates from this unmerged feature.
+- Kept a small syntax-based helper to replace each direct nested Row, using existing schema-to-Row generation. It processes matching compiled models under `App_Code/models`, reports updated/unchanged/skipped/failed models, and continues after individual failures.
+- Metadata reads bypass the shared full-schema cache without changing ordinary warm-cache behavior. Each model uses its configured DB wrapper. No database writes are performed.
+- Files are held exclusively while read and written. Ambiguous, partial/generic, conditional, invalid, or missing Rows are skipped. Linked source paths are excluded. The current file is restored if writing throws, when restoration succeeds; earlier successful files remain changed.
+- Updated canonical usage and copied-application setup guidance. Synced the branch with master after the schema metadata prerequisite merged.
 
-## Scope reviewed
+## Changed contracts / decisions
 
-Reviewed DevManage routing and write guards, current model/schema discovery, typed Row generation, model DB selection, source-root configuration, ParsePage form/repeat conventions, and existing generator/security tests. The review report's typed-row regeneration item was used only to identify the requested outcome and was validated against current code.
+Normal builds contain neither the action nor a Roslyn assembly reference/package dependency. Enabled builds deliberately replace custom Row members, attributes, and inheritance; developers review or revert affected model files in Git and rebuild. Line endings are normalized to CRLF. The existing public cached schema API and ordinary model scaffolding remain available without the constant.
 
-## Requirements / decisions
-
-- `Microsoft.CodeAnalysis.CSharp` 5.9.0 is the approved source parser dependency for the current .NET target.
-- Selection uses exact compiled model names resolved to one matching source file. The browser never submits an arbitrary path.
-- The tool reads schema metadata from each model's configured DB wrapper, matching normal model runtime selection, and does not mutate database state.
-- Row eligibility is deliberately narrow. It accepts only the scalar type and empty-string initializer forms emitted by current or legacy framework generation. Primary constructors, custom types or initializers, and other custom Row behavior are refused with a manual-review explanation.
-
-## Changed contracts
-
-The change adds two Site Admin Developer Tools actions and one page when `IS_DEV=true`. It adds a direct application project dependency on `Microsoft.CodeAnalysis.CSharp` 5.9.0. Existing model source is unchanged unless a developer selects it, reviews a preview, and explicitly applies it. Database and provider schemas are unchanged.
+The source helper remains separate from the controller to keep syntax parsing and file writing out of request orchestration. There is no preview store, hash protocol, selection UI, or batch rollback mechanism.
 
 ## Commands used / verification
 
-- `dotnet build osafw-app\osafw-app.csproj --artifacts-path artifacts\r45_build_cache_race --verbosity minimal` — passed with no warnings after restoring into the isolated output path.
-- `dotnet test osafw-tests\osafw-tests.csproj --filter FullyQualifiedName~DevRowRegeneratorTests --artifacts-path artifacts\r45_tests_cache_race --verbosity minimal` — passed 10/10 after review fixes. Controls include preserved public warm-cache behavior, an older in-flight cached metadata read publishing before a fresh regeneration read, schema changes before preview and apply, unsupported Row primary-constructor/type/initializer forms, and failure to acquire exclusive source ownership.
-- `dotnet test osafw-tests\osafw-tests.csproj --filter FullyQualifiedName~Dev --artifacts-path artifacts\r45_dev_cache_race --verbosity minimal` — passed 74/74 generator, regeneration, and Developer Tools security tests.
-- `dotnet test osafw-tests\osafw-tests.csproj --filter FullyQualifiedName~DBOperationTests --artifacts-path artifacts\r45_db_cache_core --verbosity minimal` — passed 20/20 provider and schema-cache operation tests.
-- `dotnet test osafw-tests\osafw-tests.csproj --filter FullyQualifiedName~ParsePageTests --artifacts-path artifacts\r45_parse_cache_race --verbosity minimal` — passed 42/42.
-- `dotnet test osafw-tests\osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite' --filter FullyQualifiedName~DevRowRegeneratorTests --artifacts-path artifacts\r45_sqlite_cache_race --verbosity minimal` — passed 10/10 with the optional SQLite symbol.
-- `dotnet list osafw-app\osafw-app.csproj package --vulnerable --include-transitive` — reported no vulnerable packages from the configured current sources.
-- Encoding inspection of all task-touched text files found no UTF-8 BOM or bare LF; `git diff --check` passed.
+All checks ran in the feature worktree using disposable source fixtures and controlled metadata; no existing model source or live database was regenerated.
 
-## Testing instructions
+- `dotnet test osafw-tests/osafw-tests.csproj --filter 'FullyQualifiedName~DevRowRegeneratorTests|FullyQualifiedName~DBOperationTests|FullyQualifiedName~DevCodeGenTests' --verbosity quiet`: 39 passed. The default action/assembly-reference regression passed, and the restored application package graph contained no `Microsoft.CodeAnalysis` packages.
+- `dotnet test osafw-tests/osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisRowRegeneration' --filter 'FullyQualifiedName~DevRowRegeneratorTests|FullyQualifiedName~DBOperationTests|FullyQualifiedName~DevCodeGenTests' --verbosity quiet`: 47 passed. Includes explicit-action URL parsing, all-model regeneration, custom Row replacement, preserved outer code, repeat stability, fresh metadata with unchanged public cache, denied environment/verb/token/access controls, invalid/ambiguous source, and locked-file continuation.
+- `dotnet test osafw-tests/osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisRowRegeneration%3BisSQLite' --filter 'FullyQualifiedName~DevRowRegeneratorTests|FullyQualifiedName~DBOperationTests|FullyQualifiedName~DevCodeGenTests' --verbosity quiet`: 47 passed with optional SQLite compilation, before the route-only fixture assertion was added.
+- `git diff --check` and strict UTF-8/no-BOM/CRLF checks passed for all changed text files.
 
-Run the focused regeneration tests above. In a development-only local app with current schema access, open `/Dev/Manage/(ModelRows)`, select a generated model, preview its complete Row diff, and apply only after review. Do not use a shared or production database for exploratory metadata checks.
+## Testing instructions / limits
 
-## Risks / follow-ups
+Enable the commented constant block in the app project, rebuild, sign in as Site Admin in local development, and POST the current XSS form value to `/Dev/Manage/(RegenerateModelRows)`. Inspect returned results and Git diffs, revert unwanted files, then rebuild. Disable the constant afterward. This live manual flow was not run against a configured database; tests use the real action with controlled metadata and disposable files.
 
-- A supported public auto-property alone cannot prove whether a human curated it. Explicit selection, the full Row diff, and the separate apply action are the review boundary.
-- Exclusive sharing prevents overlapping writes in the current process and cooperating Windows file opens. Other platforms and filesystems depend on processes honoring .NET sharing behavior.
-- Writes occur in place under held streams. A process, operating-system, or filesystem failure during write or rollback can leave partial source that requires recovery from version control.
-- No framework source Rows were bulk-regenerated in this task.
+A process or filesystem failure during an in-place write can leave partial source. Git remains the recovery boundary. Windows is the verified platform; no live SQL Server, MySQL, OLE, or Linux integration run was performed.
 
-## Reflection
+## Review
 
-Reusing current typed Row generation prevented a second mapping contract. The useful safety boundary came from syntax classification plus exact source/output hashing; a text-block pattern would not have preserved surrounding C# reliably.
-
-## Lean review follow-up (2026-09-09)
-
-Synced with master after the four approved framework updates and with the corrected schema-tooling prerequisite. The application scaffolding picker now excludes framework tables; explicit Row regeneration still lists existing models for deliberate preview/apply. Existing Row parsing and write safeguards remain; the independent lean review found no required redesign. After the prerequisite generator was corrected to emit nullable text as `string?`, the generated-type classifier was aligned. The existing preview/apply test now previews the generated source again and requires no further change.
-
-- `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~Dev|FullyQualifiedName~DBOperationTests' --verbosity quiet`: 94 passed, none skipped.
-- `dotnet test osafw-tests/osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite' --filter 'FullyQualifiedName~DevRowRegeneratorTests|FullyQualifiedName~SQLiteDBTests.DevManage' --verbosity quiet`: 11 passed, none skipped, including the real picker output against disposable SQLite.
-
-No live provider database or existing model source was regenerated.
+Fresh independent review used `reviewer_high` with consumer-contract and security-boundary overlays for the generated-output, compile-gate, and source-writing contracts. The reviewer inspected the final diff before the active summary; the subsequent summary/index audit found no supplemental issues. Final integrator verdict: No blocking findings. Review loop can stop.
