@@ -1940,6 +1940,7 @@ END" + Environment.NewLine;
         StringBuilder sb = new();
         sb.AppendLine("    public class Row");
         sb.AppendLine("    {");
+        HashSet<string> propertyNames = new(StringComparer.Ordinal);
 
         foreach (var field in fields)
         {
@@ -1953,15 +1954,17 @@ END" + Environment.NewLine;
             var propertyName = dict["fw_name"].toStr();
             if (propertyName.Length == 0)
                 propertyName = Utils.name2fw(columnName);
-            if (propertyName.Length == 0)
-                continue;
+            propertyName = buildRowPropertyName(propertyName, propertyNames);
 
             var csType = buildRowPropertyType(dict);
             if (string.IsNullOrEmpty(csType))
                 continue;
 
-            if (!string.Equals(propertyName, columnName, StringComparison.OrdinalIgnoreCase))
-                sb.AppendLine($"        [DBName(\"{columnName}\")]");
+            appendRowPropertyComments(sb, dict["comments"].toStr());
+
+            var runtimePropertyName = propertyName.StartsWith('@') ? propertyName[1..] : propertyName;
+            if (!string.Equals(runtimePropertyName, columnName, StringComparison.OrdinalIgnoreCase))
+                sb.AppendLine($"        [DBName(\"{escapeCSharpString(columnName)}\")]");
 
             var initializer = buildRowPropertyInitializer(dict, csType);
             if (initializer.Length > 0)
@@ -1985,6 +1988,75 @@ END" + Environment.NewLine;
         return regex.Replace(template, rowClassBlock, 1);
     }
 
+    private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)
+    {
+        "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const", "continue",
+        "decimal", "default", "delegate", "do", "double", "else", "enum", "event", "explicit", "extern", "false", "finally", "fixed",
+        "float", "for", "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock", "long", "namespace",
+        "new", "null", "object", "operator", "out", "override", "params", "private", "protected", "public", "readonly", "ref", "return",
+        "sbyte", "sealed", "short", "sizeof", "stackalloc", "static", "string", "struct", "switch", "this", "throw", "true", "try",
+        "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while", "add", "alias",
+        "allows", "and", "ascending", "async", "await", "by", "descending", "dynamic", "equals", "extension", "field", "file", "from", "get", "global", "group", "init",
+        "into", "join", "let", "managed", "nameof", "nint", "not", "notnull", "nuint", "on", "or", "orderby", "partial", "record",
+        "remove", "required", "scoped", "select", "set", "unmanaged", "value", "var", "when", "where", "with", "yield"
+    };
+
+    private static string buildRowPropertyName(string sourceName, HashSet<string> usedNames)
+    {
+        var normalized = Regex.Replace(sourceName, @"[^\p{L}\p{Nd}_]", "_");
+        if (normalized.Length == 0)
+            normalized = "field";
+        if (!Regex.IsMatch(normalized, @"^[\p{L}_]"))
+            normalized = "_" + normalized;
+
+        var uniqueName = normalized;
+        var suffix = 2;
+        while (!usedNames.Add(uniqueName))
+            uniqueName = normalized + "_" + suffix++;
+
+        return CSharpKeywords.Contains(uniqueName) ? "@" + uniqueName : uniqueName;
+    }
+
+    private static void appendRowPropertyComments(StringBuilder sb, string comments)
+    {
+        if (string.IsNullOrWhiteSpace(comments))
+            return;
+
+        sb.AppendLine("        /// <summary>");
+        foreach (var line in Regex.Split(comments, "\r\n|\n|\r|\u0085|\u2028|\u2029"))
+        {
+            var xmlLine = new string(line.Where(ch => ch == '\t' || ch >= ' ').ToArray())
+                .Replace("&", "&amp;", StringComparison.Ordinal)
+                .Replace("<", "&lt;", StringComparison.Ordinal)
+                .Replace(">", "&gt;", StringComparison.Ordinal);
+            sb.AppendLine("        /// " + xmlLine);
+        }
+        sb.AppendLine("        /// </summary>");
+    }
+
+    private static string escapeCSharpString(string value)
+    {
+        StringBuilder sb = new(value.Length);
+        foreach (var ch in value)
+        {
+            switch (ch)
+            {
+                case '\\': sb.Append("\\\\"); break;
+                case '"': sb.Append("\\\""); break;
+                case '\r': sb.Append("\\r"); break;
+                case '\n': sb.Append("\\n"); break;
+                case '\t': sb.Append("\\t"); break;
+                default:
+                    if (char.IsControl(ch) || char.IsSurrogate(ch) || ch is '\u2028' or '\u2029')
+                        sb.Append("\\u").Append(((int)ch).ToString("X4"));
+                    else
+                        sb.Append(ch);
+                    break;
+            }
+        }
+        return sb.ToString();
+    }
+
     internal static string buildRowPropertyType(IDictionary field)
     {
         var fwType = field["fw_type"].toStr().ToLowerInvariant();
@@ -1993,16 +2065,16 @@ END" + Environment.NewLine;
 
         string baseType = fwType switch
         {
-            "int" => fwSubtype == "bit" || fwSubtype == "boolean" ? "bool" : "int",
-            "float" => fwSubtype == "decimal" || fwSubtype == "currency" || fwSubtype == "numeric" ? "decimal" : "double",
+            "int" => fwSubtype is "bit" or "boolean" ? "bool" : fwSubtype == "unsignedbigint" ? "ulong" : fwSubtype == "bigint" ? "long" : "int",
+            "decimal" => "decimal",
+            "float" => fwSubtype is "decimal" or "currency" or "money" or "smallmoney" or "numeric" or "varnumeric" ? "decimal" : "double",
             "date" => "DateTime",
             "datetime" => fwSubtype == "datetimeoffset" ? "DateTimeOffset" : "DateTime",
             "datetimeoffset" => "DateTimeOffset",
             _ => "string",
         };
 
-        bool isValueType = baseType != "string";
-        if (isNullable && isValueType)
+        if (isNullable)
             return baseType + "?";
 
         return baseType;

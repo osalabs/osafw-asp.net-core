@@ -56,6 +56,21 @@ public class DevEntityBuilderTests
         Assert.AreEqual("id", foreignKey["pk_column"]);
     }
 
+    [TestMethod]
+    public void IsFwTableName_ExcludesCurrentFrameworkPersistenceTables()
+    {
+        foreach (var table in new[]
+        {
+            "users_cookies", "fwreports", "kb_articles", "rag_sources", "rag_chunks",
+            "assistant_threads", "assistant_messages", "assistant_runs", "assistant_runs_events",
+            "assistant_memories", "assistant_feedback", "resources", "permissions", "roles",
+            "roles_resources_permissions", "users_roles"
+        })
+            Assert.IsTrue(DevEntityBuilder.isFwTableName(table), table);
+
+        Assert.IsFalse(DevEntityBuilder.isFwTableName("customer_orders"));
+    }
+
     private static Dictionary<string, object?> InvokeParseField(string line, string comment)
     {
         return DevEntityBuilder.ParseField(line, comment)
