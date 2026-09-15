@@ -1,0 +1,9 @@
+<~message if="error[message]" inline>
+<div class="alert alert-warning text-start" role="alert"><~error[message] nl2br></div>
+</~message>
+<div class="d-flex flex-wrap gap-2 justify-content-center">
+    <~signin if="error[login_url]" inline>
+    <a class="btn btn-primary" href="<~error[login_url]>">`Sign in`</a>
+    </~signin>
+    <a class="btn btn-outline-secondary" href="<~GLOBAL[ROOT_URL]>/">`Go to home page`</a>
+</div>
