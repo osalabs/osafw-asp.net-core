@@ -19,3 +19,9 @@ HTML guidance is now controlled by ParsePage templates under `error/400`, `error
 ## Risks / follow-ups
 
 No shared database or live site was used. Tests render the changed error content; a full-layout browser visual check was not run. The anonymous 403 page/link coverage calls `FW.errMsg` directly; existing `FwLoginRedirectTests` cover normal anonymous dispatch redirects.
+
+## Review follow-up (2026-09-14)
+
+Replaced wrapper tags in `error/4xx/main.html` with direct conditional includes for 400, 403 and 404. Existing focused rendering/login tests passed 19/19 with the same command above. A local second-pass review confirmed equivalent ParsePage behavior; no public contract or changelog change is needed.
+
+Confirmed the ordinary anonymous page flow redirects directly to Login with the original app-local URL in `gourl`, then returns there after successful login. The login form preserves that field and `performLogin` validates it before redirecting. This does not show a 403 page before Login; the anonymous sign-in button is available when an application calls `FW.errMsg` directly. Authentication dispatch was not changed.
