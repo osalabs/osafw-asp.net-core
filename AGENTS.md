@@ -34,6 +34,7 @@
 - Controllers end in `Controller`; public actions end in `Action`. Template-rendering actions conventionally return `FwDict`, while an action may write the response directly. Keep controllers focused on request/response orchestration.
 - Table models generally inherit `FwModel` and are obtained from the current `FW` instance with `fw.model<T>()` or `fw.model(name)`. Prefer model-owned business/data access where it clarifies the boundary; keep controller queries narrow and parameterized.
 - Prefer `FwDynamicController` or `FwVueController` with `config.json` for standard CRUD and compose views under `osafw-app/App_Data/template`. For a new standard module follow `docs/feature_modules.md` and its approval-gated schema/scaffolder workflow.
+- Name constants `UPPER_SNAKE_CASE` and boolean variables, fields, and parameters with `is` or `is_` prefixes. Keep source readable with blank lines between logical blocks and expanded control flow; follow [naming and readability](docs/naming.md#casing). Apply these rules to new and changed code without unrelated renames or breaking existing public contracts.
 - Nearby code and canonical topic docs own detailed conventions: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, and `datetime.md`.
 - Add XML docs for non-obvious framework intent, loose shapes, security/access expectations, side effects, exceptions, or null/empty behavior; do not restate signatures.
 
