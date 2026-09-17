@@ -1,11 +1,15 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace osafw.Tests;
@@ -13,28 +17,153 @@ namespace osafw.Tests;
 [TestClass]
 public class PdfLocalAssetTests
 {
-    [TestMethod]
+    [TestMethod, TestCategory("PdfBrowser")]
     public async Task PolicyAllowsStaticAssetsAndRejectsExternalEscapedAndOversizedFiles()
     {
+        using var playwright = await Playwright.CreateAsync();
+        if (!File.Exists(playwright.Chromium.ExecutablePath))
+            Assert.Inconclusive("Install matching Chromium for PDF integration tests.");
+
         var root = Path.Combine(Path.GetTempPath(), "pdf-assets-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        using var scope = new FwTestScope(_ => new RejectingDb());
+        var output = Path.Combine(root, "report.pdf");
+        var options = new FwDict { ["local_assets_root"] = root };
+
         try
         {
             File.WriteAllText(Path.Combine(root, "style.css"), "body { color: red; }");
-            var assets = new PdfLocalAssets(root);
-            var result = await assets.read(PdfLocalAssets.Origin + "/style.css?v=1");
-            Assert.AreEqual("text/css", result.ContentType);
-            StringAssert.Contains(Encoding.UTF8.GetString(result.Body), "color: red");
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => assets.read("https://example.test/style.css"));
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => assets.read("file:///style.css"));
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => assets.read(PdfLocalAssets.Origin + "/..%2foutside.css"));
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => assets.read(PdfLocalAssets.Origin + "/style.css%3astream"));
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => assets.read(PdfLocalAssets.Origin + "/config.json"));
-            await Assert.ThrowsExactlyAsync<FileNotFoundException>(() => assets.read(PdfLocalAssets.Origin + "/missing.png"));
-            using (var large = File.Create(Path.Combine(root, "large.png"))) large.SetLength(10 * 1024 * 1024 + 1);
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => assets.read(PdfLocalAssets.Origin + "/large.png"));
+            await ConvUtils.html2pdf(scope.Fw, "<link rel='stylesheet' href='/style.css?v=1'><p>Report</p>", output, options);
+            var previous = File.ReadAllBytes(output);
+
+            using (var large = File.Create(Path.Combine(root, "large.png")))
+                large.SetLength(10 * 1024 * 1024 + 1);
+
+            foreach (var url in new[]
+            {
+                "https://example.test/style.css", "file:///style.css", "/..%2foutside.css",
+                "/style.css%3astream", "/config.json", "/missing.png", "/large.png"
+            })
+            {
+                await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => ConvUtils.html2pdf(scope.Fw,
+                    $"<link rel='stylesheet' href='{url}'><p>Report</p>", output, options));
+                CollectionAssert.AreEqual(previous, File.ReadAllBytes(output));
+            }
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod, TestCategory("PdfBrowser")]
+    public async Task RendererBoundsCombinedAssetReadsPerRendering()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        if (!File.Exists(playwright.Chromium.ExecutablePath))
+            Assert.Inconclusive("Install matching Chromium for PDF integration tests.");
+
+        var root = Path.Combine(Path.GetTempPath(), "pdf-budget-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        using var scope = new FwTestScope(_ => new RejectingDb());
+        var output = Path.Combine(root, "report.pdf");
+        var options = new FwDict { ["local_assets_root"] = root };
+
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "style.css"), "/*" + new string(' ', 9 * 1024 * 1024) + "*/");
+            var html = string.Concat(Enumerable.Range(0, 5).Select(i => $"<link rel='stylesheet' href='/style.css?v={i}'>")) + "<p>Report</p>";
+            await ConvUtils.html2pdf(scope.Fw, html, output, options);
+            var previous = File.ReadAllBytes(output);
+
+            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => ConvUtils.html2pdf(scope.Fw,
+                html + "<link rel='stylesheet' href='/style.css?v=5'>", output, options));
+            CollectionAssert.AreEqual(previous, File.ReadAllBytes(output));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod, TestCategory("PdfBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task DownloadCleanupIgnoresLocksAndRemovesOlderLeftovers(bool holdDownloadOpen)
+    {
+        if (!OperatingSystem.IsWindows())
+            Assert.Inconclusive("This regression exercises Windows file sharing and creation times.");
+
+        using var playwright = await Playwright.CreateAsync();
+        if (!File.Exists(playwright.Chromium.ExecutablePath))
+            Assert.Inconclusive("Install matching Chromium for PDF integration tests.");
+
+        var root = Path.Combine(Path.GetTempPath(), "pdf-cleanup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var originalTmp = Environment.GetEnvironmentVariable("TMP");
+        var originalTemp = Environment.GetEnvironmentVariable("TEMP");
+        using var body = new MemoryStream();
+        var response = new HoldingPdfResponse(body, holdDownloadOpen);
+        var context = TestHelpers.CreateHttpContext("");
+        context.Features.Set<IHttpResponseBodyFeature>(response);
+        using var scope = new FwTestScope(_ => new RejectingDb(), context: context);
+
+        try
+        {
+            // Keep the normal age-based sweep entirely inside this test's disposable directory.
+            Environment.SetEnvironmentVariable("TMP", root);
+            Environment.SetEnvironmentVariable("TEMP", root);
+            Assert.AreEqual(Path.GetFullPath(root).TrimEnd('\\'), Path.GetTempPath().TrimEnd('\\'));
+
+            scope.Fw.config()["template"] = root;
+            File.WriteAllText(Path.Combine(root, "report.html"), "<p>Download cleanup</p>");
+            var stale = Utils.getTmpFilename() + ".pdf";
+            var locked = Utils.getTmpFilename() + ".pdf";
+            File.WriteAllText(stale, "older interrupted download");
+            File.WriteAllText(locked, "older locked download");
+            File.SetCreationTime(stale, DateTime.Now.AddHours(-2));
+            File.SetCreationTime(locked, DateTime.Now.AddHours(-2));
+
+            using (var held = new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                ConvUtils.parsePagePdf(scope.Fw, "", "/report.html", [], "report");
+
+                StringAssert.StartsWith(Encoding.ASCII.GetString(body.ToArray()), "%PDF-");
+                Assert.AreEqual(holdDownloadOpen, File.Exists(response.Filename));
+                Assert.IsFalse(File.Exists(stale), "The download must sweep old files left by an earlier crash.");
+                Assert.IsTrue(File.Exists(locked), "A locked old file must not fail the download.");
+            }
+
+            response.HeldFile?.Dispose();
+            if (holdDownloadOpen)
+                File.SetCreationTime(response.Filename, DateTime.Now.AddHours(-2));
+
+            Utils.cleanupTmpFiles();
+            Assert.IsFalse(File.Exists(locked));
+            Assert.IsFalse(File.Exists(response.Filename), "A later sweep must retry the previously locked download.");
+        }
+        finally
+        {
+            response.HeldFile?.Dispose();
+            Environment.SetEnvironmentVariable("TMP", originalTmp);
+            Environment.SetEnvironmentVariable("TEMP", originalTemp);
+            Directory.Delete(root, true);
+        }
+    }
+
+    private sealed class HoldingPdfResponse(Stream body, bool holdOpen) : StreamResponseBodyFeature(body)
+    {
+        internal string Filename = "";
+        internal FileStream? HeldFile;
+
+        public override async Task SendFileAsync(string path, long offset, long? count, CancellationToken cancellationToken)
+        {
+            Filename = path;
+            if (holdOpen)
+                HeldFile = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+            await base.SendFileAsync(path, offset, count, cancellationToken);
+        }
     }
 
     [TestMethod, TestCategory("PdfBrowser")]
@@ -43,10 +172,12 @@ public class PdfLocalAssetTests
         using var playwright = await Playwright.CreateAsync();
         if (!File.Exists(playwright.Chromium.ExecutablePath))
             Assert.Inconclusive("Install matching Chromium for PDF integration tests.");
+
         var root = Path.Combine(Path.GetTempPath(), "pdf-legacy-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         var output = Path.Combine(root, "report.pdf");
         using var scope = new FwTestScope(_ => new RejectingDb());
+
         try
         {
             File.WriteAllText(output, "previous report");
@@ -58,7 +189,10 @@ public class PdfLocalAssetTests
             Assert.AreEqual("%PDF-", Encoding.ASCII.GetString(signature), "Existing readers must see the updated file.");
             Assert.IsEmpty(Directory.GetFiles(root, "*.tmp"));
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 
     [TestMethod, TestCategory("PdfBrowser")]
@@ -67,6 +201,7 @@ public class PdfLocalAssetTests
         using var playwright = await Playwright.CreateAsync();
         if (!File.Exists(playwright.Chromium.ExecutablePath))
             Assert.Inconclusive("Install matching Chromium for PDF integration tests.");
+
         var root = Path.Combine(Path.GetTempPath(), "pdf-report-" + Guid.NewGuid().ToString("N"));
         var templates = Path.Combine(root, "templates");
         var assets = Path.Combine(root, "assets");
@@ -74,6 +209,7 @@ public class PdfLocalAssetTests
         Directory.CreateDirectory(Path.Combine(assets, "lib", "bootstrap", "css"));
         Directory.CreateDirectory(Path.Combine(assets, "css"));
         using var scope = new FwTestScope(_ => new RejectingDb(), context: TestHelpers.CreateHttpContext(""));
+
         try
         {
             File.Copy(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../osafw-app/App_Data/template/layout_print_local.html")), Path.Combine(templates, "layout_print_local.html"));
@@ -90,7 +226,10 @@ public class PdfLocalAssetTests
             Assert.IsTrue(File.Exists(report.render_to));
             Assert.IsEmpty(Directory.GetFiles(root, "*.tmp"));
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 
     [TestMethod, TestCategory("PdfBrowser")]
@@ -99,11 +238,13 @@ public class PdfLocalAssetTests
         using var playwright = await Playwright.CreateAsync();
         if (!File.Exists(playwright.Chromium.ExecutablePath))
             Assert.Inconclusive("Install matching Chromium with playwright.ps1 install chromium --no-shell to run PDF integration tests.");
+
         var root = Path.Combine(Path.GetTempPath(), "pdf-render-" + Guid.NewGuid().ToString("N"));
         var assets = Path.Combine(root, "assets");
         Directory.CreateDirectory(assets);
         using var scope = new FwTestScope(_ => new RejectingDb());
         var output = Path.Combine(root, "report.pdf");
+
         try
         {
             File.WriteAllText(Path.Combine(assets, "style.css"), "body { color: #123456; } img { width: 20px; }");
@@ -141,6 +282,9 @@ public class PdfLocalAssetTests
             await ConvUtils.html2pdf(scope.Fw, "<p>Legacy rendering still works.</p>", Path.Combine(root, "legacy.pdf"));
             Assert.IsTrue(File.Exists(Path.Combine(root, "legacy.pdf")));
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 }

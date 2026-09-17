@@ -35,3 +35,19 @@ A second review found that report CSS with !important could make diagnostic imag
 Synced with master after the approved framework updates. Restricted staging and replacement to opt-in local asset rendering so legacy callers retain in-place writes and existing file access behavior. Clarified that trusted configuration includes Site Admin-managed custom report options. Added a real-renderer regression with an existing open reader that permits writes but not deletion; it observes the new PDF through the same file handle.
 
 With matching task-owned Chromium selected by `PLAYWRIGHT_BROWSERS_PATH`, `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~PdfLocalAssetTests|FullyQualifiedName~ConvUtilsTests' --verbosity quiet` passed 7 tests, none skipped. The existing local-mode failure and prior-output preservation controls passed. No live application database or external asset server was used.
+
+## Feedback follow-up (2026-09-16)
+
+Restored `Utils.cleanupTmpFiles()` after browser PDF downloads so later requests can remove framework temporary files older than one hour, including crash leftovers. Immediate download and staged-PDF deletions now share a best-effort helper; deletion failures do not fail downloads or mask rendering errors. The age-based sweep is also guarded against enumeration/access failures. Staged files outside the framework temporary directory are not swept by this utility.
+
+Removed the single-use `PdfLocalAssets` class. `ConvUtils` now owns the path/type checks and link rejection, while a local reader in `html2pdf` holds the per-render byte budget. Concurrent reads use an atomic counter; the 10 MiB per-resource and 50 MiB per-render limits are unchanged. Added blank lines between logical blocks, expanded dense try/catch and browser scripts, and added a short explanation of `TPL_EXPORT_PDF_LOCAL`. The prior compact formatting was an implementation choice, not a repository requirement.
+
+Final verification with matching Chromium in the task-owned browser directory:
+
+- `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~PdfLocalAssetTests|FullyQualifiedName~ConvUtilsTests' --verbosity quiet`: 10 passed, none skipped.
+- Asset-policy checks now use the public renderer instead of the removed internal class. A paired test accepts combined asset reads below the total budget and rejects reads above it while preserving the prior PDF.
+- Windows download tests enter `parsePagePdf` and `fileResponse`, including a response holding the PDF open without delete sharing. The response succeeds; old unlocked files are removed, locked files survive without errors, and a later sweep removes them after release. TMP/TEMP are temporarily directed into the fixture's unique directory and restored; no shared temp directory is swept by these tests.
+- Existing legacy in-place rendering, local styles/images/fonts failure controls, blocked external connections, destination preservation, and diagnostic-image pagination checks still pass.
+- No live database, application server, or external asset server was used. Matching Chromium is required for the policy tests; Windows file-sharing and creation-time controls are Windows-only. Visual PDF comparison and non-Windows execution remain unperformed.
+
+Fresh independent review used `reviewer_high` with security-boundary and state-integrity overlays, followed by an active-summary/index audit; neither found blocking issues. Final integrator verdict: No blocking findings. Review loop can stop. UTF-8/no-BOM/CRLF and diff checks passed. The additive master synchronization resolved only the task-index conflict, preserving both entries. No breaking changelog entry is needed for this unmerged feature follow-up.
