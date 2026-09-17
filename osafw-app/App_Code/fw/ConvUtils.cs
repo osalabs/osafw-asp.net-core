@@ -15,13 +15,13 @@ namespace osafw;
 
 public class ConvUtils
 {
-    private static bool playwrightInstalled = false; // to avoid multiple installs in parallel requests
+    private static bool isPlaywrightInstalled = false; // to avoid multiple installs in parallel requests
     private static readonly object playwrightLock = new();
 
-    private const string PdfAssetOrigin = "https://pdf-assets.invalid";
-    private const string PdfDocumentUrl = PdfAssetOrigin + "/__document__.html";
-    private const long PdfMaxAssetBytes = 10 * 1024 * 1024;
-    private const long PdfMaxTotalBytes = 50 * 1024 * 1024;
+    private const string PDF_ASSET_ORIGIN = "https://pdf-assets.invalid";
+    private const string PDF_DOCUMENT_URL = PDF_ASSET_ORIGIN + "/__document__.html";
+    private const long PDF_MAX_ASSET_BYTES = 10 * 1024 * 1024;
+    private const long PDF_MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 
     private static readonly Dictionary<string, string> PdfAssetMimeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -40,10 +40,10 @@ public class ConvUtils
 
     public static void ensurePlaywrightInstalled(FW fw)
     {
-        if (playwrightInstalled) return;
+        if (isPlaywrightInstalled) return;
         lock (playwrightLock)
         {
-            if (playwrightInstalled) return;
+            if (isPlaywrightInstalled) return;
             // Read PLAYWRIGHT_BROWSERS_PATH from config
             string browsersPath = fw.config("PLAYWRIGHT_BROWSERS_PATH").toStr();
             if (!string.IsNullOrEmpty(browsersPath))
@@ -59,7 +59,7 @@ public class ConvUtils
                     "--with-deps",
                     "--no-shell"
                 ]);
-                playwrightInstalled = true;
+                isPlaywrightInstalled = true;
             }
             catch (Exception ex)
             {
@@ -114,7 +114,7 @@ public class ConvUtils
             }
             finally
             {
-                deleteTemporaryPdf(pdf_file);
+                Utils.deleteFile(pdf_file);
 
                 try
                 {
@@ -158,8 +158,8 @@ public class ConvUtils
 
         options ??= [];
         var assetRoot = options["local_assets_root"].toStr();
-        var useLocalAssets = !string.IsNullOrWhiteSpace(assetRoot);
-        if (useLocalAssets)
+        var isLocalAssets = !string.IsNullOrWhiteSpace(assetRoot);
+        if (isLocalAssets)
         {
             assetRoot = Path.GetFullPath(assetRoot);
             if (!Directory.Exists(assetRoot))
@@ -169,7 +169,7 @@ public class ConvUtils
         }
 
         var outputPath = Path.GetFullPath(filename);
-        var temporaryPdf = !useLocalAssets ? null : outputPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var temporaryPdf = !isLocalAssets ? null : outputPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
         long totalAssetBytes = 0;
 
@@ -178,7 +178,7 @@ public class ConvUtils
         {
             var (path, contentType) = getPdfAssetPath(assetRoot, url);
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            if (stream.Length > PdfMaxAssetBytes)
+            if (stream.Length > PDF_MAX_ASSET_BYTES)
                 throw new InvalidOperationException("PDF asset is too large.");
 
             using var buffer = new MemoryStream();
@@ -188,7 +188,7 @@ public class ConvUtils
             // Bound reads even if a file grows after opening it.
             while ((read = await stream.ReadAsync(chunk)) > 0)
             {
-                if (Interlocked.Add(ref totalAssetBytes, read) > PdfMaxTotalBytes || buffer.Length + read > PdfMaxAssetBytes)
+                if (Interlocked.Add(ref totalAssetBytes, read) > PDF_MAX_TOTAL_BYTES || buffer.Length + read > PDF_MAX_ASSET_BYTES)
                     throw new InvalidOperationException("PDF asset size limit exceeded.");
 
                 buffer.Write(chunk, 0, read);
@@ -206,7 +206,7 @@ public class ConvUtils
                 Channel = "chromium"
             });
 
-            var context = !useLocalAssets ? await browser.NewContextAsync() : await browser.NewContextAsync(new BrowserNewContextOptions
+            var context = !isLocalAssets ? await browser.NewContextAsync() : await browser.NewContextAsync(new BrowserNewContextOptions
             {
                 JavaScriptEnabled = false,
                 Offline = true,
@@ -217,18 +217,18 @@ public class ConvUtils
             var failures = new ConcurrentQueue<Exception>();
             var imageUrls = new ConcurrentDictionary<string, byte>();
 
-            if (useLocalAssets)
+            if (isLocalAssets)
             {
                 context.RequestFailed += (_, request) => failures.Enqueue(new InvalidOperationException("A PDF asset request failed."));
-                var documentServed = false;
+                var isDocumentServed = false;
 
                 await context.RouteAsync("**/*", async route =>
                 {
                     try
                     {
-                        if (!documentServed && route.Request.Url == PdfDocumentUrl && route.Request.IsNavigationRequest)
+                        if (!isDocumentServed && route.Request.Url == PDF_DOCUMENT_URL && route.Request.IsNavigationRequest)
                         {
-                            documentServed = true;
+                            isDocumentServed = true;
                             await route.FulfillAsync(new RouteFulfillOptions { ContentType = "text/html", Body = html_data });
                         }
                         else
@@ -252,16 +252,16 @@ public class ConvUtils
             }
 
             var page = await context.NewPageAsync();
-            if (!useLocalAssets)
+            if (!isLocalAssets)
                 await page.SetContentAsync(html_data);
             else
             {
                 await page.EmulateMediaAsync(new PageEmulateMediaOptions { Media = Media.Print });
-                await page.GotoAsync(PdfDocumentUrl, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 30000 });
+                await page.GotoAsync(PDF_DOCUMENT_URL, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 30000 });
                 await page.EvaluateAsync("() => document.querySelectorAll('img[loading=lazy]').forEach(image => image.loading = 'eager')");
                 await page.WaitForFunctionAsync("() => Array.from(document.images).every(image => image.complete) && document.fonts.status === 'loaded'", options: new PageWaitForFunctionOptions { Timeout = 30000 });
 
-                var ready = await page.EvaluateAsync<bool>("""
+                var isReady = await page.EvaluateAsync<bool>("""
                     () => Array.from(document.images).every(image => image.naturalWidth > 0)
                         && Array.from(document.fonts).every(font => font.status !== 'error')
                         && Array.from(document.querySelectorAll('link[rel~=stylesheet]')).every(link =>
@@ -272,11 +272,11 @@ public class ConvUtils
                 await page.EvaluateAsync("""
                     urls => {
                         window.pdfAssetImages = urls.map(url => {
-                            const image = document.createElement('img');
-                            image.style.display = 'none';
-                            document.body.appendChild(image);
-                            image.src = url;
-                            return image;
+                            const IMAGE = document.createElement('img');
+                            IMAGE.style.display = 'none';
+                            document.body.appendChild(IMAGE);
+                            IMAGE.src = url;
+                            return IMAGE;
                         });
                     }
                     """, imageUrls.Keys.ToArray());
@@ -290,7 +290,7 @@ public class ConvUtils
                     throw new InvalidOperationException("A PDF image could not be decoded.", ex);
                 }
 
-                var imagesReady = await page.EvaluateAsync<bool>("() => window.pdfAssetImages.every(image => image.naturalWidth > 0)");
+                var isImagesReady = await page.EvaluateAsync<bool>("() => window.pdfAssetImages.every(image => image.naturalWidth > 0)");
                 await page.EvaluateAsync("""
                     () => {
                         window.pdfAssetImages.forEach(image => image.remove());
@@ -298,7 +298,7 @@ public class ConvUtils
                     }
                     """);
 
-                if (!ready || !imagesReady || !failures.IsEmpty)
+                if (!isReady || !isImagesReady || !failures.IsEmpty)
                     throw new InvalidOperationException("One or more PDF assets could not be loaded under the local asset policy.");
             }
 
@@ -337,7 +337,7 @@ public class ConvUtils
         }
         finally
         {
-            deleteTemporaryPdf(temporaryPdf);
+            Utils.deleteFile(temporaryPdf);
         }
     }
 
@@ -367,21 +367,6 @@ public class ConvUtils
         {
             if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                 throw new InvalidOperationException("Linked files or directories are not allowed for PDF assets.");
-        }
-    }
-
-    private static void deleteTemporaryPdf(string? path)
-    {
-        if (path == null)
-            return;
-
-        try
-        {
-            File.Delete(path);
-        }
-        catch (Exception)
-        {
-            // A locked or inaccessible temporary file must not fail the download or mask a render error.
         }
     }
 

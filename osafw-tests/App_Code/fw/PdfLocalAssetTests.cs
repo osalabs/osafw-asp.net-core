@@ -89,7 +89,7 @@ public class PdfLocalAssetTests
     [TestMethod, TestCategory("PdfBrowser")]
     [DataRow(false)]
     [DataRow(true)]
-    public async Task DownloadCleanupIgnoresLocksAndRemovesOlderLeftovers(bool holdDownloadOpen)
+    public async Task DownloadCleanupIgnoresLocksAndRemovesOlderLeftovers(bool isDownloadHeldOpen)
     {
         if (!OperatingSystem.IsWindows())
             Assert.Inconclusive("This regression exercises Windows file sharing and creation times.");
@@ -103,7 +103,7 @@ public class PdfLocalAssetTests
         var originalTmp = Environment.GetEnvironmentVariable("TMP");
         var originalTemp = Environment.GetEnvironmentVariable("TEMP");
         using var body = new MemoryStream();
-        var response = new HoldingPdfResponse(body, holdDownloadOpen);
+        var response = new HoldingPdfResponse(body, isDownloadHeldOpen);
         var context = TestHelpers.CreateHttpContext("");
         context.Features.Set<IHttpResponseBodyFeature>(response);
         using var scope = new FwTestScope(_ => new RejectingDb(), context: context);
@@ -129,13 +129,13 @@ public class PdfLocalAssetTests
                 ConvUtils.parsePagePdf(scope.Fw, "", "/report.html", [], "report");
 
                 StringAssert.StartsWith(Encoding.ASCII.GetString(body.ToArray()), "%PDF-");
-                Assert.AreEqual(holdDownloadOpen, File.Exists(response.Filename));
+                Assert.AreEqual(isDownloadHeldOpen, File.Exists(response.Filename));
                 Assert.IsFalse(File.Exists(stale), "The download must sweep old files left by an earlier crash.");
                 Assert.IsTrue(File.Exists(locked), "A locked old file must not fail the download.");
             }
 
             response.HeldFile?.Dispose();
-            if (holdDownloadOpen)
+            if (isDownloadHeldOpen)
                 File.SetCreationTime(response.Filename, DateTime.Now.AddHours(-2));
 
             Utils.cleanupTmpFiles();
@@ -151,7 +151,7 @@ public class PdfLocalAssetTests
         }
     }
 
-    private sealed class HoldingPdfResponse(Stream body, bool holdOpen) : StreamResponseBodyFeature(body)
+    private sealed class HoldingPdfResponse(Stream body, bool isHeldOpen) : StreamResponseBodyFeature(body)
     {
         internal string Filename = "";
         internal FileStream? HeldFile;
@@ -159,7 +159,7 @@ public class PdfLocalAssetTests
         public override async Task SendFileAsync(string path, long offset, long? count, CancellationToken cancellationToken)
         {
             Filename = path;
-            if (holdOpen)
+            if (isHeldOpen)
                 HeldFile = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
             await base.SendFileAsync(path, offset, count, cancellationToken);

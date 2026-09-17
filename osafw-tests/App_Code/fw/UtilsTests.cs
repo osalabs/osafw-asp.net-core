@@ -659,6 +659,32 @@ namespace osafw.Tests
             Assert.AreEqual(r.Length, tmp_path.Length + prefix.Length + 1 + 31);
         }
 
+        [TestMethod]
+        public void deleteFileRemovesFilesAndIgnoresMissingOrInvalidPaths()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "delete-file-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            var path = Path.Combine(root, "temporary.txt");
+
+            try
+            {
+                File.WriteAllText(path, "temporary");
+                Utils.deleteFile(path);
+                Assert.IsFalse(File.Exists(path));
+
+                Utils.deleteFile(path);
+                Utils.deleteFile(null);
+                Utils.deleteFile("");
+                Utils.deleteFile("\0");
+                Utils.deleteFile(root);
+                Assert.IsTrue(Directory.Exists(root), "The helper deletes files, not directories.");
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
         [TestMethod()]
         public void cleanupTmpFilesTest()
         {

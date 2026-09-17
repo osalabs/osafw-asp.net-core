@@ -51,3 +51,15 @@ Final verification with matching Chromium in the task-owned browser directory:
 - No live database, application server, or external asset server was used. Matching Chromium is required for the policy tests; Windows file-sharing and creation-time controls are Windows-only. Visual PDF comparison and non-Windows execution remain unperformed.
 
 Fresh independent review used `reviewer_high` with security-boundary and state-integrity overlays, followed by an active-summary/index audit; neither found blocking issues. Final integrator verdict: No blocking findings. Review loop can stop. UTF-8/no-BOM/CRLF and diff checks passed. The additive master synchronization resolved only the task-index conflict, preserving both entries. No breaking changelog entry is needed for this unmerged feature follow-up.
+
+## Naming, readability, and shared cleanup follow-up (2026-09-16)
+
+Recorded the requested conventions in `AGENTS.md` and the canonical `docs/naming.md`: constants use `UPPER_SNAKE_CASE`, boolean variables/fields/parameters use `is` or `is_`, and logical blocks retain readable spacing and expanded control flow. The reviewer checklist now routes these checks to the naming guide. Applied the rules to the PDF constants, boolean names, and affected test parameters; unrelated public contracts were not renamed.
+
+Moved best-effort deletion to public `Utils.deleteFile(string? path)` and documented its silent-error/null/empty/missing-path behavior. PDF cleanup and `Utils.cleanupTmpFiles()` reuse it; operations that require successful deletion keep their existing direct file calls.
+
+- With task-owned matching Chromium selected by `PLAYWRIGHT_BROWSERS_PATH`, `dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~PdfLocalAssetTests|FullyQualifiedName~ConvUtilsTests|FullyQualifiedName~UtilsTests.deleteFile' --verbosity quiet`: 11 passed, none skipped. The new helper check covers existing, missing, null, empty, invalid, and directory paths; browser regressions retain locked-file and later-cleanup coverage.
+- `./docs/agents/tools/Test-AgentInstructions.ps1`: passed all instruction, routing, encoding, privacy, index, and route-literal checks.
+- `git diff --check`: passed. The same Windows/browser scope and earlier non-Windows/visual omissions apply.
+
+Fresh independent `reviewer_high` review used the agent-workflow and consumer-contract overlays; the subsequent active-summary/index audit found no supplemental issues. Final integrator verdict: No blocking findings. Review loop can stop. The helper is additive; no breaking changelog entry is required.
