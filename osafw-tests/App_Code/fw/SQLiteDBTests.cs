@@ -113,6 +113,24 @@ public class SQLiteDBTests
         Assert.AreEqual(0, ((FwDict)schema["base_value"]!)["is_computed"].toInt());
         Assert.AreEqual(1, ((FwDict)schema["virtual_value"]!)["is_computed"].toInt());
         Assert.AreEqual(1, ((FwDict)schema["stored_value"]!)["is_computed"].toInt());
+        Assert.AreEqual("", ((FwDict)schema["base_value"]!)["comments"]);
+    }
+
+    [TestMethod]
+    public void DevManageIndex_OffersApplicationTablesAndExcludesFrameworkTables()
+    {
+        db.exec("CREATE TABLE customer_orders (id INTEGER PRIMARY KEY)");
+        db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY)");
+        var controller = new DevManageIndexController();
+        controller.SetDatabase(db);
+
+        var pageState = controller.IndexAction();
+        var selectableTables = ((FwList)pageState["select_tables"]!)
+            .Select(item => item["id"].toStr())
+            .ToList();
+
+        CollectionAssert.Contains(selectableTables, "customer_orders");
+        CollectionAssert.DoesNotContain(selectableTables, "users");
     }
 
     [TestMethod]
@@ -266,6 +284,11 @@ public class SQLiteDBTests
         }
 
         throw new DirectoryNotFoundException("Cannot locate repository root from " + Directory.GetCurrentDirectory());
+    }
+
+    private sealed class DevManageIndexController : DevManageController
+    {
+        public void SetDatabase(DB database) => db = database;
     }
 }
 #endif

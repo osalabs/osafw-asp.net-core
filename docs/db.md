@@ -176,7 +176,9 @@ dotnet test osafw-tests/osafw-tests.csproj -p:DefineConstants=isSQLite
 - `schemaField(table, field)`
 - `listForeignKeys([table])`
 
-`loadTableSchemaFull(table)` and `tableSchemaFull(table)` expose provider-normalized `is_computed` metadata for SQL Server computed columns, SQLite stored/virtual generated columns, and MySQL generated columns. The value is `1` for a computed/generated column and `0` otherwise.
+`loadTableSchemaFull(table)` and `tableSchemaFull(table)` expose provider-normalized `is_computed` metadata for SQL Server computed columns, SQLite stored/virtual generated columns, and MySQL generated columns. The value is `1` for a computed/generated column and `0` otherwise. MySQL schema discovery selects the active database inside the query, so cold connections work, and reads `COLUMN_TYPE` to preserve unsigned-bigint metadata for typed generation. Full schema rows also include an optional neutral `comments` value: SQL Server reads `MS_Description`, MySQL reads the column comment, OLE reads the provider description, and SQLite returns an empty value because SQLite has no native column-comment catalog.
+
+SQL Server accepts either `table` or `schema.table` metadata names. Qualified names select that exact schema; unqualified names follow SQL Server object resolution and do not merge same-named tables from other schemas. OLE metadata opens its configured connection on a cold schema-cache miss, while a warm full-schema cache hit remains connection-free.
 
 The bundled `demos` schema provides a provider-specific example: editable `icode` and `iname` columns produce the computed `display_name` value `CODE — Title`.
 
@@ -394,6 +396,12 @@ DBList fkeys = db.listForeignKeys("orders");
 ```
 
 Refer to the `DB.cs` source for detailed behaviour of each method. For full CRUD examples using both FwDict-based and typed models see [`docs/crud.md`](./crud.md).
+
+### Attachment lookup helpers
+
+`Att.listByCategory(categoryCode, item_id: null, is_image: -1)` reads active attachments in an existing category. An omitted/null item filter means all item IDs; explicitly passing zero selects item zero. Unknown categories return an empty list. `Att.listAllByEntity(entityCode, is_image: -1)` explicitly reads across all items of an existing entity. Neither helper creates entity metadata. Both authorize every attachment through `checkAccess` before returning; if one parent is denied, the whole lookup fails. These helpers are for bounded result sets, not paginated attachment browsing.
+
+`AttLinks.listByAtt(attachmentId)` first authorizes the attachment, then reads active links and authorizes every linked parent record. It returns no partial result on denied/missing parent access. Existing `listByEntity` and `listByEntityCategory` keep their exact zero/default filters; use `listByEntity` to read all categories for one item. URL creation and file delivery retain their existing access rules.
 
 ### Nullable conversion and shared Row fields
 

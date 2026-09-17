@@ -46,10 +46,24 @@ After generation, inspect the generated diff, customize the controller and `conf
 
 In local development, Home can automatically redirect to a pending FwUpdates notice when update scripts exist. Set `appSettings.is_fwupdates_auto_apply` to `false` when you want to review and apply `/Admin/FwUpdates` manually.
 
+### Refresh existing typed Rows
+
+Row regeneration is an optional local development tool. Enable the commented `isRowRegeneration` property group in `osafw-app.csproj`, then rebuild. Its conditional `Microsoft.CodeAnalysis.CSharp` package reference is restored only when that constant is enabled. Normal builds contain neither that dependency nor the regeneration action. Copied applications adopting the tool need the conditional package reference as well as the source changes.
+
+With `IS_DEV=true`, sign in as Site Admin and send a POST to `/Dev/Manage/(RegenerateModelRows)` with the current session's `XSS` form value. No model list or preview is needed: the action processes all compiled models with matching `.cs` files under `App_Code/models`. It reads each model's current database schema without consuming or updating the shared schema cache. It does not change the database.
+
+Each existing nested `Row` class is replaced in full, including custom properties, methods, attributes, and inheritance. Surrounding model code is retained, and line endings are normalized to CRLF. Review the results in Git, revert any model files you do not want changed, then rebuild. Keep custom Row changes in mind when accepting a generated file.
+
+The JSON response lists `updated`, `unchanged`, `skipped` (with reasons), and `failed` model names. Missing or ambiguous Rows, partial/generic Rows, directives inside Rows, and source parse errors are skipped. Linked files/directories are excluded. File or database failures are logged and do not prevent later models from being processed; earlier successful writes remain. Writes use an exclusive file handle and attempt to restore the current file if writing fails, but a process or filesystem failure can still leave a partial file. Use Git to inspect or restore it.
+
+Disable the constant and rebuild after use; keep it disabled in deployed builds.
+
 ## How `/Dev/Manage` scaffolding works
 - `CreateModelAction` converts the selected table into an entity description (`DevEntityBuilder.table2entity`) and passes it to `DevCodeGen.createModel`, which clones demo model templates and adjusts names/fields based on schema metadata.
+- The *Create Model* picker lists application tables and views and omits the framework persistence tables. Explicit CLI model scaffolding remains available when deliberate framework `Row` regeneration is required.
 - `CreateControllerAction` builds a temporary entity with the chosen model and controller options, loads `dev/db.json`, and calls `DevCodeGen.createController`. The generator copies the demo controller/templates (dynamic or Vue), rewrites URLs/titles, regenerates `config.json`, writes the controller class, and appends/updates `menu_items`; lookup scaffolding registers `fwcontrollers` metadata instead of writing a controller class.
 - The built-in `scaffold` command initializes `FW` in offline mode and calls the same entity-builder and code-generator layer without constructing an HTTP request or bypassing the browser actions' POST/XSS protections.
+- Generated model `Row` properties use `long` for signed database `bigint`, `ulong` for unsigned `bigint`, `decimal` for decimal/numeric metadata, and `DateTimeOffset` for offset-aware columns. The generator emits `[DBName]` when it must normalize a column into a safe, unique C# property identifier and escapes both attribute strings and database column comments used as XML documentation. Nullable text columns use `string?`; required text uses `string` initialized to `string.Empty`. Identity and computed columns remain present in the typed read shape; computed fields stay excluded from generated save fields.
 
 ## Manual creation from the demo module
 Use this fallback only under the conditions above; otherwise use the built-in CLI. To proceed manually, replicate what the generators do:
