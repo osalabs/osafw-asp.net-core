@@ -32,7 +32,10 @@ public class DevManageController : FwController
         var select_tables = new FwList();
         ps["select_tables"] = select_tables;
         foreach (string table in tables)
-            select_tables.Add(new FwDict() { { "id", table }, { "iname", table } });
+        {
+            if (!DevEntityBuilder.isFwTableName(table))
+                select_tables.Add(new FwDict() { { "id", table }, { "iname", table } });
+        }
 
         // models list - all clasess inherited from FwModel
         var select_models = new FwList();
@@ -243,6 +246,20 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
+#if isRowRegeneration
+    /// <summary>Regenerates all model Row classes. Review the resulting source changes in Git.</summary>
+    /// <remarks>Requires development mode, Site Admin access and a POST with the current XSS token.
+    /// Entire Row classes are replaced, including custom members. Other model source is preserved.</remarks>
+    public FwDict RegenerateModelRowsAction()
+    {
+        enforcePost();
+        if (!fw.config("IS_DEV").toBool() || fw.userAccessLevel < Users.ACL_SITEADMIN)
+            throw new AuthException("Model Row regeneration requires development mode and Site Admin access.");
+        var result = DevRowRegenerator.regenerate(fw);
+        result["_json"] = true;
+        return result;
+    }
+#endif
     public void CreateControllerAction()
     {
         enforcePost();
