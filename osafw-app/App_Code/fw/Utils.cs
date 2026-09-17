@@ -1178,6 +1178,24 @@ public class Utils
         return Utils.getTmpDir(prefix) + "\\" + Utils.uuid();
     }
 
+    /// <summary>Attempts to delete a file, silently ignoring deletion errors.</summary>
+    /// <remarks>Null, empty and missing paths are harmless. Use only when deletion is best-effort;
+    /// callers that require successful deletion should use File.Delete directly.</remarks>
+    public static void deleteFile(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception)
+        {
+            // Best-effort cleanup must not interrupt the caller.
+        }
+    }
+
     // scan tmp directory, find all tmp files created by website and delete older than 1 hour
     public static void cleanupTmpFiles(string prefix = TMP_PREFIX)
     {
@@ -1187,16 +1205,7 @@ public class Utils
             FileInfo fi = new(file);
             TimeSpan ts = DateTime.Now - fi.CreationTime;
             if (ts.TotalMinutes > 60)
-            {
-                try
-                {
-                    fi.Delete();
-                }
-                catch (Exception)
-                {
-                    //throw; //ignore errors as it just cleanup, should not affect main logic, could be access denied
-                }
-            }
+                deleteFile(file);
         }
     }
 

@@ -82,12 +82,20 @@ Casing matters for scanability, but it should not become a churn project.
 
 - Use `PascalCase` for C# classes, controller classes, DTO classes, and framework route action methods such as `IndexAction`, `ShowAction`, `ShowFormAction`, `SaveAction`, `SaveMultiAction`, `ShowDeleteAction`, and `DeleteAction`.
 - Use the established local style for ordinary helper methods. Framework model helpers commonly use lower camel case, such as `listByParticipant`, `oneByIcode`, and `updateEmail`.
-- Use `ALL_CAPS` for constants when the surrounding framework code already follows that style, such as access-level constants.
+- Use `UPPER_SNAKE_CASE` for all constants, including local constants; for example, `PDF_MAX_ASSET_BYTES`. Boolean constants use `IS_`, such as `IS_ENABLED`.
+- Prefix boolean local variables, fields, and parameters with `is` or `is_`, including booleans declared with `var`; for example, `isReady`, `isDocumentServed`, or `is_enabled`. Choose the casing that fits the surrounding framework code. These variable rules do not rename established methods such as `exists*`.
 - Use `camelCase` for local variables by default.
 - Use `snake_case` for local variables only when mirroring database columns, template keys, request keys, JSON config keys, or existing framework fields makes the code easier to verify.
 - Avoid using two casings for the same concept in one method or class.
 
 For local variables, clarity in the immediate scope matters more than global uniformity. A short method with consistent names is usually better than a broad rename that obscures the actual change.
+
+## Source Readability
+
+- Separate logical blocks with blank lines: setup, validation, work, and cleanup should be easy to distinguish.
+- Expand multi-statement control flow and `try`/`catch`/`finally` blocks onto separate lines. Do not compress code just to reduce its line count.
+- Format long expressions and embedded scripts over multiple lines when this makes the flow easier to read.
+- Keep implementations small by avoiding unnecessary abstractions and duplication, while retaining useful spacing and comments that explain intent.
 
 ## Framework Names That Stay As-Is
 
