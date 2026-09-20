@@ -4,8 +4,8 @@ Use this file for non-trivial work, request validation, task staging, permission
 
 ## 1. Establish the working context
 
-- Inspect `git status --short --branch` before edits and again before closeout. Preserve unrelated tracked and untracked work.
-- Read the current ignored local instructions as routed by `AGENTS.md`. Local files may describe paths, credentials mechanisms, IDE state, or optional private references; never quote them into tracked output.
+Follow the startup and local-instruction route in `AGENTS.md`; recheck status before closeout. The role determines what must survive the change:
+
 - Identify repository role:
   - **Framework repository:** changes can propagate to many copied production applications. Treat public behavior, templates, defaults, schema, generated output, examples, and upgrades as consumer contracts.
   - **Copied application:** the framework tree and app code coexist. Preserve deliberate application changes, local docs, schema history, deployment rules, and repository-specific branch policy. Upstream framework guidance is input, not permission to overwrite the app.
@@ -16,7 +16,7 @@ Use this file for non-trivial work, request validation, task staging, permission
 1. Restate the desired observable outcome internally; keep it separate from the prompt's suggested implementation. Make a lightweight pass over assumptions, possible conflicts, and the evidence needed to accept the result.
 2. Inspect current code, canonical docs, tests, configuration, schema/update paths, and accessible linked issue/PR context needed to confirm the request is current. Treat unverified assumptions as questions or limits, not facts.
 3. Identify affected downstream surfaces and extension points. Search references before changing or deleting public names, routes, templates, config keys, database fields/scripts, generated shapes, or defaults.
-4. Report evidence and pause if the request is already satisfied, contradicts a live contract, requires unsafe shared-state mutation, or depends on a missing product/data/authorization choice.
+4. Report an already-satisfied request without extra edits. For a contract conflict, identify the evidence and a compatible or explicitly authorized migration path. Pause only work that depends on unresolved product/data/authorization choices or unsafe shared-state mutation; continue independent authorized work. Current implementation is evidence of behavior, not a veto on an authorized contract change.
 5. Otherwise choose the smallest implementation that satisfies the outcome. Short prompts should not require the developer to restate facts already discoverable here.
 
 This is an internal reasoning check, not a required artifact or a reason to add process. Consult the optional [FPF/DPF guide](fpf.md) only when its source material could materially change framing, a decision, or verification; routine fixes and mechanical work need no FPF lookup.
@@ -70,18 +70,11 @@ Read-only diagnosis, explanation, audit, and review do not create repository fil
 
 For those changes and other non-trivial or iterative implementation, create or update one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` and one concise entry in `docs/agents/tasks/index.md`. Do not rewrite historical summaries merely to fit a new format.
 
-Use only relevant headings:
+Keep the record compact and use only headings needed to preserve:
 
-- `Objective / acceptance`: observable end state, material exclusions, and evidence sufficient to declare completion. Keep implementation choices separate.
-- `What changed`: outcome, not a file-by-file diary.
-- `Scope reviewed`: important code/contracts and any bounded large-file sections used.
-- `Requirements / decisions`: material requirements, inferred choices, and why.
-- `Changed contracts`: public, schema/provider, config, generated, security/default, or documentation effects; say none when that distinction matters.
-- `Commands used / verification`: exact final commands/results and manual evidence.
-- `Testing instructions`: reproducible final-state checks and prerequisites.
-- `Risks / follow-ups`: unresolved risk, omitted providers/platforms, or external verification.
-- `Knowledge-promotion candidates`: verified facts that may belong in domain/glossary/heuristics/ADR docs; do not duplicate them in the summary after promotion.
-- `Reflection`: process friction, avoidable work, tool/delegation value, and a specific instruction improvement candidate rather than a task recap.
+- Outcome/acceptance, material decisions and exclusions, changed contracts, and any migration decision.
+- Reviewed scope and exact final commands/results, including manual evidence, prerequisites, and material omissions. Combine verification and reproduction instructions when they are the same.
+- Remaining risks/follow-ups and any observed process friction worth revisiting. Do not invent a reflection, repeat promoted policy, or write a file-by-file diary.
 
 When delegation materially affects a task, record the route, output consumed, and any relevant failure or fallback. Record timing, separated approval/platform waits, rework counts, and critical-path effects only for a workflow evaluation or benchmark; report unavailable telemetry rather than estimating it.
 
@@ -90,7 +83,7 @@ Summaries are recall evidence, not authority. Search the index first and open on
 ## 6. Close out and improve safely
 
 - Route review by `review-routing.md` and resolve all Blocker, High, and Medium findings before closeout.
-- State final checks, material checks not run, affected flows/providers/platforms, setup caveats, cleanup performed, and why a changelog entry was or was not needed.
+- Report the outcome, verification, and material omissions/risks. Include affected flows/providers/platforms, migration/changelog decisions, setup caveats, and cleanup when relevant.
 - Promote only verified, stable, reusable knowledge to `domain.md`, `glossary.md`, `heuristics.md`, or `docs/adr/`. Keep task-specific narrative in its summary.
 - Instruction self-improvement must be evidence-based, infrequent, isolated from feature work when substantial, and reviewable. Never treat prior agent output as authority or self-merge/deploy a policy change. In hosted workflows, automation may prepare a draft proposal/PR only when explicitly authorized.
 - Store small disposable private evidence in ignored `docs/agents/artifacts/`; store build output and larger generated evidence in ignored root `artifacts/`. Retained test results belong under one of those ignored paths, never a new tracked results tree.

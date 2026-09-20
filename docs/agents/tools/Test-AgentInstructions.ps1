@@ -820,8 +820,8 @@ try {
     if ([int]$instructionPack.schemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string]$instructionPack.packVersion) -or @($instructionPack.files).Count -eq 0) {
         Add-Failure "Instruction-pack metadata has an unsupported schema or missing version."
     }
-    elseif ([string]$instructionPack.packVersion -cne "1.5.0") {
-        Add-Failure "Instruction-pack version must be 1.5.0 for the portable FPF integration."
+    elseif ([string]$instructionPack.packVersion -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+        Add-Failure "Instruction-pack version must use major.minor.patch release format."
     }
     foreach ($entry in @($instructionPack.files)) {
         if ([string]::IsNullOrWhiteSpace([string]$entry.path) -or [string]::IsNullOrWhiteSpace([string]$entry.upgradeMode)) {
@@ -946,7 +946,7 @@ if ($null -ne $instructionPack -and -not ($failures | Where-Object { $_ -match '
     Add-Pass "Portable shared policy files, including every instruction-pack managed file, contain no private machine paths or supplied private identifiers."
 }
 
-$linkFiles = $policyFiles | Where-Object { $_ -ne "AGENTS.md" -and $_ -ne "CLAUDE.md" }
+$linkFiles = $portableSharedFiles | Where-Object { $_.EndsWith(".md", [System.StringComparison]::OrdinalIgnoreCase) -and $_ -ne "CLAUDE.md" }
 foreach ($relativePath in $linkFiles) {
     $filePath = Get-RepoPath $relativePath
     $baseDirectory = [System.IO.Path]::GetDirectoryName($filePath)
@@ -971,7 +971,7 @@ foreach ($relativePath in $linkFiles) {
     }
 }
 if (-not ($failures | Where-Object { $_ -like 'Broken local link*' })) {
-    Add-Pass "Local links in shared agent policy resolve."
+    Add-Pass "Local links in shared policy and managed Markdown files resolve."
 }
 
 $tasksDirectory = Get-RepoPath "docs/agents/tasks"

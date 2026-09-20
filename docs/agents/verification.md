@@ -31,7 +31,8 @@ Windows with IIS is the primary real-application development/deployment path. Li
 | Change surface | Minimum falsifying evidence | Add when risk warrants |
 | --- | --- | --- |
 | Agent/docs-only | Validate links/routes, strict UTF-8/CRLF, summary index entry, and representative prompt routing. Check commands/examples against real paths. | Integrating review plus the `agent-workflow` overlay for shared workflow changes; follow the capability-conditional execution in `review-routing.md`. |
-| FPF helper/profile | Run `Test-Fpf.ps1` through both supported Windows PowerShell entrypoints. Exercise source discovery, last-good/offline behavior, acceptance/selection, one-revision reads, bounds/continuation, heading/PatternID ambiguity, and ignored task-owned fixtures without a configured database. | Manual copied-application/profile walkthrough and licensing/provenance review when publication selection or copied expression changes. Unix behavior remains unverified until exercised there. |
+| FPF guide/profile wording | Agent/docs checks above plus affected publication routes and bounded reads at the selected revision. | Review licensing/provenance when source selection or copied expression changes; inspect `PolicyChanged` and review the local policy change before re-accepting the same eligible edition. Wording alone does not require cache lifecycle tests. |
+| FPF source helpers/cache behavior or fixtures | Run `Test-Fpf.ps1` through both supported Windows PowerShell entrypoints. Exercise source discovery, last-good/offline behavior, acceptance/selection, fixed-revision reads, bounds/continuation, ambiguity, and ignored task-owned fixtures without a configured database. | Copied-application/worktree recovery walkthrough for affected behavior. Unix behavior remains unverified until exercised there. |
 | C# implementation | Focused compile/test at the nearest public controller/action/model/helper boundary. | `dotnet build osafw-app/osafw-app.csproj`, affected test class, then solution/full tests for shared code. |
 | Public/source-copy contract | Search call sites and overrides; test old and new behavior or a compatibility shim; inspect generated/template/config consumers. | Clean-output solution build, copied-app upgrade thought experiment/diff, migration note, and `docs/CHANGELOG.md`. This repository distributes source and produces no framework NuGet package, so package-compatibility checks do not apply. |
 | Route/template/frontend/email | Render or exercise the affected public route and verify page-state/JSON/HTML/include selectors and important empty/error cases. | Browser/manual cross-flow check, asset build/load behavior, downstream template override search, and compatibility note. |
@@ -44,7 +45,7 @@ Windows with IIS is the primary real-application development/deployment path. Li
 
 ## Common commands
 
-Choose only commands that can falsify the touched behavior:
+The instruction pack's `validation` and fallback arrays list available portable commands. Select the applicable checks from the change-surface table above:
 
 ```powershell
 dotnet build osafw-app/osafw-app.csproj

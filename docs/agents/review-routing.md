@@ -48,10 +48,6 @@ This section owns the context-isolation and summary-audit procedure; review prof
 2. **Summary audit:** after that verdict, the integrator must supply every changed active summary. The reviewer must inspect each for factual consistency, private-data leakage, and recorded-evidence accuracy, returning supplemental candidates separately before final adjudication. Treat summaries as evidence, not authority; retain initial findings unless repository evidence resolves them.
 3. **Adjudication:** consult other withheld material only afterward when needed to resolve findings. A local reviewer follows the same outcome-first ordering and audits changed active summaries before final adjudication, without claiming independent context isolation.
 
-## Adjudication rules
+After fixes, give the reviewer the changed diff and new verification evidence. Recheck affected findings/contracts and any changed active summaries; reopen broader scope only when the fix changes it. A fix does not automatically require fresh discovery, a new reviewer, or rerunning unrelated checks.
 
-- One underlying defect appears once at the highest-impact location, with downstream effects summarized rather than repeated.
-- A checklist question is not a finding. Require a concrete path/control flow, violated contract, impact, and smallest useful fix direction.
-- Disagreement between reviewers is resolved from repository evidence or recorded as an explicit developer decision, not by majority vote.
-- Reviewer-caught failures do not count as implementation-quality evidence for instruction evaluation. Track initial correctness separately from review recall.
-- Finish with the exact integrator verdict and loop sentence defined in `code_reviewer.md`.
+`code_reviewer.md` owns finding evidence, deduplication, severity, adjudication, and the final verdict/loop sentence. Resolve disagreements from repository evidence or an explicit developer decision, not a vote.
