@@ -13,11 +13,13 @@ Use this file for non-trivial work, request validation, task staging, permission
 
 ## 2. Validate the request before implementation
 
-1. Restate the desired observable outcome internally; keep it separate from the prompt's suggested implementation.
-2. Inspect current code, canonical docs, tests, configuration, schema/update paths, and accessible linked issue/PR context needed to confirm the request is current.
+1. Restate the desired observable outcome internally; keep it separate from the prompt's suggested implementation. Make a lightweight pass over assumptions, possible conflicts, and the evidence needed to accept the result.
+2. Inspect current code, canonical docs, tests, configuration, schema/update paths, and accessible linked issue/PR context needed to confirm the request is current. Treat unverified assumptions as questions or limits, not facts.
 3. Identify affected downstream surfaces and extension points. Search references before changing or deleting public names, routes, templates, config keys, database fields/scripts, generated shapes, or defaults.
 4. Report evidence and pause if the request is already satisfied, contradicts a live contract, requires unsafe shared-state mutation, or depends on a missing product/data/authorization choice.
 5. Otherwise choose the smallest implementation that satisfies the outcome. Short prompts should not require the developer to restate facts already discoverable here.
+
+This is an internal reasoning check, not a required artifact or a reason to add process. Consult the optional [FPF/DPF guide](fpf.md) only when its source material could materially change framing, a decision, or verification; routine fixes and mechanical work need no FPF lookup.
 
 Use a focused developer interview only for a broad feature with unresolved choices that materially affect user behavior, authorization, data ownership/lifecycle, public compatibility, or operational cost. Routine fixes and well-specified enhancements should proceed without interview ceremony.
 

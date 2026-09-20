@@ -16,7 +16,7 @@ Start read-only when requested. Do not edit, initialize/migrate configuration, m
 
 ## Audit
 
-1. Inventory native root/nested instruction discovery, project custom-agent profiles, tool-specific instruction entry files, local ignored conventions, workflow/reviewer/tool docs, hooks/helpers, prompts, task summaries/indexes, domain/glossary/heuristics/ADRs, instruction-pack metadata, and deterministic validators.
+1. Inventory native root/nested instruction discovery, project custom-agent profiles, tool-specific instruction entry files, local ignored conventions, workflow/reviewer/tool docs, optional FPF guide/profile/cache helpers, hooks/helpers, prompts, task summaries/indexes, domain/glossary/heuristics/ADRs, instruction-pack metadata, and deterministic validators.
 2. Classify each material rule as `Keep`, `Adapt`, `Move`, `Remove duplicate`, `Remove stale/incorrect`, or `Defer`. Name the surviving owner for every move/removal.
 3. Profile the real repository and common tasks: framework versus copied-application mode, target/runtime/project ownership, public/source-copy contracts, providers/schema updates, hosting/deployment, authentication/security, templates/scaffolding, configuration, tests, release/versioning, and downstream upgrades.
 4. Evaluate public-OSS portability, one-maintainer context cost, downstream production compatibility, machine-local values, worktree/resource isolation, request validation, summaries/memory routing, adaptive review, and proportional verification.
@@ -34,6 +34,8 @@ Start read-only when requested. Do not edit, initialize/migrate configuration, m
 - Keep summaries as indexed evidence logs. Promote only stable verified knowledge; do not bulk-load or rewrite history.
 - Permit automatic self-improvement only as evidence-based, infrequent, reviewable draft work; never self-merge, release, or deploy it.
 - Version the copied instruction pack through `docs/agents/instruction-pack.json`. In an existing application repository, compare source and target versions, classify every managed path, preserve app-owned divergence, and update the target version only after its merged pack passes validation. Never bulk-overwrite a copied application's instructions.
+- Treat `.gitignore` as a targeted merge: add the exact `/.codex-local/` rule when absent and preserve every application-owned rule. Preserve optional `docs/agents/fpf-app.md`, the checkout's ignored FPF adoption/cache state, and application-specific FPF profile choices during pack upgrades.
+- Keep FPF development-time and optional. Source updates may refresh an ignored cache after semantic review, but they must not silently rewrite tracked repository policy; current code, canonical docs, ADRs, and explicit developer decisions remain authoritative.
 
 ## Implementation and validation
 
@@ -42,6 +44,7 @@ After audit approval (or immediately when the invocation explicitly asks for bot
 Validate deterministic claims separately from implementation-quality claims:
 
 - native routing/pointers, file links, stale terms, private-path leakage, summary-index references, strict UTF-8/line endings, and helper behavior;
+- FPF source/cache tests under both `pwsh` and Windows PowerShell 5.1, including offline/last-good, accepted-versus-candidate state, fixed-revision bounded reads, ambiguity, and copied-application preservation;
 - several lightweight representative prompt walkthroughs: an ordinary fix, a downstream/public compatibility change, a security or persistence risk, and a docs/release task;
 - review the candidate with the agent-workflow overlay and integrator. If a broad rewrite is proposed, compare baseline/candidate on safely reversible held-out work before adoption; do not accept a candidate merely because its own reviewer catches failures it caused.
 
@@ -49,4 +52,4 @@ Do not add repository-wide or primary-task model/reasoning pins. Add `.codex/con
 
 ## Closeout
 
-Report changed files, evidence/checks, rule disposition and surviving owners, contradictions marked `Fixed`, `Intentionally retained`, `Deferred`, or `Out of scope`, representative walkthrough results, migration/rollback steps, and remaining non-blocking risk. Commit, push, open a PR, or release only when explicitly requested.
+Report changed files, evidence/checks, rule disposition and surviving owners, contradictions marked `Fixed`, `Intentionally retained`, `Deferred`, or `Out of scope`, representative walkthrough results, migration/rollback steps, and remaining non-blocking risk. For an instruction-pack upgrade, report the preserved `fpf-app.md`/adoption state and whether the single `.gitignore` rule was added. Commit, push, open a PR, or release only when explicitly requested.

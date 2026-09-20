@@ -16,6 +16,7 @@
    - build, test, provider, worktree, or cleanup decisions: `docs/agents/verification.md`;
    - meaningful-risk review: `docs/agents/review-routing.md`, then `docs/agents/code_reviewer.md` and only triggered overlays;
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
+   - optional FPF/DPF source lookup for a material conceptual, architecture, or method question: `docs/agents/fpf.md`;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
 5. For broad searches prefer `docs/agents/tools/Search-Repo.ps1`. Opt into ignored drafts, large files, vendor content, or task history only when directly relevant. For files over 1 MB, search headings/patterns and read bounded ranges rather than streaming the file.
 6. Default to direct execution. `docs/agents/workflow.md` owns delegation eligibility, role selection, ownership, and fallback. Load `docs/prompts/orchestrator.md` only for work that qualifies under that workflow.

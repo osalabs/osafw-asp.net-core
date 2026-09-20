@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.4.0",
+  "packVersion": "1.5.0",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
   "files": [
     { "path": "AGENTS.md", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": ".gitignore", "upgradeMode": "merge-ignore-rule", "benchmarkMode": "preserve-existing" },
     { "path": "CLAUDE.md", "upgradeMode": "replace-import", "benchmarkMode": "preserve-existing" },
     { "path": "docs/README.md", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/workflow.md", "upgradeMode": "merge" },
@@ -18,10 +19,16 @@
     { "path": "docs/agents/reviewers/security-boundary.md", "upgradeMode": "merge" },
     { "path": "docs/agents/reviewers/state-integrity.md", "upgradeMode": "merge" },
     { "path": "docs/agents/mcp.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/fpf.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/fpf-profile.md", "upgradeMode": "merge" },
     { "path": "docs/agents/model-selection.md", "upgradeMode": "merge" },
     { "path": "docs/agents/tools/Normalize-TextFiles.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Search-Repo.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Test-AgentInstructions.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Fpf.Common.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Sync-Fpf.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Read-Fpf.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Test-Fpf.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/prompts/README.md", "upgradeMode": "merge" },
     { "path": "docs/prompts/orchestrator.md", "upgradeMode": "merge" },
     { "path": "docs/prompts/agent_upgrade.md", "upgradeMode": "merge" },
@@ -49,17 +56,21 @@
     "docs/agents/domain.md",
     "docs/agents/glossary.md",
     "docs/agents/heuristics.md",
+    "docs/agents/fpf-app.md",
     "docs/agents/tasks/",
     "docs/adr/",
+    ".codex-local/fpf/",
     "application-specific AGENTS.md additions"
   ],
   "validation": [
     "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+    "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
     "git diff --check"
   ],
   "windowsPowerShell51Fallback": [
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1",
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
   ]
 }
