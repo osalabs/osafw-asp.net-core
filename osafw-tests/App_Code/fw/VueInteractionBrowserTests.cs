@@ -25,7 +25,7 @@ public class VueInteractionBrowserTests
         return Regex.Replace(content, @"<~/common/vue/([^>]+)>", match => Template(match.Groups[1].Value));
     }
 
-    private static async Task<IPage> Page(IBrowser browser, string markup)
+    private static async Task<IPage> Page(IBrowser browser, string markup, FwDict? validationMessages = null)
     {
         var assets = Environment.GetEnvironmentVariable("FW_BROWSER_ASSETS_ROOT") ?? Path.Combine(RepoRoot, "osafw-app/wwwroot/assets");
         if (!File.Exists(Path.Combine(assets, "lib/vue/vue.esm-browser.js"))) Assert.Inconclusive("Restore frontend libraries, or set FW_BROWSER_ASSETS_ROOT to a restored assets directory.");
@@ -60,12 +60,28 @@ public class VueInteractionBrowserTests
                 "perfect-debounce":"/lib/perfect-debounce/dist/index.mjs","hookable":"/lib/hookable/dist/index.mjs","birpc":"/lib/birpc/dist/index.mjs"
             }}</script><script src="/js/apputils.js"></script>
             """;
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(RepoRoot, "osafw-app/App_Data/template"),
+        });
+        if (validationMessages == null)
+        {
+            validationMessages = [];
+            foreach (var line in File.ReadAllLines(Path.Combine(RepoRoot, "osafw-app/App_Data/template/common/vue/validation-messages.sel")))
+            {
+                var pair = line.Split('|', 2);
+                validationMessages[pair[0]] = parser.parse_string(pair[1], []);
+            }
+        }
+        var storeScript = Template("store.js").Replace("<~validation_messages json noescape>",
+            parser.parse_string("<~validation_messages json noescape>", new FwDict { ["validation_messages"] = validationMessages }));
+
         var setup = """
             <script type="module">
             import { createApp } from 'vue'; import { defineStore, createPinia } from 'pinia';
             const fwStoreState = {}, fwStoreGetters = {}, fwStoreActions = {};
             const mande = () => ({}); window.Toast = () => {};
-            """ + Template("store.js") + """
+            """ + storeScript + """
             const pinia = createPinia(); window.testStore = useFwStore(pinia);
             window.testStore.handleError = () => {};
             window.testStore.api = { get: async () => ({}), post: async () => ({ id: 7 }), delete: async () => ({ id: 7 }) };
@@ -100,6 +116,34 @@ public class VueInteractionBrowserTests
     {
         if (!File.Exists(playwright.Chromium.ExecutablePath)) Assert.Inconclusive("Install matching Chromium for Vue browser checks.");
         return await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chromium" });
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task LocalizedValidationMessages_ArePlainTextInIssueSummary()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        const string REQUIRED_MESSAGE = "必填字段 ' \" </script><img src=x onerror=alert(1)>";
+        var messages = new FwDict
+        {
+            ["REQUIRED"] = REQUIRED_MESSAGE,
+            ["EMAIL"] = "电子邮件无效",
+            ["EXISTS"] = "名称已存在",
+            ["WRONG"] = "无效",
+            ["INVALID"] = "无效值",
+        };
+        var page = await Page(browser, Template("form-issues.html"), messages);
+        await page.EvaluateAsync("""
+            () => {
+                testStore.edit_data = {save_result:{error:{details:{title:true,email:'EMAIL',other:'UNKNOWN'}}}};
+            }
+            """);
+
+        Assert.AreEqual(REQUIRED_MESSAGE, await page.Locator("li button").Nth(0).TextContentAsync());
+        Assert.AreEqual("电子邮件无效", await page.Locator("li button").Nth(1).TextContentAsync());
+        Assert.AreEqual("无效值", await page.Locator("li button").Nth(2).TextContentAsync());
+        Assert.AreEqual(0, await page.Locator("img").CountAsync());
+        await AssertNoClientErrors(page);
     }
 
     [TestMethod, TestCategory("VueBrowser")]
@@ -168,7 +212,7 @@ public class VueInteractionBrowserTests
     }
 
     [TestMethod, TestCategory("VueBrowser")]
-    public async Task ValidationRevealsTabAndFieldsetAndImmutableFieldsStayReadOnly()
+    public async Task ValidationRevealsTabAndFieldsetAndReadonlyOnEditFieldsStayReadOnly()
     {
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await Browser(playwright);
@@ -177,7 +221,7 @@ public class VueInteractionBrowserTests
             () => {
                 testStore.current_screen='edit'; testStore.current_id=7;
                 testStore.form_tabs=[{tab:'',label:'Main'},{tab:'details',label:'Details'}];
-                testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',immutable_on_edit:true},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
+                testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',is_edit_readonly:true},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
                 testStore.edit_data={id:7,i:{id:7,code:'Fixed',title:'Entered'},save_result:{error:{message:'Review'},validation_issues:[{severity:'error',field:'title',tab:'details',message:'Check title',value:'<img src=x onerror=alert(1)>'},{severity:'warning',field:'code',message:'Check code'}]}};
             }
             """);
@@ -188,7 +232,7 @@ public class VueInteractionBrowserTests
         await page.GetByRole(AriaRole.Button, new() { Name = "Values", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Check title", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('.fw-fieldset.is-collapsed')");
-        await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',immutable_on_edit:true}]; }");
+        await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',is_edit_readonly:true}]; }");
         await page.Locator("[data-fw-field='code'] input").WaitForAsync(new() { State = WaitForSelectorState.Visible });
         Assert.IsTrue(await page.EvaluateAsync<bool>("""
             () => {
@@ -737,7 +781,7 @@ public class VueInteractionBrowserTests
     }
 
     [TestMethod, TestCategory("VueBrowser")]
-    public async Task SubtableIssuesFocusTheMatchingRowAndImmutableExistingRowsOnly()
+    public async Task SubtableIssuesFocusTheMatchingRowAndReadonlyOnEditExistingRowsOnly()
     {
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await Browser(playwright);
@@ -745,7 +789,7 @@ public class VueInteractionBrowserTests
             <form id="subtable-form" v-if="fwStore.edit_data">
                 <button id="subtable-issue" type="button" @click="fwStore.focusFormIssue(fwStore.formIssues()[0], $event.currentTarget.closest('form'))">Review second notes</button>
                 <subtable_demos_items
-                    :def="{field:'lines',type:'subtable_edit',showform_fields:[{field:'demo_dicts_id',immutable_on_edit:true},{field:'iname',immutable_on_edit:true},{field:'idesc',immutable_on_edit:true},{field:'is_checkbox',immutable_on_edit:true}]}"
+                    :def="{field:'lines',type:'subtable_edit',showform_fields:[{field:'demo_dicts_id',is_edit_readonly:true},{field:'iname',is_edit_readonly:true},{field:'idesc',is_edit_readonly:true},{field:'is_checkbox',is_edit_readonly:true}]}"
                     :lookups="fwStore.lookups" :form="fwStore.edit_data"></subtable_demos_items>
             </form>
             """);

@@ -54,7 +54,7 @@
                             </template>
                         </td>
                         <td :data-fw-field="issueField(row, 'demo_dicts_id')" :data-fw-row="row.id" tabindex="-1">
-                            <select v-model="row.demo_dicts_id" :disabled="isImmutable(row, 'demo_dicts_id')"
+                            <select v-model="row.demo_dicts_id" :disabled="isReadonly(row, 'demo_dicts_id')"
                                     :class="'form-select'+(error(row, 'demo_dicts_id')?' is-invalid':'')">
                                 <option value="">- select -</option>
                                 <option v-for="lookup in fwStore.lookups.DemoDicts" :value="lookup.id">{{lookup.iname}}</option>
@@ -69,7 +69,7 @@
                                    :class="'form-control'+(error(row, 'iname')?' is-invalid':'')"-->
 
                             <!-- autocomplete -->
-                            <span v-if="isImmutable(row, 'iname')">{{row.iname}}</span>
+                            <span v-if="isReadonly(row, 'iname')">{{row.iname}}</span>
                             <autocomplete v-else
                               v-model="row.iname"
                               placeholder="Start typing..."
@@ -80,7 +80,7 @@
                         <div v-for="(issue,index) in fieldIssues(row, 'iname')" :key="index" class="small" :class="issue.severity === 'warning' ? 'text-warning-emphasis' : 'text-danger'">{{issue.message}}<span v-if="issue.value !== undefined">: {{issue.value}}</span></div>
                         </td>
                         <td :data-fw-field="issueField(row, 'idesc')" :data-fw-row="row.id" tabindex="-1">
-                            <textarea v-model="row.idesc" :readonly="isImmutable(row, 'idesc')"
+                            <textarea v-model="row.idesc" :readonly="isReadonly(row, 'idesc')"
                                       :class="'form-control'+(error(row, 'idesc')?' is-invalid':'')"
                                       rows="1"></textarea>
                             <div v-if="error(row, 'idesc')" class="invalid-tooltip">{{error_text(row, 'idesc')}}</div>
@@ -88,7 +88,7 @@
                         </td>
                         <td :data-fw-field="issueField(row, 'is_checkbox')" :data-fw-row="row.id" tabindex="-1">
                             <div class="form-check form-check-inline">
-                            <input :disabled="isImmutable(row, 'is_checkbox')" :checked="row.is_checkbox===true || row.is_checkbox===1 || row.is_checkbox==='1'"
+                            <input :disabled="isReadonly(row, 'is_checkbox')" :checked="row.is_checkbox===true || row.is_checkbox===1 || row.is_checkbox==='1'"
                                        @change="$e => row.is_checkbox = $e.target.checked ? 1 : 0"
                                        class="form-check-input"
                                        type="checkbox"
@@ -157,9 +157,9 @@
         methods: {
             issueField(row, field) { return 'item-' + this.def.field + '#' + row.id + '[' + field + ']'; },
             fieldIssues(row, field) { return this.fwStore.formIssues().filter(issue => issue.field === this.issueField(row, field) && (issue.row_id === undefined || String(issue.row_id) === String(row.id))); },
-            isImmutable(row, field) {
+            isReadonly(row, field) {
                 const child = (this.def.showform_fields ?? []).find(def => def.field === field);
-                return !this.fwStore.canSaveForm() || (!!child?.immutable_on_edit && !row.is_new && Number(row.id) > 0);
+                return !this.fwStore.canSaveForm() || (!!child?.is_edit_readonly && !row.is_new && Number(row.id) > 0);
             },
             error(row, field_name) {
               const key = 'item-'+this.def.field+'#'+row.id+'['+field_name+']';

@@ -1,5 +1,5 @@
 <script type="text/x-template" id="form-one-control-template">
-    <p v-if="isImmutableOnEdit" class="form-control-plaintext" style="white-space:pre-wrap">{{def.type === 'password' ? '••••••' : value}}</p>
+    <p v-if="isEditReadonly" class="form-control-plaintext" style="white-space:pre-wrap">{{def.type === 'password' ? '••••••' : value}}</p>
     <template v-else>
     <p v-if="def.type=='id'" class="form-control-plaintext">
         {{value}}
@@ -208,7 +208,7 @@
                 {{lrow.iname}}
             </option>
         </select>
-        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : error_text}}</p>
         <form-control-help-block :text="def.help_text" />
     </template>
 
@@ -254,7 +254,7 @@
                :max="def.max"
                :step="def.step"
                :pattern="def.pattern">
-        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : error_text}}</p>
         <p class="err-WRONG">`Invalid`</p>
         <form-control-help-block :text="def.help_text" />
     </template>
@@ -288,7 +288,7 @@
                :max="def.max"
                :step="def.step"
                :pattern="def.pattern">
-        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : 'This name already exists in our database'}}</p>
+        <p class="err-EXISTS">{{def.err_exists_msg ? def.err_exists_msg : error_text}}</p>
         <p class="err-EMAIL">`Invalid Email`</p>
         <p class="err-WRONG">`Invalid`</p>
         <form-control-help-block :text="def.help_text" />
@@ -507,11 +507,11 @@
             is_invalid_true() {
                 return this.error === true;
             },
-            isImmutableOnEdit() {
-                return !!this.def.immutable_on_edit && !this.form.i?.is_new && Number(this.form.i?.id ?? this.form.id ?? this.fwStore.current_id) > 0;
+            isEditReadonly() {
+                return !!this.def.is_edit_readonly && !this.form.i?.is_new && Number(this.form.i?.id ?? this.form.id ?? this.fwStore.current_id) > 0;
             },
             isReadonlyControl() {
-                return this.isImmutableOnEdit || this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
+                return this.isEditReadonly || this.def.readonly || this.def.disabled || this.fwStore.current_screen === 'view';
             },
             isTrustedMarkdown() {
                 return this.def.trusted === true || this.def.trusted === 1 || this.def.trusted === '1' || this.def.trusted === 'true';

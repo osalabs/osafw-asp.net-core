@@ -1,11 +1,6 @@
 // define some global constants
 window.fwConst = {
-    ERR_CODES_MAP: {
-        REQUIRED: 'Required field',
-        EXISTS: 'This name already exists in our database',
-        WRONG: 'Invalid',
-        EMAIL: 'Invalid Email',
-    },
+    ERR_CODES_MAP: <~validation_messages json noescape>,
 };
 <~/common/vue/store_core.js>
 <~/common/vue/interaction_helpers.js>
@@ -613,7 +608,7 @@ let actions = {
 
             let def_type = def.type;
             header.input_type = def_type;
-            if (!this.list_editable_def_types.includes(def_type) || def.immutable_on_edit) header.is_ro = true;
+            if (!this.list_editable_def_types.includes(def_type) || def.is_edit_readonly) header.is_ro = true;
 
             //add all other def attributes to header (if not exists in header yet)
             Object.keys(def).forEach(attr => {
@@ -836,13 +831,13 @@ let actions = {
             //check if we got required field error
             let is_required = error.body?.error?.details?.REQUIRED ?? false;
             if (is_required) {
-                err_msg = 'Required field';
+                err_msg = window.fwConst.ERR_CODES_MAP.REQUIRED;
             }
 
             //check if we got specific field error code
             let field_err_code = error.body?.error?.details?.[col.field_name] ?? '';
             if (field_err_code && field_err_code !== true) {
-                err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
+                err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? window.fwConst.ERR_CODES_MAP.INVALID;
             }
 
             this.cells_errors[id_name] = err_msg;

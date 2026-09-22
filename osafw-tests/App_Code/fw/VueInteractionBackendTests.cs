@@ -242,11 +242,11 @@ public class VueInteractionBackendTests
     }
 
     [TestMethod]
-    public void ImmutableMainField_IsSavedOnCreateAndIgnoredOnExistingRow()
+    public void ReadonlyOnEditMainField_IsSavedOnCreateAndIgnoredOnExistingRow()
     {
         var definition = basicSaveDefinition(new FwList
         {
-            new FwDict { ["field"] = "code", ["type"] = "text", ["immutable_on_edit"] = true },
+            new FwDict { ["field"] = "code", ["type"] = "text", ["is_edit_readonly"] = true },
             new FwDict { ["field"] = "title", ["type"] = "text" },
         }, "code title");
         var (fw, _, controller, model) = buildSaveController(definition);
@@ -262,11 +262,11 @@ public class VueInteractionBackendTests
     }
 
     [TestMethod]
-    public void ImmutableSubtableField_IsIgnoredForExistingChildAndSavedForNewChild()
+    public void ReadonlyOnEditSubtableField_IsIgnoredForExistingChildAndSavedForNewChild()
     {
         var childDefinitions = new FwList
         {
-            new FwDict { ["field"] = "code", ["immutable_on_edit"] = true },
+            new FwDict { ["field"] = "code", ["is_edit_readonly"] = true },
             new FwDict { ["field"] = "notes" },
         };
         var subtable = new FwDict
@@ -422,6 +422,60 @@ public class VueInteractionBackendTests
         StringAssert.Contains(mysqlUpdate, "column_name = 'widths'");
     }
 
+    [TestMethod]
+    public void ValidationMessages_UseCurrentLanguageAndKeepCustomMessages()
+    {
+        using var scope = FwConfig.beginScope();
+        var root = Path.Combine(Path.GetTempPath(), "vue-validation-" + Guid.NewGuid().ToString("N"));
+        var language = "zh-" + Guid.NewGuid().ToString("N");
+        Directory.CreateDirectory(Path.Combine(root, "common", "vue"));
+        Directory.CreateDirectory(Path.Combine(root, "lang"));
+
+        try
+        {
+            File.Copy(Path.Combine(repoRoot(), "osafw-app/App_Data/template/common/vue/validation-messages.sel"),
+                Path.Combine(root, "common/vue/validation-messages.sel"));
+            File.Copy(Path.Combine(repoRoot(), "osafw-app/App_Data/template/lang/zh.txt"),
+                Path.Combine(root, "lang", language + ".txt"));
+            var (fw, _, controller) = buildController(basicSaveDefinition([], "title"));
+            FwConfig.GetCurrentSettings()["template"] = root;
+            fw.G["lang"] = language;
+            fw.FormErrors["title"] = true;
+            fw.FormErrors["email"] = "EMAIL";
+            fw.FormErrors["empty"] = "";
+            fw.FormErrors["custom"] = "Application message";
+
+            var response = controller.actionError(new ValidationException("Invalid"), []);
+            var issues = (FwList)((FwDict)response!["_json"]!)["validation_issues"]!;
+            Assert.AreEqual("必填字段", issues.Single(issue => issue["field"].toStr() == "title")["message"]);
+            Assert.AreEqual("电子邮件无效", issues.Single(issue => issue["field"].toStr() == "email")["message"]);
+            Assert.AreEqual("无效值", issues.Single(issue => issue["field"].toStr() == "empty")["message"]);
+            Assert.AreEqual("Application message", issues.Single(issue => issue["field"].toStr() == "custom")["message"]);
+
+            fw.request.Headers.Accept = "text/html";
+            var pageState = controller.IndexAction();
+            var messages = (FwDict)pageState["validation_messages"]!;
+            Assert.AreEqual("必填字段", messages["REQUIRED"]);
+            Assert.AreEqual("电子邮件无效", messages["EMAIL"]);
+            Assert.AreEqual("无效值", messages["INVALID"]);
+            Assert.AreEqual("数据库中已存在此名称", messages["EXISTS"]);
+            Assert.AreEqual("无效", messages["WRONG"]);
+
+            var summary = fw.parsePageInstance().parse_string(
+                File.ReadAllText(Path.Combine(repoRoot(), "osafw-app/App_Data/template/common/vue/form-issues.html")), []);
+            StringAssert.Contains(summary, "请检查以下字段：");
+            StringAssert.Contains(summary, "警告：");
+            StringAssert.Contains(summary, "错误：");
+            StringAssert.Contains(summary, "已输入的值：");
+
+
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
     private static FwDict basicSaveDefinition(FwList fields, string saveFields) => new()
     {
         ["is_dynamic_showform"] = true,
@@ -455,6 +509,7 @@ public class VueInteractionBackendTests
     private static FW createFw(FwDict? permissions = null)
     {
         var fw = TestHelpers.CreateFw();
+        FwConfig.GetCurrentSettings()["template"] = Path.Combine(repoRoot(), "osafw-app", "App_Data", "template");
         fw.request.Headers.Accept = "application/json";
         fw.route.method = "POST";
         TestHelpers.RegisterModel(fw, (Users)new StubUsers(permissions ?? new FwDict

@@ -372,6 +372,11 @@ public class FwVueController : FwDynamicController
                 return ps;
             }
 
+            var validationMessages = new FwDict();
+            foreach (var code in Utils.qw("REQUIRED EXISTS EMAIL WRONG INVALID"))
+                validationMessages[code] = validationIssueMessage(code);
+            ps["validation_messages"] = validationMessages;
+
             // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
             // if url is /ID or /ID/edit or /new - add screen, id to ps so Vue app will switch to related screen
             var route = fw.getRoute(fw.request?.Path ?? string.Empty);
@@ -623,7 +628,7 @@ public class FwVueController : FwDynamicController
         var success = true;
         var is_new = (id == 0);
 
-        removeImmutableOnEditFields(id, item);
+        removeEditReadonlyFields(id, item);
         Validate(id, item);
         if (validation_issues.Any(issue => issue["severity"].toStr() == "error"))
         {
@@ -640,7 +645,7 @@ public class FwVueController : FwDynamicController
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        removeImmutableOnEditFields(id, itemdb);
+        removeEditReadonlyFields(id, itemdb);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -721,20 +726,14 @@ public class FwVueController : FwDynamicController
         }
     }
 
-    private static string validationIssueMessage(object? code)
+    private string validationIssueMessage(object? code)
     {
-        if (code is true)
-            return "Required field";
+        var value = code is true ? "REQUIRED" : code.toStr();
+        if (value.Length == 0)
+            value = "INVALID";
 
-        return code.toStr() switch
-        {
-            "REQUIRED" => "Required field",
-            "EXISTS" => "This name already exists in our database",
-            "EMAIL" => "Invalid Email",
-            "WRONG" => "Invalid",
-            var message when message.Length > 0 => message,
-            _ => "Invalid value",
-        };
+        var message = FormUtils.selectTplName("/common/vue/validation-messages.sel", value);
+        return message.Length > 0 ? fw.parsePageInstance().langMap(message) : value;
     }
 
     private static bool isValidationValueAllowed(FwDict? definition)

@@ -280,14 +280,14 @@ public partial class FwDynamicController : FwController
         var success = true;
         var is_new = (id == 0);
 
-        removeImmutableOnEditFields(id, item);
+        removeEditReadonlyFields(id, item);
         Validate(id, item);
         // load old record if necessary
         // var itemOld = modelOne(id);
 
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        removeImmutableOnEditFields(id, itemdb);
+        removeEditReadonlyFields(id, itemdb);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -471,10 +471,10 @@ public partial class FwDynamicController : FwController
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
-            removeImmutableSubtableFields(row_id, row_item, def);
+            removeEditReadonlySubtableFields(row_id, row_item, def);
             FwDict itemdb = FormUtils.filter(row_item, save_fields);
             FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
-            removeImmutableSubtableFields(row_id, itemdb, def);
+            removeEditReadonlySubtableFields(row_id, itemdb, def);
 
             if (row_id.StartsWith("new-"))
                 itemdb[sub_model.junction_field_main_id] = id;
@@ -517,19 +517,19 @@ public partial class FwDynamicController : FwController
     }
 
     /// <summary>
-    /// Removes configured immutable values from an existing main-row payload before validation or persistence.
+    /// Removes configured read-only-on-edit values from an existing main-row payload before validation or persistence.
     /// New rows retain these values so a field can be set once during creation.
     /// </summary>
     /// <param name="id">Existing row id, or zero for a new row.</param>
     /// <param name="item">Submitted main-row values.</param>
-    protected virtual void removeImmutableOnEditFields(int id, FwDict item)
+    protected virtual void removeEditReadonlyFields(int id, FwDict item)
     {
         if (id == 0 || item.Count == 0)
             return;
 
         foreach (FwDict def in collectFormFields("showform_fields"))
         {
-            if (!def["immutable_on_edit"].toBool() || def["type"].toStr() == "subtable_edit")
+            if (!def["is_edit_readonly"].toBool() || def["type"].toStr() == "subtable_edit")
                 continue;
 
             removeSubmittedFieldValue(item, def["field"].toStr());
@@ -537,20 +537,20 @@ public partial class FwDynamicController : FwController
     }
 
     /// <summary>
-    /// Removes immutable child-field values from existing subtable rows. Child field definitions are supplied
+    /// Removes read-only-on-edit child-field values from existing subtable rows. Child field definitions are supplied
     /// through the subtable definition's optional <c>showform_fields</c> list.
     /// </summary>
     /// <param name="row_id">Existing numeric child id or a <c>new-</c> temporary id.</param>
     /// <param name="item">Submitted child-row values.</param>
     /// <param name="def">The parent <c>subtable_edit</c> field definition.</param>
-    protected virtual void removeImmutableSubtableFields(string row_id, FwDict item, FwDict def)
+    protected virtual void removeEditReadonlySubtableFields(string row_id, FwDict item, FwDict def)
     {
         if (row_id.StartsWith("new-", StringComparison.Ordinal) || item.Count == 0)
             return;
 
         foreach (FwDict childDef in getSubtableFormFields(def))
         {
-            if (childDef["immutable_on_edit"].toBool())
+            if (childDef["is_edit_readonly"].toBool())
                 removeSubmittedFieldValue(item, childDef["field"].toStr());
         }
     }
@@ -1505,7 +1505,7 @@ public partial class FwDynamicController : FwController
         {
             string field = def["field"].toStr();
             string type = def["type"].toStr();
-            if (!is_new_model_save && def["immutable_on_edit"].toBool())
+            if (!is_new_model_save && def["is_edit_readonly"].toBool())
                 continue;
 
             if (type == "att_links_edit")
@@ -1661,10 +1661,10 @@ public partial class FwDynamicController : FwController
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
-            removeImmutableSubtableFields(row_id, row_item, def);
+            removeEditReadonlySubtableFields(row_id, row_item, def);
             FwDict itemdb = FormUtils.filter(row_item, save_fields);
             FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
-            removeImmutableSubtableFields(row_id, itemdb, def);
+            removeEditReadonlySubtableFields(row_id, itemdb, def);
 
             itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 

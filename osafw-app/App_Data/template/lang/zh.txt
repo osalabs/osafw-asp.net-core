@@ -1,2 +1,11 @@
 Main Dashboard === 主仪表板
 My Profile === 我的个人资料
+Required field === 必填字段
+This name already exists in our database === 数据库中已存在此名称
+Invalid Email === 电子邮件无效
+Invalid === 无效
+Invalid value === 无效值
+Please review these fields: === 请检查以下字段：
+Warning: === 警告：
+Error: === 错误：
+Entered value: === 已输入的值：
