@@ -18,7 +18,13 @@
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
    - optional FPF/DPF source lookup for a material conceptual, architecture, or method question: `docs/agents/fpf.md`;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
-5. For broad searches prefer `docs/agents/tools/Search-Repo.ps1`. Opt into ignored drafts, large files, vendor content, or task history only when directly relevant. For files over 1 MB, search headings/patterns and read bounded ranges rather than streaming the file.
+5. Match tools and output to the question. Include ignored content (including drafts), large files, vendor files, or task history only with explicit opt-ins when directly relevant.
+   - Use `docs/agents/tools/Search-Repo.ps1` for broad discovery; it invokes `rg` with repository exclusions.
+   - Prefer direct `rg` scoped to known paths for targeted searches: `-n` for matching lines, `-l` for filenames containing matches, and `--files -g` for filename discovery.
+   - Use bounded `Get-Content` reads for known files; avoid recursive PowerShell content-search pipelines when `rg` fits. For files over 1 MB, search headings/patterns to select bounded ranges rather than streaming the file.
+   - Use native `git` commands for tracked-file and history questions.
+   - Avoid unnecessary nested shells. Choose PowerShell or Python for structured processing based on simplicity and available dependencies.
+   - Minimize returned output and reuse prior search/read results while their underlying files and task scope remain unchanged.
 6. Default to direct execution. `docs/agents/workflow.md` owns delegation eligibility, role selection, ownership, and fallback. Load `docs/prompts/orchestrator.md` only for work that qualifies under that workflow.
 
 # Work Boundaries

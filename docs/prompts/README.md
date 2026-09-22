@@ -11,7 +11,7 @@ Use these as starting points, then fill the placeholders and remove anything tha
 - `app_test_bootstrap_cleanup.md` - remove inherited framework implementation tests from a downstream app while keeping app smoke and app-specific coverage.
 - `orchestrator.md` - plan and hand off bounded work that meets the delegation criteria in `docs/agents/workflow.md`.
 - `pr_code_review.md` - review a GitHub PR, fix confirmed issues, verify, and repeat until ready for rereview.
-- `agent_reflection.md` - periodically inspect task summaries and improve shared agent instructions only where the pattern is stable and worth the added guidance.
+- `agent_reflection.md` - run an occasional manual learning cycle over bounded, committed signals; prefer a verified fix in its proper owner and evaluate two real cycles before proposing automation.
 - `security_hardening.md` - review and harden a scoped feature, PR, or finding set using the repository security guardrails.
 - `docs_consistency.md` - synchronize docs, changelog, navigation, and agent instruction docs after a behavior or workflow change.
 - `test_stabilization.md` - reproduce and stabilize a failing build or test command without hiding real regressions.

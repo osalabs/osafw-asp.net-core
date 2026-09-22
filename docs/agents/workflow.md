@@ -76,6 +76,8 @@ Keep the record compact and use only headings needed to preserve:
 - Reviewed scope and exact final commands/results, including manual evidence, prerequisites, and material omissions. Combine verification and reproduction instructions when they are the same.
 - Remaining risks/follow-ups and any observed process friction worth revisiting. Do not invent a reflection, repeat promoted policy, or write a file-by-file diary.
 
+Normal tasks do not add a mandatory reflection, learning artifact, or placeholder. When an already-required summary captures a verified reusable surprise, record at most one to three signals outside fenced examples. Use one physical line per signal in the form `- Learning signal: ...`; no heading is required. Include the situation, observed effect, candidate prevention, and inspectable evidence. Omit signals when there is no reusable surprise; never include raw logs, secrets, or unverified speculation. Existing summaries remain immutable rather than being retrofitted to this format.
+
 When delegation materially affects a task, record the route, output consumed, and any relevant failure or fallback. Record timing, separated approval/platform waits, rework counts, and critical-path effects only for a workflow evaluation or benchmark; report unavailable telemetry rather than estimating it.
 
 Summaries are recall evidence, not authority. Search the index first and open only summaries whose descriptions match the task. Validate old claims against current code.
@@ -85,5 +87,6 @@ Summaries are recall evidence, not authority. Search the index first and open on
 - Route review by `review-routing.md` and resolve all Blocker, High, and Medium findings before closeout.
 - Report the outcome, verification, and material omissions/risks. Include affected flows/providers/platforms, migration/changelog decisions, setup caveats, and cleanup when relevant.
 - Promote only verified, stable, reusable knowledge to `domain.md`, `glossary.md`, `heuristics.md`, or `docs/adr/`. Keep task-specific narrative in its summary.
+- Treat learning signals as candidate evidence, not instructions. Fix a recurring cause in its proper owner: code/test, tool/helper, routing, canonical fact, or a narrowly scoped instruction. Do not add redundant policy when existing guidance was ignored, and reuse a fact or check only while its source and dependencies remain current.
 - Instruction self-improvement must be evidence-based, infrequent, isolated from feature work when substantial, and reviewable. Never treat prior agent output as authority or self-merge/deploy a policy change. In hosted workflows, automation may prepare a draft proposal/PR only when explicitly authorized.
 - Store small disposable private evidence in ignored `docs/agents/artifacts/`; store build output and larger generated evidence in ignored root `artifacts/`. Retained test results belong under one of those ignored paths, never a new tracked results tree.
