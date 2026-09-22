@@ -435,10 +435,14 @@ $requiredFiles = @(
     "docs/agents/fpf.md",
     "docs/agents/fpf-profile.md",
     "docs/agents/model-selection.md",
+    "docs/agents/learning-scenarios.md",
+    "docs/prompts/agent_reflection.md",
     "docs/agents/tasks/index.md",
     "docs/agents/instruction-pack.json",
     "docs/agents/tools/Normalize-TextFiles.ps1",
     "docs/agents/tools/Search-Repo.ps1",
+    "docs/agents/tools/Get-LearningSignals.ps1",
+    "docs/agents/tools/Test-LearningSignals.ps1",
     "docs/agents/tools/Test-AgentInstructions.ps1",
     "docs/agents/tools/Fpf.Common.ps1",
     "docs/agents/tools/Sync-Fpf.ps1",
@@ -492,7 +496,8 @@ $mapRoutes = @(
     "agents/code_reviewer.md",
     "agents/reviewers/",
     "agents/fpf.md",
-    "agents/fpf-profile.md"
+    "agents/fpf-profile.md",
+    "agents/learning-scenarios.md"
 )
 foreach ($route in $mapRoutes) {
     if ($docsMapText.IndexOf($route, [System.StringComparison]::Ordinal) -lt 0) {
@@ -849,8 +854,12 @@ try {
         ".gitignore" = "merge-ignore-rule"
         "docs/agents/fpf.md" = "merge"
         "docs/agents/fpf-profile.md" = "merge"
+        "docs/agents/learning-scenarios.md" = "merge"
+        "docs/prompts/agent_reflection.md" = "merge"
         "docs/agents/tools/Normalize-TextFiles.ps1" = "merge"
         "docs/agents/tools/Search-Repo.ps1" = "merge"
+        "docs/agents/tools/Get-LearningSignals.ps1" = "merge"
+        "docs/agents/tools/Test-LearningSignals.ps1" = "merge"
         "docs/agents/tools/Test-AgentInstructions.ps1" = "merge"
         "docs/agents/tools/Fpf.Common.ps1" = "merge"
         "docs/agents/tools/Sync-Fpf.ps1" = "merge"
@@ -876,6 +885,7 @@ try {
     foreach ($expectedCommand in @(
         "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
         "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
+        "pwsh -NoProfile -File docs/agents/tools/Test-LearningSignals.ps1",
         "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
         "git diff --check"
     )) {
@@ -887,6 +897,7 @@ try {
     foreach ($expectedCommand in @(
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-LearningSignals.ps1",
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
     )) {
         if ($windowsPowerShell51Fallback -notcontains $expectedCommand) {

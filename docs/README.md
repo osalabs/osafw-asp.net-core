@@ -30,9 +30,10 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
 - [agents/fpf.md](agents/fpf.md): optional development-time FPF/DPF source cache, revision, bounded-reading, authority, provenance, and licensing workflow.
 - [agents/fpf-profile.md](agents/fpf-profile.md): repository and copied-application routing from concrete work questions to FPF Core, the suites, and applicable DPFs.
+- [agents/learning-scenarios.md](agents/learning-scenarios.md): optional manual probes for the repository-learning pilot; load during maintenance or when changing that workflow.
 - [agents/model-selection.md](agents/model-selection.md): optional dated starting-model advice, benchmark evidence, and lightweight profile calibration; not required for ordinary tasks.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
-- [agents/tools/](agents/tools/): scoped repository search, optional FPF source/cache access, and strict UTF-8/CRLF validation helpers.
+- [agents/tools/](agents/tools/): scoped repository search, optional FPF source/cache access, bounded learning-signal collection, and strict UTF-8/CRLF validation helpers.
 - [agents/instruction-pack.json](agents/instruction-pack.json): version and managed-path metadata for deliberate agent-instruction upgrades in copied applications.
 - [agents/domain.md](agents/domain.md): verified stable framework/domain facts.
 - [agents/glossary.md](agents/glossary.md): stable project terms.
@@ -60,4 +61,5 @@ Open only the canonical documentation needed for the task. This map identifies t
 - Material conceptual framing, architecture/system boundaries, method design, computational reasoning, or cross-domain source synthesis: `agents/fpf.md`, then `agents/fpf-profile.md`; skip source lookup when it cannot change the task decision.
 - Build/test/provider/worktree/cleanup decisions: `agents/verification.md` plus the affected canonical topic doc.
 - Review: `agents/review-routing.md`, then `agents/code_reviewer.md` and only the triggered overlay(s).
+- Repository-learning maintenance: `prompts/agent_reflection.md`, then `agents/learning-scenarios.md`; ordinary tasks need neither.
 - Recurring maintenance workflow: select the narrowest matching prompt from `prompts/README.md`.
