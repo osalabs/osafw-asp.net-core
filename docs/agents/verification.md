@@ -22,6 +22,7 @@ Use the smallest check that can falsify the touched behavior, then add checks in
 | Queues/background services | Disable when irrelevant or give workers/queues a task-specific namespace. Prevent two instances from consuming the same real queue or running the same cron work. | Stop only task-started workers and reconcile task-created messages/jobs. |
 | Containers | Use unique project/container/network/volume names and host ports. Containers do not make external databases/accounts isolated automatically. | Verify labels/names and remove only task-created resources. |
 | External accounts/services | Prefer a sandbox tenant/account and unique object IDs. External writes, messages, deployment, billing, or destructive cleanup require request authority. | Delete/revert only exact task-created objects when authorized; otherwise report them for human cleanup. |
+| Optional FPF cache | Adoption state and publication cache live under the ignored checkout-local `.codex-local/fpf/`. A linked worktree may reuse a source-only bare Git cache from the primary checkout when accessible, but it keeps its own adoption state; derived indexes follow the shared or local source cache and task pins are explicit. Use the `-LocalCache` switch when sharing is unavailable or inappropriate. | Do not delete shared source caches. Remove only exact task-created fixture/cache paths, and never run upstream repository code as part of source refresh or reading. |
 
 Windows with IIS is the primary real-application development/deployment path. Linux/container support is optional and must not be claimed from a successful Windows-only check. Conversely, optional-platform work must not weaken Windows/IIS behavior or DPAPI/security defaults.
 
@@ -30,6 +31,8 @@ Windows with IIS is the primary real-application development/deployment path. Li
 | Change surface | Minimum falsifying evidence | Add when risk warrants |
 | --- | --- | --- |
 | Agent/docs-only | Validate links/routes, strict UTF-8/CRLF, summary index entry, and representative prompt routing. Check commands/examples against real paths. | Integrating review plus the `agent-workflow` overlay for shared workflow changes; follow the capability-conditional execution in `review-routing.md`. |
+| FPF guide/profile wording | Agent/docs checks above plus affected publication routes and bounded reads at the selected revision. | Review licensing/provenance when source selection or copied expression changes; inspect `PolicyChanged` and review the local policy change before re-accepting the same eligible edition. Wording alone does not require cache lifecycle tests. |
+| FPF source helpers/cache behavior or fixtures | Run `Test-Fpf.ps1` through both supported Windows PowerShell entrypoints. Exercise source discovery, last-good/offline behavior, acceptance/selection, fixed-revision reads, bounds/continuation, ambiguity, and ignored task-owned fixtures without a configured database. | Copied-application/worktree recovery walkthrough for affected behavior. Unix behavior remains unverified until exercised there. |
 | C# implementation | Focused compile/test at the nearest public controller/action/model/helper boundary. | `dotnet build osafw-app/osafw-app.csproj`, affected test class, then solution/full tests for shared code. |
 | Public/source-copy contract | Search call sites and overrides; test old and new behavior or a compatibility shim; inspect generated/template/config consumers. | Clean-output solution build, copied-app upgrade thought experiment/diff, migration note, and `docs/CHANGELOG.md`. This repository distributes source and produces no framework NuGet package, so package-compatibility checks do not apply. |
 | Route/template/frontend/email | Render or exercise the affected public route and verify page-state/JSON/HTML/include selectors and important empty/error cases. | Browser/manual cross-flow check, asset build/load behavior, downstream template override search, and compatibility note. |
@@ -42,13 +45,15 @@ Windows with IIS is the primary real-application development/deployment path. Li
 
 ## Common commands
 
-Choose only commands that can falsify the touched behavior:
+The instruction pack's `validation` and fallback arrays list available portable commands. Select the applicable checks from the change-surface table above:
 
 ```powershell
 dotnet build osafw-app/osafw-app.csproj
 dotnet build osafw-asp.net-core.sln
 dotnet test osafw-tests/osafw-tests.csproj
 dotnet test osafw-tests/osafw-tests.csproj -p:DefineConstants=isSQLite
+pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1
 ```
 
 If ordinary output is locked, use an absolute task-owned output path, for example:

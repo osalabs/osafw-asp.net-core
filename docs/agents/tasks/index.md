@@ -2,6 +2,8 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-20-instruction-optimization.md` - Applied an FPF/DPF instruction review: streamlined guidance, clarified authority and verification, and repaired pack-version and Markdown-link validation.
+- `summary-2026-09-20-fpf-integration.md` - Added portable FPF/DPF source caching, reviewed revisions, bounded retrieval and copied-application instruction-pack integration.
 - `summary-2026-09-08-r01-email-delivery.md` - Made email delivery failures observable and added database-backed test-recipient precedence with provider migrations.
 - `summary-2025-05-07-001.md` - Converted legacy VB-style comment snippets to idiomatic C# equivalents across controllers, framework helpers, and models.
 - `summary-2025-10-08-bootstrap.md` - Completed bootstrap: documented project in `AGENTS.md`, created `docs/agents/{heuristics,domain,glossary}.md`.
