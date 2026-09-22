@@ -17,6 +17,7 @@ public partial class FwDynamicController : FwController
 
     protected FwModel? model_related;
     protected FwDict subtable_save_row_ids = [];
+    // Preserve creation context for the existing virtual post-save hook after an insert assigns its id.
     private bool is_new_model_save;
 
     protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header", "fieldset", "fieldset_end"];
@@ -786,7 +787,7 @@ public partial class FwDynamicController : FwController
         var load_id = reqi("load_id");
         var is_reset = reqb("is_reset");
         var density = reqs("density");
-        var has_widths = req("widths") != null;
+        var is_widths_supplied = req("widths") != null;
         var is_list_edit = reqb("is_list_edit");
         var icode = base_url + (is_list_edit ? "/edit" : "");
 
@@ -815,7 +816,7 @@ public partial class FwDynamicController : FwController
                 density = "";
             fw.model<UserViews>().updateByIcode(icode, DB.h("density", density));
         }
-        else if (has_widths)
+        else if (is_widths_supplied)
         {
             var widths = normalizeUserViewWidths(req("widths"));
             fw.model<UserViews>().updateByIcode(icode, DB.h("widths", Utils.jsonEncode(widths)));

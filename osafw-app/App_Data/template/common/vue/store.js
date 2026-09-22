@@ -3,7 +3,7 @@ window.fwConst = {
     ERR_CODES_MAP: <~validation_messages json noescape>,
 };
 <~/common/vue/store_core.js>
-<~/common/vue/interaction_helpers.js>
+import { interactionActions } from '<~GLOBAL[ASSETS_URL]>/js/vue-interactions.js?v<~GLOBAL[SITE_VERSION]>';
 
 let state = {
     global: {}, //global config
@@ -20,7 +20,7 @@ let state = {
     is_readonly: false,
     capabilities: {},
     is_filter_panel_open: true,
-    quick_edit_keep_context: false,
+    is_quick_edit_keep_context: false,
     edit_save_states: [], // in-flight requests and coalesced followups, scoped to the captured form
     is_activity_logs: false, //true if activity logs enabled
 
@@ -186,6 +186,7 @@ function editFormSaveSnapshot(form) {
 
 const editFormSaveDebounces = new WeakMap();
 const editFormSaveFailures = new WeakMap();
+const editFormSavedSnapshots = new WeakMap();
 const editFormSaveContextKey = Symbol();
 function editFormSaveContext(store) {
     return {
@@ -194,32 +195,68 @@ function editFormSaveContext(store) {
         tabLabel: store.form_tabs?.find(tab => tab.tab === store.activeFormTab)?.label ?? store.activeFormTab,
         // The standard server processes compound fields only from this tab, even when
         // its response contains other submitted subtables. Untabbed extensions keep their existing merge.
-        subtableFields: store.form_tabs?.length
-            ? store.tabbedShowFormFields.filter(def => def.type === 'subtable_edit').map(def => def.field) : null,
+        fields: store.form_tabs?.length
+            ? store.tabbedShowFormFields.map(def => ({ field: def.field, type: def.type })) : null,
     };
 }
 
 function processedSubtableSaveResult(response, context) {
-    if (!context.subtableFields) return response;
+    if (!context.fields) return response;
+    const subtableFields = context.fields.filter(def => def.type === 'subtable_edit').map(def => def.field);
     const processed = entries => Object.fromEntries(Object.entries(entries ?? {})
-        .filter(([field]) => context.subtableFields.includes(field)));
+        .filter(([field]) => subtableFields.includes(field)));
     return { ...response, subtables: processed(response?.subtables), subtable_row_ids: processed(response?.subtable_row_ids) };
+}
+
+// Advance only values processed by this request. Other tabs retain their last
+// acknowledged values, including across later saves of the same captured draft.
+function rememberEditFormSave(form, submitted, response, context, fieldId) {
+    const acknowledged = editFormSaveSnapshot(submitted);
+    acknowledged.id = form.id;
+    if (form.i[fieldId]) acknowledged.i[fieldId] = form.i[fieldId];
+    const baseline = context.fields ? editFormSavedSnapshots.get(form) : acknowledged;
+    if (context.fields) {
+        baseline.id = acknowledged.id;
+        baseline.i = acknowledged.i;
+        for (const [key, types] of Object.entries({
+            subtables: ['subtable_edit'], multi_rows: ['multicb', 'multicb_prio'], att_files: ['att_files_edit']
+        })) {
+            for (const def of context.fields.filter(def => types.includes(def.type))) {
+                if (acknowledged[key]?.[def.field] !== undefined) {
+                    baseline[key] ??= {};
+                    baseline[key][def.field] = acknowledged[key][def.field];
+                } else if (baseline[key]) {
+                    delete baseline[key][def.field];
+                }
+            }
+        }
+        if (context.fields.some(def => def.type === 'att_links_edit')) {
+            if (acknowledged.att_links === undefined) delete baseline.att_links;
+            else baseline.att_links = acknowledged.att_links;
+        }
+    }
+    // Apply server normalization and assigned IDs to the acknowledged copy too.
+    reconcileSubtableSaveResult(response, null, baseline);
+    editFormSavedSnapshots.set(form, baseline);
+}
+
+function editFormSaveSignature(form, tab = '') {
+    // Acknowledging different tabs can insert object keys in a different order.
+    return JSON.stringify([tab, editFormSaveSnapshot(form)], (key, value) =>
+        value && typeof value === 'object' && !Array.isArray(value)
+            ? Object.fromEntries(Object.keys(value).sort().map(name => [name, value[name]])) : value);
 }
 
 // A save on another tab cannot repair these failures: its server-side field processing
 // is separate. Keep them with the draft across queues until each failed tab succeeds.
-function retainEditFormSaveFailures(form, context, saved, issues) {
+function retainEditFormSaveFailures(form, context, isSaved, issues) {
     const response = form.save_result;
     const failures = editFormSaveFailures.get(form) ?? new Map();
-    if (saved) failures.delete(context.tab);
+    if (isSaved) failures.delete(context.tab);
     else {
         const failureIssues = issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab }));
-        if (!failureIssues.some(issue => issue.severity === 'error')) {
-            const message = response?.error?.message || 'Save failed';
-            failureIssues.push({ severity: 'error', tab: context.tab,
-                message: context.tabLabel ? context.tabLabel + ': ' + message : message });
-        }
-        failures.set(context.tab, { response, issues: failureIssues });
+        // Transport/server/auth failures remain save errors, not field validation.
+        failures.set(context.tab, { response, issues: failureIssues, tabLabel: context.tabLabel });
     }
     if (!failures.size) {
         editFormSaveFailures.delete(form);
@@ -233,11 +270,15 @@ function retainEditFormSaveFailures(form, context, saved, issues) {
         success: false,
         error: {
             ...firstFailure.response?.error,
-            message: firstFailure.response?.error?.message || firstFailure.issues.find(issue => issue.severity === 'error').message,
+            message: outstanding.map(failure => {
+                const message = failure.response?.error?.message
+                    || failure.issues.find(issue => issue.severity === 'error')?.message || 'Save failed';
+                return failure.tabLabel ? failure.tabLabel + ': ' + message : message;
+            }).join('; '),
             details: Object.assign({}, ...outstanding.map(failure => failure.response?.error?.details ?? {})),
         },
         validation_issues: [
-            ...(saved ? issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab })) : []),
+            ...(isSaved ? issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab })) : []),
             ...outstanding.flatMap(failure => failure.issues),
         ],
     };
@@ -288,9 +329,9 @@ function reconcileSubtableSaveResult(response, submittedSubtables, form) {
             existingRows.forEach(row => {
                 if (serverIds.has(String(row.id))) return;
                 const submittedRow = submittedById.get(String(row.id));
-                const changed = submittedRow && Object.keys({ ...submittedRow, ...row }).some(col =>
+                const isChanged = submittedRow && Object.keys({ ...submittedRow, ...row }).some(col =>
                     col !== 'id' && col !== 'is_new' && JSON.stringify(row[col]) !== JSON.stringify(submittedRow[col]));
-                if (!submittedRow || changed) updatedRows.push(row); // added/changed draft absent from old response
+                if (!submittedRow || isChanged) updatedRows.push(row); // added/changed draft absent from old response
             });
         }
         existingRows.splice(0, existingRows.length, ...updatedRows);
@@ -300,8 +341,7 @@ function reconcileSubtableSaveResult(response, submittedSubtables, form) {
 
 let getters = {
     is_saving_edit: (state) => state.edit_save_states.some(save => save.form === state.edit_data),
-    active_save_signature: (state) => state.edit_save_states.find(save => save.form === state.edit_data)?.signature ?? '',
-    pending_edit_save: (state) => state.edit_save_states.find(save => save.form === state.edit_data)?.pending ?? false,
+    is_pending_edit_save: (state) => (state.edit_save_states.find(save => save.form === state.edit_data)?.requests.length ?? 0) > 0,
     doubleCount: (state) => state.count * 2, //sample getter
     //return true if state.list_headers contains at least one non-empty search_value
     isListSearch: (state) => state.list_headers.some(h => hasListSearchValue(h.search_value)),
@@ -554,6 +594,7 @@ let actions = {
             suffix = '/' + (id ? id + '/edit' : 'new');
             if (!id) {
                 this.edit_data = { i: {} };
+                editFormSavedSnapshots.set(this.edit_data, editFormSaveSnapshot(this.edit_data));
             } else if (!is_same_mode) {
                 this.edit_data = null;
             }
@@ -724,6 +765,7 @@ let actions = {
             const data = await this.api.get(id, options);
             //console.log('loadItem data', data);
             this.edit_data = data;
+            editFormSavedSnapshots.set(this.edit_data, editFormSaveSnapshot(this.edit_data));
             window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
 
         } catch (error) {
@@ -943,7 +985,7 @@ let actions = {
         if (!form || !this.canSaveForm()) return false;
         // Vue event handlers may pass a MouseEvent; only internally captured contexts override the active tab.
         const request = context?.[editFormSaveContextKey] === true ? context : editFormSaveContext(this);
-        const signature = JSON.stringify([request.tab, editFormSaveSnapshot(form)]);
+        const signature = editFormSaveSignature(form, request.tab);
         const active = this.edit_save_states.find(save => save.form === form);
         if (active) {
             const index = active.requests.findIndex(pending => pending.tab === request.tab);
@@ -951,25 +993,24 @@ let actions = {
                 if (index >= 0) active.requests.splice(index, 1);
             } else if (index >= 0) active.requests[index] = request;
             else active.requests.push(request);
-            active.pending = active.requests.length > 0;
             return false;
         }
         const api = this.api;
         const xss = this.XSS;
         const fieldId = this.field_id;
         const attachmentDefs = this.showform_fields.map(def => ({ field: def.field, att_post_prefix: def.att_post_prefix }));
-        const wasNew = !form.id;
-        this.edit_save_states.push({ form, signature, pending: false, requests: [request] });
+        const isNew = !form.id;
+        if (!editFormSavedSnapshots.has(form)) {
+            editFormSavedSnapshots.set(form, editFormSaveSnapshot(isNew ? { id: form.id, i: {} } : form));
+        }
+        this.edit_save_states.push({ form, signature, requests: [request] });
         const saving = this.edit_save_states[this.edit_save_states.length - 1];
         try {
             while (true) {
                 const currentRequest = saving.requests.shift();
-                saving.pending = saving.requests.length > 0;
                 const submitted = editFormSaveSnapshot(form);
-                const submittedSignature = JSON.stringify(submitted);
-                saving.signature = JSON.stringify([currentRequest.tab, submitted]);
-                let saved = false;
-                let changedDuringSave = false;
+                saving.signature = editFormSaveSignature(submitted, currentRequest.tab);
+                let isSaved = false;
                 let response;
                 let serverError;
                 try {
@@ -1004,10 +1045,9 @@ let actions = {
                     });
 
                     response = await api.post(submitted.id, req);
-                    changedDuringSave = JSON.stringify(editFormSaveSnapshot(form)) !== submittedSignature;
                     form.save_result = response;
-                    saved = !response?.error && response?.success !== false && !this.formIssues(form).some(issue => issue.severity === 'error');
-                    if (saved) {
+                    isSaved = !response?.error && response?.success !== false && !this.formIssues(form).some(issue => issue.severity === 'error');
+                    if (isSaved) {
                         // Even an inactive draft needs assigned IDs before it can be saved again.
                         if (response?.id && !form.id) {
                             form.id = response.id;
@@ -1016,9 +1056,10 @@ let actions = {
                         const subtableResponse = processedSubtableSaveResult(response, currentRequest);
                         if (this.edit_data === form) this.applySubtableSaveResult(subtableResponse, submitted.subtables ?? {}, form);
                         else reconcileSubtableSaveResult(subtableResponse, submitted.subtables ?? {}, form);
+                        rememberEditFormSave(form, submitted, subtableResponse, currentRequest, fieldId);
                     }
                 } catch (error) {
-                    saved = false;
+                    isSaved = false;
                     form.save_result = error.body ?? { error: { message: 'Server error' } };
                     if (error.response >= 500) {
                         serverError = error;
@@ -1027,13 +1068,13 @@ let actions = {
                     // A requested newer draft can retry after validation or transport failure.
                 }
 
-                retainEditFormSaveFailures(form, currentRequest, saved, this.formIssues(form));
-                if (saving.pending) continue;
-                if (!saved || editFormSaveFailures.has(form)) return serverError ?? false;
+                retainEditFormSaveFailures(form, currentRequest, isSaved, this.formIssues(form));
+                if (saving.requests.length) continue;
+                if (!isSaved || editFormSaveFailures.has(form)) return serverError ?? false;
                 if (this.edit_data !== form) return false;
                 // Navigation/reload must not discard edits made after the submitted snapshot.
-                if (changedDuringSave) {
-                    if (wasNew && form.id && this.current_screen === 'edit') {
+                if (editFormSaveSignature(form) !== editFormSaveSignature(editFormSavedSnapshots.get(form))) {
+                    if (isNew && form.id && this.current_screen === 'edit') {
                         this.current_id = form.id;
                         window.history.replaceState({ screen: 'edit', id: form.id }, '', this.buildScreenUrl('edit', form.id, this.activeFormTab));
                     }
@@ -1041,10 +1082,10 @@ let actions = {
                 }
 
                 if (this.current_screen === 'list') {
-                    if (this.quick_edit_keep_context && this.is_list_edit_pane) {
+                    if (this.is_quick_edit_keep_context && this.is_list_edit_pane) {
                         try { await this.refreshQuickEditList(); }
                         catch (error) {
-                            response.validation_issues = [...(response.validation_issues ?? []), { severity: 'warning', message: 'Saved, but the list could not refresh. Reload the list to see current values.' }];
+                            form.save_result.is_list_refresh_failed = true;
                             this.handleError(error, 'refreshQuickEditList');
                         }
                     } else await this.loadIndex();
@@ -1055,9 +1096,9 @@ let actions = {
                         this.openEditScreen(0);
                     } else if (rr === 'Show') this.openViewScreen(response.id);
                     else if (rr === 'Index') this.openListScreen();
-                    else if (wasNew && response.id) await this.openEditScreen(response.id);
+                    else if (isNew && response.id) await this.openEditScreen(response.id);
                 }
-                if (!saving.pending) return;
+                if (!saving.requests.length) return;
             }
         } finally {
             const index = this.edit_save_states.indexOf(saving);
@@ -1188,7 +1229,7 @@ let actions = {
     }
 };
 
-actions = { ...actions, ...createInteractionActions() };
+actions = { ...actions, ...interactionActions };
 //merge in fwStoreActions if defined
 actions = mergeStoreDefaults(actions, fwStoreActions);
 

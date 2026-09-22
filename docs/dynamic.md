@@ -1591,6 +1591,8 @@ Active tab is set by `tab` parameter in the URL, e.g. `/Admin/DemosDynamic/123?t
 
 ## Vue interaction behavior
 
+The shared behavior is exported from `wwwroot/assets/js/vue-interactions.js` and imported by the common Vue templates. Copy that asset and the updated `site.css` alongside the templates; application `fwStoreActions` overrides still take precedence.
+
 ### Saved column widths
 
 Vue list headers support dragging the right-edge resize control, pressing Left/Right for ten-pixel steps, Home/End for the limits, and double-clicking to fit visible text. Widths are rounded and limited to 60–800 pixels. The `user_views.widths` JSON map stores up to 100 configured columns, alongside the existing fields and density. Unknown columns and invalid widths are discarded. Resizing saves the current default view; saving a named view copies the current widths, loading a view restores them, and resetting a view clears them. Hidden configured columns retain their widths; removed columns are ignored.
@@ -1606,7 +1608,7 @@ addValidationIssue("error", "title", "Check this value.");
 addValidationIssue("warning", "title", "Review this value before continuing.");
 ```
 
-The save response adds `validation_issues`, an array with `severity`, `field`, and `message`; optional `tab` identifies a form tab and `row_id` identifies a repeated row. Errors block the save and retain HTTP 400 plus legacy `error.details`. Warnings do not block a successful save. The UI renders messages as text, shows field messages and a summary, and lets a summary button select the tab, open containing fieldsets, and focus the control. Failed saves retain entered form values and do not reload or navigate the list. A failed tab keeps its error even if another tab saves successfully; success navigation resumes only after each failed tab saves successfully.
+The save response adds `validation_issues`, an array with `severity`, `field`, and `message`; optional `tab` identifies a form tab and `row_id` identifies a repeated row. Errors block the save and retain HTTP 400 plus legacy `error.details`. Warnings do not block a successful save. The UI renders messages as text, shows field messages and a summary, and lets a summary button select the tab, open containing fieldsets, and focus the control. Transport, authorization, and unrelated server failures remain save alerts rather than field validation issues. Failed saves retain entered form values and do not reload or navigate the list. A failed tab keeps its error even if another tab saves successfully; success navigation resumes only after each failed tab saves successfully. These structured issues remain scoped to `FwVueController`; Dynamic forms and the base controller keep their existing validation contracts.
 
 An optional attempted `value` is included only for a field definition with JSON boolean `validation_show_value: true`. Leave that setting absent for sensitive values. Password and hidden controls do not expose attempted values. Messages themselves must also avoid sensitive data; the framework cannot determine which application text is confidential.
 
@@ -1624,11 +1626,11 @@ Set `is_edit_readonly: true` on a form field to allow entry when creating a row 
 
 The filter panel starts open and remembers its visibility in browser storage. Keys include origin, application/controller URL, list/edit mode, and related-record context. Hiding the panel preserves its filter values. If storage is unavailable, the panel remains usable with an open default.
 
-Quick-edit context retention is opt-in:
+Quick-edit context retention is opt-in (`is_quick_edit_keep_context` replaces the unreleased `quick_edit_keep_context` spelling):
 
 ```json
 "store": {
-  "quick_edit_keep_context": true
+  "is_quick_edit_keep_context": true
 }
 ```
 

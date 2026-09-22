@@ -63,7 +63,7 @@ public class FwVueController : FwDynamicController
     protected virtual void applyListRowCapabilities(FwDict row)
     {
         var restrictions = getListRowCapabilities(row);
-        var hasRestrictions = restrictions.Count > 0 || row.ContainsKey("_capabilities");
+        var isRestricted = restrictions.Count > 0 || row.ContainsKey("_capabilities");
         var capabilities = getCapabilities();
 
         foreach (var action in new[] { "create", "edit", "delete" })
@@ -76,10 +76,10 @@ public class FwVueController : FwDynamicController
         {
             capabilities["edit"] = false;
             capabilities["delete"] = false;
-            hasRestrictions = true;
+            isRestricted = true;
         }
 
-        if (hasRestrictions)
+        if (isRestricted)
             row["_capabilities"] = capabilities;
         else
             row.Remove("_capabilities");

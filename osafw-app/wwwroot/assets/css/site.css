@@ -894,6 +894,24 @@ table.list > thead > tr > th[data-sort] {
   cursor: pointer;
 }
 
+table.list > thead > tr > th.fw-column-resizable {
+  position: relative;
+}
+
+.fw-column-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  padding: 0;
+  cursor: col-resize;
+  touch-action: none;
+  background: transparent;
+  border: 0;
+  border-right: 2px solid var(--fw-border-color);
+}
+
 table.list > thead > tr > th[data-sort].active-sort {
   background-color: var(--fw-hiliter) !important;
   white-space: nowrap;
@@ -956,6 +974,14 @@ table.list .search > th {
 
 table.list tbody td {
   font-size: var(--fw-table-row-font-size);
+}
+
+table.list tbody td.fw-list-cell {
+  overflow: hidden;
+}
+
+table.list tbody td.fw-list-cell-wrap {
+  overflow-wrap: anywhere;
 }
 
 table.list tbody a {
@@ -1052,6 +1078,10 @@ table.list-edit tbody td > div > .form-select {
 
 table.list-edit tbody td > div > .form-check-input {
   margin: 0.5rem 0.4rem;
+}
+
+.fw-edit-readonly {
+  white-space: pre-wrap;
 }
 
 /* table-sm overrides */

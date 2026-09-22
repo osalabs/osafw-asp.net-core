@@ -2,6 +2,10 @@
 
 This changelog records breaking upgrade changes for end-user apps based on this framework. It is organized by commit date. Commits since 2025-06-01 were reviewed; changes not listed here were treated as additive, internal, documentation-only, or bug/security fixes that should not require app code, template, config, data, or schema changes.
 
+## 2026-09-21
+
+- Vue interaction followup: copy `wwwroot/assets/js/vue-interactions.js` and the updated `site.css` with the common Vue templates. Shared interactions now use this static ES module. Rename the unreleased `store.quick_edit_keep_context` option to `store.is_quick_edit_keep_context`. Save coordination retains unsaved changes across queued and later tab saves, keeps transport/server failures separate from field validation, and restores the last confirmed widths after failed queued width saves. Existing `FormErrors`/`error.details` and controller save hook signatures remain compatible.
+
 ## 2026-09-08
 
 - Vue interaction update: apply the provider's additive `upd2026-09-08-user-view-widths.sql` before using saved widths in an existing database. Lists gain accessible width controls and remembered filter visibility; forms gain neutral validation issues and permission-aware controls. `is_edit_readonly` ignores existing-row changes in standard save paths (renamed from the unreleased `immutable_on_edit` draft). Copy `common/vue/validation-messages.sel` with the updated controller and Vue templates for localized validation text. Quick-edit context retention is opt-in and keeps existing save triggers. See [Vue interaction behavior](dynamic.md#vue-interaction-behavior).

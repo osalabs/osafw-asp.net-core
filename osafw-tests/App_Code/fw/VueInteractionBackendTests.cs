@@ -32,6 +32,11 @@ public class VueInteractionBackendTests
         }
     }
 
+    private sealed class BasePermissionUsers(bool isUserReadonly) : Users
+    {
+        public override bool isReadOnly(int id = -1) => isUserReadonly;
+    }
+
     private class RecordingModel : FwModel
     {
         public FwDict LastAdded { get; private set; } = [];
@@ -212,6 +217,40 @@ public class VueInteractionBackendTests
         Assert.IsFalse(rowCapabilities["delete"].toBool());
         Assert.IsFalse(rowCapabilities.ContainsKey("admin"));
     }
+
+#if !isRoles
+    [TestMethod]
+    [DataRow(false, false, true)]
+    [DataRow(true, false, false)]
+    [DataRow(false, true, false)]
+    public void CapabilitiesWithoutRoles_UseRealUserPermissionsAndRespectReadonly(bool isUserReadonly, bool isControllerReadonly, bool isAllowed)
+    {
+        var fw = createFw();
+        var users = new BasePermissionUsers(isUserReadonly);
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
+        TestHelpers.RegisterModel(fw, (UserViews)new RecordingUserViews());
+        var controller = new InteractionController();
+        controller.Configure(fw, new RecordingModel(), new FwDict
+        {
+            ["is_dynamic_index"] = true,
+            ["view_list_defaults"] = "title",
+            ["view_list_map"] = new FwDict { ["title"] = "Title" },
+            ["list_sortdef"] = "title asc",
+            ["is_readonly"] = isControllerReadonly,
+        });
+
+        var capabilities = (FwDict)controller.InitialState()["capabilities"]!;
+        foreach (var action in new[] { "create", "edit", "delete" })
+            Assert.AreEqual(isAllowed, capabilities[action].toBool(), action);
+
+        var row = new FwDict { ["_meta"] = new FwDict { ["is_ro"] = true } };
+        controller.ApplyCapabilities(row);
+        var rowCapabilities = (FwDict)row["_capabilities"]!;
+        Assert.IsFalse(rowCapabilities["edit"].toBool());
+        Assert.IsFalse(rowCapabilities["delete"].toBool());
+    }
+#endif
 
     [TestMethod]
     public void SaveUserViews_LoadsNamedFieldsWithNormalizedNamedWidths()

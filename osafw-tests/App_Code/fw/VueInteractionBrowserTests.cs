@@ -36,10 +36,11 @@ public class VueInteractionBrowserTests
             if (uri.Host != "vue-tests.invalid") { await route.AbortAsync(); return; }
             var relative = uri.AbsolutePath.TrimStart('/');
             if (relative == "") { await route.FulfillAsync(new() { ContentType = "text/html", Body = "<html><head></head><body></body></html>" }); return; }
-            if (!relative.StartsWith("lib/") && relative != "js/apputils.js") { await route.AbortAsync(); return; }
-            var file = Path.GetFullPath(Path.Combine(assets, relative));
-            if (!file.StartsWith(Path.GetFullPath(assets) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) { await route.AbortAsync(); return; }
-            await route.FulfillAsync(new() { ContentType = "text/javascript", Body = await File.ReadAllTextAsync(file) });
+            if (!relative.StartsWith("lib/") && relative != "js/apputils.js" && relative != "js/vue-interactions.js" && relative != "css/site.css") { await route.AbortAsync(); return; }
+            var assetRoot = relative is "js/vue-interactions.js" or "css/site.css" ? Path.Combine(RepoRoot, "osafw-app/wwwroot/assets") : assets;
+            var file = Path.GetFullPath(Path.Combine(assetRoot, relative));
+            if (!file.StartsWith(Path.GetFullPath(assetRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) { await route.AbortAsync(); return; }
+            await route.FulfillAsync(new() { ContentType = relative.EndsWith(".css") ? "text/css" : "text/javascript", Body = await File.ReadAllTextAsync(file) });
         });
         var page = await context.NewPageAsync();
         var errors = new List<string>();
@@ -58,7 +59,7 @@ public class VueInteractionBrowserTests
                 "Multiselect":"/lib/vueform-multiselect/dist/multiselect.js","vue-demi":"/lib/vue-demi/lib/index.mjs","@vue/devtools-api":"/lib/vue-devtools-api/dist/index.js",
                 "@vue/devtools-shared":"/lib/vue-devtools-shared/dist/index.js","@vue/devtools-kit":"/lib/vue-devtools-kit/dist/index.js",
                 "perfect-debounce":"/lib/perfect-debounce/dist/index.mjs","hookable":"/lib/hookable/dist/index.mjs","birpc":"/lib/birpc/dist/index.mjs"
-            }}</script><script src="/js/apputils.js"></script>
+            }}</script><script src="/js/apputils.js"></script><link rel="stylesheet" href="/css/site.css">
             """;
         var parser = new ParsePage(new ParsePageOptions
         {
@@ -73,7 +74,7 @@ public class VueInteractionBrowserTests
                 validationMessages[pair[0]] = parser.parse_string(pair[1], []);
             }
         }
-        var storeScript = Template("store.js").Replace("<~validation_messages json noescape>",
+        var storeScript = Template("store.js").Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test").Replace("<~validation_messages json noescape>",
             parser.parse_string("<~validation_messages json noescape>", new FwDict { ["validation_messages"] = validationMessages }));
 
         var setup = """
@@ -90,13 +91,13 @@ public class VueInteractionBrowserTests
             fwApp.config.warnHandler = message => testErrors.push('Vue warning: ' + message);
             fwApp.config.errorHandler = error => testErrors.push('Vue error: ' + (error?.message ?? String(error)));
             fwApp.component('autocomplete', { props: ['modelValue'], emits: ['update:modelValue'], template: `<input :value="modelValue" @input="$emit('update:modelValue', $event.target.value)">` });
-            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'form-control-help-block', 'att-select'])
+            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'form-control-help-block', 'att-select', 'list-pagination', 'list-btn-multi'])
                 fwApp.component(name, { template: '<span></span>' });
             </script>
             """;
         var components = "";
-        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
-            components += Regex.Replace(Template(name), @"<~[^>]+>", "");
+        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
+            components += Regex.Replace(Template(name).Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test"), @"<~[^>]+>", "");
         components += Regex.Replace(TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html"), @"<~[^>]+>", "");
         await page.SetContentAsync(diagnostics + imports + "<script type='text/x-template' id='test-root-template'>" + markup + "</script><div id='app'></div>" + setup + components + "<script type='module'>fwApp.mount('#app'); window.testReady=true;</script>");
         try { await page.WaitForFunctionAsync("() => window.testReady === true", options: new() { Timeout = 10000 }); }
@@ -212,6 +213,35 @@ public class VueInteractionBrowserTests
     }
 
     [TestMethod, TestCategory("VueBrowser")]
+    public async Task FullTableLoadsSharedWidthsAndResizeStyles()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-table v-if='fwStore.count > 0'></list-table>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.loadIndex = async () => {};
+                testStore.list_headers = [{field_name:'title',field_name_visible:'Title'}, {field_name:'notes',field_name_visible:'Notes'}];
+                testStore.list_rows = [{id:7,title:'Example',notes:'Text'}];
+                testStore.list_user_view = {widths:{title:230}};
+                testStore.count = 1;
+            }
+            """);
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list')?.style.width === '590px'");
+        Assert.AreEqual("fixed", await page.Locator("table.list").EvaluateAsync<string>("el => getComputedStyle(el).tableLayout"));
+        CollectionAssert.AreEqual(new[] { "40px", "230px", "160px", "160px" },
+            await page.Locator("colgroup col").EvaluateAllAsync<string[]>("els => els.map(el => el.style.width)"));
+        var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
+        Assert.AreEqual("absolute|8px|col-resize|none", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.position,s.width,s.cursor,s.touchAction].join('|'); }"));
+        Assert.AreEqual("relative", await page.Locator("th[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).position"));
+        Assert.AreEqual("hidden", await page.Locator("td[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).overflow"));
+        await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons = false");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.width === '430px'");
+        Assert.AreEqual(3, await page.Locator("colgroup col").CountAsync());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
     public async Task ValidationRevealsTabAndFieldsetAndReadonlyOnEditFieldsStayReadOnly()
     {
         using var playwright = await Playwright.CreateAsync();
@@ -229,7 +259,7 @@ public class VueInteractionBrowserTests
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField === 'title'");
         Assert.AreEqual(0, await page.Locator("[data-fw-field='code'] input").CountAsync());
         Assert.AreEqual(0, await page.Locator("img[src='x']").CountAsync());
-        await page.GetByRole(AriaRole.Button, new() { Name = "Values", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Values") }).ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Check title", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('.fw-fieldset.is-collapsed')");
         await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',is_edit_readonly:true}]; }");
@@ -293,7 +323,7 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("""
             () => {
                 testStore.current_screen='list'; testStore.current_id=7; testStore.is_list_edit_pane=true;
-                testStore.quick_edit_keep_context=true; testStore.is_initial_load=false;
+                testStore.is_quick_edit_keep_context=true; testStore.is_initial_load=false;
                 testStore.edit_data={id:7,i:{id:7,title:'Draft changed'},subtables:{},save_result:{}};
                 testStore.list_rows=[{id:7,title:'Before'}]; testStore.count=1;
                 window.posts=0; window.gets=0; window.handled=[];
@@ -327,7 +357,7 @@ public class VueInteractionBrowserTests
             }
             """);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus === true"));
-        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue => issue.severity==='warning' && issue.message.includes('list could not refresh'))"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.edit_data.save_result.is_list_refresh_failed && !testStore.formIssues().length"));
         CollectionAssert.Contains(await page.EvaluateAsync<string[]>("() => handled"), "refreshQuickEditList");
         await AssertNoClientErrors(page);
     }
@@ -358,7 +388,188 @@ public class VueInteractionBrowserTests
         Assert.AreEqual(2, await page.EvaluateAsync<int>("() => payloads.length"));
         Assert.AreEqual("First draft", await page.EvaluateAsync<string>("() => payloads[0].item.title"));
         Assert.AreEqual("Changed while saving", await page.EvaluateAsync<string>("() => payloads[1].item.title"));
-        Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.is_saving_edit || testStore.pending_edit_save"));
+        Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.is_saving_edit || testStore.is_pending_edit_save"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false, false, 100)]
+    [DataRow(true, false, 200)]
+    [DataRow(false, true, 300)]
+    [DataRow(true, true, 300)]
+    public async Task QueuedColumnWidthsRollbackToLastConfirmedValue(bool isFirstSuccess, bool isSecondSuccess, int expected)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            results => {
+                testStore.list_headers=[{field_name:'title'}];
+                testStore.list_user_view={widths:{title:100}};
+                window.widthRequests=[];
+                testStore.api.post=async (_,request) => {
+                    const index=widthRequests.length;
+                    widthRequests.push(JSON.parse(request.widths));
+                    if(index===0) await new Promise(resolve=>window.releaseWidth=resolve);
+                    return {success:results[index]};
+                };
+                window.widthSaves=[testStore.saveColumnWidth('title',200),testStore.saveColumnWidth('title',300)];
+            }
+            """, new[] { isFirstSuccess, isSecondSuccess });
+        await page.WaitForFunctionAsync("() => typeof releaseWidth === 'function'");
+        await page.EvaluateAsync("async () => { releaseWidth(); await Promise.all(widthSaves); }");
+        Assert.AreEqual(expected, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"));
+        CollectionAssert.AreEqual(new[] { 200, 300 }, await page.EvaluateAsync<int[]>("() => widthRequests.map(widths=>widths.title)"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task OtherTabSuccessCannotNavigatePastNewerUnsavedEdits(bool isQueued)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            queued => {
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                window.firstSave=testStore.saveEditData();
+                originalDetail.idesc='Newer unsaved detail';
+                testStore.setFormTab('relations');
+                if(queued) testStore.saveEditData();
+            }
+            """, isQueued);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        if (!isQueued) await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Original detail' && originalDetail.idesc==='Newer unsaved detail' && navigations===0"));
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => navigations"), "Unacknowledged edits must survive later independent saves too.");
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Newer unsaved detail' && navigations===1"), "Saving the changed tab restores navigation.");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task LoadedDraftKeepsUnsubmittedOtherTabChanges()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            async () => {
+                const loaded=JSON.parse(JSON.stringify(testStore.edit_data));
+                testStore.api.get=async()=>loaded;
+                await testStore.loadItem(7,'edit');
+                window.originalDetail=testStore.edit_data.subtables.lines[0];
+                originalDetail.idesc='Changed before first save';
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                testStore.setFormTab('relations');
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => navigations===0 && originalDetail.idesc==='Changed before first save' && databaseRows.lines[0].idesc==='Original detail'"));
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => navigations"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("multicb", false)]
+    [DataRow("multicb_prio", false)]
+    [DataRow("att_files_edit", false)]
+    [DataRow("att_links_edit", false)]
+    [DataRow("multicb", true)]
+    [DataRow("multicb_prio", true)]
+    [DataRow("att_files_edit", true)]
+    [DataRow("att_links_edit", true)]
+    public async Task CompoundFieldChangesRemainUnsavedUntilTheirOwnTabSucceeds(string type, bool isNew)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            async ({type,isNew}) => {
+                testStore.current_screen='edit';
+                testStore.form_tabs=[{tab:'',label:'Main'},{tab:'other',label:'Other'}];
+                testStore.showform_fields=[{field:'links',type}];
+                testStore.showform_fields_tabs={'':testStore.showform_fields,other:[]};
+                if (isNew) await testStore.openEditScreen(0);
+                else {
+                    const loaded={id:7,i:{id:7},multi_rows:{links:[{id:1,is_checked:false}]},att_files:{links:[]},att_links:[]};
+                    testStore.api.get=async()=>loaded;
+                    await testStore.loadItem(7,'edit');
+                }
+                testStore.edit_data.route_return='Index';
+                if (type.startsWith('multicb')) testStore.edit_data.multi_rows={links:[{id:1,is_checked:true}]};
+                else if (type==='att_files_edit') testStore.edit_data.att_files={links:[1]};
+                else testStore.edit_data.att_links=[1];
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                window.savedLinks={};
+                testStore.api.post=async(_,req)=>{
+                    if (!req.tab) savedLinks=req[type.startsWith('multicb') ? 'links_multi' : type==='att_files_edit' ? 'links' : 'att'];
+                    return {id:7};
+                };
+                testStore.setFormTab('other');
+                await testStore.saveEditData();
+            }
+            """, new { type, isNew });
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => navigations===0 && Object.keys(savedLinks).length===0"));
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => navigations===1 && savedLinks[1]===1"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("New", "edit", 0)]
+    [DataRow("Show", "view", 41)]
+    [DataRow("Index", "list", 0)]
+    [DataRow("", "edit", 41)]
+    public async Task NewFormEntryFollowsSuccessfulSaveDestination(string destination, string screen, int id)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            async destination => {
+                await testStore.openEditScreen(0);
+                testStore.edit_data.i.title='New record';
+                testStore.edit_data.route_return=destination;
+                testStore.api.post=async()=>({id:41});
+                testStore.api.get=async()=>({id:41,i:{id:41,title:'New record'}});
+                await testStore.saveEditData();
+            }
+            """, destination);
+        Assert.AreEqual(screen, await page.EvaluateAsync<string>("() => testStore.current_screen"));
+        Assert.AreEqual(id, await page.EvaluateAsync<int>("() => testStore.current_id"));
+        if (destination == "New")
+            Assert.IsTrue(await page.EvaluateAsync<bool>("() => !testStore.edit_data.id && Object.keys(testStore.edit_data.i).length===0"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task NewFormAcknowledgesCompoundFieldsSavedInReverseOrder()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            async () => {
+                await testStore.openEditScreen(0);
+                testStore.edit_data.subtables={lines:[{id:11,idesc:'New line'}],links:[{id:21,idesc:'New link'}]};
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                testStore.setFormTab('relations');
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => navigations"));
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => navigations"));
         await AssertNoClientErrors(page);
     }
 
@@ -409,7 +620,7 @@ public class VueInteractionBrowserTests
         await page.Locator("[data-fw-row='21'] textarea").FillAsync("Requested relation");
         if (autosave) await page.Locator("[data-fw-row='21'] textarea").DispatchEventAsync("change");
         else await page.Locator("#explicit-save").DispatchEventAsync("click");
-        await page.WaitForFunctionAsync("() => testStore.pending_edit_save");
+        await page.WaitForFunctionAsync("() => testStore.is_pending_edit_save");
         await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
         CollectionAssert.AreEqual(new[] { "", "relations" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.links[0].idesc==='Requested relation' && originalRelation===testStore.edit_data.subtables.links[0] && originalRelation.idesc==='Requested relation' && originalRelation.iname==='Saved links'"));
@@ -457,7 +668,7 @@ public class VueInteractionBrowserTests
         if (autosave) await page.WaitForTimeoutAsync(150);
         await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
         CollectionAssert.AreEqual(new[] { "", "", "relations" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
-        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Pending detail' && databaseRows.links[0].idesc==='Pending relation' && originalDetail.idesc==='Pending detail' && originalRelation.idesc==='Pending relation' && testStore.current_form_tab==='audit' && !testStore.pending_edit_save && !testStore.is_saving_edit"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Pending detail' && databaseRows.links[0].idesc==='Pending relation' && originalDetail.idesc==='Pending detail' && originalRelation.idesc==='Pending relation' && testStore.current_form_tab==='audit' && !testStore.is_pending_edit_save && !testStore.is_saving_edit"));
         await AssertNoClientErrors(page);
     }
 
@@ -465,6 +676,8 @@ public class VueInteractionBrowserTests
     [DataRow("structured")]
     [DataRow("legacy")]
     [DataRow("transport")]
+    [DataRow("authorization")]
+    [DataRow("server")]
     public async Task FailedTabSaveSurvivesOtherTabSuccessUntilItsOwnSuccessfulRetry(string failureKind)
     {
         using var playwright = await Playwright.CreateAsync();
@@ -478,6 +691,7 @@ public class VueInteractionBrowserTests
                 window.tabSaveFailure=req => {
                     if(req.tab || req['item-lines#11'].idesc!=='Invalid detail') return;
                     if(kind==='transport') throw new Error('Connection lost');
+                    if(kind==='authorization' || kind==='server') throw {response:kind==='authorization'?403:500,body:{error:{message:'Request failed'}}};
                     const failure={success:false,error:{message:'Details failed',details:{'item-lines#11[idesc]':'WRONG'}}};
                     if(kind==='structured') failure.validation_issues=[{severity:'error',field:'item-lines#11[idesc]',row_id:'11',message:'Correct detail'}];
                     return failure;
@@ -489,11 +703,14 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("() => testStore.saveEditData()");
         await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Original detail' && databaseRows.links[0].idesc==='Requested relation' && originalDetail.idesc==='Invalid detail'"));
-        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='') && navigations===0"), "A successful Relations save cannot resolve the failed Details tab or navigate away.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details') && navigations===0"), "A successful Relations save cannot resolve the failed Details tab or navigate away.");
+        var isValidation = failureKind is "structured" or "legacy";
+        Assert.AreEqual(isValidation, await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='')"), "Only validation failures belong in field issues.");
+        Assert.IsTrue(await page.GetByRole(AriaRole.Alert).IsVisibleAsync());
 
         await page.EvaluateAsync("async () => { originalRelation.idesc='Later relation'; await testStore.saveEditData(); }");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0 && databaseRows.links[0].idesc==='Later relation'"), "The failure must outlive the original request queue.");
-        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.saveEditDataDebounced(20); return testStore.savedStatus===false && testStore.formIssues().some(issue=>issue.severity==='error'); }"), "Debouncing must not hide an unresolved failure.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.saveEditDataDebounced(20); return testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details'); }"), "Debouncing must not hide an unresolved failure.");
         await page.WaitForFunctionAsync("() => payloads.length===4 && !testStore.is_saving_edit");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0"));
 
@@ -509,7 +726,7 @@ public class VueInteractionBrowserTests
             """);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherFormSucceeded && testStore.savedStatus===false && navigations===0"), "Failures belong to the captured form.");
 
-        if (failureKind == "transport") await page.GetByRole(AriaRole.Link, new() { Name = "Details", Exact = true }).ClickAsync();
+        if (!isValidation) await page.GetByRole(AriaRole.Link, new() { Name = "Details", Exact = true }).ClickAsync();
         else
         {
             await page.GetByRole(AriaRole.Button, new() { Name = failureKind == "structured" ? "Correct detail" : "Invalid", Exact = true }).ClickAsync();

@@ -1,0 +1,6 @@
+<div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger" role="alert">
+    {{fwStore.savedErrorMessage}}
+</div>
+<div v-if="fwStore.edit_data?.save_result?.is_list_refresh_failed" class="alert alert-warning" role="alert">
+    `Saved, but the list could not refresh. Reload the list to see current values.`
+</div>

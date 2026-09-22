@@ -6,9 +6,7 @@
             <span v-if="!fwStore.savedStatus" class="badge text-bg-danger">not saved</span>
         </span>
         <h2>Edit Record</h2>
-        <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">
-            {{fwStore.savedErrorMessage}}
-        </div>
+        <~/common/vue/save-status>
         <form v-if="fwStore.edit_data !== null"
               class="fw-card"
               @submit.prevent="saveChanges"

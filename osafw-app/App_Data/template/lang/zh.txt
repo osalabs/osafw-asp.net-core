@@ -9,3 +9,4 @@ Please review these fields: === 请检查以下字段：
 Warning: === 警告：
 Error: === 错误：
 Entered value: === 已输入的值：
+Saved, but the list could not refresh. Reload the list to see current values. === 已保存，但列表无法刷新。请重新加载列表以查看最新值。

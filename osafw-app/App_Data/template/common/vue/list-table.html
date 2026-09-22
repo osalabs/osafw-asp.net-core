@@ -10,10 +10,10 @@
 
                 <table :style="tableWidthStyle" :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
                     <colgroup v-if="Object.keys(fwStore.columnWidths()).length">
-                        <col style="width:40px">
-                        <col v-if="uioptions.isButtonsLeft && uioptions.rowButtons !== false" style="width:160px">
-                        <col v-for="header in fwStore.list_headers" :key="header.field_name" :style="{width: (fwStore.columnWidths()[header.field_name] || 160) + 'px'}">
-                        <col v-if="!uioptions.isButtonsLeft && uioptions.rowButtons !== false" style="width:160px">
+                        <col :style="{ width: columnWidthDefaults.selection + 'px' }">
+                        <col v-if="uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnWidthDefaults.standard + 'px' }">
+                        <col v-for="header in fwStore.list_headers" :key="header.field_name" :style="{ width: (fwStore.columnWidths()[header.field_name] || columnWidthDefaults.standard) + 'px' }">
+                        <col v-if="!uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnWidthDefaults.standard + 'px' }">
                     </colgroup>
                     <list-table-header />
 
@@ -82,19 +82,29 @@
 
 <script type="module">
     import { mapStores } from 'pinia';
+    import { LIST_TABLE_COLUMN_WIDTHS } from '<~GLOBAL[ASSETS_URL]>/js/vue-interactions.js?v<~GLOBAL[SITE_VERSION]>';
 
     fwApp.component('list-table', {
         template: '#list-table-template',
         props: {},
         emit: [],
         data: () => ({
+            columnWidthDefaults: LIST_TABLE_COLUMN_WIDTHS
         }),
         computed: {
             ...mapStores(fwStore),
             tableWidthStyle() {
                 const widths = this.fwStore.columnWidths();
-                if (!Object.keys(widths).length) return null;
-                const width = this.fwStore.list_headers.reduce((total, header) => total + (widths[header.field_name] || 160), 40 + (this.uioptions.rowButtons === false ? 0 : 160));
+                if (!Object.keys(widths).length) {
+                    return null;
+                }
+
+                const fixedWidth = this.columnWidthDefaults.selection
+                    + (this.uioptions.rowButtons === false ? 0 : this.columnWidthDefaults.standard);
+                const width = this.fwStore.list_headers.reduce(
+                    (total, header) => total + (widths[header.field_name] || this.columnWidthDefaults.standard),
+                    fixedWidth
+                );
                 return { tableLayout: 'fixed', width: width + 'px' };
             },
             uioptions() {

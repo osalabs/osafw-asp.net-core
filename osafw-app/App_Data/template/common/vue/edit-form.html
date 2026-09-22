@@ -1,7 +1,5 @@
 <script type="text/x-template" id="edit-form-template">
-    <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">
-        {{fwStore.savedErrorMessage}}
-    </div>
+    <~/common/vue/save-status>
     <form v-if="fwStore.edit_data !== null"
           id="FEdit"
           class="fw-card"

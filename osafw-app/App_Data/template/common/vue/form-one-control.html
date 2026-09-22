@@ -1,5 +1,5 @@
 <script type="text/x-template" id="form-one-control-template">
-    <p v-if="isEditReadonly" class="form-control-plaintext" style="white-space:pre-wrap">{{def.type === 'password' ? '••••••' : value}}</p>
+    <p v-if="isEditReadonly" class="form-control-plaintext fw-edit-readonly">{{def.type === 'password' ? '••••••' : value}}</p>
     <template v-else>
     <p v-if="def.type=='id'" class="form-control-plaintext">
         {{value}}
