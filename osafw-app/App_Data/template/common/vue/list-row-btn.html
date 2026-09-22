@@ -20,15 +20,17 @@
             <template v-if="co_buttons.view || co_buttons.edit || co_buttons.quickedit">
                 &nbsp;&#183;&nbsp;
             </template>
-            <a href="#" class="text-danger" title="`Delete`" aria-label="`Delete`" @click.prevent="$emit('delete', $event)" :disabled="isReadonly"><~/common/icons/x></a>
+            <a href="#" class="text-danger" title="`Delete`" aria-label="`Delete`" @click.prevent="$emit('delete', $event)" :disabled="isReadonly || null"><~/common/icons/x></a>
         </template>
         <template v-for="(btn, index) in co_buttons.buttons">
             <template v-if="index || co_buttons.view || co_buttons.edit || co_buttons.quickedit || co_buttons.delete">
                 &nbsp;&#183;&nbsp;
             </template>
             <a href="#" 
-               @click.prevent="$emit('custom', {url: btn.url, post: btn.post??false, e: $event})" 
-               :disabled="isReadonly" 
+               @click.prevent="!isReadonly && $emit('custom', {url: btn.url, post: btn.post??false, e: $event})"
+               :disabled="isReadonly || null"
+               :aria-disabled="isReadonly || null"
+               :tabindex="isReadonly ? -1 : null"
                class="on-view-pane" 
                :class="btn.class"
                :title="btn.title || btn.hint || btn.label || 'Action'"

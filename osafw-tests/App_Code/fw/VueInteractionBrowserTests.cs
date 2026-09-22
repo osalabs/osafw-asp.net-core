@@ -22,7 +22,8 @@ public class VueInteractionBrowserTests
     private static string TemplatePath(string relativePath)
     {
         var content = File.ReadAllText(Path.Combine(RepoRoot, "osafw-app/App_Data/template", relativePath));
-        return Regex.Replace(content, @"<~/common/vue/([^>]+)>", match => Template(match.Groups[1].Value));
+        return Regex.Replace(content, @"<~/common/vue/([^>]+)>", match => Template(match.Groups[1].Value))
+            .Replace("<~/common/icons/x>", "&#215;"); // Keep the icon-only delete link's hit area in this font-free fixture.
     }
 
     private static async Task<IPage> Page(IBrowser browser, string markup, FwDict? validationMessages = null)
@@ -246,6 +247,63 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons = false");
         await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.width === '430px'");
         Assert.AreEqual(3, await page.Locator("colgroup col").CountAsync());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task FixedWidthRowActionsRemainInsideTheirCellAndClickable(bool isButtonsLeft)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, """
+            <list-table v-if="fwStore.count > 0">
+                <template #list-row-btn-prepend><a href="#" @click.prevent="fwStore.count++">Audit</a> </template>
+                <template #list-row-btn-append> <a href="#" @click.prevent="fwStore.count++">History</a></template>
+            </list-table>
+            """);
+        await page.EvaluateAsync("""
+            isButtonsLeft => {
+                testStore.loadIndex = async () => {};
+                testStore.uioptions.list.table.isButtonsLeft = isButtonsLeft;
+                testStore.uioptions.list.table.rowButtons.buttons = [{label:'Review record details',url:'review'}];
+                testStore.list_headers = [{field_name:'title',field_name_visible:'Title'}];
+                testStore.list_rows = [{id:7,title:'Example'}];
+                testStore.list_user_view = {widths:{title:230}};
+                window.customClicks = 0;
+                testStore.onRowBtnCustomClick = () => customClicks++;
+                window.deletes = 0;
+                testStore.deleteRow = async () => { deletes++; return false; };
+                testStore.count = 1;
+            }
+            """, isButtonsLeft);
+        var controls = page.Locator("td.list-row-controls");
+        await controls.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.IsTrue(await controls.EvaluateAsync<bool>("""
+            cell => {
+                const bounds = cell.getBoundingClientRect();
+                return [...cell.querySelectorAll('a')].every(link => [...link.getClientRects()].every(rect =>
+                    rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom));
+            }
+            """), "Resizing must not let action links overlap adjacent cells, including custom actions.");
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true }).ClickAsync();
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => customClicks"));
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Delete", Exact = false }).ClickAsync();
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => deletes"));
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Audit", Exact = true }).ClickAsync();
+        await controls.GetByRole(AriaRole.Link, new() { Name = "History", Exact = true }).ClickAsync();
+        Assert.AreEqual(3, await page.EvaluateAsync<int>("() => testStore.count"));
+
+        await page.EvaluateAsync("() => testStore.is_readonly = true");
+        Assert.AreEqual("none", await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true })
+            .EvaluateAsync<string>("el => getComputedStyle(el).pointerEvents"));
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true }).PressAsync("Enter");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => customClicks"), "Read-only actions must also reject keyboard activation.");
+        Assert.AreEqual(0, await controls.GetByRole(AriaRole.Link, new() { Name = "Delete", Exact = false }).CountAsync());
+
+        await page.EvaluateAsync("() => { testStore.is_readonly = false; testStore.list_user_view.widths = {}; }");
+        Assert.AreEqual("nowrap", await controls.EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
         await AssertNoClientErrors(page);
     }
 

@@ -8,8 +8,8 @@
         <td class="list-row-cb d-print-none"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[id]"></td>
         <list-row-btn v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"
                       :row="row"
-                      :is_left="uioptions.isButtonsLeft"
-                      :is_readonly="fwStore.is_readonly"
+                      :is-left="uioptions.isButtonsLeft"
+                      :is-readonly="fwStore.is_readonly"
                       :buttons="uioptions.rowButtons"
                       @view="onRowView(row)"
                       @edit="onRowEdit(row)"
@@ -67,8 +67,8 @@
 
         <list-row-btn v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"
                       :row="row"
-                      :is_left="uioptions.isButtonsLeft"
-                      :is_readonly="fwStore.is_readonly"
+                      :is-left="uioptions.isButtonsLeft"
+                      :is-readonly="fwStore.is_readonly"
                       :buttons="uioptions.rowButtons"
                       @view="onRowView(row)"
                       @edit="onRowEdit(row)"

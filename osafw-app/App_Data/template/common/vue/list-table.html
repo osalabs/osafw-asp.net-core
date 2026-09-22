@@ -8,7 +8,7 @@
                     <~/common/icons/info-circle-fill>use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
                 </div>
 
-                <table :style="tableWidthStyle" :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
+                <table :style="tableWidthStyle" :class="'table table-stripedX table-hover list ' + (tableWidthStyle?'fw-list-fixed ':'') + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
                     <colgroup v-if="Object.keys(fwStore.columnWidths()).length">
                         <col :style="{ width: columnWidthDefaults.selection + 'px' }">
                         <col v-if="uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnWidthDefaults.standard + 'px' }">
