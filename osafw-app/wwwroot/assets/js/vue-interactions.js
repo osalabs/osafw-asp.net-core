@@ -103,6 +103,9 @@ export const interactionActions = {
         return normalizedColumnWidths(this.list_user_view?.widths, headers);
     },
     async saveColumnWidth(field, width) {
+        return this.saveColumnWidths({ [field]: width });
+    },
+    async saveColumnWidths(changes) {
         const userView = this.list_user_view;
         const api = this.api;
         const xss = this.XSS;
@@ -114,7 +117,7 @@ export const interactionActions = {
             state.confirmedByView.set(userView, normalizedColumnWidths(userView.widths, headers));
         }
 
-        const widths = normalizedColumnWidths({ ...this.columnWidths(), [field]: width }, headers);
+        const widths = normalizedColumnWidths({ ...this.columnWidths(), ...changes }, headers);
         userView.widths = widths;
 
         let write;
@@ -136,7 +139,7 @@ export const interactionActions = {
                     userView.widths = state.confirmedByView.get(userView) ?? {};
                 }
 
-                this.handleError(error, 'saveColumnWidth');
+                this.handleError(error, 'saveColumnWidths');
                 return false;
             } finally {
                 if (state.latestByView.get(userView) === write) {

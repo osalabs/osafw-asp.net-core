@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-22-vue-resize-feedback.md` - Narrowed the upgrade changelog, refined resize handles and Ctrl+double-click auto-fit, bumped the asset version, and verified 50 browser cases with Bootstrap.
 - `summary-2026-09-21-vue-review-followup.md` - Simplified Vue interaction assets/styles and repaired save acknowledgment, failure separation, and width rollback; focused browser/backend, SQLite, and RBAC checks recorded.
 - `summary-2026-09-21-agent-learning-pilot.md` - Added optional learning signals, a bounded committed-summary collector, and a manual two-cycle pilot with portable checks and scenarios.
 - `summary-2026-09-20-instruction-optimization.md` - Applied an FPF/DPF instruction review: streamlined guidance, clarified authority and verification, and repaired pack-version and Markdown-link validation.

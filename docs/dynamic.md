@@ -1595,9 +1595,11 @@ The shared behavior is exported from `wwwroot/assets/js/vue-interactions.js` and
 
 ### Saved column widths
 
-Vue list headers support dragging the right-edge resize control, pressing Left/Right for ten-pixel steps, Home/End for the limits, and double-clicking to fit visible text. Widths are rounded and limited to 60–800 pixels. The `user_views.widths` JSON map stores up to 100 configured columns, alongside the existing fields and density. Unknown columns and invalid widths are discarded. Resizing saves the current default view; saving a named view copies the current widths, loading a view restores them, and resetting a view clears them. Hidden configured columns retain their widths; removed columns are ignored.
+Vue list headers support dragging the right-edge resize control, pressing Left/Right for ten-pixel steps, Home/End for the limits, and double-clicking to fit visible text. Ctrl+double-click fits all visible data columns in one save, using the current page's content and preserving hidden-column widths. The eight-pixel grab area shows a one-pixel divider on hover or keyboard focus, with a resize cursor. Widths are rounded and limited to 60–800 pixels. The `user_views.widths` JSON map stores up to 100 configured columns, alongside the existing fields and density. Unknown columns and invalid widths are discarded. Resizing saves the current default view; saving a named view copies the current widths, loading a view restores them, and resetting a view clears them. Hidden configured columns retain their widths; removed columns are ignored.
 
 Apply the provider's additive `upd2026-09-08-user-view-widths.sql` update before copying these model/controller changes into an existing application. Fresh SQL Server, SQLite, and MySQL schemas include the column. The saved-view action still requires POST and the current XSS token, and existing owner/system authorization remains in force.
+
+For custom persistence, override `fwStoreActions.saveColumnWidths(changes)`, where `changes` maps field names to widths. Both batch fitting and the standard `saveColumnWidth(field, width)` action use it; existing single-column overrides still apply to single-column gestures.
 
 ### Validation issues
 

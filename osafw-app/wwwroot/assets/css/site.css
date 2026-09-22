@@ -898,7 +898,7 @@ table.list > thead > tr > th.fw-column-resizable {
   position: relative;
 }
 
-.fw-column-resize {
+table.list .fw-column-resize {
   position: absolute;
   top: 0;
   right: 0;
@@ -909,7 +909,12 @@ table.list > thead > tr > th.fw-column-resizable {
   touch-action: none;
   background: transparent;
   border: 0;
-  border-right: 2px solid var(--fw-border-color);
+  border-right: 1px solid transparent;
+}
+
+table.list .fw-column-resize:hover,
+table.list .fw-column-resize:focus-visible {
+  border-right-color: var(--fw-border-color);
 }
 
 table.list > thead > tr > th[data-sort].active-sort {

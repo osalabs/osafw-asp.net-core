@@ -59,7 +59,7 @@ public class VueInteractionBrowserTests
                 "Multiselect":"/lib/vueform-multiselect/dist/multiselect.js","vue-demi":"/lib/vue-demi/lib/index.mjs","@vue/devtools-api":"/lib/vue-devtools-api/dist/index.js",
                 "@vue/devtools-shared":"/lib/vue-devtools-shared/dist/index.js","@vue/devtools-kit":"/lib/vue-devtools-kit/dist/index.js",
                 "perfect-debounce":"/lib/perfect-debounce/dist/index.mjs","hookable":"/lib/hookable/dist/index.mjs","birpc":"/lib/birpc/dist/index.mjs"
-            }}</script><script src="/js/apputils.js"></script><link rel="stylesheet" href="/css/site.css">
+            }}</script><script src="/js/apputils.js"></script><link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css"><link rel="stylesheet" href="/css/site.css">
             """;
         var parser = new ParsePage(new ParsePageOptions
         {
@@ -152,7 +152,7 @@ public class VueInteractionBrowserTests
     {
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await Browser(playwright);
-        var page = await Page(browser, "<table><list-table-header v-if='fwStore.count !== -1'></list-table-header></table>");
+        var page = await Page(browser, "<table class='list'><list-table-header v-if='fwStore.count !== -1'></list-table-header></table>");
         await page.EvaluateAsync("() => { testStore.list_headers=[{field_name:'title',field_name_visible:'Title'}]; testStore.count=1; window.widthSaves=[]; testStore.api.post=async (_, data) => { widthSaves.push(JSON.parse(data.widths)); return {}; }; }");
         var resize = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
         await resize.PressAsync("End");
@@ -233,11 +233,57 @@ public class VueInteractionBrowserTests
             await page.Locator("colgroup col").EvaluateAllAsync<string[]>("els => els.map(el => el.style.width)"));
         var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
         Assert.AreEqual("absolute|8px|col-resize|none", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.position,s.width,s.cursor,s.touchAction].join('|'); }"));
+        Assert.AreEqual("1px|rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.borderRightWidth,s.borderRightColor].join('|'); }"));
+        await handle.HoverAsync();
+        Assert.AreEqual("col-resize", await handle.EvaluateAsync<string>("el => getComputedStyle(el).cursor"), "The resize cursor must override Bootstrap's button cursor.");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => getComputedStyle(el).borderRightColor"));
+        await page.Mouse.MoveAsync(0, 0);
+        Assert.AreEqual("rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => getComputedStyle(el).borderRightColor"));
+        await handle.FocusAsync();
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => getComputedStyle(el).borderRightColor"), "Keyboard focus should expose the resize control too.");
         Assert.AreEqual("relative", await page.Locator("th[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).position"));
         Assert.AreEqual("hidden", await page.Locator("td[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).overflow"));
         await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons = false");
         await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.width === '430px'");
         Assert.AreEqual(3, await page.Locator("colgroup col").CountAsync());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task CtrlDoubleClickFitsVisibleColumnsInOneSaveAndRetainsHiddenWidths(bool isEditable)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var title = new string('W', 120);
+        var titleCell = isEditable ? "<input value='" + title + "'>" : title;
+        var page = await Page(browser, "<table class='list'><list-table-header></list-table-header><tbody><tr><td></td>"
+            + "<td data-fw-column='title'>" + titleCell + "</td>"
+            + "<td data-fw-column='notes'>A medium length value</td><td data-fw-column='code'>x</td></tr></tbody></table>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.uioptions.list.table.rowButtons=false;
+                testStore.list_headers=[{field_name:'title',field_name_visible:'Title',is_sortable:true},
+                    {field_name:'notes',field_name_visible:'Notes'},{field_name:'code',field_name_visible:'X'}];
+                testStore.all_list_columns=[...testStore.list_headers,{field_name:'hidden'}];
+                testStore.list_user_view={widths:{title:100,notes:333,code:333,hidden:190}};
+                window.widthSaves=[]; window.sorts=0;
+                testStore.setFilters=()=>sorts++;
+                testStore.api.post=async(_,data)=>{widthSaves.push(JSON.parse(data.widths)); return {};};
+            }
+            """);
+        var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
+        await handle.DblClickAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length===1");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => widthSaves[0].title===800 && widthSaves[0].notes===333 && widthSaves[0].code===333 && widthSaves[0].hidden===190"));
+        await handle.DblClickAsync(new() { Modifiers = new[] { KeyboardModifier.Control } });
+        await page.WaitForFunctionAsync("() => widthSaves.length===2");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => widthSaves[1].title===800 && widthSaves[1].notes>60 && widthSaves[1].notes<333 && widthSaves[1].code===60 && widthSaves[1].hidden===190 && sorts===0"));
+        await page.EvaluateAsync("() => testStore.api.post=async()=>({success:false})");
+        var previous = await page.EvaluateAsync<string>("() => JSON.stringify(testStore.columnWidths())");
+        Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.saveColumnWidths({title:80,notes:90,unknown:120})"));
+        Assert.AreEqual(previous, await page.EvaluateAsync<string>("() => JSON.stringify(testStore.columnWidths())"));
         await AssertNoClientErrors(page);
     }
 
@@ -819,6 +865,7 @@ public class VueInteractionBrowserTests
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await Browser(playwright);
         var page = await Page(browser, "<edit-form></edit-form>");
+        await page.SetViewportSizeAsync(900, 700); // Exercise the real responsive form Save button.
         await page.EvaluateAsync("""
             () => {
                 testStore.current_screen='edit'; testStore.current_id=7;

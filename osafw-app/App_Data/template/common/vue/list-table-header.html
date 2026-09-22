@@ -18,7 +18,7 @@
                     </div>
                     <button type="button" class="fw-column-resize"
                             :aria-label="'Resize ' + header.field_name_visible"
-                            :title="'Drag or use arrow keys to resize; double-click to fit'"
+                            title="`Drag or use arrow keys to resize; double-click to fit; Ctrl+double-click to fit all columns`"
                             @click.stop @pointerdown.stop.prevent="startResize($event, header)"
                             @dblclick.stop.prevent="autoFit($event, header)"
                             @keydown.stop="resizeKey($event, header)"></button>
@@ -86,6 +86,7 @@
                 const startX = event.clientX;
                 const previous = this.fwStore.list_user_view.widths;
                 const move = pointerEvent => {
+                    this.resizeSession.isMoved = pointerEvent.clientX !== startX;
                     const width = Math.max(
                         60,
                         Math.min(800, Math.round(initial + pointerEvent.clientX - startX))
@@ -94,7 +95,7 @@
                 };
                 const stop = () => this.finishResize(true);
                 const cancel = () => this.finishResize(false);
-                this.resizeSession = { field: header.field_name, move, stop, cancel, previous };
+                this.resizeSession = { field: header.field_name, move, stop, cancel, previous, isMoved: false };
                 window.addEventListener('pointermove', move);
                 window.addEventListener('pointerup', stop);
                 window.addEventListener('pointercancel', cancel);
@@ -112,7 +113,7 @@
                 const width = this.fwStore.columnWidths()[session.field];
                 this.fwStore.list_user_view.widths = session.previous;
                 this.resizeSession = null;
-                if (isSave && width) {
+                if (isSave && session.isMoved && width) {
                     this.fwStore.saveColumnWidth(session.field, width);
                 }
             },
@@ -135,16 +136,31 @@
             },
             autoFit(event, header) {
                 const table = event.currentTarget.closest('table');
-                const cells = Array.from(table.querySelectorAll('[data-fw-column]'))
-                    .filter(cell => cell.dataset.fwColumn === header.field_name);
+                const headers = event.ctrlKey ? this.fwStore.list_headers : [header];
+                const widths = Object.fromEntries(headers.map(column => [column.field_name, 60]));
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
-                let width = 60;
-                cells.forEach(cell => {
+                for (const cell of table.querySelectorAll('[data-fw-column]')) {
+                    const field = cell.dataset.fwColumn;
+                    if (!Object.hasOwn(widths, field)) {
+                        continue;
+                    }
                     context.font = getComputedStyle(cell).font;
-                    width = Math.max(width, ...cell.innerText.split('\n').map(line => context.measureText(line).width + 32));
-                });
-                this.fwStore.saveColumnWidth(header.field_name, width);
+                    const lines = cell.innerText.split('\n');
+                    for (const control of cell.querySelectorAll('input:not([type=hidden]),textarea,select')) {
+                        const value = control.tagName === 'SELECT'
+                            ? Array.from(control.selectedOptions, option => option.text).join(' ') : control.value;
+                        lines.push(...value.split('\n'));
+                    }
+                    for (const line of lines) {
+                        widths[field] = Math.max(widths[field], context.measureText(line).width + 32);
+                    }
+                }
+                if (event.ctrlKey) {
+                    this.fwStore.saveColumnWidths(widths);
+                } else {
+                    this.fwStore.saveColumnWidth(header.field_name, widths[header.field_name]);
+                }
             },
             // Sorting handler
             onSortHeader(e, header) {
