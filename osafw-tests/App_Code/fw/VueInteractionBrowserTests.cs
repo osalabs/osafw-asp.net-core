@@ -23,7 +23,7 @@ public class VueInteractionBrowserTests
     {
         var content = File.ReadAllText(Path.Combine(RepoRoot, "osafw-app/App_Data/template", relativePath));
         return Regex.Replace(content, @"<~/common/vue/([^>]+)>", match => Template(match.Groups[1].Value))
-            .Replace("<~/common/icons/x>", "&#215;"); // Keep the icon-only delete link's hit area in this font-free fixture.
+            .Replace("<~/common/icons/x>", "<span aria-hidden=\"true\">&#215;</span>"); // Preserve nested icon hit targeting without loading fonts.
     }
 
     private static async Task<IPage> Page(IBrowser browser, string markup, FwDict? validationMessages = null)
@@ -289,8 +289,10 @@ public class VueInteractionBrowserTests
             """), "Resizing must not let action links overlap adjacent cells, including custom actions.");
         await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true }).ClickAsync();
         Assert.AreEqual(1, await page.EvaluateAsync<int>("() => customClicks"));
-        await controls.GetByRole(AriaRole.Link, new() { Name = "Delete", Exact = false }).ClickAsync();
+        await page.Locator("tbody input.multicb").CheckAsync();
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Delete", Exact = false }).Locator("span").ClickAsync();
         Assert.AreEqual(1, await page.EvaluateAsync<int>("() => deletes"));
+        Assert.IsTrue(await page.Locator("tbody input.multicb").IsCheckedAsync(), "Clicking the delete icon must preserve selection after failure.");
         await controls.GetByRole(AriaRole.Link, new() { Name = "Audit", Exact = true }).ClickAsync();
         await controls.GetByRole(AriaRole.Link, new() { Name = "History", Exact = true }).ClickAsync();
         Assert.AreEqual(3, await page.EvaluateAsync<int>("() => testStore.count"));

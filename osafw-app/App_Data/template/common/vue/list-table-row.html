@@ -114,9 +114,8 @@
             //click on row - select/unselect row
             onClickRow(e, row) {
                 //console.log('onClickRow',e);
-                var tag = e.target.tagName.toLowerCase();
-                if (['a', 'button', 'input', 'textarea', 'select', 'option'].includes(tag)) {
-                    return; // skip toggling if clicked on a link/button/etc
+                if (e.target.closest('a, button, input, textarea, select, option')) {
+                    return; // Includes icons and other content inside interactive controls.
                 }
                 this.fwStore.hchecked_rows[this.id] = !this.fwStore.hchecked_rows[this.id];
             },
