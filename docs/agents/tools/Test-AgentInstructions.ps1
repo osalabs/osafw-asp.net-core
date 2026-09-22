@@ -416,6 +416,7 @@ foreach ($role in @(
 
 $requiredFiles = @(
     "AGENTS.md",
+    ".gitignore",
     "CLAUDE.md",
     "docs/README.md",
     "docs/agents/workflow.md",
@@ -431,12 +432,18 @@ $requiredFiles = @(
     "docs/agents/glossary.md",
     "docs/agents/heuristics.md",
     "docs/agents/mcp.md",
+    "docs/agents/fpf.md",
+    "docs/agents/fpf-profile.md",
     "docs/agents/model-selection.md",
     "docs/agents/tasks/index.md",
     "docs/agents/instruction-pack.json",
     "docs/agents/tools/Normalize-TextFiles.ps1",
     "docs/agents/tools/Search-Repo.ps1",
-    "docs/agents/tools/Test-AgentInstructions.ps1"
+    "docs/agents/tools/Test-AgentInstructions.ps1",
+    "docs/agents/tools/Fpf.Common.ps1",
+    "docs/agents/tools/Sync-Fpf.ps1",
+    "docs/agents/tools/Read-Fpf.ps1",
+    "docs/agents/tools/Test-Fpf.ps1"
 ) + @($profileFiles.Keys)
 
 foreach ($relativePath in $requiredFiles) {
@@ -449,9 +456,12 @@ if ($failures.Count -eq 0) {
 }
 
 $agentsText = Read-StrictUtf8 (Get-RepoPath "AGENTS.md")
+$gitIgnoreText = Read-StrictUtf8 (Get-RepoPath ".gitignore")
 $claudeText = Read-StrictUtf8 (Get-RepoPath "CLAUDE.md")
 $docsMapText = Read-StrictUtf8 (Get-RepoPath "docs/README.md")
 $reviewRoutingText = Read-StrictUtf8 (Get-RepoPath "docs/agents/review-routing.md")
+$fpfGuideText = Read-StrictUtf8 (Get-RepoPath "docs/agents/fpf.md")
+$fpfProfileText = Read-StrictUtf8 (Get-RepoPath "docs/agents/fpf-profile.md")
 
 if ($claudeText -ne "@AGENTS.md`r`n") {
     Add-Failure "CLAUDE.md must contain only the @AGENTS.md import."
@@ -466,6 +476,7 @@ $rootRoutes = @(
     "docs/agents/review-routing.md",
     "docs/agents/code_reviewer.md",
     "docs/agents/mcp.md",
+    "docs/agents/fpf.md",
     "docs/agents/tasks/index.md"
 )
 foreach ($route in $rootRoutes) {
@@ -479,7 +490,9 @@ $mapRoutes = @(
     "agents/verification.md",
     "agents/review-routing.md",
     "agents/code_reviewer.md",
-    "agents/reviewers/"
+    "agents/reviewers/",
+    "agents/fpf.md",
+    "agents/fpf-profile.md"
 )
 foreach ($route in $mapRoutes) {
     if ($docsMapText.IndexOf($route, [System.StringComparison]::Ordinal) -lt 0) {
@@ -503,6 +516,38 @@ if ($failures.Count -eq 0) {
     Add-Pass "Root, documentation-map, and reviewer routes are connected."
 }
 
+$fpfIgnoreRuleCount = [regex]::Matches($gitIgnoreText, '(?m)^/\.codex-local/\r?$').Count
+if ($fpfIgnoreRuleCount -ne 1) {
+    Add-Failure ".gitignore must contain the exact /.codex-local/ rule once; application-owned rules must be preserved."
+}
+
+$fpfGuideRequirements = @(
+    "docs/agents/tools/Sync-Fpf.ps1",
+    "docs/agents/tools/Read-Fpf.ps1",
+    "docs/agents/tools/Test-Fpf.ps1",
+    "docs/agents/fpf-app.md",
+    "https://github.com/ailev/FPF",
+    "CC BY 4.0",
+    "full commit SHA",
+    "last attempt",
+    "last success",
+    "candidate revision",
+    "accepted revision"
+)
+foreach ($requiredText in $fpfGuideRequirements) {
+    if ($fpfGuideText.IndexOf($requiredText, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        Add-Failure "FPF guide is missing required portable contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @("Problem Structuring and Decision Support", "Systems Engineering", "Method Engineering", "Computational Thinking", '`CMP`', "docs/agents/fpf-app.md", "FPF Core")) {
+    if ($fpfProfileText.IndexOf($requiredText, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        Add-Failure "FPF profile is missing required route text: $requiredText"
+    }
+}
+if (-not ($failures | Where-Object { $_ -like 'FPF guide*' -or $_ -like 'FPF profile*' -or $_ -like '.gitignore must contain*' })) {
+    Add-Pass "Optional FPF routes, cache boundary, profile families, attribution, and exact ignored cache rule are connected."
+}
+
 $roleOwners = @{}
 foreach ($role in $profileFiles.Values) {
     $roleOwners[$role] = if ($role.StartsWith("reviewer_", [System.StringComparison]::Ordinal)) {
@@ -524,7 +569,7 @@ if (-not ($failures | Where-Object { $_ -like 'Canonical role owner is missing*'
 }
 
 $textFiles = [System.Collections.Generic.List[string]]::new()
-foreach ($relativePath in @("AGENTS.md", "CLAUDE.md", "docs/README.md", "docs/agents/tasks/index.md")) {
+foreach ($relativePath in @("AGENTS.md", ".gitignore", "CLAUDE.md", "docs/README.md", "docs/agents/tasks/index.md")) {
     $path = Get-RepoPath $relativePath
     if (Test-Path -LiteralPath $path) {
         $textFiles.Add($path)
@@ -627,6 +672,8 @@ $semanticPolicyFiles = @(
     "AGENTS.md",
     "docs/agents/workflow.md",
     "docs/agents/review-routing.md",
+    "docs/agents/fpf.md",
+    "docs/agents/fpf-profile.md",
     "docs/prompts/orchestrator.md",
     "docs/prompts/agent_upgrade.md"
 )
@@ -773,6 +820,9 @@ try {
     if ([int]$instructionPack.schemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace([string]$instructionPack.packVersion) -or @($instructionPack.files).Count -eq 0) {
         Add-Failure "Instruction-pack metadata has an unsupported schema or missing version."
     }
+    elseif ([string]$instructionPack.packVersion -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+        Add-Failure "Instruction-pack version must use major.minor.patch release format."
+    }
     foreach ($entry in @($instructionPack.files)) {
         if ([string]::IsNullOrWhiteSpace([string]$entry.path) -or [string]::IsNullOrWhiteSpace([string]$entry.upgradeMode)) {
             Add-Failure "Instruction-pack entry is missing path or upgradeMode."
@@ -795,18 +845,37 @@ try {
     if ($managedPaths -notcontains "docs/agents/model-selection.md") {
         Add-Failure "Instruction-pack does not manage the optional model-selection advice."
     }
-    foreach ($requiredManagedPath in @(
-        "docs/agents/tools/Normalize-TextFiles.ps1",
-        "docs/agents/tools/Search-Repo.ps1",
-        "docs/agents/tools/Test-AgentInstructions.ps1"
-    )) {
-        if ($managedPaths -notcontains $requiredManagedPath) {
-            Add-Failure "Instruction-pack metadata does not manage required helper: $requiredManagedPath"
+    $requiredManagedPaths = @{
+        ".gitignore" = "merge-ignore-rule"
+        "docs/agents/fpf.md" = "merge"
+        "docs/agents/fpf-profile.md" = "merge"
+        "docs/agents/tools/Normalize-TextFiles.ps1" = "merge"
+        "docs/agents/tools/Search-Repo.ps1" = "merge"
+        "docs/agents/tools/Test-AgentInstructions.ps1" = "merge"
+        "docs/agents/tools/Fpf.Common.ps1" = "merge"
+        "docs/agents/tools/Sync-Fpf.ps1" = "merge"
+        "docs/agents/tools/Read-Fpf.ps1" = "merge"
+        "docs/agents/tools/Test-Fpf.ps1" = "merge"
+    }
+    foreach ($requiredManagedPath in $requiredManagedPaths.Keys) {
+        $entries = @($instructionPack.files | Where-Object { [string]$_.path -ceq $requiredManagedPath })
+        if ($entries.Count -ne 1 -or [string]$entries[0].upgradeMode -cne $requiredManagedPaths[$requiredManagedPath]) {
+            Add-Failure "Instruction-pack must manage required path exactly once with $($requiredManagedPaths[$requiredManagedPath]): $requiredManagedPath"
         }
+    }
+    $preservedApplicationPaths = @($instructionPack.preserveInCopiedApplications | ForEach-Object { [string]$_ })
+    foreach ($preservedPath in @("docs/agents/fpf-app.md", ".codex-local/fpf/")) {
+        if ($preservedApplicationPaths -notcontains $preservedPath) {
+            Add-Failure "Instruction-pack copied-application preservation is missing: $preservedPath"
+        }
+    }
+    if ($managedPaths -contains "docs/agents/fpf-app.md") {
+        Add-Failure "Instruction-pack must preserve, not manage, the optional app-owned FPF profile extension."
     }
     $validationCommands = @($instructionPack.validation | ForEach-Object { [string]$_ })
     foreach ($expectedCommand in @(
         "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
         "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
         "git diff --check"
     )) {
@@ -817,6 +886,7 @@ try {
     $windowsPowerShell51Fallback = @($instructionPack.windowsPowerShell51Fallback | ForEach-Object { [string]$_ })
     foreach ($expectedCommand in @(
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1",
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
     )) {
         if ($windowsPowerShell51Fallback -notcontains $expectedCommand) {
@@ -843,6 +913,8 @@ $policyFiles = @(
     "docs/agents/glossary.md",
     "docs/agents/heuristics.md",
     "docs/agents/mcp.md",
+    "docs/agents/fpf.md",
+    "docs/agents/fpf-profile.md",
     "docs/agents/reviewers/agent-workflow.md",
     "docs/agents/reviewers/consumer-contract.md",
     "docs/agents/reviewers/performance-scale.md",
@@ -874,7 +946,7 @@ if ($null -ne $instructionPack -and -not ($failures | Where-Object { $_ -match '
     Add-Pass "Portable shared policy files, including every instruction-pack managed file, contain no private machine paths or supplied private identifiers."
 }
 
-$linkFiles = $policyFiles | Where-Object { $_ -ne "AGENTS.md" -and $_ -ne "CLAUDE.md" }
+$linkFiles = $portableSharedFiles | Where-Object { $_.EndsWith(".md", [System.StringComparison]::OrdinalIgnoreCase) -and $_ -ne "CLAUDE.md" }
 foreach ($relativePath in $linkFiles) {
     $filePath = Get-RepoPath $relativePath
     $baseDirectory = [System.IO.Path]::GetDirectoryName($filePath)
@@ -899,7 +971,7 @@ foreach ($relativePath in $linkFiles) {
     }
 }
 if (-not ($failures | Where-Object { $_ -like 'Broken local link*' })) {
-    Add-Pass "Local links in shared agent policy resolve."
+    Add-Pass "Local links in shared policy and managed Markdown files resolve."
 }
 
 $tasksDirectory = Get-RepoPath "docs/agents/tasks"

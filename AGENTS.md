@@ -16,6 +16,7 @@
    - build, test, provider, worktree, or cleanup decisions: `docs/agents/verification.md`;
    - meaningful-risk review: `docs/agents/review-routing.md`, then `docs/agents/code_reviewer.md` and only triggered overlays;
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
+   - optional FPF/DPF source lookup for a material conceptual, architecture, or method question: `docs/agents/fpf.md`;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
 5. For broad searches prefer `docs/agents/tools/Search-Repo.ps1`. Opt into ignored drafts, large files, vendor content, or task history only when directly relevant. For files over 1 MB, search headings/patterns and read bounded ranges rather than streaming the file.
 6. Default to direct execution. `docs/agents/workflow.md` owns delegation eligibility, role selection, ownership, and fallback. Load `docs/prompts/orchestrator.md` only for work that qualifies under that workflow.
@@ -34,6 +35,7 @@
 - Controllers end in `Controller`; public actions end in `Action`. Template-rendering actions conventionally return `FwDict`, while an action may write the response directly. Keep controllers focused on request/response orchestration.
 - Table models generally inherit `FwModel` and are obtained from the current `FW` instance with `fw.model<T>()` or `fw.model(name)`. Prefer model-owned business/data access where it clarifies the boundary; keep controller queries narrow and parameterized.
 - Prefer `FwDynamicController` or `FwVueController` with `config.json` for standard CRUD and compose views under `osafw-app/App_Data/template`. For a new standard module follow `docs/feature_modules.md` and its approval-gated schema/scaffolder workflow.
+- Name constants `UPPER_SNAKE_CASE` and boolean variables, fields, and parameters with `is` or `is_` prefixes. Keep source readable with blank lines between logical blocks and expanded control flow; follow [naming and readability](docs/naming.md#casing). Apply these rules to new and changed code without unrelated renames or breaking existing public contracts.
 - Nearby code and canonical topic docs own detailed conventions: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, and `datetime.md`.
 - Add XML docs for non-obvious framework intent, loose shapes, security/access expectations, side effects, exceptions, or null/empty behavior; do not restate signatures.
 

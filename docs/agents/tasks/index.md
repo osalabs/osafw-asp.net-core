@@ -2,6 +2,8 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-20-instruction-optimization.md` - Applied an FPF/DPF instruction review: streamlined guidance, clarified authority and verification, and repaired pack-version and Markdown-link validation.
+- `summary-2026-09-20-fpf-integration.md` - Added portable FPF/DPF source caching, reviewed revisions, bounded retrieval and copied-application instruction-pack integration.
 - `summary-2026-09-08-r01-email-delivery.md` - Made email delivery failures observable and added database-backed test-recipient precedence with provider migrations.
 - `summary-2025-05-07-001.md` - Converted legacy VB-style comment snippets to idiomatic C# equivalents across controllers, framework helpers, and models.
 - `summary-2025-10-08-bootstrap.md` - Completed bootstrap: documented project in `AGENTS.md`, created `docs/agents/{heuristics,domain,glossary}.md`.
@@ -189,6 +191,11 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-08-framework-testability.md` - Added explicit DB factories and scoped configuration; verified repeatable disposal, logger restoration, SQLite ownership, simpler fixtures, deterministic cron cancellation, and current stable dependencies with clean NuGet audits.
 - `summary-2026-09-08-r02-calculated-list-columns.md` - Added dependency-aware calculated list columns across Dynamic/Vue selection, search, filtering, sorting, JSON, and export paths, using a single map format with the legacy Vue adapter.
 - `summary-2026-09-08-vue-interactions.md` - Saved Vue widths, neutral validation issues, scoped filter visibility, action capabilities, immutable fields, and optional quick-edit context retention; verified after master and calculated-column synchronization.
+- `summary-2026-09-08-pdf-local-assets.md` - Opt-in PDF local assets with bounded ConvUtils helpers, shared best-effort Utils.deleteFile cleanup and stale-file retries; recorded constant/boolean naming and readable-source rules.
+- `summary-2026-09-08-error-page-guidance.md` - Translated, overridable status-specific HTML error guidance with direct conditional includes, safe messages and direct anonymous-403 sign-in links.
+- `summary-2026-09-08-schema-codegen-metadata.md` - Added neutral schema comments, schema-qualified SQL Server and cold OLE metadata handling, safer typed-row generation, and framework-table exclusion from the `/Dev/Manage` model picker.
+- `summary-2026-09-08-typed-row-regeneration.md` - Added opt-in development-only bulk Row regeneration with a conditional Roslyn dependency, one guarded POST, and Git diff/revert review; removed the preview/apply UI.
+- `summary-2026-09-08-attachment-lookup-helpers.md` - Explicit attachment category/entity/reverse-link reads; September 9 PR #287 fix shares the overridable parent policy and verifies nonconventional, denied-other-parent, and missing-model controls.
 - `summary-2026-09-08-template-selector-cache.md` - Bounded select-template label caching preserves first-match behavior and reloads changed files.
 - `summary-2026-09-08-configured-environment.md` - Consistent host-resolved environment selection with scoped override state and offline fallbacks.
 - `summary-2026-09-08-nullable-conversion-contracts.md` - Nullable conversion inputs and schema-aligned optional Row descriptions and audit IDs.

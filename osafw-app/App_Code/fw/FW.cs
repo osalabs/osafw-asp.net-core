@@ -1713,7 +1713,7 @@ public class FW : IDisposable
 
         ps["_json"] = true;
         ps["title"] = publicMsg;
-        ps["error"] = new FwDict
+        var error = new FwDict
         {
             ["code"] = code,
             ["message"] = publicMsg,
@@ -1722,6 +1722,15 @@ public class FW : IDisposable
             //["category"] = Ex?.GetType().Name,
             //["details"] = new FwList()
         };
+        if (code == 403 && !isLogged)
+        {
+            var loginUrl = config("ROOT_URL").toStr() + "/Login";
+            var returnUrl = request.Path.ToUriComponent() + request.QueryString.ToUriComponent();
+            if (Utils.isAppUrl(returnUrl, config("ROOT_DOMAIN").toStr()))
+                loginUrl = Utils.addUrlQueryParam(loginUrl, "gourl", returnUrl);
+            error["login_url"] = loginUrl;
+        }
+        ps["error"] = error;
 
         //legacy response: TODO DEPRECATE
         ps["code"] = code;

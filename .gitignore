@@ -22,3 +22,4 @@
 /docs/agents/artifacts/*
 !/docs/agents/artifacts/.gitignore
 /codex-security-scans/**
+/.codex-local/
