@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.5.1",
+  "packVersion": "1.6.0",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
@@ -10,6 +10,7 @@
     { "path": "CLAUDE.md", "upgradeMode": "replace-import", "benchmarkMode": "preserve-existing" },
     { "path": "docs/README.md", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/workflow.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/learning-scenarios.md", "upgradeMode": "merge" },
     { "path": "docs/agents/verification.md", "upgradeMode": "merge" },
     { "path": "docs/agents/review-routing.md", "upgradeMode": "merge" },
     { "path": "docs/agents/code_reviewer.md", "upgradeMode": "merge" },
@@ -24,6 +25,8 @@
     { "path": "docs/agents/model-selection.md", "upgradeMode": "merge" },
     { "path": "docs/agents/tools/Normalize-TextFiles.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Search-Repo.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Get-LearningSignals.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Test-LearningSignals.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Test-AgentInstructions.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Fpf.Common.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Sync-Fpf.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
@@ -32,6 +35,7 @@
     { "path": "docs/prompts/README.md", "upgradeMode": "merge" },
     { "path": "docs/prompts/orchestrator.md", "upgradeMode": "merge" },
     { "path": "docs/prompts/agent_upgrade.md", "upgradeMode": "merge" },
+    { "path": "docs/prompts/agent_reflection.md", "upgradeMode": "merge" },
     { "path": "docs/agents/instruction-pack.json", "upgradeMode": "replace-metadata" },
     { "path": ".codex/agents/discovery_fast.toml", "upgradeMode": "replace-profile" },
     { "path": ".codex/agents/implementation_fast.toml", "upgradeMode": "replace-profile" },
@@ -65,12 +69,14 @@
   "validation": [
     "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
+    "pwsh -NoProfile -File docs/agents/tools/Test-LearningSignals.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
     "git diff --check"
   ],
   "windowsPowerShell51Fallback": [
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1",
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-LearningSignals.ps1",
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
   ]
 }
