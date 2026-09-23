@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-22-vue-subtable-heading.md` - Matched the Vue demo subtable headings to Dynamic; inspected validation duplication without changing validation behavior.
 - `summary-2026-09-22-vue-resize-layout.md` - Preserved rendered widths on the first column resize, kept row actions on one line, and verified browser regressions plus live Chrome geometry.
 - `summary-2026-09-22-vue-acceptance.md` - Authenticated browser acceptance captures, fixed action-column wrapping and link bindings, and verified 52 browser cases.
 - `summary-2026-09-22-vue-resize-feedback.md` - Narrowed the upgrade changelog, refined resize handles and Ctrl+double-click auto-fit, bumped the asset version, and verified 50 browser cases with Bootstrap.

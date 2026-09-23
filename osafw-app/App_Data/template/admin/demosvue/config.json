@@ -482,7 +482,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 hr-header fs-5",
                     "type": "subtable",
                     "model": "DemosItems"
                 },
@@ -839,7 +839,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 text-center hr-header fs-5",
                     "type": "subtable_edit",
                     "model": "DemosItems",
                     "related_field_name": "demos_id",
