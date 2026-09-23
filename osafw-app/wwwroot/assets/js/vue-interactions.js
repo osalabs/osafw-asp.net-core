@@ -184,8 +184,20 @@ export const interactionActions = {
     fieldIssues(def, form) {
         const field = def.issue_field ?? def.field;
         const rowId = form?.row_id ?? form?.i?.id;
-        return this.formIssues(this.edit_data).filter(issue => issue.field === field
+        return this.formIssues(form?.save_result ? form : this.edit_data).filter(issue => issue.field === field
+            && (issue.tab === undefined || issue.tab === this.activeFormTab)
             && (issue.row_id === undefined || String(issue.row_id) === String(rowId)));
+    },
+    issueLabel(issue) {
+        const fields = [...(this.showform_fields_tabs?.[issue.tab] ?? []), ...(this.showform_fields ?? []), ...Object.values(this.showform_fields_tabs ?? {}).flat()];
+        const child = /^item-(.+)#([^[]+)\[([^\]]+)\]$/.exec(issue.field ?? '');
+        const field = child ? child[1] : issue.field;
+        const def = fields.find(def => (def.issue_field ?? def.field) === field);
+        if (child) {
+            const column = def?.showform_fields?.find(def => def.field === child[3]);
+            return (def?.label ?? field) + ' #' + child[2] + ' / ' + (column?.label ?? child[3]);
+        }
+        return def?.label ?? field;
     },
     async focusFormIssue(issue, root) {
         if (!issue.field || !root) {

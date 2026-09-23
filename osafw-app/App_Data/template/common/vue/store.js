@@ -72,6 +72,7 @@ let state = {
             },
         },
         edit: {
+            is_validation_summary: false,
             header: { // edit-header, can be false
                 btnAddNew: true,
             },
@@ -252,11 +253,18 @@ function editFormSaveSignature(form, tab = '') {
 function retainEditFormSaveFailures(form, context, isSaved, issues) {
     const response = form.save_result;
     const failures = editFormSaveFailures.get(form) ?? new Map();
+    let notification = null;
     if (isSaved) failures.delete(context.tab);
     else {
         const failureIssues = issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab }));
+        const message = response?.error?.message || failureIssues.find(issue => issue.severity === 'error')?.message
+            || window.fwConst.ERR_CODES_MAP.SAVE_FAILED;
+        const signature = JSON.stringify([message, failureIssues.map(issue => [issue.field, issue.row_id, issue.message])]);
+        if (failures.get(context.tab)?.signature !== signature) {
+            notification = context.tabLabel ? context.tabLabel + ': ' + message : message;
+        }
         // Transport/server/auth failures remain save errors, not field validation.
-        failures.set(context.tab, { response, issues: failureIssues, tabLabel: context.tabLabel });
+        failures.set(context.tab, { response, issues: failureIssues, tabLabel: context.tabLabel, signature, message });
     }
     if (!failures.size) {
         editFormSaveFailures.delete(form);
@@ -268,12 +276,14 @@ function retainEditFormSaveFailures(form, context, isSaved, issues) {
     form.save_result = {
         ...response,
         success: false,
+        failed_tabs: [...failures].map(([tab, failure]) => ({
+            tab, label: failure.tabLabel, message: failure.message,
+            is_validation: failure.issues.some(issue => issue.severity === 'error' && issue.field)
+        })),
         error: {
             ...firstFailure.response?.error,
             message: outstanding.map(failure => {
-                const message = failure.response?.error?.message
-                    || failure.issues.find(issue => issue.severity === 'error')?.message || 'Save failed';
-                return failure.tabLabel ? failure.tabLabel + ': ' + message : message;
+                return failure.tabLabel ? failure.tabLabel + ': ' + failure.message : failure.message;
             }).join('; '),
             details: Object.assign({}, ...outstanding.map(failure => failure.response?.error?.details ?? {})),
         },
@@ -282,6 +292,7 @@ function retainEditFormSaveFailures(form, context, isSaved, issues) {
             ...outstanding.flatMap(failure => failure.issues),
         ],
     };
+    return notification;
 }
 
 // Merge into the captured draft without dispatching an active-form extension for an inactive form.
@@ -485,6 +496,15 @@ let getters = {
     },
     savedErrorMessage: (state) => {
         return state.edit_data?.save_result?.error?.message ?? '';
+    },
+    failedFormTabs: (state) => state.edit_data?.save_result?.failed_tabs ?? [],
+    formSaveErrors: (state) => {
+        const response = state.edit_data?.save_result;
+        if (response?.failed_tabs) {
+            return response.failed_tabs.filter(failure => !failure.is_validation);
+        }
+        return response?.error && !state.formIssues().some(issue => issue.severity === 'error' && issue.field)
+            ? [{ message: response.error.message }] : [];
     }
 };
 
@@ -1063,12 +1083,15 @@ let actions = {
                     form.save_result = error.body ?? { error: { message: 'Server error' } };
                     if (error.response >= 500) {
                         serverError = error;
-                        this.handleError(error, 'saveEditData');
+                        this.handleError(error, 'saveEditData', true);
                     }
                     // A requested newer draft can retry after validation or transport failure.
                 }
 
-                retainEditFormSaveFailures(form, currentRequest, isSaved, this.formIssues(form));
+                const notification = retainEditFormSaveFailures(form, currentRequest, isSaved, this.formIssues(form));
+                if (notification && this.edit_data === form) {
+                    Toast(notification, { theme: 'text-bg-danger' });
+                }
                 if (saving.requests.length) continue;
                 if (!isSaved || editFormSaveFailures.has(form)) return serverError ?? false;
                 if (this.edit_data !== form) return false;

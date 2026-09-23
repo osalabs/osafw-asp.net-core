@@ -5,6 +5,8 @@ This name already exists in our database === 数据库中已存在此名称
 Invalid Email === 电子邮件无效
 Invalid === 无效
 Invalid value === 无效值
+Save failed === 保存失败
+Not saved === 未保存
 Please review these fields: === 请检查以下字段：
 Warning: === 警告：
 Error: === 错误：

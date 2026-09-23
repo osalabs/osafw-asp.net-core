@@ -1279,6 +1279,19 @@ form [class^="err-"] {
   display: none;
 }
 
+.fw-subtable-validation {
+  position: relative;
+}
+
+.fw-subtable-validation > .fw-subtable-feedback {
+  display: none;
+}
+
+.fw-subtable-validation:hover > .fw-subtable-feedback,
+.fw-subtable-validation:focus-within > .fw-subtable-feedback {
+  display: block;
+}
+
 form .has-danger label {
   color: var(--bs-form-invalid-color);
 }

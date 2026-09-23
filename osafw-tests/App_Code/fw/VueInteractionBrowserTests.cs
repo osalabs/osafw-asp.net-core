@@ -82,7 +82,7 @@ public class VueInteractionBrowserTests
             <script type="module">
             import { createApp } from 'vue'; import { defineStore, createPinia } from 'pinia';
             const fwStoreState = {}, fwStoreGetters = {}, fwStoreActions = {};
-            const mande = () => ({}); window.Toast = () => {};
+            const mande = () => ({}); window.toasts = []; window.Toast = message => toasts.push(message);
             """ + storeScript + """
             const pinia = createPinia(); window.testStore = useFwStore(pinia);
             window.testStore.handleError = () => {};
@@ -144,12 +144,13 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("""
             () => {
                 testStore.edit_data = {save_result:{error:{details:{title:true,email:'EMAIL',other:'UNKNOWN'}}}};
+                testStore.uioptions.edit.is_validation_summary = true;
             }
             """);
 
-        Assert.AreEqual(REQUIRED_MESSAGE, await page.Locator("li button").Nth(0).TextContentAsync());
-        Assert.AreEqual("电子邮件无效", await page.Locator("li button").Nth(1).TextContentAsync());
-        Assert.AreEqual("无效值", await page.Locator("li button").Nth(2).TextContentAsync());
+        Assert.AreEqual("title: " + REQUIRED_MESSAGE, await page.Locator(".fw-validation-summary button").Nth(0).TextContentAsync());
+        Assert.AreEqual("email: 电子邮件无效", await page.Locator(".fw-validation-summary button").Nth(1).TextContentAsync());
+        Assert.AreEqual("other: 无效值", await page.Locator(".fw-validation-summary button").Nth(2).TextContentAsync());
         Assert.AreEqual(0, await page.Locator("img").CountAsync());
         await AssertNoClientErrors(page);
     }
@@ -467,17 +468,18 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("""
             () => {
                 testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.uioptions.edit.is_validation_summary=true;
                 testStore.form_tabs=[{tab:'',label:'Main'},{tab:'details',label:'Details'}];
                 testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',is_edit_readonly:true},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
                 testStore.edit_data={id:7,i:{id:7,code:'Fixed',title:'Entered'},save_result:{error:{message:'Review'},validation_issues:[{severity:'error',field:'title',tab:'details',message:'Check title',value:'<img src=x onerror=alert(1)>'},{severity:'warning',field:'code',message:'Check code'}]}};
             }
             """);
-        await page.GetByRole(AriaRole.Button, new() { Name = "Check title", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField === 'title'");
         Assert.AreEqual(0, await page.Locator("[data-fw-field='code'] input").CountAsync());
         Assert.AreEqual(0, await page.Locator("img[src='x']").CountAsync());
         await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Values") }).ClickAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "Check title", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('.fw-fieldset.is-collapsed')");
         await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',is_edit_readonly:true}]; }");
         await page.Locator("[data-fw-field='code'] input").WaitForAsync(new() { State = WaitForSelectorState.Visible });
@@ -490,6 +492,52 @@ public class VueInteractionBrowserTests
                     && issues[1].field==='other' && issues[1].message==='Required field';
             }
             """));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task ValidationPresentationUsesOneFieldMessageOptionalSummaryAndDeduplicatedToast()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<edit-form></edit-form>");
+        await page.EvaluateAsync("""
+            async () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.showform_fields=[{field:'email',type:'email',label:'Email'},{field:'title',type:'input',label:'Title'}];
+                testStore.edit_data={id:7,i:{id:7,email:'bad',title:''}};
+                window.invalidResponse={error:{message:'Please review your input',details:{email:'EMAIL',title:true}},
+                    validation_issues:[{severity:'error',field:'email',message:'Invalid Email'}]};
+                testStore.api.post=async()=>invalidResponse;
+                await testStore.saveEditData();
+            }
+            """);
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => toasts.length"));
+        Assert.AreEqual(0, await page.Locator(".alert-danger").CountAsync(), "Ordinary validation has no global alert; summary defaults off.");
+        Assert.AreEqual(1, await page.Locator("[data-fw-field='email'] .fw-field-feedback").CountAsync());
+        Assert.AreEqual("Invalid Email", (await page.Locator("[data-fw-field='email'] .fw-field-feedback").InnerTextAsync()).Trim());
+        Assert.AreEqual("Required field", (await page.Locator("[data-fw-field='title'] .fw-field-feedback").InnerTextAsync()).Trim());
+        Assert.AreEqual(2, await page.Locator("input.is-invalid").CountAsync());
+        await page.EvaluateAsync("async () => { testStore.uioptions.edit.is_validation_summary=true; await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => toasts.length"), "Repeated autosave failures must not repeat the same toast.");
+        Assert.AreEqual(1, await page.Locator(".fw-validation-summary.alert-danger").CountAsync());
+        Assert.AreEqual(0, await page.Locator(".fw-validation-summary ul,.fw-validation-summary li").CountAsync());
+        await page.GetByRole(AriaRole.Button, new() { Name = "Email: Invalid Email", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField==='email'");
+        await page.EvaluateAsync("""
+            async () => {
+                testStore.api.post=async()=>({id:7,validation_issues:[{severity:'warning',field:'email',message:'Check address'}]});
+                await testStore.saveEditData();
+            }
+            """);
+        Assert.AreEqual(0, await page.Locator("input.is-invalid").CountAsync());
+        Assert.AreEqual(1, await page.Locator(".fw-validation-summary.alert-warning").CountAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus && !testStore.failedFormTabs.length && toasts.length===1"));
+        await page.EvaluateAsync("async () => { testStore.edit_data.i.email='bad again'; testStore.api.post=async()=>invalidResponse; await testStore.saveEditData(); }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => toasts.length"), "A new failure after a successful save must notify again.");
+        await page.EvaluateAsync("async () => { testStore.api.post=async()=>{throw {response:403,body:{error:{message:'Permission denied'}}};}; await testStore.saveEditData(); }");
+        Assert.AreEqual(0, await page.Locator(".fw-validation-summary").CountAsync());
+        Assert.AreEqual("Permission denied", (await page.Locator(".alert-danger").InnerTextAsync()).Trim());
         await AssertNoClientErrors(page);
     }
 
@@ -902,6 +950,7 @@ public class VueInteractionBrowserTests
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("""
             kind => {
+                testStore.uioptions.edit.is_validation_summary = true;
                 originalDetail.idesc='Invalid detail'; originalRelation.idesc='Requested relation';
                 testStore.edit_data.route_return='Index';
                 window.navigations=0; testStore.openListScreen=() => navigations++;
@@ -923,7 +972,9 @@ public class VueInteractionBrowserTests
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details') && navigations===0"), "A successful Relations save cannot resolve the failed Details tab or navigate away.");
         var isValidation = failureKind is "structured" or "legacy";
         Assert.AreEqual(isValidation, await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='')"), "Only validation failures belong in field issues.");
-        Assert.IsTrue(await page.GetByRole(AriaRole.Alert).IsVisibleAsync());
+        Assert.AreEqual(isValidation ? 0 : 1, await page.GetByRole(AriaRole.Alert).CountAsync());
+        Assert.IsTrue(await page.GetByRole(AriaRole.Status).IsVisibleAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.failedFormTabs.length===1 && testStore.failedFormTabs[0].label==='Details'"));
 
         await page.EvaluateAsync("async () => { originalRelation.idesc='Later relation'; await testStore.saveEditData(); }");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0 && databaseRows.links[0].idesc==='Later relation'"), "The failure must outlive the original request queue.");
@@ -943,10 +994,10 @@ public class VueInteractionBrowserTests
             """);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherFormSucceeded && testStore.savedStatus===false && navigations===0"), "Failures belong to the captured form.");
 
-        if (!isValidation) await page.GetByRole(AriaRole.Link, new() { Name = "Details", Exact = true }).ClickAsync();
+        if (!isValidation) await page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("^Details") }).ClickAsync();
         else
         {
-            await page.GetByRole(AriaRole.Button, new() { Name = failureKind == "structured" ? "Correct detail" : "Invalid", Exact = true }).ClickAsync();
+            await page.Locator(".fw-validation-summary button").Filter(new() { HasText = failureKind == "structured" ? "Correct detail" : "Invalid" }).ClickAsync();
             await page.WaitForFunctionAsync("() => testStore.activeFormTab==='' && document.activeElement?.closest('[data-fw-row]')?.dataset.fwRow==='11'");
         }
         await page.Locator("[data-fw-row='11'] textarea").FillAsync("Corrected detail");
@@ -1235,14 +1286,26 @@ public class VueInteractionBrowserTests
                 testStore.edit_data={id:7,i:{id:7},subtables:{lines:[
                     {id:11,demo_dicts_id:1,iname:'First',idesc:'First notes',is_checkbox:1},
                     {id:22,demo_dicts_id:2,iname:'Second',idesc:'Second notes',is_checkbox:0}
-                ]},save_result:{validation_issues:[{severity:'error',field:'item-lines#22[idesc]',row_id:'22',message:'Review second notes'}]}};
+                ]},save_result:{error:{details:{'item-lines#22[idesc]':'WRONG'}},validation_issues:[{severity:'error',field:'item-lines#22[idesc]',row_id:'22',message:'Review second notes'}]}};
             }
             """);
         var rows = page.Locator("#subtable-form tbody tr");
         await rows.Nth(1).WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        var rowHeight = await rows.Nth(1).EvaluateAsync<double>("row => row.getBoundingClientRect().height");
+        var tooltip = rows.Nth(1).Locator(".fw-subtable-feedback");
+        Assert.AreEqual(1, await tooltip.CountAsync(), "Legacy and structured errors share one subtable message.");
+        Assert.IsFalse(await tooltip.IsVisibleAsync());
         await page.Locator("#subtable-issue").ClickAsync();
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-row]')?.dataset.fwRow==='22'");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.tagName==='TEXTAREA' && document.activeElement.closest('[data-fw-field]')?.dataset.fwField==='item-lines#22[idesc]'"));
+        Assert.IsTrue(await tooltip.IsVisibleAsync());
+        Assert.AreEqual(rowHeight, await rows.Nth(1).EvaluateAsync<double>("row => row.getBoundingClientRect().height"));
+        Assert.AreEqual(await tooltip.GetAttributeAsync("id"), await rows.Nth(1).Locator("textarea").GetAttributeAsync("aria-describedby"));
+        await rows.Nth(0).Locator("textarea").FocusAsync();
+        Assert.IsFalse(await tooltip.IsVisibleAsync());
+        await rows.Nth(1).Locator("textarea").HoverAsync();
+        Assert.IsTrue(await tooltip.IsVisibleAsync());
+        Assert.AreEqual(rowHeight, await rows.Nth(1).EvaluateAsync<double>("row => row.getBoundingClientRect().height"));
 
         var existing = rows.Nth(0);
         Assert.IsTrue(await existing.Locator("select").IsDisabledAsync());

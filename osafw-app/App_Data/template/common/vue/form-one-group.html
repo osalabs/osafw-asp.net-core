@@ -10,10 +10,6 @@
                           @cancel-form="$emit('cancel-form', $event)"
                           :def="def"
                           :lookups="lookups" />
-        <div v-for="(issue,index) in fwStore.fieldIssues(def, form)" :key="index" :class="issue.severity === 'warning' ? 'text-warning-emphasis' : 'text-danger'" class="small" aria-live="polite">
-            {{issue.message}}
-            <span v-if="issue.value !== undefined" class="d-block">`Entered value:` {{issue.value}}</span>
-        </div>
     </div>
 </script>
 

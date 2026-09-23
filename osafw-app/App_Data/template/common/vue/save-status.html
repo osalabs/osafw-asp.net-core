@@ -1,5 +1,11 @@
-<div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger" role="alert">
-    {{fwStore.savedErrorMessage}}
+<div v-if="fwStore.failedFormTabs.length" class="small text-body-secondary mb-2" role="status">
+    `Not saved`
+    <template v-for="failure in fwStore.failedFormTabs" :key="failure.tab">
+        <span v-if="failure.label"> &middot; <button type="button" class="btn btn-link btn-sm p-0 text-danger" @click="fwStore.setFormTab(failure.tab)">{{failure.label}}</button></span>
+    </template>
+</div>
+<div v-for="(failure,index) in fwStore.formSaveErrors" :key="index" class="alert alert-danger" role="alert">
+    {{failure.message}}
 </div>
 <div v-if="fwStore.edit_data?.save_result?.is_list_refresh_failed" class="alert alert-warning" role="alert">
     `Saved, but the list could not refresh. Reload the list to see current values.`

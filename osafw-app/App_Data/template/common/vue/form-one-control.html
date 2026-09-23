@@ -386,7 +386,11 @@
     </template>
 
     </template>
-    <div v-if="is_invalid && !is_invalid_true" class="invalid-feedback">{{error_text}}</div>
+    <div v-for="(issue,index) in controlIssues" :key="index" class="fw-field-feedback d-block"
+         :class="issue.severity === 'warning' ? 'small text-warning-emphasis' : 'invalid-feedback'" aria-live="polite">
+        {{issue.message}}
+        <span v-if="issue.value !== undefined" class="d-block">`Entered value:` {{issue.value}}</span>
+    </div>
 </script>
 
 <script type="module">
@@ -502,7 +506,10 @@
                 return window.fwConst.ERR_CODES_MAP[this.error];
             },
             is_invalid() {
-                return !!this.error;
+                return this.controlIssues.some(issue => issue.severity === 'error');
+            },
+            controlIssues() {
+                return this.fwStore.fieldIssues(this.def, this.form);
             },
             is_invalid_true() {
                 return this.error === true;

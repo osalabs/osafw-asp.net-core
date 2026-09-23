@@ -3,3 +3,4 @@ EXISTS|`This name already exists in our database`
 EMAIL|`Invalid Email`
 WRONG|`Invalid`
 INVALID|`Invalid value`
+SAVE_FAILED|`Save failed`
