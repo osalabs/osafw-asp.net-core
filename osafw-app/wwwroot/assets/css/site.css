@@ -989,11 +989,6 @@ table.list tbody td.fw-list-cell-wrap {
   overflow-wrap: anywhere;
 }
 
-table.list.fw-list-fixed tbody td.list-row-controls {
-  white-space: normal !important;
-  overflow-wrap: anywhere;
-}
-
 table.list tbody a {
   text-decoration: none;
 }

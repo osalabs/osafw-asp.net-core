@@ -50,6 +50,7 @@
         template: '#list-table-header-template',
         props: {
         },
+        emits: ['prepare-resize'],
         data: () => ({
             cb_check_all: false
         }),
@@ -81,6 +82,7 @@
                 }
 
                 this.finishResize(false);
+                this.$emit('prepare-resize');
                 const cell = event.currentTarget.closest('th');
                 const initial = cell.getBoundingClientRect().width;
                 const startX = event.clientX;
@@ -123,6 +125,7 @@
                 }
 
                 event.preventDefault();
+                this.$emit('prepare-resize');
                 const current = this.fwStore.columnWidths()[header.field_name]
                     ?? event.currentTarget.closest('th').getBoundingClientRect().width;
                 let width = current + (event.key === 'ArrowRight' ? 10 : -10);
@@ -135,6 +138,7 @@
                 this.fwStore.saveColumnWidth(header.field_name, width);
             },
             autoFit(event, header) {
+                this.$emit('prepare-resize');
                 const table = event.currentTarget.closest('table');
                 const headers = event.ctrlKey ? this.fwStore.list_headers : [header];
                 const widths = Object.fromEntries(headers.map(column => [column.field_name, 60]));

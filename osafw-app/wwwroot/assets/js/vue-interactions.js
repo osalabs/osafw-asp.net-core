@@ -1,4 +1,5 @@
 // Shared interaction behavior; authorization and validation remain server responsibilities.
+// Retained for customized templates that import the original width defaults.
 export const LIST_TABLE_COLUMN_WIDTHS = Object.freeze({
     selection: 40,
     standard: 160

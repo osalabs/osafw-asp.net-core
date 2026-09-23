@@ -26,7 +26,7 @@ public class VueInteractionBrowserTests
             .Replace("<~/common/icons/x>", "<span aria-hidden=\"true\">&#215;</span>"); // Preserve nested icon hit targeting without loading fonts.
     }
 
-    private static async Task<IPage> Page(IBrowser browser, string markup, FwDict? validationMessages = null)
+    private static async Task<IPage> Page(IBrowser browser, string markup, FwDict? validationMessages = null, bool isRealListCells = false)
     {
         var assets = Environment.GetEnvironmentVariable("FW_BROWSER_ASSETS_ROOT") ?? Path.Combine(RepoRoot, "osafw-app/wwwroot/assets");
         if (!File.Exists(Path.Combine(assets, "lib/vue/vue.esm-browser.js"))) Assert.Inconclusive("Restore frontend libraries, or set FW_BROWSER_ASSETS_ROOT to a restored assets directory.");
@@ -97,6 +97,12 @@ public class VueInteractionBrowserTests
             </script>
             """;
         var components = "";
+        if (isRealListCells)
+        {
+            setup = setup.Replace("'list-cell-ro', 'list-cell-input', ", "").Replace("'list-cell-checkbox', ", "");
+            foreach (var name in new[] { "list-cell-ro.html", "list-cell-input.html", "list-cell-checkbox.html" })
+                components += Regex.Replace(Template(name), @"<~[^>]+>", "");
+        }
         foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
             components += Regex.Replace(Template(name).Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test"), @"<~[^>]+>", "");
         components += Regex.Replace(TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html"), @"<~[^>]+>", "");
@@ -214,7 +220,7 @@ public class VueInteractionBrowserTests
     }
 
     [TestMethod, TestCategory("VueBrowser")]
-    public async Task FullTableLoadsSharedWidthsAndResizeStyles()
+    public async Task FullTableLoadsSavedWidthsAndResizeStyles()
     {
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await Browser(playwright);
@@ -228,10 +234,10 @@ public class VueInteractionBrowserTests
                 testStore.count = 1;
             }
             """);
-        await page.WaitForFunctionAsync("() => document.querySelector('table.list')?.style.width === '590px'");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list')?.style.tableLayout === 'fixed'");
         Assert.AreEqual("fixed", await page.Locator("table.list").EvaluateAsync<string>("el => getComputedStyle(el).tableLayout"));
-        CollectionAssert.AreEqual(new[] { "40px", "230px", "160px", "160px" },
-            await page.Locator("colgroup col").EvaluateAllAsync<string[]>("els => els.map(el => el.style.width)"));
+        Assert.AreEqual(230, await page.Locator("th[data-fw-column='title']").EvaluateAsync<double>("el => el.getBoundingClientRect().width"), 1);
+        Assert.AreEqual(4, await page.Locator("colgroup col").CountAsync());
         var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
         Assert.AreEqual("absolute|8px|col-resize|none", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.position,s.width,s.cursor,s.touchAction].join('|'); }"));
         Assert.AreEqual("1px|rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.borderRightWidth,s.borderRightColor].join('|'); }"));
@@ -245,7 +251,7 @@ public class VueInteractionBrowserTests
         Assert.AreEqual("relative", await page.Locator("th[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).position"));
         Assert.AreEqual("hidden", await page.Locator("td[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).overflow"));
         await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons = false");
-        await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.width === '430px'");
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('colgroup col').length === 3");
         Assert.AreEqual(3, await page.Locator("colgroup col").CountAsync());
         await AssertNoClientErrors(page);
     }
@@ -280,6 +286,7 @@ public class VueInteractionBrowserTests
             """, isButtonsLeft);
         var controls = page.Locator("td.list-row-controls");
         await controls.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("nowrap", await controls.EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
         Assert.IsTrue(await controls.EvaluateAsync<bool>("""
             cell => {
                 const bounds = cell.getBoundingClientRect();
@@ -297,6 +304,14 @@ public class VueInteractionBrowserTests
         await controls.GetByRole(AriaRole.Link, new() { Name = "History", Exact = true }).ClickAsync();
         Assert.AreEqual(3, await page.EvaluateAsync<int>("() => testStore.count"));
 
+        var initialControlsWidth = await controls.EvaluateAsync<double>("cell => cell.getBoundingClientRect().width");
+        await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons.buttons.push({label:'Additional action revealed after loading '.repeat(5),url:'extra'})");
+        await page.WaitForFunctionAsync("width => document.querySelector('td.list-row-controls').getBoundingClientRect().width > width", initialControlsWidth);
+        Assert.IsTrue(await controls.EvaluateAsync<bool>("""
+            cell => [...cell.querySelectorAll('a')].every(link =>
+                link.getClientRects().length === 1 && link.getBoundingClientRect().right <= cell.getBoundingClientRect().right)
+            """), "Actions revealed by child updates must fit inside the fixed action column.");
+
         await page.EvaluateAsync("() => testStore.is_readonly = true");
         Assert.AreEqual("none", await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true })
             .EvaluateAsync<string>("el => getComputedStyle(el).pointerEvents"));
@@ -306,6 +321,102 @@ public class VueInteractionBrowserTests
 
         await page.EvaluateAsync("() => { testStore.is_readonly = false; testStore.list_user_view.widths = {}; }");
         Assert.AreEqual("nowrap", await controls.EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task FirstColumnResizePreservesOtherColumnsAndSingleLineActions(bool isEditable, bool isButtonsLeft)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-table v-if='fwStore.count > 0'></list-table>", isRealListCells: true);
+        await page.EvaluateAsync("""
+            options => {
+                testStore.loadIndex = async () => {};
+                testStore.is_list_edit = options.isEditable;
+                testStore.uioptions.list.table.isButtonsLeft = options.isButtonsLeft;
+                testStore.uioptions.list.table.rowButtons.quickedit = {title:'Quick Edit'};
+                testStore.list_headers = [
+                    {field_name:'code',field_name_visible:'Code',input_type:'input'},
+                    {field_name:'title',field_name_visible:'Display name',input_type:'input'},
+                    {field_name:'email',field_name_visible:'Email',input_type:'email'},
+                    {field_name:'is_active',field_name_visible:'CB',input_type:'cb'},
+                    {field_name:'status',field_name_visible:'Status',input_type:'input'}];
+                testStore.list_rows = [{id:'7',code:'D-7',title:'Example business record',email:'test@example.invalid',is_active:true,status:'Open'}];
+                testStore.list_user_view = {widths:{},density:'table-sm'};
+                testStore.count = 1;
+                window.widthSaves = [];
+                testStore.api.post = async (_,data) => { widthSaves.push(JSON.parse(data.widths)); return {}; };
+                window.measureLayout = () => [...document.querySelector('table.list').tHead.rows[0].cells].map(cell => {
+                    const rect=cell.getBoundingClientRect();
+                    return {field:cell.dataset.fwColumn,width:rect.width,left:rect.left};
+                });
+                window.otherColumnsUnchanged = () => measureLayout().every((cell,index) =>
+                    cell.field === 'email' || Math.abs(cell.width-beforeLayout[index].width) <= 1);
+            }
+            """, new { isEditable, isButtonsLeft });
+        var table = page.Locator("table.list");
+        var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Email", Exact = true });
+        await handle.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        await page.EvaluateAsync("() => window.beforeLayout = measureLayout()");
+        var box = (await handle.BoundingBoxAsync())!;
+        await page.Mouse.MoveAsync(box.X + 4, box.Y + 4);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(box.X + 36, box.Y + 4);
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherColumnsUnchanged()"), "First drag must preserve all other rendered column widths.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const before=beforeLayout.find(cell=>cell.field==='email'), after=measureLayout().find(cell=>cell.field==='email');
+                return Math.abs(after.left-before.left)<=1 && Math.abs(after.width-before.width-32)<=1;
+            }
+            """), "The dragged divider must stay under the pointer instead of jumping with the table layout.");
+        await page.EvaluateAsync("""
+            () => {
+                window.actionMeasurements = 0;
+                window.originalRangeRect = Range.prototype.getBoundingClientRect;
+                Range.prototype.getBoundingClientRect = function() { actionMeasurements++; return originalRangeRect.call(this); };
+            }
+            """);
+        await page.Mouse.MoveAsync(box.X + 40, box.Y + 4);
+        await page.Mouse.MoveAsync(box.X + 44, box.Y + 4);
+        await page.Mouse.MoveAsync(box.X + 36, box.Y + 4);
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => actionMeasurements"), "Further pointer moves must not remeasure every row's actions.");
+        await page.EvaluateAsync("() => Range.prototype.getBoundingClientRect = originalRangeRect");
+        await page.Mouse.UpAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length === 1");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => Object.keys(widthSaves[0]).join(',')==='email' && otherColumnsUnchanged()"));
+        Assert.AreEqual("nowrap", await page.Locator("td.list-row-controls").EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
+        Assert.IsTrue(await page.Locator("td.list-row-controls").EvaluateAsync<bool>("""
+            cell => {
+                const bounds=cell.getBoundingClientRect(), links=[...cell.querySelectorAll('a')];
+                return links.every(link=>link.getClientRects().length===1 && link.getBoundingClientRect().right<=bounds.right)
+                    && Math.max(...links.map(link=>link.getBoundingClientRect().top))-Math.min(...links.map(link=>link.getBoundingClientRect().top))<2;
+            }
+            """), "All standard actions must remain on a single line inside their column.");
+
+        await page.EvaluateAsync("() => testStore.list_user_view.widths = {}");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.tableLayout === ''");
+        await page.EvaluateAsync("() => window.beforeLayout = measureLayout()");
+        await handle.PressAsync("ArrowRight");
+        await page.WaitForFunctionAsync("() => widthSaves.length === 2");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherColumnsUnchanged()"), "Keyboard resize after Reset must also preserve other columns.");
+
+        await page.EvaluateAsync("() => testStore.list_user_view.widths = {}");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.tableLayout === ''");
+        await page.EvaluateAsync("() => window.beforeLayout = measureLayout()");
+        await handle.DblClickAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length === 3");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherColumnsUnchanged()"), "Single-column auto-fit must preserve other columns.");
+        var savedWidth = await page.EvaluateAsync<double>("() => testStore.columnWidths().email");
+        await page.EvaluateAsync("() => testStore.count = 0");
+        await table.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await page.EvaluateAsync("() => testStore.count = 1");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list')?.style.tableLayout === 'fixed'");
+        Assert.AreEqual(savedWidth, await page.Locator("th[data-fw-column='email']").EvaluateAsync<double>("el => el.getBoundingClientRect().width"), 1);
         await AssertNoClientErrors(page);
     }
 
