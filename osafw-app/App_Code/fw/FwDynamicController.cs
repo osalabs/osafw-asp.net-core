@@ -1134,6 +1134,8 @@ public partial class FwDynamicController : FwController
             string dtype = def["type"].toStr(); // type is required
             string field = def["field"].toStr();
 
+            def["is_edit_readonly_active"] = id > 0 && def["is_edit_readonly"].toBool();
+
             // for just loaded forms for existing items - pre-load filter's values into "item"
             if (is_get_existing && def.TryGetValue("filter_for", out object? value))
             {

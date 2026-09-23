@@ -92,7 +92,7 @@ public class VueInteractionBrowserTests
             fwApp.config.warnHandler = message => testErrors.push('Vue warning: ' + message);
             fwApp.config.errorHandler = error => testErrors.push('Vue error: ' + (error?.message ?? String(error)));
             fwApp.component('autocomplete', { props: ['modelValue'], emits: ['update:modelValue'], template: `<input :value="modelValue" @input="$emit('update:modelValue', $event.target.value)">` });
-            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'form-control-help-block', 'att-select', 'list-pagination', 'list-btn-multi'])
+            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'att-select', 'list-pagination', 'list-btn-multi'])
                 fwApp.component(name, { template: '<span></span>' });
             </script>
             """;
@@ -103,7 +103,7 @@ public class VueInteractionBrowserTests
             foreach (var name in new[] { "list-cell-ro.html", "list-cell-input.html", "list-cell-checkbox.html" })
                 components += Regex.Replace(Template(name), @"<~[^>]+>", "");
         }
-        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
+        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-control-help-block.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
             components += Regex.Replace(Template(name).Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test"), @"<~[^>]+>", "");
         components += Regex.Replace(TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html"), @"<~[^>]+>", "");
         await page.SetContentAsync(diagnostics + imports + "<script type='text/x-template' id='test-root-template'>" + markup + "</script><div id='app'></div>" + setup + components + "<script type='module'>fwApp.mount('#app'); window.testReady=true;</script>");
@@ -470,19 +470,21 @@ public class VueInteractionBrowserTests
                 testStore.current_screen='edit'; testStore.current_id=7;
                 testStore.uioptions.edit.is_validation_summary=true;
                 testStore.form_tabs=[{tab:'',label:'Main'},{tab:'details',label:'Details'}];
-                testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',is_edit_readonly:true},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
+                testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',is_edit_readonly:true,help_text:'Set when creating the record; read-only when editing.'},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
                 testStore.edit_data={id:7,i:{id:7,code:'Fixed',title:'Entered'},save_result:{error:{message:'Review'},validation_issues:[{severity:'error',field:'title',tab:'details',message:'Check title',value:'<img src=x onerror=alert(1)>'},{severity:'warning',field:'code',message:'Check code'}]}};
             }
             """);
         await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField === 'title'");
         Assert.AreEqual(0, await page.Locator("[data-fw-field='code'] input").CountAsync());
+        Assert.AreEqual("Set when creating the record; read-only when editing.", await page.Locator("[data-fw-field='code'] .form-text").InnerTextAsync());
         Assert.AreEqual(0, await page.Locator("img[src='x']").CountAsync());
         await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Values") }).ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('.fw-fieldset.is-collapsed')");
-        await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',is_edit_readonly:true}]; }");
+        await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',is_edit_readonly:true,help_text:'Set when creating the record; read-only when editing.'}]; }");
         await page.Locator("[data-fw-field='code'] input").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("Set when creating the record; read-only when editing.", await page.Locator("[data-fw-field='code'] .form-text").InnerTextAsync());
         Assert.IsTrue(await page.EvaluateAsync<bool>("""
             () => {
                 testStore.edit_data.save_result={error:{details:{title:true,REQUIRED:true,other:true,INVALID:true}},

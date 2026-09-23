@@ -560,6 +560,8 @@
             "field": "icode",
             "label": "Code",
             "type": "input",
+            "is_edit_readonly": true,
+            "help_text": "Set when creating the record; read-only when editing.",
             "maxlength": 32
         },
         {

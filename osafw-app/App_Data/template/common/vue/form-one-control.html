@@ -1,5 +1,8 @@
 <script type="text/x-template" id="form-one-control-template">
-    <p v-if="isEditReadonly" class="form-control-plaintext fw-edit-readonly">{{def.type === 'password' ? '••••••' : value}}</p>
+    <template v-if="isEditReadonly">
+        <p class="form-control-plaintext fw-edit-readonly">{{def.type === 'password' ? '••••••' : value}}</p>
+        <form-control-help-block :text="def.help_text" />
+    </template>
     <template v-else>
     <p v-if="def.type=='id'" class="form-control-plaintext">
         {{value}}

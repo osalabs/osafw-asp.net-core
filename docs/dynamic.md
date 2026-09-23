@@ -1630,6 +1630,8 @@ Initial Vue state contains `capabilities: { create, edit, delete }`. It reflects
 
 Set `is_edit_readonly: true` on a form field to allow entry when creating a row and display its value without an editable control afterward. Existing-row updates ignore submitted changes to that field, including forged requests; ordinary full-form submissions remain usable. New rows retain the field. Editable subtables can declare child fields in their nested `showform_fields`, using the same metadata. Custom subtable controls must also honor those child definitions for presentation. This metadata governs the standard controller save paths; model writes and custom actions must enforce any application-wide immutability requirement separately.
 
+Both `/Admin/DemosDynamic` and `/Admin/DemosVue` demonstrate this with the existing Code (`icode`) field, without an additional database column. Open Add New to enter a Code, then edit an existing record to see its read-only value. Both states show the help text "Set when creating the record; read-only when editing."
+
 ### Filter visibility and quick edit
 
 The filter panel starts open and remembers its visibility in browser storage. Keys include origin, application/controller URL, list/edit mode, and related-record context. Hiding the panel preserves its filter values. If storage is unavailable, the panel remains usable with an open default.
