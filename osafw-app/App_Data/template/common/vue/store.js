@@ -1,13 +1,9 @@
 // define some global constants
 window.fwConst = {
-    ERR_CODES_MAP: {
-        REQUIRED: 'Required field',
-        EXISTS: 'This name already exists in our database',
-        WRONG: 'Invalid',
-        EMAIL: 'Invalid Email',
-    },
+    ERR_CODES_MAP: <~validation_messages json noescape>,
 };
 <~/common/vue/store_core.js>
+import { interactionActions } from '<~GLOBAL[ASSETS_URL]>/js/vue-interactions.js?v<~GLOBAL[SITE_VERSION]>';
 
 let state = {
     global: {}, //global config
@@ -22,6 +18,10 @@ let state = {
     edit_title: '',
     add_new_title: '',
     is_readonly: false,
+    capabilities: {},
+    is_filter_panel_open: true,
+    is_quick_edit_keep_context: false,
+    edit_save_states: [], // in-flight requests and coalesced followups, scoped to the captured form
     is_activity_logs: false, //true if activity logs enabled
 
     // default UI options, override in specific controller via store.js
@@ -72,6 +72,7 @@ let state = {
             },
         },
         edit: {
+            is_validation_summary: false,
             header: { // edit-header, can be false
                 btnAddNew: true,
             },
@@ -178,7 +179,180 @@ function serializeListSearchValue(value) {
     return JSON.stringify(value);
 }
 
+function editFormSaveSnapshot(form) {
+    // Match the JSON request boundary; later v-model changes must not mutate a submitted request.
+    return JSON.parse(JSON.stringify({ id: form.id, i: form.i, subtables: form.subtables,
+        multi_rows: form.multi_rows, att_links: form.att_links, att_files: form.att_files }));
+}
+
+const editFormSaveDebounces = new WeakMap();
+const editFormSaveFailures = new WeakMap();
+const editFormSavedSnapshots = new WeakMap();
+const editFormSaveContextKey = Symbol();
+function editFormSaveContext(store) {
+    return {
+        [editFormSaveContextKey]: true,
+        tab: store.activeFormTab,
+        tabLabel: store.form_tabs?.find(tab => tab.tab === store.activeFormTab)?.label ?? store.activeFormTab,
+        // The standard server processes compound fields only from this tab, even when
+        // its response contains other submitted subtables. Untabbed extensions keep their existing merge.
+        fields: store.form_tabs?.length
+            ? store.tabbedShowFormFields.map(def => ({ field: def.field, type: def.type })) : null,
+    };
+}
+
+function processedSubtableSaveResult(response, context) {
+    if (!context.fields) return response;
+    const subtableFields = context.fields.filter(def => def.type === 'subtable_edit').map(def => def.field);
+    const processed = entries => Object.fromEntries(Object.entries(entries ?? {})
+        .filter(([field]) => subtableFields.includes(field)));
+    return { ...response, subtables: processed(response?.subtables), subtable_row_ids: processed(response?.subtable_row_ids) };
+}
+
+// Advance only values processed by this request. Other tabs retain their last
+// acknowledged values, including across later saves of the same captured draft.
+function rememberEditFormSave(form, submitted, response, context, fieldId) {
+    const acknowledged = editFormSaveSnapshot(submitted);
+    acknowledged.id = form.id;
+    if (form.i[fieldId]) acknowledged.i[fieldId] = form.i[fieldId];
+    const baseline = context.fields ? editFormSavedSnapshots.get(form) : acknowledged;
+    if (context.fields) {
+        baseline.id = acknowledged.id;
+        baseline.i = acknowledged.i;
+        for (const [key, types] of Object.entries({
+            subtables: ['subtable_edit'], multi_rows: ['multicb', 'multicb_prio'], att_files: ['att_files_edit']
+        })) {
+            for (const def of context.fields.filter(def => types.includes(def.type))) {
+                if (acknowledged[key]?.[def.field] !== undefined) {
+                    baseline[key] ??= {};
+                    baseline[key][def.field] = acknowledged[key][def.field];
+                } else if (baseline[key]) {
+                    delete baseline[key][def.field];
+                }
+            }
+        }
+        if (context.fields.some(def => def.type === 'att_links_edit')) {
+            if (acknowledged.att_links === undefined) delete baseline.att_links;
+            else baseline.att_links = acknowledged.att_links;
+        }
+    }
+    // Apply server normalization and assigned IDs to the acknowledged copy too.
+    reconcileSubtableSaveResult(response, null, baseline);
+    editFormSavedSnapshots.set(form, baseline);
+}
+
+function editFormSaveSignature(form, tab = '') {
+    // Acknowledging different tabs can insert object keys in a different order.
+    return JSON.stringify([tab, editFormSaveSnapshot(form)], (key, value) =>
+        value && typeof value === 'object' && !Array.isArray(value)
+            ? Object.fromEntries(Object.keys(value).sort().map(name => [name, value[name]])) : value);
+}
+
+// A save on another tab cannot repair these failures: its server-side field processing
+// is separate. Keep them with the draft across queues until each failed tab succeeds.
+function retainEditFormSaveFailures(form, context, isSaved, issues) {
+    const response = form.save_result;
+    const failures = editFormSaveFailures.get(form) ?? new Map();
+    let notification = null;
+    if (isSaved) failures.delete(context.tab);
+    else {
+        const failureIssues = issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab }));
+        const message = response?.error?.message || failureIssues.find(issue => issue.severity === 'error')?.message
+            || window.fwConst.ERR_CODES_MAP.SAVE_FAILED;
+        const signature = JSON.stringify([message, failureIssues.map(issue => [issue.field, issue.row_id, issue.message])]);
+        if (failures.get(context.tab)?.signature !== signature) {
+            notification = context.tabLabel ? context.tabLabel + ': ' + message : message;
+        }
+        // Transport/server/auth failures remain save errors, not field validation.
+        failures.set(context.tab, { response, issues: failureIssues, tabLabel: context.tabLabel, signature, message });
+    }
+    if (!failures.size) {
+        editFormSaveFailures.delete(form);
+        return;
+    }
+    editFormSaveFailures.set(form, failures);
+    const outstanding = [...failures.values()];
+    const firstFailure = outstanding[0];
+    form.save_result = {
+        ...response,
+        success: false,
+        failed_tabs: [...failures].map(([tab, failure]) => ({
+            tab, label: failure.tabLabel, message: failure.message,
+            is_validation: failure.issues.some(issue => issue.severity === 'error' && issue.field)
+        })),
+        error: {
+            ...firstFailure.response?.error,
+            message: outstanding.map(failure => {
+                return failure.tabLabel ? failure.tabLabel + ': ' + failure.message : failure.message;
+            }).join('; '),
+            details: Object.assign({}, ...outstanding.map(failure => failure.response?.error?.details ?? {})),
+        },
+        validation_issues: [
+            ...(isSaved ? issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab })) : []),
+            ...outstanding.flatMap(failure => failure.issues),
+        ],
+    };
+    return notification;
+}
+
+// Merge into the captured draft without dispatching an active-form extension for an inactive form.
+function reconcileSubtableSaveResult(response, submittedSubtables, form) {
+    if (!form || !response) return;
+    const subtableRowIds = response.subtable_row_ids ?? {};
+    const subtableRows = response.subtables ?? {};
+    Object.keys(subtableRowIds).forEach(field => {
+        const rows = form.subtables?.[field];
+        const rowMap = subtableRowIds[field] ?? {};
+        if (!Array.isArray(rows)) return;
+        rows.forEach(row => {
+            const newId = rowMap[row.id];
+            if (!newId) return;
+            row.id = newId;
+            row.is_new = false;
+        });
+    });
+
+    Object.keys(subtableRows).forEach(field => {
+        const serverRows = subtableRows[field] ?? [];
+        if (!form.subtables) form.subtables = {};
+        const existingRows = form.subtables[field] ?? [];
+        const existingById = new Map(existingRows.map(row => [String(row.id), row]));
+        const rowMap = subtableRowIds[field] ?? {};
+        const submittedById = new Map((submittedSubtables?.[field] ?? []).map(row => [String(rowMap[row.id] ?? row.id), row]));
+        const updatedRows = [];
+        const serverIds = new Set();
+        serverRows.forEach(row => {
+            const id = String(row.id);
+            serverIds.add(id);
+            const localRow = existingById.get(id);
+            const submittedRow = submittedById.get(id);
+            if (submittedSubtables && submittedRow && !localRow) return; // removed while saving
+            if (localRow) {
+                Object.keys(row).forEach(col => {
+                    if (!submittedSubtables || (submittedRow && JSON.stringify(localRow[col]) === JSON.stringify(submittedRow[col]))) {
+                        localRow[col] = row[col];
+                    }
+                });
+                updatedRows.push(localRow);
+            } else updatedRows.push(row);
+        });
+        if (submittedSubtables) {
+            existingRows.forEach(row => {
+                if (serverIds.has(String(row.id))) return;
+                const submittedRow = submittedById.get(String(row.id));
+                const isChanged = submittedRow && Object.keys({ ...submittedRow, ...row }).some(col =>
+                    col !== 'id' && col !== 'is_new' && JSON.stringify(row[col]) !== JSON.stringify(submittedRow[col]));
+                if (!submittedRow || isChanged) updatedRows.push(row); // added/changed draft absent from old response
+            });
+        }
+        existingRows.splice(0, existingRows.length, ...updatedRows);
+        form.subtables[field] = existingRows;
+    });
+}
+
 let getters = {
+    is_saving_edit: (state) => state.edit_save_states.some(save => save.form === state.edit_data),
+    is_pending_edit_save: (state) => (state.edit_save_states.find(save => save.form === state.edit_data)?.requests.length ?? 0) > 0,
     doubleCount: (state) => state.count * 2, //sample getter
     //return true if state.list_headers contains at least one non-empty search_value
     isListSearch: (state) => state.list_headers.some(h => hasListSearchValue(h.search_value)),
@@ -318,10 +492,19 @@ let getters = {
     savedStatus: (state) => {
         let sr = state.edit_data?.save_result ?? null;
         if (!sr) return null; // no save initiated yet
-        return !(!sr.id || sr.error); //saved when we have id and no error
+        return !!sr.id && sr.success !== false && !sr.error && !(sr.validation_issues ?? []).some(issue => issue.severity !== 'warning');
     },
     savedErrorMessage: (state) => {
         return state.edit_data?.save_result?.error?.message ?? '';
+    },
+    failedFormTabs: (state) => state.edit_data?.save_result?.failed_tabs ?? [],
+    formSaveErrors: (state) => {
+        const response = state.edit_data?.save_result;
+        if (response?.failed_tabs) {
+            return response.failed_tabs.filter(failure => !failure.is_validation);
+        }
+        return response?.error && !state.formIssues().some(issue => issue.severity === 'error' && issue.field)
+            ? [{ message: response.error.message }] : [];
     }
 };
 
@@ -431,6 +614,7 @@ let actions = {
             suffix = '/' + (id ? id + '/edit' : 'new');
             if (!id) {
                 this.edit_data = { i: {} };
+                editFormSavedSnapshots.set(this.edit_data, editFormSaveSnapshot(this.edit_data));
             } else if (!is_same_mode) {
                 this.edit_data = null;
             }
@@ -485,7 +669,7 @@ let actions = {
 
             let def_type = def.type;
             header.input_type = def_type;
-            if (!this.list_editable_def_types.includes(def_type)) header.is_ro = true;
+            if (!this.list_editable_def_types.includes(def_type) || def.is_edit_readonly) header.is_ro = true;
 
             //add all other def attributes to header (if not exists in header yet)
             Object.keys(def).forEach(attr => {
@@ -601,6 +785,7 @@ let actions = {
             const data = await this.api.get(id, options);
             //console.log('loadItem data', data);
             this.edit_data = data;
+            editFormSavedSnapshots.set(this.edit_data, editFormSaveSnapshot(this.edit_data));
             window.setTimeout(() => document.dispatchEvent(new CustomEvent('fw-page-change')), 0);
 
         } catch (error) {
@@ -708,13 +893,13 @@ let actions = {
             //check if we got required field error
             let is_required = error.body?.error?.details?.REQUIRED ?? false;
             if (is_required) {
-                err_msg = 'Required field';
+                err_msg = window.fwConst.ERR_CODES_MAP.REQUIRED;
             }
 
             //check if we got specific field error code
             let field_err_code = error.body?.error?.details?.[col.field_name] ?? '';
             if (field_err_code && field_err_code !== true) {
-                err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? 'Invalid';
+                err_msg = window.fwConst.ERR_CODES_MAP[field_err_code] ?? window.fwConst.ERR_CODES_MAP.INVALID;
             }
 
             this.cells_errors[id_name] = err_msg;
@@ -726,10 +911,12 @@ let actions = {
             const req = { XSS: this.XSS };
             //console.log('deleteRow req', req);
             const response = await this.api.delete(id, { query: req });
-            //console.log('deleteRow response', response);
+            if (response?.error || response?.success === false) return false;
+            return true;
 
         } catch (error) {
             this.handleError(error, 'deleteRow');
+            return false;
         }
     },
     async deleteCheckedRows() {
@@ -740,17 +927,17 @@ let actions = {
 
             //console.log('deleteCheckedRows req', req);
             const response = await this.api.put(req);
-            //console.log('deleteCheckedRows response', response);
+            if (response?.error || response?.success === false) return false;
 
             //clear checked rows
             this.hchecked_rows = {};
 
         } catch (error) {
             this.handleError(error, 'deleteCheckedRows');
-        } finally {
-            //reload list to show changes
-            this.loadIndex();
+            return false;
         }
+        await this.loadIndex();
+        return true;
     },
 
     async customCheckedRows(url) {
@@ -795,163 +982,156 @@ let actions = {
     async saveEditDataDebounced(delay) {
         if (!delay) delay = 500;
         // debounce saveEditData
-        if (this.edit_data) this.edit_data.save_result = {};
+        const form = this.edit_data;
+        if (form && !editFormSaveFailures.has(form)) form.save_result = {};
+        const previous = editFormSaveDebounces.get(this);
+        const requests = previous?.form === form ? previous.requests : [];
+        const request = editFormSaveContext(this);
+        const index = requests.findIndex(pending => pending.tab === request.tab);
+        if (index >= 0) requests[index] = request;
+        else requests.push(request);
+        editFormSaveDebounces.set(this, { form, requests });
         if (this.saveEditDataDebouncedTimeout) clearTimeout(this.saveEditDataDebouncedTimeout);
         this.saveEditDataDebouncedTimeout = setTimeout(() => {
-            this.saveEditData();
+            editFormSaveDebounces.delete(this);
+            if (form && this.edit_data === form) requests.forEach(context => this.saveEditData(context));
         }, delay);
     },
-    //save edit form data
-    async saveEditData() {
+    // Save requests coalesce per tab, retaining the order of explicitly requested tabs.
+    // A different form can save independently;
+    // its request, response, and busy indicator never belong to the previously open form.
+    async saveEditData(context = null) {
+        const form = this.edit_data;
+        if (!form || !this.canSaveForm()) return false;
+        // Vue event handlers may pass a MouseEvent; only internally captured contexts override the active tab.
+        const request = context?.[editFormSaveContextKey] === true ? context : editFormSaveContext(this);
+        const signature = editFormSaveSignature(form, request.tab);
+        const active = this.edit_save_states.find(save => save.form === form);
+        if (active) {
+            const index = active.requests.findIndex(pending => pending.tab === request.tab);
+            if (active.signature === signature) {
+                if (index >= 0) active.requests.splice(index, 1);
+            } else if (index >= 0) active.requests[index] = request;
+            else active.requests.push(request);
+            return false;
+        }
+        const api = this.api;
+        const xss = this.XSS;
+        const fieldId = this.field_id;
+        const attachmentDefs = this.showform_fields.map(def => ({ field: def.field, att_post_prefix: def.att_post_prefix }));
+        const isNew = !form.id;
+        if (!editFormSavedSnapshots.has(form)) {
+            editFormSavedSnapshots.set(form, editFormSaveSnapshot(isNew ? { id: form.id, i: {} } : form));
+        }
+        this.edit_save_states.push({ form, signature, requests: [request] });
+        const saving = this.edit_save_states[this.edit_save_states.length - 1];
         try {
-            const req = { item: this.edit_data.i, XSS: this.XSS };
-            const activeTab = this.activeFormTab;
-            if (activeTab) {
-                req.tab = activeTab;
-            }
-            // also submit checked multi_rows, if form has any
-            Object.keys(this.edit_data.multi_rows ?? {}).forEach(field => {
-                let rows = this.edit_data.multi_rows[field] ?? [];
-                let checked_rows = rows.filter(row => row.is_checked);
-                if (checked_rows.length) {
-                    req[field + '_multi'] = {};
-                    checked_rows.forEach(row => {
-                        req[field + '_multi'][row.id] = 1;
+            while (true) {
+                const currentRequest = saving.requests.shift();
+                const submitted = editFormSaveSnapshot(form);
+                saving.signature = editFormSaveSignature(submitted, currentRequest.tab);
+                let isSaved = false;
+                let response;
+                let serverError;
+                try {
+                    const req = { item: submitted.i, XSS: xss };
+                    if (currentRequest.tab) req.tab = currentRequest.tab;
+                    Object.keys(submitted.multi_rows ?? {}).forEach(field => {
+                        const checkedRows = (submitted.multi_rows[field] ?? []).filter(row => row.is_checked);
+                        if (checkedRows.length) req[field + '_multi'] = Object.fromEntries(checkedRows.map(row => [row.id, 1]));
                     });
-                };
-            });
 
-            //also submit subtables
-            // row ids submitted as: item-FIELD[ID]=1
-            // input name format: item-FIELD#ID[field_name]=value
-            Object.keys(this.edit_data.subtables ?? {}).forEach(field => {
-                let rows = this.edit_data.subtables[field] ?? [];
-                if (rows.length) {
-                    req['item-' + field] = {};
-                }
-                rows.forEach(row => {
-                    req['item-' + field + '#' + row.id] = {};
-                    Object.keys(row).forEach(col => {
-                        if (col == 'id' || col == 'is_new') return;
-                        const value = row[col];
-                        if (Array.isArray(value)) return;
-                        if (value && typeof value === 'object') return;
-                        req['item-' + field + '#' + row.id][col] = value;
-                    });
-                    req['item-' + field][row.id] = 1;
-                });
-            });
-
-            //also submit attachments (att_links) as att[ID]=1
-            if (this.edit_data.att_links?.length) {
-                req.att = {};
-                this.edit_data.att_links.forEach(att_id => {
-                    req.att[att_id] = 1;
-                });
-            }
-
-            //also submit attachments (att_files) as att_post_prefix[ID]=1 (or field_name[ID]=1)
-            if (this.edit_data.att_files) {
-                Object.keys(this.edit_data.att_files).forEach(field_name => {
-                    // find att_post_prefix from field definition
-                    let def = this.showform_fields.find(f => f.field == field_name);
-                    let att_post_prefix = def?.att_post_prefix ?? field_name;
-
-                    let att_ids = this.edit_data.att_files[field_name] ?? [];
-                    if (att_ids.length) {
-                        req[att_post_prefix] = req[att_post_prefix] || {};
-                        att_ids.forEach(att_id => {
-                            req[att_post_prefix][att_id] = 1;
+                    // Keep the established item-FIELD[ID] and item-FIELD#ID[field] wire format.
+                    Object.keys(submitted.subtables ?? {}).forEach(field => {
+                        const rows = submitted.subtables[field] ?? [];
+                        req['item-' + field] = {};
+                        rows.forEach(row => {
+                            const values = {};
+                            Object.keys(row).forEach(col => {
+                                if (col === 'id' || col === 'is_new') return;
+                                const value = row[col];
+                                if (Array.isArray(value) || (value && typeof value === 'object')) return;
+                                values[col] = value;
+                            });
+                            req['item-' + field + '#' + row.id] = values;
+                            req['item-' + field][row.id] = 1;
                         });
-                    }
-                });
-            }
+                    });
+                    if (submitted.att_links?.length) req.att = Object.fromEntries(submitted.att_links.map(id => [id, 1]));
+                    Object.keys(submitted.att_files ?? {}).forEach(field => {
+                        const prefix = attachmentDefs.find(def => def.field === field)?.att_post_prefix ?? field;
+                        const ids = submitted.att_files[field] ?? [];
+                        if (ids.length) req[prefix] = { ...req[prefix], ...Object.fromEntries(ids.map(id => [id, 1])) };
+                    });
 
-            //console.log('saveEditData req', req);
-            const response = await this.api.post(this.edit_data.id, req);
-            //console.log('saveEditData response', response);
-            this.edit_data.save_result = response;
-            if (!response?.error) {
-                this.applySubtableSaveResult(response);
-            }
-
-            if (this.current_screen == 'list') {
-                //reload list to show changes
-                await this.loadIndex();
-            } else {
-                //after edit form saved - process route_return
-                const rr = this.edit_data.route_return ?? '';
-                if (rr == 'New') {
-                    Toast("Saved", { theme: 'text-bg-success' });
-                    this.openEditScreen(0);
-                } else if (rr == 'Show') {
-                    this.openViewScreen(response.id);
-                } else if (rr == 'Index') {
-                    this.openListScreen();
-                } else {
-                    if (!response.error && response.id && !this.edit_data.id) {
-                        //just reload edit after add new
-                        await this.openEditScreen(response.id);
+                    response = await api.post(submitted.id, req);
+                    form.save_result = response;
+                    isSaved = !response?.error && response?.success !== false && !this.formIssues(form).some(issue => issue.severity === 'error');
+                    if (isSaved) {
+                        // Even an inactive draft needs assigned IDs before it can be saved again.
+                        if (response?.id && !form.id) {
+                            form.id = response.id;
+                            if (!form.i[fieldId]) form.i[fieldId] = response.id;
+                        }
+                        const subtableResponse = processedSubtableSaveResult(response, currentRequest);
+                        if (this.edit_data === form) this.applySubtableSaveResult(subtableResponse, submitted.subtables ?? {}, form);
+                        else reconcileSubtableSaveResult(subtableResponse, submitted.subtables ?? {}, form);
+                        rememberEditFormSave(form, submitted, subtableResponse, currentRequest, fieldId);
                     }
+                } catch (error) {
+                    isSaved = false;
+                    form.save_result = error.body ?? { error: { message: 'Server error' } };
+                    if (error.response >= 500) {
+                        serverError = error;
+                        this.handleError(error, 'saveEditData', true);
+                    }
+                    // A requested newer draft can retry after validation or transport failure.
                 }
-            }
 
-        } catch (error) {
-            this.edit_data.save_result = error.body ?? { error: 'server error' };
-            if (error.response >= 500) {
-                this.handleError(error, 'saveEditData');
-                return error;
+                const notification = retainEditFormSaveFailures(form, currentRequest, isSaved, this.formIssues(form));
+                if (notification && this.edit_data === form) {
+                    Toast(notification, { theme: 'text-bg-danger' });
+                }
+                if (saving.requests.length) continue;
+                if (!isSaved || editFormSaveFailures.has(form)) return serverError ?? false;
+                if (this.edit_data !== form) return false;
+                // Navigation/reload must not discard edits made after the submitted snapshot.
+                if (editFormSaveSignature(form) !== editFormSaveSignature(editFormSavedSnapshots.get(form))) {
+                    if (isNew && form.id && this.current_screen === 'edit') {
+                        this.current_id = form.id;
+                        window.history.replaceState({ screen: 'edit', id: form.id }, '', this.buildScreenUrl('edit', form.id, this.activeFormTab));
+                    }
+                    return;
+                }
+
+                if (this.current_screen === 'list') {
+                    if (this.is_quick_edit_keep_context && this.is_list_edit_pane) {
+                        try { await this.refreshQuickEditList(); }
+                        catch (error) {
+                            form.save_result.is_list_refresh_failed = true;
+                            this.handleError(error, 'refreshQuickEditList');
+                        }
+                    } else await this.loadIndex();
+                } else {
+                    const rr = form.route_return ?? '';
+                    if (rr === 'New') {
+                        Toast('Saved', { theme: 'text-bg-success' });
+                        this.openEditScreen(0);
+                    } else if (rr === 'Show') this.openViewScreen(response.id);
+                    else if (rr === 'Index') this.openListScreen();
+                    else if (isNew && response.id) await this.openEditScreen(response.id);
+                }
+                if (!saving.requests.length) return;
             }
-            //400 errors are user validation
+        } finally {
+            const index = this.edit_save_states.indexOf(saving);
+            if (index >= 0) this.edit_save_states.splice(index, 1);
         }
     },
-    applySubtableSaveResult(response) {
-        if (!this.edit_data || !response) return;
-
-        const subtableRowIds = response.subtable_row_ids ?? {};
-        const subtableRows = response.subtables ?? {};
-
-        Object.keys(subtableRowIds).forEach(field => {
-            const rows = this.edit_data.subtables?.[field];
-            const rowMap = subtableRowIds[field] ?? {};
-            if (!rows || !Array.isArray(rows)) return;
-
-            rows.forEach(row => {
-                const newId = rowMap[row.id] ?? rowMap[String(row.id)];
-                if (!newId) return;
-                row.id = newId;
-                row.is_new = false;
-            });
-        });
-
-        Object.keys(subtableRows).forEach(field => {
-            const serverRows = subtableRows[field] ?? [];
-            if (!this.edit_data.subtables) this.edit_data.subtables = {};
-
-            const existingRows = this.edit_data.subtables[field] ?? [];
-            const existingById = {};
-            existingRows.forEach(row => {
-                existingById[row.id] = row;
-            });
-
-            const updatedRows = [];
-            serverRows.forEach(row => {
-                const localRow = existingById[row.id];
-                if (localRow) {
-                    Object.assign(localRow, row);
-                    updatedRows.push(localRow);
-                } else {
-                    updatedRows.push(row);
-                }
-            });
-
-            if (Array.isArray(existingRows)) {
-                existingRows.splice(0, existingRows.length, ...updatedRows);
-                this.edit_data.subtables[field] = existingRows;
-            } else {
-                this.edit_data.subtables[field] = updatedRows;
-            }
-        });
+    // A supplied snapshot preserves subsequent draft changes. Calls with one argument
+    // retain the established authoritative refresh behavior for application extensions.
+    applySubtableSaveResult(response, submittedSubtables = null, form = this.edit_data) {
+        reconcileSubtableSaveResult(response, submittedSubtables, form);
     },
 
     // *** userlists support ***
@@ -1072,6 +1252,7 @@ let actions = {
     }
 };
 
+actions = { ...actions, ...interactionActions };
 //merge in fwStoreActions if defined
 actions = mergeStoreDefaults(actions, fwStoreActions);
 

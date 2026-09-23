@@ -3,11 +3,11 @@
          class="mb-3 d-print-none"
          :class="(fwStore.countCheckedRows ? 'position-sticky' : '')">
         with <span class="badge text-bg-secondary rows-num" v-if="fwStore.countCheckedRows">{{fwStore.countCheckedRows}}</span> checked rows:<br>
-        <button v-if="uioptions.isDelete"
+        <button v-if="uioptions.isDelete && fwStore.canAction('delete')"
                 type="button"
                 class="btn btn-danger me-2"
                 @click="onDelete"
-                :disabled="fwStore.is_readonly || !fwStore.countCheckedRows">
+                :disabled="!fwStore.canDeleteSelection() || !fwStore.countCheckedRows">
             `Delete`
         </button>
         <list-btn-userlists v-if="fwStore.is_userlists && uioptions.isUserlists" />

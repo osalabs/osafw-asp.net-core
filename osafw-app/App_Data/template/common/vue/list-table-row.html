@@ -8,8 +8,8 @@
         <td class="list-row-cb d-print-none"><input class="multicb" type="checkbox" v-model="fwStore.hchecked_rows[id]"></td>
         <list-row-btn v-if="uioptions.isButtonsLeft && uioptions.rowButtons!==false"
                       :row="row"
-                      :is_left="uioptions.isButtonsLeft"
-                      :is_readonly="fwStore.is_readonly"
+                      :is-left="uioptions.isButtonsLeft"
+                      :is-readonly="fwStore.is_readonly"
                       :buttons="uioptions.rowButtons"
                       @view="onRowView(row)"
                       @edit="onRowEdit(row)"
@@ -25,7 +25,7 @@
         </list-row-btn>
 
         <template v-for="header in fwStore.list_headers" :key="header.field_name">
-            <td v-if="!fwStore.is_list_edit">
+            <td v-if="!fwStore.is_list_edit" class="fw-list-cell fw-list-cell-wrap" :data-fw-column="header.field_name">
                 <slot :name="'cell-'+header.field_name"
                       :row="row"
                       :col="header">
@@ -34,9 +34,9 @@
                     <list-cell-ro v-else :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
                 </slot>
             </td>
-            <td v-else
+            <td v-else class="fw-list-cell" :data-fw-column="header.field_name"
                 :class="(fwStore.cells_saving[id+'-'+header.field_name]?'cell-success-fade':'')+(fwStore.cells_errors[id+'-'+header.field_name]?' cell-invalid':'')">
-                <list-cell-ro v-if="header.is_ro || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
+                <list-cell-ro v-if="header.is_ro || !fwStore.canAction('edit', row) || row._meta?.is_ro || row._meta?.ro_fields?.includes(header.field_name)" :row="row" :col="header" :uioptions="uioptions"></list-cell-ro>
 
                 <list-cell-input v-else-if="['input','email','number','range','date_popup','datetime_popup','datetime_local','time','textarea'].includes(header.input_type)"
                                  :rowId="id" :row="row" :col="header"
@@ -67,8 +67,8 @@
 
         <list-row-btn v-if="!uioptions.isButtonsLeft && uioptions.rowButtons!==false"
                       :row="row"
-                      :is_left="uioptions.isButtonsLeft"
-                      :is_readonly="fwStore.is_readonly"
+                      :is-left="uioptions.isButtonsLeft"
+                      :is-readonly="fwStore.is_readonly"
                       :buttons="uioptions.rowButtons"
                       @view="onRowView(row)"
                       @edit="onRowEdit(row)"
@@ -114,9 +114,8 @@
             //click on row - select/unselect row
             onClickRow(e, row) {
                 //console.log('onClickRow',e);
-                var tag = e.target.tagName.toLowerCase();
-                if (['a', 'button', 'input', 'textarea', 'select', 'option'].includes(tag)) {
-                    return; // skip toggling if clicked on a link/button/etc
+                if (e.target.closest('a, button, input, textarea, select, option')) {
+                    return; // Includes icons and other content inside interactive controls.
                 }
                 this.fwStore.hchecked_rows[this.id] = !this.fwStore.hchecked_rows[this.id];
             },
@@ -138,15 +137,14 @@
                 this.fwStore.openViewScreen(this.id);
             },
             onRowEdit(row) {
-                this.fwStore.openEditScreen(this.id);
+                if (this.fwStore.canAction('edit', row)) this.fwStore.openEditScreen(this.id);
             },
             async onRowQuickEdit(row) {
-                await this.fwStore.openEditPane(this.id);
+                if (this.fwStore.canAction('edit', row)) await this.fwStore.openEditPane(this.id);
             },
             async onRowDelete(row) {
                 console.log("TODO confirm modal onRowDelete", this.id);
-                await this.fwStore.deleteRow(this.id);
-                await this.fwStore.loadIndexDebounced(); //reload list to show changes
+                if (this.fwStore.canAction('delete', row) && await this.fwStore.deleteRow(this.id)) await this.fwStore.loadIndexDebounced();
             },
             async onRowCustom(row, e) {
                 this.fwStore.onRowBtnCustomClick(row, e);

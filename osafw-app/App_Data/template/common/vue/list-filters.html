@@ -1,6 +1,13 @@
 <script type="text/x-template" id="list-filters-template">
-    <div>
-        <form class="fw-card d-print-none" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
+    <div class="fw-filter-panel d-print-none">
+        <button type="button" class="fw-filter-toggle"
+                :aria-expanded="fwStore.is_filter_panel_open"
+                :title="fwStore.is_filter_panel_open ? '`Hide filters`' : '`Show filters`'"
+                :aria-label="fwStore.is_filter_panel_open ? '`Hide filters`' : '`Show filters`'"
+                @click="fwStore.toggleFilterPanel()">
+            <span class="fw-filter-toggle-chevron" aria-hidden="true"></span>
+        </button>
+        <form v-show="fwStore.is_filter_panel_open" class="fw-card" data-list-filter @submit.prevent @change="fwStore.setFilters({})">
             <div v-if="uioptions.s"
                  class="row form-row">
                 <label class="col-form-label col-md-2 col-xl-1" for="list-filters-s">`Search`</label>

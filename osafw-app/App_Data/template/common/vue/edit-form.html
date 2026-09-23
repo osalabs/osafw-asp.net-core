@@ -1,7 +1,5 @@
 <script type="text/x-template" id="edit-form-template">
-    <div v-if="fwStore.savedStatus===false && fwStore.savedErrorMessage>''" class="alert alert-danger">
-        {{fwStore.savedErrorMessage}}
-    </div>
+    <~/common/vue/save-status>
     <form v-if="fwStore.edit_data !== null"
           id="FEdit"
           class="fw-card"
@@ -22,12 +20,13 @@
                            disabled: !current_id && tab.tab !== ''
                        }"
                        @click.prevent="(!current_id && tab.tab !== '') ? null : fwStore.setFormTab(tab.tab)">
-                        {{ tab.label }}
+                        {{ tab.label }}<span v-if="fwStore.failedFormTabs.some(failure => failure.tab === tab.tab)" class="ms-1 text-danger" role="img" aria-label="`Not saved`">!</span>
                     </a>
                 </li>
             </ul>
             <hr>
         </div>
+        <~/common/vue/form-issues>
         <fieldset>
             <form-one-def v-for="(def,index) in preparedDefs"
                           :key="index"
@@ -47,7 +46,7 @@
                     </p>
                 </div>
                 <div class="col">
-                    <button type="submit" class="btn btn-primary me-1" :disabled="fwStore.is_readonly">`Save`</button>
+                    <button type="submit" class="btn btn-primary me-1" :disabled="!fwStore.canSaveForm() || fwStore.is_saving_edit">`Save`</button>
                     <button type="button" class="btn btn-default" @click="onCancelForm">`Cancel`</button>
                 </div>
             </div>

@@ -482,7 +482,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 hr-header fs-5",
                     "type": "subtable",
                     "model": "DemosItems"
                 },
@@ -571,6 +571,8 @@
                     "field": "icode",
                     "label": "Code",
                     "type": "input",
+                    "is_edit_readonly": true,
+                    "help_text": "Set when creating the record; read-only when editing.",
                     "maxlength": 32
                 },
                 {
@@ -839,7 +841,7 @@
                 {
                     "field": "demos_items",
                     "label": "Subtable",
-                    "class_label": "col-12 text-start",
+                    "class_label": "col-12 text-center hr-header fs-5",
                     "type": "subtable_edit",
                     "model": "DemosItems",
                     "related_field_name": "demos_id",

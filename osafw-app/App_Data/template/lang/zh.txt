@@ -1,2 +1,15 @@
 Main Dashboard === 主仪表板
 My Profile === 我的个人资料
+Required field === 必填字段
+This name already exists in our database === 数据库中已存在此名称
+Invalid Email === 电子邮件无效
+Invalid === 无效
+Invalid value === 无效值
+Save failed === 保存失败
+Not saved === 未保存
+Please review these fields: === 请检查以下字段：
+Warning: === 警告：
+Error: === 错误：
+Entered value: === 已输入的值：
+Saved, but the list could not refresh. Reload the list to see current values. === 已保存，但列表无法刷新。请重新加载列表以查看最新值。
+Drag or use arrow keys to resize; double-click to fit; Ctrl+double-click to fit all columns === 拖动或使用方向键调整宽度；双击自动调整当前列；Ctrl+双击自动调整所有列

@@ -8,8 +8,14 @@
                     <~/common/icons/info-circle-fill>use <kbd>Shift+Mouse Wheel</kbd> for an easy horizontal scrolling
                 </div>
 
-                <table :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
-                    <list-table-header />
+                <table ref="listTable" :style="tableWidthStyle" :class="'table table-stripedX table-hover list ' + (fwStore.is_list_edit?'list-edit ':'') + fwStore.list_user_view.density">
+                    <colgroup v-if="tableWidthStyle">
+                        <col :style="{ width: columnLayout.selection + 'px' }">
+                        <col v-if="uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnLayout.controls + 'px' }">
+                        <col v-for="header in fwStore.list_headers" :key="header.field_name" :style="{ width: (fwStore.columnWidths()[header.field_name] || columnLayout.fields[header.field_name]) + 'px' }">
+                        <col v-if="!uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnLayout.controls + 'px' }">
+                    </colgroup>
+                    <list-table-header @prepare-resize="captureColumnLayout" />
 
                     <tbody class="table-group-divider" :class="uioptions.nl2br ? 'nl2br' :'' ">
                         <template v-for="row in fwStore.list_rows" :key="row[fwStore.field_id]">
@@ -82,9 +88,25 @@
         props: {},
         emit: [],
         data: () => ({
+            columnLayout: null
         }),
         computed: {
             ...mapStores(fwStore),
+            tableWidthStyle() {
+                const widths = this.fwStore.columnWidths();
+                if (!Object.keys(widths).length || !this.columnLayout
+                    || this.fwStore.list_headers.some(header => !this.columnLayout.fields[header.field_name])) {
+                    return null;
+                }
+
+                const fixedWidth = this.columnLayout.selection
+                    + (this.uioptions.rowButtons === false ? 0 : this.columnLayout.controls);
+                const width = this.fwStore.list_headers.reduce(
+                    (total, header) => total + (widths[header.field_name] || this.columnLayout.fields[header.field_name]),
+                    fixedWidth
+                );
+                return { tableLayout: 'fixed', width: width + 'px' };
+            },
             uioptions() {
                 return this.fwStore.uioptions.list.table ?? {};
             }
@@ -92,8 +114,77 @@
         mounted() {
             console.log('list-table mounted');
             this.fwStore.loadIndex();
+            this.updateColumnLayout();
+            // Body changes include actions rendered by child components or custom slots.
+            // Column drag styles live outside tbody, so pointer moves do not rescan rows.
+            this.actionObserver = new MutationObserver(() => this.updateColumnLayout(true));
+            this.actionObserver.observe(this.$refs.listTable.tBodies[0], {
+                childList: true, subtree: true, characterData: true,
+                attributes: true, attributeFilter: ['class', 'style', 'hidden']
+            });
+        },
+        updated() {
+            this.updateColumnLayout();
+        },
+        beforeUnmount() {
+            this.actionObserver.disconnect();
+        },
+        watch: {
+            'fwStore.list_user_view'() {
+                this.columnLayout = null;
+            },
+            'fwStore.list_user_view.density'() {
+                this.columnLayout = null;
+            },
+            'fwStore.is_list_edit'() {
+                this.columnLayout = null;
+            }
         },
         methods: {
+            captureColumnLayout() {
+                const cells = this.$refs.listTable?.tHead?.rows[0]?.cells;
+                if (!cells?.length || !this.fwStore.list_headers.length) {
+                    return;
+                }
+
+                const fields = {};
+                let controls = 0;
+                for (const cell of Array.from(cells).slice(1)) {
+                    if (cell.dataset.fwColumn) {
+                        fields[cell.dataset.fwColumn] = cell.getBoundingClientRect().width;
+                    } else {
+                        controls = cell.getBoundingClientRect().width;
+                    }
+                }
+                // Keep unresized columns at their rendered widths, including narrow checkbox columns.
+                this.columnLayout = { fields, controls, selection: cells[0].getBoundingClientRect().width };
+            },
+            updateColumnLayout(isBodyChanged = false) {
+                if (!Object.keys(this.fwStore.columnWidths()).length || (this.tableWidthStyle && !isBodyChanged)) {
+                    return;
+                }
+                if (!this.tableWidthStyle) {
+                    this.captureColumnLayout();
+                }
+                if (!this.columnLayout || this.uioptions.rowButtons === false) {
+                    return;
+                }
+
+                // Custom actions and slots may need more space after a page or permission change.
+                let width = this.columnLayout.controls;
+                const borderScale = getComputedStyle(this.$refs.listTable).borderCollapse === 'collapse' ? 0.5 : 1;
+                for (const cell of this.$refs.listTable.querySelectorAll('td.list-row-controls')) {
+                    const range = document.createRange();
+                    range.selectNodeContents(cell);
+                    const style = getComputedStyle(cell);
+                    const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+                        + (parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth)) * borderScale;
+                    width = Math.max(width, range.getBoundingClientRect().width + padding);
+                }
+                if (width > this.columnLayout.controls) {
+                    this.columnLayout.controls = width;
+                }
+            },
             resetCheckedRows() {
                 this.fwStore.hchecked_rows = [];
             },

@@ -277,6 +277,7 @@ CREATE TABLE user_views (
   iname                 VARCHAR(255) NOT NULL DEFAULT '', -- if empty - it's a "default" view
   is_system             TINYINT NOT NULL DEFAULT 0, -- 1 - system - visible for all
   is_shared             TINYINT NOT NULL DEFAULT 0, -- 1 if shared/published
+  widths                TEXT, -- JSON map of configured list column names to pixel widths
 
   status                TINYINT NOT NULL DEFAULT 0,
   add_time              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

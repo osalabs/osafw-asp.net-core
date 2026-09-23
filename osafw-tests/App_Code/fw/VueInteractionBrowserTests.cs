@@ -1,0 +1,1365 @@
+using Microsoft.Playwright;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+namespace osafw.Tests;
+
+[TestClass]
+public class VueInteractionBrowserTests
+{
+    private static string RepoRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+
+    private static string Template(string name)
+    {
+        if (!Path.HasExtension(name)) name += ".html";
+        return TemplatePath(Path.Combine("common/vue", name));
+    }
+
+    private static string TemplatePath(string relativePath)
+    {
+        var content = File.ReadAllText(Path.Combine(RepoRoot, "osafw-app/App_Data/template", relativePath));
+        return Regex.Replace(content, @"<~/common/vue/([^>]+)>", match => Template(match.Groups[1].Value))
+            .Replace("<~/common/icons/x>", "<span aria-hidden=\"true\">&#215;</span>"); // Preserve nested icon hit targeting without loading fonts.
+    }
+
+    private static async Task<IPage> Page(IBrowser browser, string markup, FwDict? validationMessages = null, bool isRealListCells = false)
+    {
+        var assets = Environment.GetEnvironmentVariable("FW_BROWSER_ASSETS_ROOT") ?? Path.Combine(RepoRoot, "osafw-app/wwwroot/assets");
+        if (!File.Exists(Path.Combine(assets, "lib/vue/vue.esm-browser.js"))) Assert.Inconclusive("Restore frontend libraries, or set FW_BROWSER_ASSETS_ROOT to a restored assets directory.");
+        var context = await browser.NewContextAsync(new() { Offline = true });
+        await context.RouteAsync("**/*", async route =>
+        {
+            var uri = new Uri(route.Request.Url);
+            if (uri.Host != "vue-tests.invalid") { await route.AbortAsync(); return; }
+            var relative = uri.AbsolutePath.TrimStart('/');
+            if (relative == "") { await route.FulfillAsync(new() { ContentType = "text/html", Body = "<html><head></head><body></body></html>" }); return; }
+            if (!relative.StartsWith("lib/") && relative != "js/apputils.js" && relative != "js/vue-interactions.js" && relative != "css/site.css") { await route.AbortAsync(); return; }
+            var assetRoot = relative is "js/vue-interactions.js" or "css/site.css" ? Path.Combine(RepoRoot, "osafw-app/wwwroot/assets") : assets;
+            var file = Path.GetFullPath(Path.Combine(assetRoot, relative));
+            if (!file.StartsWith(Path.GetFullPath(assetRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) { await route.AbortAsync(); return; }
+            await route.FulfillAsync(new() { ContentType = relative.EndsWith(".css") ? "text/css" : "text/javascript", Body = await File.ReadAllTextAsync(file) });
+        });
+        var page = await context.NewPageAsync();
+        var errors = new List<string>();
+        page.PageError += (_, error) => errors.Add(error);
+        await page.GotoAsync("https://vue-tests.invalid/");
+        var diagnostics = """
+            <script>
+            window.testErrors = [];
+            window.addEventListener('error', event => testErrors.push(event.error?.message ?? event.message));
+            window.addEventListener('unhandledrejection', event => testErrors.push(event.reason?.message ?? String(event.reason)));
+            </script>
+            """;
+        var imports = """
+            <script type="importmap">{"imports":{
+                "vue":"/lib/vue/vue.esm-browser.js","pinia":"/lib/pinia/pinia.esm-browser.js",
+                "Multiselect":"/lib/vueform-multiselect/dist/multiselect.js","vue-demi":"/lib/vue-demi/lib/index.mjs","@vue/devtools-api":"/lib/vue-devtools-api/dist/index.js",
+                "@vue/devtools-shared":"/lib/vue-devtools-shared/dist/index.js","@vue/devtools-kit":"/lib/vue-devtools-kit/dist/index.js",
+                "perfect-debounce":"/lib/perfect-debounce/dist/index.mjs","hookable":"/lib/hookable/dist/index.mjs","birpc":"/lib/birpc/dist/index.mjs"
+            }}</script><script src="/js/apputils.js"></script><link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css"><link rel="stylesheet" href="/css/site.css">
+            """;
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(RepoRoot, "osafw-app/App_Data/template"),
+        });
+        if (validationMessages == null)
+        {
+            validationMessages = [];
+            foreach (var line in File.ReadAllLines(Path.Combine(RepoRoot, "osafw-app/App_Data/template/common/vue/validation-messages.sel")))
+            {
+                var pair = line.Split('|', 2);
+                validationMessages[pair[0]] = parser.parse_string(pair[1], []);
+            }
+        }
+        var storeScript = Template("store.js").Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test").Replace("<~validation_messages json noescape>",
+            parser.parse_string("<~validation_messages json noescape>", new FwDict { ["validation_messages"] = validationMessages }));
+
+        var setup = """
+            <script type="module">
+            import { createApp } from 'vue'; import { defineStore, createPinia } from 'pinia';
+            const fwStoreState = {}, fwStoreGetters = {}, fwStoreActions = {};
+            const mande = () => ({}); window.toasts = []; window.Toast = message => toasts.push(message);
+            """ + storeScript + """
+            const pinia = createPinia(); window.testStore = useFwStore(pinia);
+            window.testStore.handleError = () => {};
+            window.testStore.api = { get: async () => ({}), post: async () => ({ id: 7 }), delete: async () => ({ id: 7 }) };
+            window.fwApp = createApp({ template: '#test-root-template', setup: () => ({ fwStore: window.testStore }) }); fwApp.use(pinia);
+            fwApp.config.globalProperties.AppUtils = AppUtils;
+            fwApp.config.warnHandler = message => testErrors.push('Vue warning: ' + message);
+            fwApp.config.errorHandler = error => testErrors.push('Vue error: ' + (error?.message ?? String(error)));
+            fwApp.component('autocomplete', { props: ['modelValue'], emits: ['update:modelValue'], template: `<input :value="modelValue" @input="$emit('update:modelValue', $event.target.value)">` });
+            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'att-select', 'list-pagination', 'list-btn-multi', 'list-customize-columns'])
+                fwApp.component(name, { template: '<span></span>' });
+            </script>
+            """;
+        var components = "";
+        if (isRealListCells)
+        {
+            setup = setup.Replace("'list-cell-ro', 'list-cell-input', ", "").Replace("'list-cell-checkbox', ", "");
+            foreach (var name in new[] { "list-cell-ro.html", "list-cell-input.html", "list-cell-checkbox.html" })
+                components += Regex.Replace(Template(name), @"<~[^>]+>", "");
+        }
+        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-control-help-block.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
+            components += Regex.Replace(Template(name).Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test"), @"<~[^>]+>", "");
+        components += Regex.Replace(TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html"), @"<~[^>]+>", "");
+        foreach (var name in new[] { "list-filters.html", "list-filters-table-btn.html" })
+            components += Regex.Replace(Template(name), @"<~[^>]+>", "").Replace("`Hide filters`", "Hide filters").Replace("`Show filters`", "Show filters");
+        await page.SetContentAsync(diagnostics + imports + "<script type='text/x-template' id='test-root-template'>" + markup + "</script><div id='app'></div>" + setup + components + "<script type='module'>fwApp.mount('#app'); window.testReady=true;</script>");
+        try { await page.WaitForFunctionAsync("() => window.testReady === true", options: new() { Timeout = 10000 }); }
+        catch (TimeoutException) { Assert.Fail("Vue startup failed: " + string.Join("; ", errors)); }
+        Assert.IsEmpty(errors, "Vue component scripts must load: " + string.Join("; ", errors));
+        await AssertNoClientErrors(page);
+        return page;
+    }
+
+    private static async Task AssertNoClientErrors(IPage page)
+    {
+        var errors = await page.EvaluateAsync<string[]>("() => window.testErrors");
+        Assert.IsEmpty(errors, "Vue browser fixture reported client errors: " + string.Join("; ", errors));
+    }
+
+    private static async Task<IBrowser> Browser(IPlaywright playwright)
+    {
+        if (!File.Exists(playwright.Chromium.ExecutablePath)) Assert.Inconclusive("Install matching Chromium for Vue browser checks.");
+        return await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chromium" });
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task LocalizedValidationMessages_ArePlainTextInIssueSummary()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        const string REQUIRED_MESSAGE = "必填字段 ' \" </script><img src=x onerror=alert(1)>";
+        var messages = new FwDict
+        {
+            ["REQUIRED"] = REQUIRED_MESSAGE,
+            ["EMAIL"] = "电子邮件无效",
+            ["EXISTS"] = "名称已存在",
+            ["WRONG"] = "无效",
+            ["INVALID"] = "无效值",
+        };
+        var page = await Page(browser, Template("form-issues.html"), messages);
+        await page.EvaluateAsync("""
+            () => {
+                testStore.edit_data = {save_result:{error:{details:{title:true,email:'EMAIL',other:'UNKNOWN'}}}};
+                testStore.uioptions.edit.is_validation_summary = true;
+            }
+            """);
+
+        Assert.AreEqual("title: " + REQUIRED_MESSAGE, await page.Locator(".fw-validation-summary button").Nth(0).TextContentAsync());
+        Assert.AreEqual("email: 电子邮件无效", await page.Locator(".fw-validation-summary button").Nth(1).TextContentAsync());
+        Assert.AreEqual("other: 无效值", await page.Locator(".fw-validation-summary button").Nth(2).TextContentAsync());
+        Assert.AreEqual(0, await page.Locator("img").CountAsync());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task ColumnResizeSupportsKeyboardPointerBoundsAndCleanup()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<table class='list'><list-table-header v-if='fwStore.count !== -1'></list-table-header></table>");
+        await page.EvaluateAsync("() => { testStore.list_headers=[{field_name:'title',field_name_visible:'Title'}]; testStore.count=1; window.widthSaves=[]; testStore.api.post=async (_, data) => { widthSaves.push(JSON.parse(data.widths)); return {}; }; }");
+        var resize = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
+        await resize.PressAsync("End");
+        await page.WaitForFunctionAsync("() => widthSaves.length === 1");
+        Assert.AreEqual(800, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"));
+        await resize.PressAsync("Home");
+        await page.WaitForFunctionAsync("() => widthSaves.length === 2");
+        Assert.AreEqual(60, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"));
+        var box = (await resize.BoundingBoxAsync())!;
+        await page.Mouse.MoveAsync(box.X + 3, box.Y + 3);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(box.X + 250, box.Y + 3);
+        await page.Mouse.UpAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length === 3");
+        await resize.DblClickAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length >= 4");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.columnWidths().title >= 60 && testStore.columnWidths().title <= 800"));
+        await page.Mouse.MoveAsync(box.X + 3, box.Y + 3);
+        await page.Mouse.DownAsync();
+        await page.EvaluateAsync("() => testStore.count = -1");
+        var before = await page.EvaluateAsync<int>("() => widthSaves.length");
+        await page.Mouse.UpAsync();
+        Assert.AreEqual(before, await page.EvaluateAsync<int>("() => widthSaves.length"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.list_user_view.widths = {unknown:99,title:900}; const widths=testStore.columnWidths(); return widths.title===800 && !(\"unknown\" in widths); }"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                testStore.all_list_columns=Array.from({length:105},(_,index)=>({field_name:'field'+index}));
+                testStore.list_headers=[testStore.all_list_columns[5]];
+                testStore.list_user_view.widths=Object.fromEntries(testStore.all_list_columns.map((header,index)=>[header.field_name,index<5?0:100+index]));
+                const widths=testStore.columnWidths();
+                return Object.keys(widths).length===100 && !('field0' in widths) && widths.field104===204 && widths.field6===106;
+            }
+            """));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            async () => {
+                testStore.all_list_columns=[{field_name:'visible'},{field_name:'hidden'}];
+                testStore.list_headers=[testStore.all_list_columns[0]];
+                testStore.list_user_view.widths={visible:100,hidden:140}; testStore.is_list_edit=false;
+                const oldCalls=[]; const newCalls=[]; let release;
+                testStore.api={post:async (_,data)=>{oldCalls.push(data); await new Promise(resolve=>release=resolve); return {};}};
+                const first=testStore.saveColumnWidth('visible',120);
+                await new Promise(resolve=>setTimeout(resolve,0));
+                testStore.api={post:async (_,data)=>{newCalls.push(data); return {};}}; testStore.is_list_edit=true;
+                const second=testStore.saveColumnWidth('hidden',160); release(); await Promise.all([first,second]);
+                return oldCalls.length===1 && oldCalls[0].is_list_edit===false && newCalls.length===1 && newCalls[0].is_list_edit===true
+                    && JSON.parse(newCalls[0].widths).hidden===160;
+            }
+            """));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            async () => {
+                const previous={...testStore.list_user_view.widths};
+                testStore.api={post:async()=>({success:false})};
+                const saved=await testStore.saveColumnWidth('visible',300);
+                return saved===false && JSON.stringify(testStore.list_user_view.widths)===JSON.stringify(previous);
+            }
+            """));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task FullTableLoadsSavedWidthsAndResizeStyles()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-table v-if='fwStore.count > 0'></list-table>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.loadIndex = async () => {};
+                testStore.list_headers = [{field_name:'title',field_name_visible:'Title'}, {field_name:'notes',field_name_visible:'Notes'}];
+                testStore.list_rows = [{id:7,title:'Example',notes:'Text'}];
+                testStore.list_user_view = {widths:{title:230}};
+                testStore.count = 1;
+            }
+            """);
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list')?.style.tableLayout === 'fixed'");
+        Assert.AreEqual("fixed", await page.Locator("table.list").EvaluateAsync<string>("el => getComputedStyle(el).tableLayout"));
+        Assert.AreEqual(230, await page.Locator("th[data-fw-column='title']").EvaluateAsync<double>("el => el.getBoundingClientRect().width"), 1);
+        Assert.AreEqual(4, await page.Locator("colgroup col").CountAsync());
+        var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
+        Assert.AreEqual("absolute|8px|col-resize|none", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.position,s.width,s.cursor,s.touchAction].join('|'); }"));
+        Assert.AreEqual("1px|rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => { const s=getComputedStyle(el); return [s.borderRightWidth,s.borderRightColor].join('|'); }"));
+        await handle.HoverAsync();
+        Assert.AreEqual("col-resize", await handle.EvaluateAsync<string>("el => getComputedStyle(el).cursor"), "The resize cursor must override Bootstrap's button cursor.");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => getComputedStyle(el).borderRightColor"));
+        await page.Mouse.MoveAsync(0, 0);
+        Assert.AreEqual("rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => getComputedStyle(el).borderRightColor"));
+        await handle.FocusAsync();
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", await handle.EvaluateAsync<string>("el => getComputedStyle(el).borderRightColor"), "Keyboard focus should expose the resize control too.");
+        Assert.AreEqual("relative", await page.Locator("th[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).position"));
+        Assert.AreEqual("hidden", await page.Locator("td[data-fw-column='title']").EvaluateAsync<string>("el => getComputedStyle(el).overflow"));
+        await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons = false");
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('colgroup col').length === 3");
+        Assert.AreEqual(3, await page.Locator("colgroup col").CountAsync());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task FixedWidthRowActionsRemainInsideTheirCellAndClickable(bool isButtonsLeft)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, """
+            <list-table v-if="fwStore.count > 0">
+                <template #list-row-btn-prepend><a href="#" @click.prevent="fwStore.count++">Audit</a> </template>
+                <template #list-row-btn-append> <a href="#" @click.prevent="fwStore.count++">History</a></template>
+            </list-table>
+            """);
+        await page.EvaluateAsync("""
+            isButtonsLeft => {
+                testStore.loadIndex = async () => {};
+                testStore.uioptions.list.table.isButtonsLeft = isButtonsLeft;
+                testStore.uioptions.list.table.rowButtons.buttons = [{label:'Review record details',url:'review'}];
+                testStore.list_headers = [{field_name:'title',field_name_visible:'Title'}];
+                testStore.list_rows = [{id:7,title:'Example'}];
+                testStore.list_user_view = {widths:{title:230}};
+                window.customClicks = 0;
+                testStore.onRowBtnCustomClick = () => customClicks++;
+                window.deletes = 0;
+                testStore.deleteRow = async () => { deletes++; return false; };
+                testStore.count = 1;
+            }
+            """, isButtonsLeft);
+        var controls = page.Locator("td.list-row-controls");
+        await controls.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("nowrap", await controls.EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
+        Assert.IsTrue(await controls.EvaluateAsync<bool>("""
+            cell => {
+                const bounds = cell.getBoundingClientRect();
+                return [...cell.querySelectorAll('a')].every(link => [...link.getClientRects()].every(rect =>
+                    rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom));
+            }
+            """), "Resizing must not let action links overlap adjacent cells, including custom actions.");
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true }).ClickAsync();
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => customClicks"));
+        await page.Locator("tbody input.multicb").CheckAsync();
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Delete", Exact = false }).Locator("span").ClickAsync();
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => deletes"));
+        Assert.IsTrue(await page.Locator("tbody input.multicb").IsCheckedAsync(), "Clicking the delete icon must preserve selection after failure.");
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Audit", Exact = true }).ClickAsync();
+        await controls.GetByRole(AriaRole.Link, new() { Name = "History", Exact = true }).ClickAsync();
+        Assert.AreEqual(3, await page.EvaluateAsync<int>("() => testStore.count"));
+
+        var initialControlsWidth = await controls.EvaluateAsync<double>("cell => cell.getBoundingClientRect().width");
+        await page.EvaluateAsync("() => testStore.uioptions.list.table.rowButtons.buttons.push({label:'Additional action revealed after loading '.repeat(5),url:'extra'})");
+        await page.WaitForFunctionAsync("width => document.querySelector('td.list-row-controls').getBoundingClientRect().width > width", initialControlsWidth);
+        Assert.IsTrue(await controls.EvaluateAsync<bool>("""
+            cell => [...cell.querySelectorAll('a')].every(link =>
+                link.getClientRects().length === 1 && link.getBoundingClientRect().right <= cell.getBoundingClientRect().right)
+            """), "Actions revealed by child updates must fit inside the fixed action column.");
+
+        await page.EvaluateAsync("() => testStore.is_readonly = true");
+        Assert.AreEqual("none", await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true })
+            .EvaluateAsync<string>("el => getComputedStyle(el).pointerEvents"));
+        await controls.GetByRole(AriaRole.Link, new() { Name = "Review record details", Exact = true }).PressAsync("Enter");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => customClicks"), "Read-only actions must also reject keyboard activation.");
+        Assert.AreEqual(0, await controls.GetByRole(AriaRole.Link, new() { Name = "Delete", Exact = false }).CountAsync());
+
+        await page.EvaluateAsync("() => { testStore.is_readonly = false; testStore.list_user_view.widths = {}; }");
+        Assert.AreEqual("nowrap", await controls.EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task FirstColumnResizePreservesOtherColumnsAndSingleLineActions(bool isEditable, bool isButtonsLeft)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-table v-if='fwStore.count > 0'></list-table>", isRealListCells: true);
+        await page.EvaluateAsync("""
+            options => {
+                testStore.loadIndex = async () => {};
+                testStore.is_list_edit = options.isEditable;
+                testStore.uioptions.list.table.isButtonsLeft = options.isButtonsLeft;
+                testStore.uioptions.list.table.rowButtons.quickedit = {title:'Quick Edit'};
+                testStore.list_headers = [
+                    {field_name:'code',field_name_visible:'Code',input_type:'input'},
+                    {field_name:'title',field_name_visible:'Display name',input_type:'input'},
+                    {field_name:'email',field_name_visible:'Email',input_type:'email'},
+                    {field_name:'is_active',field_name_visible:'CB',input_type:'cb'},
+                    {field_name:'status',field_name_visible:'Status',input_type:'input'}];
+                testStore.list_rows = [{id:'7',code:'D-7',title:'Example business record',email:'test@example.invalid',is_active:true,status:'Open'}];
+                testStore.list_user_view = {widths:{},density:'table-sm'};
+                testStore.count = 1;
+                window.widthSaves = [];
+                testStore.api.post = async (_,data) => { widthSaves.push(JSON.parse(data.widths)); return {}; };
+                window.measureLayout = () => [...document.querySelector('table.list').tHead.rows[0].cells].map(cell => {
+                    const rect=cell.getBoundingClientRect();
+                    return {field:cell.dataset.fwColumn,width:rect.width,left:rect.left};
+                });
+                window.otherColumnsUnchanged = () => measureLayout().every((cell,index) =>
+                    cell.field === 'email' || Math.abs(cell.width-beforeLayout[index].width) <= 1);
+            }
+            """, new { isEditable, isButtonsLeft });
+        var table = page.Locator("table.list");
+        var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Email", Exact = true });
+        await handle.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        await page.EvaluateAsync("() => window.beforeLayout = measureLayout()");
+        var box = (await handle.BoundingBoxAsync())!;
+        await page.Mouse.MoveAsync(box.X + 4, box.Y + 4);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(box.X + 36, box.Y + 4);
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherColumnsUnchanged()"), "First drag must preserve all other rendered column widths.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const before=beforeLayout.find(cell=>cell.field==='email'), after=measureLayout().find(cell=>cell.field==='email');
+                return Math.abs(after.left-before.left)<=1 && Math.abs(after.width-before.width-32)<=1;
+            }
+            """), "The dragged divider must stay under the pointer instead of jumping with the table layout.");
+        await page.EvaluateAsync("""
+            () => {
+                window.actionMeasurements = 0;
+                window.originalRangeRect = Range.prototype.getBoundingClientRect;
+                Range.prototype.getBoundingClientRect = function() { actionMeasurements++; return originalRangeRect.call(this); };
+            }
+            """);
+        await page.Mouse.MoveAsync(box.X + 40, box.Y + 4);
+        await page.Mouse.MoveAsync(box.X + 44, box.Y + 4);
+        await page.Mouse.MoveAsync(box.X + 36, box.Y + 4);
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => actionMeasurements"), "Further pointer moves must not remeasure every row's actions.");
+        await page.EvaluateAsync("() => Range.prototype.getBoundingClientRect = originalRangeRect");
+        await page.Mouse.UpAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length === 1");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => Object.keys(widthSaves[0]).join(',')==='email' && otherColumnsUnchanged()"));
+        Assert.AreEqual("nowrap", await page.Locator("td.list-row-controls").EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"));
+        Assert.IsTrue(await page.Locator("td.list-row-controls").EvaluateAsync<bool>("""
+            cell => {
+                const bounds=cell.getBoundingClientRect(), links=[...cell.querySelectorAll('a')];
+                return links.every(link=>link.getClientRects().length===1 && link.getBoundingClientRect().right<=bounds.right)
+                    && Math.max(...links.map(link=>link.getBoundingClientRect().top))-Math.min(...links.map(link=>link.getBoundingClientRect().top))<2;
+            }
+            """), "All standard actions must remain on a single line inside their column.");
+
+        await page.EvaluateAsync("() => testStore.list_user_view.widths = {}");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.tableLayout === ''");
+        await page.EvaluateAsync("() => window.beforeLayout = measureLayout()");
+        await handle.PressAsync("ArrowRight");
+        await page.WaitForFunctionAsync("() => widthSaves.length === 2");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherColumnsUnchanged()"), "Keyboard resize after Reset must also preserve other columns.");
+
+        await page.EvaluateAsync("() => testStore.list_user_view.widths = {}");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list').style.tableLayout === ''");
+        await page.EvaluateAsync("() => window.beforeLayout = measureLayout()");
+        await handle.DblClickAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length === 3");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherColumnsUnchanged()"), "Single-column auto-fit must preserve other columns.");
+        var savedWidth = await page.EvaluateAsync<double>("() => testStore.columnWidths().email");
+        await page.EvaluateAsync("() => testStore.count = 0");
+        await table.WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await page.EvaluateAsync("() => testStore.count = 1");
+        await page.WaitForFunctionAsync("() => document.querySelector('table.list')?.style.tableLayout === 'fixed'");
+        Assert.AreEqual(savedWidth, await page.Locator("th[data-fw-column='email']").EvaluateAsync<double>("el => el.getBoundingClientRect().width"), 1);
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task CtrlDoubleClickFitsVisibleColumnsInOneSaveAndRetainsHiddenWidths(bool isEditable)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var title = new string('W', 120);
+        var titleCell = isEditable ? "<input value='" + title + "'>" : title;
+        var page = await Page(browser, "<table class='list'><list-table-header></list-table-header><tbody><tr><td></td>"
+            + "<td data-fw-column='title'>" + titleCell + "</td>"
+            + "<td data-fw-column='notes'>A medium length value</td><td data-fw-column='code'>x</td></tr></tbody></table>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.uioptions.list.table.rowButtons=false;
+                testStore.list_headers=[{field_name:'title',field_name_visible:'Title',is_sortable:true},
+                    {field_name:'notes',field_name_visible:'Notes'},{field_name:'code',field_name_visible:'X'}];
+                testStore.all_list_columns=[...testStore.list_headers,{field_name:'hidden'}];
+                testStore.list_user_view={widths:{title:100,notes:333,code:333,hidden:190}};
+                window.widthSaves=[]; window.sorts=0;
+                testStore.setFilters=()=>sorts++;
+                testStore.api.post=async(_,data)=>{widthSaves.push(JSON.parse(data.widths)); return {};};
+            }
+            """);
+        var handle = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
+        await handle.DblClickAsync();
+        await page.WaitForFunctionAsync("() => widthSaves.length===1");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => widthSaves[0].title===800 && widthSaves[0].notes===333 && widthSaves[0].code===333 && widthSaves[0].hidden===190"));
+        await handle.DblClickAsync(new() { Modifiers = new[] { KeyboardModifier.Control } });
+        await page.WaitForFunctionAsync("() => widthSaves.length===2");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => widthSaves[1].title===800 && widthSaves[1].notes>60 && widthSaves[1].notes<333 && widthSaves[1].code===60 && widthSaves[1].hidden===190 && sorts===0"));
+        await page.EvaluateAsync("() => testStore.api.post=async()=>({success:false})");
+        var previous = await page.EvaluateAsync<string>("() => JSON.stringify(testStore.columnWidths())");
+        Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.saveColumnWidths({title:80,notes:90,unknown:120})"));
+        Assert.AreEqual(previous, await page.EvaluateAsync<string>("() => JSON.stringify(testStore.columnWidths())"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task ValidationRevealsTabAndFieldsetAndReadonlyOnEditFieldsStayReadOnly()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<edit-form></edit-form>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.uioptions.edit.is_validation_summary=true;
+                testStore.form_tabs=[{tab:'',label:'Main'},{tab:'details',label:'Details'}];
+                testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',is_edit_readonly:true,help_text:'Set when creating the record; read-only when editing.'},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
+                testStore.edit_data={id:7,i:{id:7,code:'Fixed',title:'Entered'},save_result:{error:{message:'Review'},validation_issues:[{severity:'error',field:'title',tab:'details',message:'Check title',value:'<img src=x onerror=alert(1)>'},{severity:'warning',field:'code',message:'Check code'}]}};
+            }
+            """);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField === 'title'");
+        Assert.AreEqual(0, await page.Locator("[data-fw-field='code'] input").CountAsync());
+        Assert.AreEqual("Set when creating the record; read-only when editing.", await page.Locator("[data-fw-field='code'] .form-text").InnerTextAsync());
+        Assert.AreEqual(0, await page.Locator("img[src='x']").CountAsync());
+        await page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Values") }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => !document.querySelector('.fw-fieldset.is-collapsed')");
+        await page.EvaluateAsync("() => { testStore.current_id=0; testStore.edit_data.id=0; testStore.edit_data.i.id=0; testStore.form_tabs=[]; testStore.showform_fields=[{field:'code',type:'input',label:'Code',is_edit_readonly:true,help_text:'Set when creating the record; read-only when editing.'}]; }");
+        await page.Locator("[data-fw-field='code'] input").WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("Set when creating the record; read-only when editing.", await page.Locator("[data-fw-field='code'] .form-text").InnerTextAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                testStore.edit_data.save_result={error:{details:{title:true,REQUIRED:true,other:true,INVALID:true}},
+                    validation_issues:[{severity:'error',field:'title',message:'Structured title'}]};
+                const issues=testStore.formIssues();
+                return issues.length===2 && issues[0].field==='title' && issues[0].message==='Structured title'
+                    && issues[1].field==='other' && issues[1].message==='Required field';
+            }
+            """));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task ValidationPresentationUsesOneFieldMessageOptionalSummaryAndDeduplicatedToast()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<edit-form></edit-form>");
+        await page.EvaluateAsync("""
+            async () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.showform_fields=[{field:'email',type:'email',label:'Email'},{field:'title',type:'input',label:'Title'}];
+                testStore.edit_data={id:7,i:{id:7,email:'bad',title:''}};
+                window.invalidResponse={error:{message:'Please review your input',details:{email:'EMAIL',title:true}},
+                    validation_issues:[{severity:'error',field:'email',message:'Invalid Email'}]};
+                testStore.api.post=async()=>invalidResponse;
+                await testStore.saveEditData();
+            }
+            """);
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => toasts.length"));
+        Assert.AreEqual(0, await page.Locator(".alert-danger").CountAsync(), "Ordinary validation has no global alert; summary defaults off.");
+        Assert.AreEqual(1, await page.Locator("[data-fw-field='email'] .fw-field-feedback").CountAsync());
+        Assert.AreEqual("Invalid Email", (await page.Locator("[data-fw-field='email'] .fw-field-feedback").InnerTextAsync()).Trim());
+        Assert.AreEqual("Required field", (await page.Locator("[data-fw-field='title'] .fw-field-feedback").InnerTextAsync()).Trim());
+        Assert.AreEqual(2, await page.Locator("input.is-invalid").CountAsync());
+        await page.EvaluateAsync("async () => { testStore.uioptions.edit.is_validation_summary=true; await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => toasts.length"), "Repeated autosave failures must not repeat the same toast.");
+        Assert.AreEqual(1, await page.Locator(".fw-validation-summary.alert-danger").CountAsync());
+        Assert.AreEqual(0, await page.Locator(".fw-validation-summary ul,.fw-validation-summary li").CountAsync());
+        await page.GetByRole(AriaRole.Button, new() { Name = "Email: Invalid Email", Exact = true }).ClickAsync();
+        await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField==='email'");
+        await page.EvaluateAsync("""
+            async () => {
+                testStore.api.post=async()=>({id:7,validation_issues:[{severity:'warning',field:'email',message:'Check address'}]});
+                await testStore.saveEditData();
+            }
+            """);
+        Assert.AreEqual(0, await page.Locator("input.is-invalid").CountAsync());
+        Assert.AreEqual(1, await page.Locator(".fw-validation-summary.alert-warning").CountAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus && !testStore.failedFormTabs.length && toasts.length===1"));
+        await page.EvaluateAsync("async () => { testStore.edit_data.i.email='bad again'; testStore.api.post=async()=>invalidResponse; await testStore.saveEditData(); }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => toasts.length"), "A new failure after a successful save must notify again.");
+        await page.EvaluateAsync("async () => { testStore.api.post=async()=>{throw {response:403,body:{error:{message:'Permission denied'}}};}; await testStore.saveEditData(); }");
+        Assert.AreEqual(0, await page.Locator(".fw-validation-summary").CountAsync());
+        Assert.AreEqual("Permission denied", (await page.Locator(".alert-danger").InnerTextAsync()).Trim());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task FilterToggleKeepsItsPositionAndDraftValuesWhenCollapsed()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-header></list-header><list-filters></list-filters><div id='table-start'>List table</div>");
+        var toggle = page.Locator(".fw-filter-toggle");
+        var search = page.Locator("#list-filters-s");
+        await search.FillAsync("Keep this filter");
+        var expanded = await toggle.BoundingBoxAsync();
+        var panel = await page.Locator(".fw-filter-panel").BoundingBoxAsync();
+        var form = await page.Locator("[data-list-filter]").BoundingBoxAsync();
+        Assert.AreEqual(panel!.Y, form!.Y, 0.5, "The toggle must not add space above the open form.");
+        Assert.AreEqual("Hide filters", await toggle.GetAttributeAsync("title"));
+        Assert.AreEqual(0, await page.Locator(".page-header .fw-filter-toggle").CountAsync());
+        await toggle.ClickAsync();
+        Assert.IsFalse(await search.IsVisibleAsync());
+        Assert.AreEqual("Show filters", await toggle.GetAttributeAsync("title"));
+        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"));
+        var collapsed = await toggle.BoundingBoxAsync();
+        var collapsedPanel = await page.Locator(".fw-filter-panel").BoundingBoxAsync();
+        var tableStart = await page.Locator("#table-start").BoundingBoxAsync();
+        Assert.AreEqual(0, collapsedPanel!.Height, "The collapsed panel must reserve no vertical space.");
+        Assert.AreEqual(panel.Y, tableStart!.Y, 0.5, "The table must reclaim all filter-panel space.");
+        Assert.AreEqual(expanded!.X, collapsed!.X, 0.5);
+        Assert.AreEqual(expanded.Y, collapsed.Y, 0.5);
+        Assert.AreEqual(expanded.Width, collapsed.Width);
+        Assert.AreEqual(expanded.Height, collapsed.Height);
+        await toggle.PressAsync("Enter");
+        Assert.IsTrue(await search.IsVisibleAsync());
+        Assert.AreEqual("Keep this filter", await search.InputValueAsync());
+        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task SaveFailuresWarningsDuplicateCallsPermissionsAndVisibilityKeepTheirContracts()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-header></list-header>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.base_url='/Items'; testStore.current_screen='list'; testStore.is_list_edit_pane=true;
+                testStore.edit_data={id:7,i:{id:7,title:'Draft'}};
+                window.reloads=0; testStore.loadIndex=async () => reloads++;
+                window.posts=0; testStore.api.post=async () => { posts++; return {error:{message:'No'},validation_issues:[{severity:'error',field:'title',message:'Invalid'}]}; };
+            }
+            """);
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => reloads"));
+        await page.EvaluateAsync("async () => { testStore.api.post=async () => { posts++; await new Promise(resolve=>setTimeout(resolve,50)); return {id:7,validation_issues:[{severity:'warning',field:'title',message:'Review'}]}; }; await Promise.all([testStore.saveEditData(),testStore.saveEditData()]); }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => posts"));
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => reloads"));
+        await page.EvaluateAsync("() => { testStore.capabilities={create:false,edit:false,delete:false}; }");
+        Assert.AreEqual(0, await page.GetByRole(AriaRole.Button, new() { Name = "Add New", Exact = false }).CountAsync());
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => posts"));
+        Assert.IsFalse(await page.EvaluateAsync<bool>("() => { testStore.list_rows=[{id:7},{id:8,_capabilities:{delete:false}}]; testStore.hchecked_rows={7:1,8:1}; return testStore.canDeleteSelection(); }"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.capabilities.delete=true; testStore.hchecked_rows={7:1}; return testStore.canDeleteSelection(); }"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.restoreFilterVisibility(); testStore.toggleFilterPanel(); testStore.restoreFilterVisibility(); return !testStore.is_filter_panel_open; }"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.base_url='/Other'; testStore.restoreFilterVisibility(); return testStore.is_filter_panel_open; }"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { Object.defineProperty(window,'localStorage',{get:()=>{throw new Error('blocked');}}); testStore.restoreFilterVisibility(); return testStore.is_filter_panel_open; }"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task QuickEditSaveRefreshesListAndPreservesFocusedDraftContext()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, """
+            <div class="list-edit-pane" style="height:60px;overflow:auto">
+                <div style="height:100px"></div>
+                <input v-if="fwStore.edit_data" id="quick-draft" v-model="fwStore.edit_data.i.title">
+            </div>
+            <div id="list-count">{{fwStore.count}}</div>
+            <div id="first-row">{{fwStore.list_rows[0]?.title}}</div>
+            """);
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='list'; testStore.current_id=7; testStore.is_list_edit_pane=true;
+                testStore.is_quick_edit_keep_context=true; testStore.is_initial_load=false;
+                testStore.edit_data={id:7,i:{id:7,title:'Draft changed'},subtables:{},save_result:{}};
+                testStore.list_rows=[{id:7,title:'Before'}]; testStore.count=1;
+                window.posts=0; window.gets=0; window.handled=[];
+                testStore.handleError=(error, source) => handled.push(source);
+                testStore.api.post=async () => { posts++; return {id:7}; };
+                testStore.api.get=async () => { gets++; return {list_rows:[{id:7,title:'After'},{id:8,title:'Added'}],count:2}; };
+            }
+            """);
+        var input = page.Locator("#quick-draft");
+        await input.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        await page.EvaluateAsync("""
+            () => {
+                const pane=document.querySelector('.list-edit-pane'); const input=document.querySelector('#quick-draft');
+                input.focus(); input.setSelectionRange(2, 7); pane.scrollTop=75; window.expectedPaneScroll=pane.scrollTop;
+            }
+            """);
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => posts"));
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => gets"));
+        Assert.AreEqual("2", await page.Locator("#list-count").TextContentAsync());
+        Assert.AreEqual("After", await page.Locator("#first-row").TextContentAsync());
+        Assert.AreEqual("Draft changed", await input.InputValueAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.id==='quick-draft' && document.activeElement.selectionStart===2 && document.activeElement.selectionEnd===7 && document.querySelector('.list-edit-pane').scrollTop===expectedPaneScroll"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus === true"));
+
+        await page.EvaluateAsync("""
+            async () => {
+                testStore.api.post=async () => { posts++; return {id:7}; };
+                testStore.api.get=async () => { gets++; throw new Error('refresh unavailable'); };
+                await testStore.saveEditData();
+            }
+            """);
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus === true"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.edit_data.save_result.is_list_refresh_failed && !testStore.formIssues().length"));
+        CollectionAssert.Contains(await page.EvaluateAsync<string[]>("() => handled"), "refreshQuickEditList");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task ChangedDraftDuringInflightSaveQueuesExactlyOneFollowup()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<input v-if='fwStore.edit_data' id='queued-draft' v-model='fwStore.edit_data.i.title'>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'First draft'},subtables:{},save_result:{}};
+                window.payloads=[]; window.releaseFirst=null;
+                testStore.api.post=async (_, req) => {
+                    payloads.push(JSON.parse(JSON.stringify(req)));
+                    if (payloads.length===1) await new Promise(resolve => releaseFirst=resolve);
+                    return {id:7};
+                };
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.WaitForFunctionAsync("() => payloads.length===1 && testStore.is_saving_edit");
+        await page.Locator("#queued-draft").FillAsync("Changed while saving");
+        await page.EvaluateAsync("() => { testStore.saveEditData(); testStore.saveEditData(); releaseFirst(); }");
+        await page.EvaluateAsync("async () => { await firstSave; }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => payloads.length"));
+        Assert.AreEqual("First draft", await page.EvaluateAsync<string>("() => payloads[0].item.title"));
+        Assert.AreEqual("Changed while saving", await page.EvaluateAsync<string>("() => payloads[1].item.title"));
+        Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.is_saving_edit || testStore.is_pending_edit_save"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false, false, 100)]
+    [DataRow(true, false, 200)]
+    [DataRow(false, true, 300)]
+    [DataRow(true, true, 300)]
+    public async Task QueuedColumnWidthsRollbackToLastConfirmedValue(bool isFirstSuccess, bool isSecondSuccess, int expected)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            results => {
+                testStore.list_headers=[{field_name:'title'}];
+                testStore.list_user_view={widths:{title:100}};
+                window.widthRequests=[];
+                testStore.api.post=async (_,request) => {
+                    const index=widthRequests.length;
+                    widthRequests.push(JSON.parse(request.widths));
+                    if(index===0) await new Promise(resolve=>window.releaseWidth=resolve);
+                    return {success:results[index]};
+                };
+                window.widthSaves=[testStore.saveColumnWidth('title',200),testStore.saveColumnWidth('title',300)];
+            }
+            """, new[] { isFirstSuccess, isSecondSuccess });
+        await page.WaitForFunctionAsync("() => typeof releaseWidth === 'function'");
+        await page.EvaluateAsync("async () => { releaseWidth(); await Promise.all(widthSaves); }");
+        Assert.AreEqual(expected, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"));
+        CollectionAssert.AreEqual(new[] { 200, 300 }, await page.EvaluateAsync<int[]>("() => widthRequests.map(widths=>widths.title)"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task OtherTabSuccessCannotNavigatePastNewerUnsavedEdits(bool isQueued)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            queued => {
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                window.firstSave=testStore.saveEditData();
+                originalDetail.idesc='Newer unsaved detail';
+                testStore.setFormTab('relations');
+                if(queued) testStore.saveEditData();
+            }
+            """, isQueued);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        if (!isQueued) await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Original detail' && originalDetail.idesc==='Newer unsaved detail' && navigations===0"));
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => navigations"), "Unacknowledged edits must survive later independent saves too.");
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Newer unsaved detail' && navigations===1"), "Saving the changed tab restores navigation.");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task LoadedDraftKeepsUnsubmittedOtherTabChanges()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            async () => {
+                const loaded=JSON.parse(JSON.stringify(testStore.edit_data));
+                testStore.api.get=async()=>loaded;
+                await testStore.loadItem(7,'edit');
+                window.originalDetail=testStore.edit_data.subtables.lines[0];
+                originalDetail.idesc='Changed before first save';
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                testStore.setFormTab('relations');
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => navigations===0 && originalDetail.idesc==='Changed before first save' && databaseRows.lines[0].idesc==='Original detail'"));
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => navigations"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("multicb", false)]
+    [DataRow("multicb_prio", false)]
+    [DataRow("att_files_edit", false)]
+    [DataRow("att_links_edit", false)]
+    [DataRow("multicb", true)]
+    [DataRow("multicb_prio", true)]
+    [DataRow("att_files_edit", true)]
+    [DataRow("att_links_edit", true)]
+    public async Task CompoundFieldChangesRemainUnsavedUntilTheirOwnTabSucceeds(string type, bool isNew)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            async ({type,isNew}) => {
+                testStore.current_screen='edit';
+                testStore.form_tabs=[{tab:'',label:'Main'},{tab:'other',label:'Other'}];
+                testStore.showform_fields=[{field:'links',type}];
+                testStore.showform_fields_tabs={'':testStore.showform_fields,other:[]};
+                if (isNew) await testStore.openEditScreen(0);
+                else {
+                    const loaded={id:7,i:{id:7},multi_rows:{links:[{id:1,is_checked:false}]},att_files:{links:[]},att_links:[]};
+                    testStore.api.get=async()=>loaded;
+                    await testStore.loadItem(7,'edit');
+                }
+                testStore.edit_data.route_return='Index';
+                if (type.startsWith('multicb')) testStore.edit_data.multi_rows={links:[{id:1,is_checked:true}]};
+                else if (type==='att_files_edit') testStore.edit_data.att_files={links:[1]};
+                else testStore.edit_data.att_links=[1];
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                window.savedLinks={};
+                testStore.api.post=async(_,req)=>{
+                    if (!req.tab) savedLinks=req[type.startsWith('multicb') ? 'links_multi' : type==='att_files_edit' ? 'links' : 'att'];
+                    return {id:7};
+                };
+                testStore.setFormTab('other');
+                await testStore.saveEditData();
+            }
+            """, new { type, isNew });
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => navigations===0 && Object.keys(savedLinks).length===0"));
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => navigations===1 && savedLinks[1]===1"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("New", "edit", 0)]
+    [DataRow("Show", "view", 41)]
+    [DataRow("Index", "list", 0)]
+    [DataRow("", "edit", 41)]
+    public async Task NewFormEntryFollowsSuccessfulSaveDestination(string destination, string screen, int id)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            async destination => {
+                await testStore.openEditScreen(0);
+                testStore.edit_data.i.title='New record';
+                testStore.edit_data.route_return=destination;
+                testStore.api.post=async()=>({id:41});
+                testStore.api.get=async()=>({id:41,i:{id:41,title:'New record'}});
+                await testStore.saveEditData();
+            }
+            """, destination);
+        Assert.AreEqual(screen, await page.EvaluateAsync<string>("() => testStore.current_screen"));
+        Assert.AreEqual(id, await page.EvaluateAsync<int>("() => testStore.current_id"));
+        if (destination == "New")
+            Assert.IsTrue(await page.EvaluateAsync<bool>("() => !testStore.edit_data.id && Object.keys(testStore.edit_data.i).length===0"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task NewFormAcknowledgesCompoundFieldsSavedInReverseOrder()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            async () => {
+                await testStore.openEditScreen(0);
+                testStore.edit_data.subtables={lines:[{id:11,idesc:'New line'}],links:[{id:21,idesc:'New link'}]};
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=()=>navigations++;
+                testStore.setFormTab('relations');
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => navigations"));
+        await page.EvaluateAsync("async () => { testStore.setFormTab(''); await testStore.saveEditData(); }");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => navigations"));
+        await AssertNoClientErrors(page);
+    }
+
+    private static async Task<IPage> TabbedSavePage(IBrowser browser)
+    {
+        var page = await Page(browser, "<edit-form></edit-form><button id='explicit-save' @click='fwStore.saveEditData'>Save current tab</button>");
+        await page.EvaluateAsync("""
+            () => {
+                fwApp.component('subtable_lines', fwApp.component('subtable_demos_items'));
+                fwApp.component('subtable_links', fwApp.component('subtable_demos_items'));
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.form_tabs=[{tab:'',label:'Details'},{tab:'relations',label:'Relations'},{tab:'audit',label:'Audit'}];
+                testStore.showform_fields=[{field:'lines',type:'subtable_edit'}];
+                testStore.showform_fields_tabs={'':testStore.showform_fields,relations:[{field:'links',type:'subtable_edit'}],audit:[]};
+                testStore.lookups={DemoDicts:[]};
+                window.databaseRows={lines:[{id:11,iname:'Detail',idesc:'Original detail'}],links:[{id:21,iname:'Relation',idesc:'Original relation'}]};
+                testStore.edit_data={id:7,i:{id:7},subtables:JSON.parse(JSON.stringify(databaseRows)),save_result:{}};
+                window.originalDetail=testStore.edit_data.subtables.lines[0];
+                window.originalRelation=testStore.edit_data.subtables.links[0];
+                window.payloads=[];
+                testStore.api.post=async (_, req) => {
+                    payloads.push(JSON.parse(JSON.stringify(req)));
+                    if (payloads.length===1) await new Promise(resolve => window.releaseFirst=resolve);
+                    const failure = await window.tabSaveFailure?.(req);
+                    if (failure) return failure;
+                    // FwDynamicController processes only the tab's definitions. FwVueController's
+                    // response still includes every submitted subtable, including ignored tabs.
+                    const field=req.tab==='relations' ? 'links' : req.tab ? null : 'lines';
+                    if (field) databaseRows[field]=Object.keys(req['item-'+field]).map(id =>
+                        ({id:Number(id),...req['item-'+field+'#'+id],iname:'Saved '+field}));
+                    return {id:7,subtables:JSON.parse(JSON.stringify(databaseRows))};
+                };
+            }
+            """);
+        return page;
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task InflightSaveUsesTheTabOfTheRequestedExplicitOrAutosave(bool autosave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("() => { window.firstSave=testStore.saveEditData(); }");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        await page.Locator("[data-fw-row='21'] textarea").FillAsync("Requested relation");
+        if (autosave) await page.Locator("[data-fw-row='21'] textarea").DispatchEventAsync("change");
+        else await page.Locator("#explicit-save").DispatchEventAsync("click");
+        await page.WaitForFunctionAsync("() => testStore.is_pending_edit_save");
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        CollectionAssert.AreEqual(new[] { "", "relations" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.links[0].idesc==='Requested relation' && originalRelation===testStore.edit_data.subtables.links[0] && originalRelation.idesc==='Requested relation' && originalRelation.iname==='Saved links'"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task TabIdentityAndIgnoredSubtableResponsesPreserveAnUnchangedDraft(bool requestRelationSave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("() => { originalRelation.idesc='Draft before first request'; window.firstSave=testStore.saveEditData(); }");
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        if (requestRelationSave) await page.EvaluateAsync("() => testStore.saveEditData()");
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        CollectionAssert.AreEqual(requestRelationSave ? new[] { "", "relations" } : new[] { "" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
+        Assert.AreEqual("Draft before first request", await page.EvaluateAsync<string>("() => originalRelation.idesc"));
+        Assert.AreEqual(requestRelationSave ? "Draft before first request" : "Original relation", await page.EvaluateAsync<string>("() => databaseRows.links[0].idesc"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => originalDetail.iname==='Saved lines' && originalRelation===testStore.edit_data.subtables.links[0] && !testStore.is_saving_edit"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task MultipleRequestedTabsCoalesceInOrderAndSurviveLaterNavigation(bool autosave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            () => {
+                originalRelation.idesc='Pending relation';
+                window.firstSave=testStore.saveEditData();
+                originalDetail.idesc='Pending detail';
+            }
+            """);
+        await page.EvaluateAsync("autosave => { if(autosave) testStore.saveEditDataDebounced(20); else testStore.saveEditData(); }", autosave);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        await page.EvaluateAsync("autosave => { if(autosave) { testStore.saveEditDataDebounced(100); testStore.saveEditDataDebounced(100); } else { testStore.saveEditData(); testStore.saveEditData(); } }", autosave);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Audit", Exact = true }).ClickAsync();
+        if (autosave) await page.WaitForTimeoutAsync(150);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        CollectionAssert.AreEqual(new[] { "", "", "relations" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.tab??'')"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Pending detail' && databaseRows.links[0].idesc==='Pending relation' && originalDetail.idesc==='Pending detail' && originalRelation.idesc==='Pending relation' && testStore.current_form_tab==='audit' && !testStore.is_pending_edit_save && !testStore.is_saving_edit"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("structured")]
+    [DataRow("legacy")]
+    [DataRow("transport")]
+    [DataRow("authorization")]
+    [DataRow("server")]
+    public async Task FailedTabSaveSurvivesOtherTabSuccessUntilItsOwnSuccessfulRetry(string failureKind)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await TabbedSavePage(browser);
+        await page.EvaluateAsync("""
+            kind => {
+                testStore.uioptions.edit.is_validation_summary = true;
+                originalDetail.idesc='Invalid detail'; originalRelation.idesc='Requested relation';
+                testStore.edit_data.route_return='Index';
+                window.navigations=0; testStore.openListScreen=() => navigations++;
+                window.tabSaveFailure=req => {
+                    if(req.tab || req['item-lines#11'].idesc!=='Invalid detail') return;
+                    if(kind==='transport') throw new Error('Connection lost');
+                    if(kind==='authorization' || kind==='server') throw {response:kind==='authorization'?403:500,body:{error:{message:'Request failed'}}};
+                    const failure={success:false,error:{message:'Details failed',details:{'item-lines#11[idesc]':'WRONG'}}};
+                    if(kind==='structured') failure.validation_issues=[{severity:'error',field:'item-lines#11[idesc]',row_id:'11',message:'Correct detail'}];
+                    return failure;
+                };
+                window.firstSave=testStore.saveEditData();
+            }
+            """, failureKind);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
+        await page.EvaluateAsync("() => testStore.saveEditData()");
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Original detail' && databaseRows.links[0].idesc==='Requested relation' && originalDetail.idesc==='Invalid detail'"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details') && navigations===0"), "A successful Relations save cannot resolve the failed Details tab or navigate away.");
+        var isValidation = failureKind is "structured" or "legacy";
+        Assert.AreEqual(isValidation, await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='')"), "Only validation failures belong in field issues.");
+        Assert.AreEqual(isValidation ? 0 : 1, await page.GetByRole(AriaRole.Alert).CountAsync());
+        Assert.IsTrue(await page.GetByRole(AriaRole.Status).IsVisibleAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.failedFormTabs.length===1 && testStore.failedFormTabs[0].label==='Details'"));
+
+        await page.EvaluateAsync("async () => { originalRelation.idesc='Later relation'; await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0 && databaseRows.links[0].idesc==='Later relation'"), "The failure must outlive the original request queue.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.saveEditDataDebounced(20); return testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details'); }"), "Debouncing must not hide an unresolved failure.");
+        await page.WaitForFunctionAsync("() => payloads.length===4 && !testStore.is_saving_edit");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0"));
+
+        await page.EvaluateAsync("""
+            async () => {
+                const formA=testStore.edit_data, apiA=testStore.api;
+                testStore.edit_data={id:8,i:{id:8},save_result:{}}; testStore.current_id=8;
+                testStore.api={post:async () => ({id:8})};
+                await testStore.saveEditData();
+                window.otherFormSucceeded=testStore.savedStatus===true;
+                testStore.edit_data=formA; testStore.current_id=7; testStore.api=apiA;
+            }
+            """);
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherFormSucceeded && testStore.savedStatus===false && navigations===0"), "Failures belong to the captured form.");
+
+        if (!isValidation) await page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("^Details") }).ClickAsync();
+        else
+        {
+            await page.Locator(".fw-validation-summary button").Filter(new() { HasText = failureKind == "structured" ? "Correct detail" : "Invalid" }).ClickAsync();
+            await page.WaitForFunctionAsync("() => testStore.activeFormTab==='' && document.activeElement?.closest('[data-fw-row]')?.dataset.fwRow==='11'");
+        }
+        await page.Locator("[data-fw-row='11'] textarea").FillAsync("Corrected detail");
+        await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Corrected detail' && databaseRows.links[0].idesc==='Later relation' && testStore.savedStatus===true && !testStore.formIssues().some(issue=>issue.severity==='error') && navigations===1"), "A successful retry of Details clears its failure and restores normal navigation.");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task SubtableInflightEditsAdditionsAndRemovalsSurviveServerReconciliation()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, """
+            <form v-if="fwStore.edit_data">
+                <subtable_demos_items :def="{field:'lines',type:'subtable_edit'}" :lookups="fwStore.lookups" :form="fwStore.edit_data"></subtable_demos_items>
+            </form>
+            """);
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.lookups={DemoDicts:[]};
+                testStore.edit_data={id:7,i:{id:7},subtables:{lines:[
+                    {id:11,iname:'Original',idesc:'First'}, {id:22,iname:'Remove existing',idesc:'Remove'},
+                    {id:'new-submitted',is_new:true,iname:'Submitted',idesc:'New first'},
+                    {id:'new-removed',is_new:true,iname:'Remove submitted',idesc:'Remove new'}
+                ]},save_result:{}};
+                window.originalRow=testStore.edit_data.subtables.lines[0];
+                window.submittedRow=testStore.edit_data.subtables.lines[2];
+                window.payloads=[];
+                testStore.api.post=async (_, req) => {
+                    payloads.push(JSON.parse(JSON.stringify(req)));
+                    if (payloads.length===1) {
+                        await new Promise(resolve => window.releaseFirst=resolve);
+                        return {id:7,subtable_row_ids:{lines:{'new-submitted':101,'new-removed':102}},subtables:{lines:[
+                            {id:11,iname:'Server title',idesc:'First'}, {id:22,iname:'Remove existing',idesc:'Remove'},
+                            {id:101,iname:'Submitted',idesc:'New first'}, {id:102,iname:'Remove submitted',idesc:'Remove new'},
+                            {id:200,iname:'Server-added',idesc:'Fresh server value'}
+                        ]}};
+                    }
+                    const map={};
+                    const rows=Object.keys(req['item-lines']).map(id => {
+                        const savedId=id.startsWith('new-') ? (map[id]=103) : Number(id);
+                        return {id:savedId,...req['item-lines#'+id]};
+                    });
+                    return {id:7,subtable_row_ids:{lines:map},subtables:{lines:rows}};
+                };
+                window.firstSave=testStore.saveEditData();
+            }
+            """);
+        await page.Locator("[data-fw-row='11'] textarea").FillAsync("Changed while saving");
+        await page.Locator("[data-fw-row='new-submitted'] textarea").FillAsync("New changed while saving");
+        await page.Locator("tr").Filter(new() { Has = page.Locator("[data-fw-row='22']") }).Locator("button[title='Delete']").ClickAsync();
+        await page.Locator("tr").Filter(new() { Has = page.Locator("[data-fw-row='new-removed']") }).Locator("button[title='Delete']").ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add More", Exact = true }).ClickAsync();
+        await page.Locator("tbody tr:last-child textarea").FillAsync("Added while saving");
+        await page.EvaluateAsync("async () => { testStore.saveEditData(); testStore.saveEditData(); releaseFirst(); await firstSave; }");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => payloads.length"));
+        Assert.AreEqual("First", await page.EvaluateAsync<string>("() => payloads[0]['item-lines#11'].idesc"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const req=payloads[1], ids=Object.keys(req['item-lines']), rows=testStore.edit_data.subtables.lines;
+                return req['item-lines#11'].idesc==='Changed while saving' && req['item-lines#11'].iname==='Server title'
+                    && req['item-lines#101'].idesc==='New changed while saving'
+                    && !ids.includes('22') && !ids.includes('102') && !ids.includes('new-submitted') && !ids.includes('new-removed')
+                    && ids.filter(id => id.startsWith('new-')).length===1
+                    && req['item-lines#'+ids.find(id => id.startsWith('new-'))].idesc==='Added while saving'
+                    && rows.length===4 && rows.find(row=>row.id===11)===originalRow && rows.find(row=>row.id===101)===submittedRow
+                    && rows.some(row=>row.id===103 && !row.is_new) && rows.some(row=>row.id===200 && row.idesc==='Fresh server value');
+            }
+            """));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const rows=testStore.edit_data.subtables.lines;
+                testStore.applySubtableSaveResult({subtables:{lines:[{id:11,iname:'Explicit refresh',idesc:'Refreshed'}]}});
+                return rows===testStore.edit_data.subtables.lines && rows.length===1 && rows[0]===originalRow && rows[0].idesc==='Refreshed';
+            }
+            """));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task InflightSaveKeepsOtherFormsSaveEntryAndResultsIndependent(bool autosave)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<edit-form></edit-form>");
+        await page.SetViewportSizeAsync(900, 700); // Exercise the real responsive form Save button.
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'A'},subtables:{},save_result:{}};
+                window.formA=testStore.edit_data; window.payloads=[]; window.releases={};
+                testStore.api.post=async (id, req) => {
+                    payloads.push({id,item:JSON.parse(JSON.stringify(req.item))});
+                    await new Promise(resolve => releases[id]=resolve);
+                    return {id,validation_issues:[{severity:'warning',field:'title',message:'Saved '+req.item.title}]};
+                };
+                window.firstSave=testStore.saveEditData();
+                testStore.current_id=8; testStore.edit_data={id:8,i:{id:8,title:'B'},subtables:{},save_result:{}};
+                window.formB=testStore.edit_data;
+            }
+            """);
+        Assert.IsFalse(await page.Locator("button[type='submit']").IsDisabledAsync(), "A pending save must not disable B's save button.");
+        if (autosave) await page.EvaluateAsync("() => testStore.saveEditDataDebounced(20)");
+        else await page.Locator("button[type='submit']").ClickAsync();
+        await page.WaitForFunctionAsync("() => payloads.length===2");
+        await page.EvaluateAsync("async () => { testStore.edit_data=formA; testStore.current_id=7; releases[8](); await new Promise(resolve=>setTimeout(resolve,0)); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => formB.save_result.id===8 && !formA.save_result.id && testStore.is_saving_edit"));
+        await page.EvaluateAsync("async () => { releases[7](); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => formA.save_result.id===7 && formB.save_result.id===8 && !testStore.is_saving_edit"));
+        CollectionAssert.AreEqual(new[] { "A", "B" }, await page.EvaluateAsync<string[]>("() => payloads.map(req=>req.item.title)"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task RequestedFollowupStaysWithCapturedFormAndApiAfterNavigation()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'First'},subtables:{},save_result:{}};
+                window.formA=testStore.edit_data; window.payloads=[]; window.otherPosts=0; window.loads=0;
+                testStore.loadIndex=async () => loads++;
+                testStore.api={post:async (id,req) => {
+                    payloads.push({id,item:JSON.parse(JSON.stringify(req.item))});
+                    if(payloads.length===1) await new Promise(resolve=>window.releaseFirst=resolve);
+                    return {id};
+                }};
+                window.firstSave=testStore.saveEditData();
+                formA.i.title='Requested followup'; testStore.saveEditData();
+                testStore.edit_data={id:8,i:{id:8,title:'Not requested'},save_result:{}};
+                testStore.current_screen='list'; testStore.current_id=8;
+                testStore.api={post:async () => { otherPosts++; return {id:8}; }};
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => payloads.length===2 && payloads[1].id===7 && payloads[1].item.title==='Requested followup' && otherPosts===0 && loads===0 && !testStore.edit_data.save_result.id && formA.save_result.id===7 && testStore.edit_save_states.length===0"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task NavigationAloneNeverSavesANewFormAndStaleResponseKeepsItsDraftIds()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'A'},subtables:{lines:[{id:'new-1',is_new:true,idesc:'First'}]},save_result:{}};
+                window.formA=testStore.edit_data; window.posts=0; window.mergeCalls=0;
+                const apply=testStore.applySubtableSaveResult;
+                testStore.applySubtableSaveResult=(...args) => { mergeCalls++; apply(...args); };
+                testStore.api.post=async () => {
+                    posts++; await new Promise(resolve=>window.releaseFirst=resolve);
+                    return {id:7,subtable_row_ids:{lines:{'new-1':101}},subtables:{lines:[{id:101,idesc:'First'}]}};
+                };
+                window.firstSave=testStore.saveEditData();
+                formA.subtables.lines[0].idesc='Unsaved edit';
+                testStore.edit_data={id:8,i:{id:8,title:'B'},subtables:{},save_result:{}}; testStore.current_id=8;
+            }
+            """);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => posts===1 && mergeCalls===0 && !testStore.edit_data.save_result.id && formA.subtables.lines[0].id===101 && formA.subtables.lines[0].idesc==='Unsaved edit'"));
+        await page.EvaluateAsync("async () => { testStore.edit_data=formA; testStore.current_id=7; testStore.api.post=async (_,req) => { posts++; window.returnPayload=req; return {id:7}; }; await testStore.saveEditData(); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => posts===2 && mergeCalls===1 && !('new-1' in returnPayload['item-lines']) && returnPayload['item-lines#101'].idesc==='Unsaved edit'"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task QueuedCreateUsesAssignedIdAndLastChildRemovalStaysRemoved(bool requestFollowup)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            queue => {
+                testStore.current_screen='edit'; testStore.current_id=0;
+                testStore.edit_data={id:0,i:{title:'First'},subtables:{lines:[{id:'new-1',is_new:true,idesc:'Remove'}]},save_result:{}};
+                window.payloads=[]; window.opened=[]; testStore.openEditScreen=async id => opened.push(id);
+                testStore.api.post=async (id,req) => {
+                    payloads.push({id,req:JSON.parse(JSON.stringify(req))});
+                    if(payloads.length===1) { await new Promise(resolve=>window.releaseFirst=resolve); return {id:70,subtable_row_ids:{lines:{'new-1':101}},subtables:{lines:[{id:101,idesc:'Remove'}]}}; }
+                    return {id:70,subtables:{lines:[]}};
+                };
+                window.firstSave=testStore.saveEditData();
+                testStore.edit_data.i.title='Second'; testStore.edit_data.subtables.lines=[];
+                if (queue) testStore.saveEditData();
+            }
+            """, requestFollowup);
+        await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
+        if (requestFollowup)
+        {
+            Assert.IsTrue(await page.EvaluateAsync<bool>("() => payloads.length===2 && payloads[0].id===0 && payloads[1].id===70 && payloads[1].req.item.title==='Second' && ('item-lines' in payloads[1].req) && Object.keys(payloads[1].req['item-lines']).length===0 && testStore.edit_data.subtables.lines.length===0"));
+            CollectionAssert.AreEqual(new[] { 70 }, await page.EvaluateAsync<int[]>("() => opened"));
+            }
+        else
+        {
+            Assert.IsTrue(await page.EvaluateAsync<bool>("() => payloads.length===1 && testStore.edit_data.id===70 && testStore.current_id===70 && location.pathname==='/70/edit' && testStore.edit_data.i.title==='Second' && testStore.edit_data.subtables.lines.length===0"));
+            Assert.AreEqual(0, await page.EvaluateAsync<int>("() => opened.length"));
+        }
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task FailedRowDeleteDoesNotReloadAndSuccessfulDeleteStillDoes()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<table><tbody><list-table-row v-if='fwStore.list_rows.length' :row='fwStore.list_rows[0]'></list-table-row></tbody></table>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.list_rows=[{id:7,title:'Row'}]; testStore.list_headers=[];
+                testStore.uioptions.list.table.isButtonsLeft=true;
+                testStore.uioptions.list.table.rowButtons={view:false,edit:false,quickedit:false,delete:true,buttons:[]};
+                window.deletes=0; window.reloads=0;
+                testStore.loadIndexDebounced=async () => reloads++;
+                testStore.api.delete=async () => { deletes++; return {success:false}; };
+            }
+            """);
+        var delete = page.Locator(".list-row-controls a.text-danger");
+        Assert.IsTrue((await delete.GetAttributeAsync("aria-label"))?.Contains("Delete", StringComparison.Ordinal) == true);
+        await delete.DispatchEventAsync("click");
+        await page.WaitForFunctionAsync("() => deletes===1");
+        await page.WaitForTimeoutAsync(50);
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => reloads"));
+
+        await page.EvaluateAsync("() => { testStore.api.delete=async () => { deletes++; return {id:7}; }; }");
+        await delete.DispatchEventAsync("click");
+        await page.WaitForFunctionAsync("() => reloads===1");
+        Assert.AreEqual(2, await page.EvaluateAsync<int>("() => deletes"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task DebouncedSaveDoesNotCrossFormsAndStillSavesTheActiveForm()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.edit_data={id:7,i:{id:7,title:'Old form'},subtables:{},save_result:{}};
+                window.posts=[];
+                testStore.api.post=async (_, req) => { posts.push(req.item.title); return {id:req.item.id}; };
+                testStore.saveEditDataDebounced(30);
+                testStore.current_id=8;
+                testStore.edit_data={id:8,i:{id:8,title:'New form'},subtables:{},save_result:{}};
+            }
+            """);
+        await page.WaitForTimeoutAsync(75);
+        Assert.AreEqual(0, await page.EvaluateAsync<int>("() => posts.length"));
+
+        await page.EvaluateAsync("() => testStore.saveEditDataDebounced(20)");
+        await page.WaitForFunctionAsync("() => posts.length===1");
+        CollectionAssert.AreEqual(new[] { "New form" }, await page.EvaluateAsync<string[]>("() => posts"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task SubtableIssuesFocusTheMatchingRowAndReadonlyOnEditExistingRowsOnly()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, """
+            <form id="subtable-form" v-if="fwStore.edit_data">
+                <button id="subtable-issue" type="button" @click="fwStore.focusFormIssue(fwStore.formIssues()[0], $event.currentTarget.closest('form'))">Review second notes</button>
+                <subtable_demos_items
+                    :def="{field:'lines',type:'subtable_edit',showform_fields:[{field:'demo_dicts_id',is_edit_readonly:true},{field:'iname',is_edit_readonly:true},{field:'idesc',is_edit_readonly:true},{field:'is_checkbox',is_edit_readonly:true}]}"
+                    :lookups="fwStore.lookups" :form="fwStore.edit_data"></subtable_demos_items>
+            </form>
+            """);
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.lookups={DemoDicts:[{id:1,iname:'One'},{id:2,iname:'Two'}]};
+                testStore.edit_data={id:7,i:{id:7},subtables:{lines:[
+                    {id:11,demo_dicts_id:1,iname:'First',idesc:'First notes',is_checkbox:1},
+                    {id:22,demo_dicts_id:2,iname:'Second',idesc:'Second notes',is_checkbox:0}
+                ]},save_result:{error:{details:{'item-lines#22[idesc]':'WRONG'}},validation_issues:[{severity:'error',field:'item-lines#22[idesc]',row_id:'22',message:'Review second notes'}]}};
+            }
+            """);
+        var rows = page.Locator("#subtable-form tbody tr");
+        await rows.Nth(1).WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        var rowHeight = await rows.Nth(1).EvaluateAsync<double>("row => row.getBoundingClientRect().height");
+        var tooltip = rows.Nth(1).Locator(".fw-subtable-feedback");
+        Assert.AreEqual(1, await tooltip.CountAsync(), "Legacy and structured errors share one subtable message.");
+        Assert.IsFalse(await tooltip.IsVisibleAsync());
+        await page.Locator("#subtable-issue").ClickAsync();
+        await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-row]')?.dataset.fwRow==='22'");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.tagName==='TEXTAREA' && document.activeElement.closest('[data-fw-field]')?.dataset.fwField==='item-lines#22[idesc]'"));
+        Assert.IsTrue(await tooltip.IsVisibleAsync());
+        Assert.AreEqual(rowHeight, await rows.Nth(1).EvaluateAsync<double>("row => row.getBoundingClientRect().height"));
+        Assert.AreEqual(await tooltip.GetAttributeAsync("id"), await rows.Nth(1).Locator("textarea").GetAttributeAsync("aria-describedby"));
+        await rows.Nth(0).Locator("textarea").FocusAsync();
+        Assert.IsFalse(await tooltip.IsVisibleAsync());
+        await rows.Nth(1).Locator("textarea").HoverAsync();
+        Assert.IsTrue(await tooltip.IsVisibleAsync());
+        Assert.AreEqual(rowHeight, await rows.Nth(1).EvaluateAsync<double>("row => row.getBoundingClientRect().height"));
+
+        var existing = rows.Nth(0);
+        Assert.IsTrue(await existing.Locator("select").IsDisabledAsync());
+        Assert.IsTrue(await existing.Locator("textarea").IsEditableAsync() == false);
+        Assert.IsTrue(await existing.Locator("input[type=checkbox]").IsDisabledAsync());
+        Assert.AreEqual(0, await existing.Locator("input:not([type=checkbox])").CountAsync());
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add More", Exact = true }).ClickAsync();
+        var added = rows.Nth(2);
+        await added.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        Assert.IsFalse(await added.Locator("select").IsDisabledAsync());
+        Assert.IsTrue(await added.Locator("textarea").IsEditableAsync());
+        Assert.IsFalse(await added.Locator("input[type=checkbox]").IsDisabledAsync());
+        Assert.AreEqual(1, await added.Locator("input:not([type=checkbox])").CountAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.closest('tr') === document.querySelector('#subtable-form tbody tr:last-child')"));
+        await AssertNoClientErrors(page);
+    }
+}

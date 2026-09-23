@@ -48,14 +48,14 @@
                        :href="fwStore.return_url"><~/common/icons/arrow-left-circle><span v-if="fwStore.return_title">`Return to` {{fwStore.return_title}}</span><span v-else>`Return Back`</span>
                     </a>
 
-                    <button v-if="uioptions.btnAddNew"
+                    <button v-if="uioptions.btnAddNew && fwStore.canAction('create')"
                             type="button"
                             class="btn btn-default"
                             @click="onAddNew"
                             :disabled="fwStore.is_readonly"><~/common/icons/plus-lg>`Add New`</button>
                 </div>
 
-                <button v-if="current_id"
+                <button v-if="current_id && fwStore.canAction('edit', item)"
                         type="button"
                         class="btn btn-primary"
                         @click="onEdit"
@@ -70,11 +70,11 @@
             </div>
 
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
-                <a v-if="item.status!=127"
+                <a v-if="item.status!=127 && fwStore.canAction('delete', item)"
                    class="btn btn-default"
                    href="#"
                    @click.prevent="onDelete"><span class="text-danger"><~/common/icons/x-circle-fill></span>`Delete`</a>
-                <template v-if="item.status==127">
+                <template v-if="item.status==127 && fwStore.canAction('delete', item)">
                     <a v-if="fwStore.access_level==100"
                        class="btn btn-danger"
                        href="#"
@@ -135,8 +135,7 @@
                 this.fwStore.openListScreen();
             },
             async onDelete(e) {
-                await this.fwStore.deleteRow(this.current_id);
-                this.fwStore.openListScreen();
+                if (await this.fwStore.deleteRow(this.current_id)) this.fwStore.openListScreen();
             },
             async onRestore(e) {
                 await this.fwStore.restoreRow(this.current_id);
