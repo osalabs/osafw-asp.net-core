@@ -789,6 +789,56 @@ main {
   margin-bottom: var(--fw-spacer);
 }
 
+.fw-filter-panel {
+  position: relative;
+  display: flow-root;
+}
+
+.fw-filter-toggle {
+  position: absolute;
+  top: -12px;
+  right: var(--fw-spacer);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 12px;
+  padding: 0;
+  color: var(--bs-secondary-color);
+  background: var(--bs-body-bg);
+  border: var(--fw-card-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.fw-filter-toggle[aria-expanded="true"] {
+  border-radius: 12px 12px 0 0;
+  border-bottom-color: var(--bs-body-bg);
+}
+
+.fw-filter-toggle:hover {
+  color: var(--bs-body-color);
+  border-color: var(--bs-secondary-color);
+}
+
+.fw-filter-toggle:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
+.fw-filter-toggle-chevron {
+  width: 4px;
+  height: 4px;
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+  transform: translateY(-1px) rotate(225deg);
+}
+
+.fw-filter-toggle[aria-expanded="true"] .fw-filter-toggle-chevron {
+  transform: translateY(1px) rotate(45deg);
+}
+
 .list-filter-compact {
   --fw-card-padding: calc(var(--fw-spacer) * 0.75);
   --fw-card-margin-bottom: calc(var(--fw-spacer) * 0.75);

@@ -1634,7 +1634,7 @@ Both `/Admin/DemosDynamic` and `/Admin/DemosVue` demonstrate this with the exist
 
 ### Filter visibility and quick edit
 
-The filter panel starts open and remembers its visibility in browser storage. Keys include origin, application/controller URL, list/edit mode, and related-record context. Hiding the panel preserves its filter values. If storage is unavailable, the panel remains usable with an open default.
+The filter panel starts open and remembers its visibility in browser storage. Keys include origin, application/controller URL, list/edit mode, and related-record context. Hiding the panel preserves its filter values. If storage is unavailable, the panel remains usable with an open default. A small bump toggle above the panel's upper-right edge stays in place when collapsed without reserving vertical space in either state; its tooltip and accessible label switch between "Hide filters" and "Show filters". The toggle is part of `list-filters`, so custom screen templates should keep that component mounted and let it manage its form's visibility.
 
 Quick-edit context retention is opt-in (`is_quick_edit_keep_context` replaces the unreleased `quick_edit_keep_context` spelling):
 

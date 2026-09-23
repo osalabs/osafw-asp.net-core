@@ -92,7 +92,7 @@ public class VueInteractionBrowserTests
             fwApp.config.warnHandler = message => testErrors.push('Vue warning: ' + message);
             fwApp.config.errorHandler = error => testErrors.push('Vue error: ' + (error?.message ?? String(error)));
             fwApp.component('autocomplete', { props: ['modelValue'], emits: ['update:modelValue'], template: `<input :value="modelValue" @input="$emit('update:modelValue', $event.target.value)">` });
-            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'att-select', 'list-pagination', 'list-btn-multi'])
+            for (const name of ['list-column-filter', 'list-cell-ro', 'list-cell-input', 'list-cell-date-combo', 'list-cell-select', 'list-cell-checkbox', 'att-select', 'list-pagination', 'list-btn-multi', 'list-customize-columns'])
                 fwApp.component(name, { template: '<span></span>' });
             </script>
             """;
@@ -106,6 +106,8 @@ public class VueInteractionBrowserTests
         foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-control-help-block.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
             components += Regex.Replace(Template(name).Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test"), @"<~[^>]+>", "");
         components += Regex.Replace(TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html"), @"<~[^>]+>", "");
+        foreach (var name in new[] { "list-filters.html", "list-filters-table-btn.html" })
+            components += Regex.Replace(Template(name), @"<~[^>]+>", "").Replace("`Hide filters`", "Hide filters").Replace("`Show filters`", "Show filters");
         await page.SetContentAsync(diagnostics + imports + "<script type='text/x-template' id='test-root-template'>" + markup + "</script><div id='app'></div>" + setup + components + "<script type='module'>fwApp.mount('#app'); window.testReady=true;</script>");
         try { await page.WaitForFunctionAsync("() => window.testReady === true", options: new() { Timeout = 10000 }); }
         catch (TimeoutException) { Assert.Fail("Vue startup failed: " + string.Join("; ", errors)); }
@@ -540,6 +542,41 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("async () => { testStore.api.post=async()=>{throw {response:403,body:{error:{message:'Permission denied'}}};}; await testStore.saveEditData(); }");
         Assert.AreEqual(0, await page.Locator(".fw-validation-summary").CountAsync());
         Assert.AreEqual("Permission denied", (await page.Locator(".alert-danger").InnerTextAsync()).Trim());
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task FilterToggleKeepsItsPositionAndDraftValuesWhenCollapsed()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-header></list-header><list-filters></list-filters><div id='table-start'>List table</div>");
+        var toggle = page.Locator(".fw-filter-toggle");
+        var search = page.Locator("#list-filters-s");
+        await search.FillAsync("Keep this filter");
+        var expanded = await toggle.BoundingBoxAsync();
+        var panel = await page.Locator(".fw-filter-panel").BoundingBoxAsync();
+        var form = await page.Locator("[data-list-filter]").BoundingBoxAsync();
+        Assert.AreEqual(panel!.Y, form!.Y, 0.5, "The toggle must not add space above the open form.");
+        Assert.AreEqual("Hide filters", await toggle.GetAttributeAsync("title"));
+        Assert.AreEqual(0, await page.Locator(".page-header .fw-filter-toggle").CountAsync());
+        await toggle.ClickAsync();
+        Assert.IsFalse(await search.IsVisibleAsync());
+        Assert.AreEqual("Show filters", await toggle.GetAttributeAsync("title"));
+        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"));
+        var collapsed = await toggle.BoundingBoxAsync();
+        var collapsedPanel = await page.Locator(".fw-filter-panel").BoundingBoxAsync();
+        var tableStart = await page.Locator("#table-start").BoundingBoxAsync();
+        Assert.AreEqual(0, collapsedPanel!.Height, "The collapsed panel must reserve no vertical space.");
+        Assert.AreEqual(panel.Y, tableStart!.Y, 0.5, "The table must reclaim all filter-panel space.");
+        Assert.AreEqual(expanded!.X, collapsed!.X, 0.5);
+        Assert.AreEqual(expanded.Y, collapsed.Y, 0.5);
+        Assert.AreEqual(expanded.Width, collapsed.Width);
+        Assert.AreEqual(expanded.Height, collapsed.Height);
+        await toggle.PressAsync("Enter");
+        Assert.IsTrue(await search.IsVisibleAsync());
+        Assert.AreEqual("Keep this filter", await search.InputValueAsync());
+        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"));
         await AssertNoClientErrors(page);
     }
 

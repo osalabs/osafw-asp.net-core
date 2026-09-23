@@ -56,7 +56,6 @@
             </div>
 
             <div class="page-header-actions page-header-actions-extra d-flex flex-wrap align-items-center gap-2 ms-auto">
-                <button v-if="fwStore.uioptions.list.filters" type="button" class="btn btn-default" :aria-expanded="fwStore.is_filter_panel_open" @click="fwStore.toggleFilterPanel()">{{fwStore.is_filter_panel_open ? 'Hide filters' : 'Show filters'}}</button>
                 <slot name="actions-right"></slot>
             </div>
         </div>

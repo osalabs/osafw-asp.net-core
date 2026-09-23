@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-22-vue-filter-toggle.md` - Replaced the Vue filter text button with a fixed-position raised-tab/pill toggle, preserved visibility behavior, and verified keyboard and browser geometry.
 - `summary-2026-09-22-readonly-code-demo.md` - Demonstrated read-only-on-edit Code in both demos, added Dynamic read-only rendering, preserved help text, and verified creation/editing and save filtering.
 - `summary-2026-09-22-vue-validation-presentation.md` - Consolidated Vue validation feedback, enabled the optional compact summary in DemosVue, and added non-expanding subtable tooltips with save-failure regression checks.
 - `summary-2026-09-22-vue-subtable-heading.md` - Matched the Vue demo subtable headings to Dynamic; inspected validation duplication without changing validation behavior.
