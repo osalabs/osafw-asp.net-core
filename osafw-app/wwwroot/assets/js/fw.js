@@ -724,6 +724,9 @@ window.fw={
     fw.setup_cancel_form_handlers();
     fw.setup_autosave_form_handlers();
     fw.process_form_errors();
+    $('form[data-validation-issues]').each(function () {
+      fw.process_validation_issues(this, $(this).data('validation-issues'));
+    });
     fw.setup_file_drop_area();
     fw.setup_att_files_upload();
 
@@ -1051,10 +1054,12 @@ window.fw={
     }
 
     function form_handle_errors($f, data, hint_options){
+        if ($f.is('[data-validation-issues]')) fw.clean_form_errors($f);
         if (data.error?.details) {
             //auto-save error - highlight errors
             fw.process_form_errors($f, data.error?.details);
         }
+        fw.process_validation_issues($f, data.validation_issues);
         fw.error(data.error?.message || fw.MSG_AUTOSAVE_ERROR, hint_options);
     }
 
@@ -1083,6 +1088,7 @@ window.fw={
               fw.clean_form_errors($f);
               if (!data.error) {
                   fw.set_form_saved_status($f, false); // saved
+                  fw.process_validation_issues($f, data.validation_issues);
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
                   }
@@ -1116,6 +1122,7 @@ window.fw={
     $form.find('.has-danger').removeClass('has-danger');
     $form.find('.is-invalid').removeClass('is-invalid');
     $form.find('[class^="err-"]').removeClass('invalid-feedback');
+    $form.find('.fw-validation-issue').remove();
   },
 
   //form - optional, if set - just this form processed
@@ -1141,11 +1148,36 @@ window.fw={
             $input.addClass('is-invalid'); //mark input itself
             $input.parent('.input-group,.dropdown,.twitter-typeahead').addClass('is-invalid'); //mark input group container
             if (errcode!==true && errcode.length){
-              $p.find('.err-'+errcode).addClass('invalid-feedback'); //find/show specific error message
+              $p.find('.' + CSS.escape('err-' + errcode)).addClass('invalid-feedback'); // codes or plain-text messages are not selectors
             }
           }
         });
       }
+    });
+  },
+
+  // Optional field feedback; legacy error.details remains responsible for validation failures.
+  process_validation_issues: function (form, issues) {
+    var $form = $(form);
+    if (!$form.is('[data-validation-issues]')) return;
+    $form.find('.fw-validation-issue').remove();
+    if (!Array.isArray(issues)) return;
+    issues.forEach(function (issue) {
+      if (!issue.field || !issue.message) return;
+      var $inputs = $form.find(':input[name]').filter(function () {
+        return this.name === issue.field || this.name === 'item[' + issue.field + ']';
+      });
+      if (!$inputs.length) return;
+      var is_warning = issue.severity === 'warning';
+      if (is_warning && $inputs.is('.is-invalid')) return;
+      var $anchor = $inputs.last();
+      if ($anchor.parent().is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $anchor = $anchor.parent();
+      if (!is_warning) {
+        $inputs.addClass('is-invalid');
+        $anchor.parent().find('[class^="err-"]').removeClass('invalid-feedback');
+      }
+      $('<div>', { class: 'fw-validation-issue small ' + (is_warning ? 'text-warning' : 'invalid-feedback d-block') })
+        .text(issue.message).insertAfter($anchor);
     });
   },
 

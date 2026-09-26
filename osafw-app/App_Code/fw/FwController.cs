@@ -31,6 +31,7 @@ public abstract partial class FwController
     protected FW fw = null!;
     protected DB db = null!;
     protected FwModel model0 = null!;
+    protected FwList validation_issues = []; // optional request-local feedback; FormErrors remains the error contract
     protected FwDict config = [];                  // controller config, loaded from template dir/config.json
     protected FwDict access_actions_to_permissions = []; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
@@ -101,6 +102,7 @@ public abstract partial class FwController
     {
         this.fw = fw;
         this.db = fw.db;
+        validation_issues = [];
 
         is_readonly = fw.model<Users>().isReadOnly();
 
@@ -534,6 +536,47 @@ public abstract partial class FwController
         fw.SessionDict("_filtersearch_" + fw.G["controller.action"], []);
         this.list_filter = f;
         this.list_filter_search = [];
+    }
+
+    /// <summary>
+    /// Adds optional structured feedback alongside legacy FormErrors. Errors populate a missing field error;
+    /// warnings do not block saves. Existing error codes are never overwritten. Plain controllers must call
+    /// validateCheckResult before writing. Explicit attempted values must be safe to return to the client;
+    /// Dynamic/Vue controllers additionally require field-level opt-in and exclude sensitive control types.
+    /// </summary>
+    protected virtual void addValidationIssue(
+        string severity,
+        string field,
+        string message,
+        string? tab = null,
+        string? row_id = null,
+        object? attempted_value = null)
+    {
+        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(message))
+            return;
+
+        if (validation_issues.Any(existing =>
+            existing["severity"].toStr() == (severity == "warning" ? "warning" : "error")
+            && existing["field"].toStr() == field
+            && existing["row_id"].toStr() == row_id.toStr()))
+            return;
+
+        var issue = new FwDict
+        {
+            ["severity"] = severity == "warning" ? "warning" : "error",
+            ["field"] = field,
+            ["message"] = message,
+        };
+        if (!string.IsNullOrEmpty(tab))
+            issue["tab"] = tab;
+        if (!string.IsNullOrEmpty(row_id))
+            issue["row_id"] = row_id;
+        if (attempted_value != null)
+            issue["value"] = attempted_value;
+
+        validation_issues.Add(issue);
+        if (issue["severity"].toStr() == "error" && !fw.FormErrors.ContainsKey(field))
+            fw.FormErrors[field] = message;
     }
 
     /// <summary>
@@ -1271,6 +1314,9 @@ public abstract partial class FwController
                 _json["error"] = error;
             }
 
+            if (validation_issues.Count > 0)
+                _json["validation_issues"] = new FwList(validation_issues);
+
             if (more_json != null)
                 Utils.mergeHash(_json, more_json);
 
@@ -1282,7 +1328,12 @@ public abstract partial class FwController
             // If save Then success - Return redirect
             // If save Then failed - Return back To add/edit form
             if (success)
+            {
+                var warnings = validation_issues.Where(issue => issue["severity"].toStr() == "warning").Select(issue => issue["message"].toStr());
+                if (warnings.Any())
+                    fw.flash("warning", string.Join("\n", warnings));
                 fw.redirect(location);
+            }
             else
                 fw.routeRedirect(action, [id.toStr()]);
         }
@@ -1320,6 +1371,14 @@ public abstract partial class FwController
     //called when unhandled error happens in action
     public virtual FwDict? actionError(Exception? ex, object[] args)
     {
+        if (fw.isJsonExpected() && ex is ValidationException && validation_issues.Count > 0)
+        {
+            fw.G["err_msg"] = ex.Message;
+            if (!fw.response.HasStarted)
+                fw.response.StatusCode = 400;
+            return afterSave(false, args.Length > 0 ? args[0] : null);
+        }
+
         var edi = ExceptionDispatchInfo.Capture(ex ?? new Exception("Unknown error"));
 
         FwDict? ps = null;

@@ -568,6 +568,7 @@
             "field": "iname",
             "label": "Title",
             "type": "input",
+            "help_text": "Optional validation demo: validation-error blocks saving; validation-warning saves with a warning.",
             "required": true,
             "maxlength": 64
         },

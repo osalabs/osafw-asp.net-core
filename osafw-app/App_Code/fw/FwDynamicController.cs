@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -220,6 +221,8 @@ public partial class FwDynamicController : FwController
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["tab"] = form_tab;
+        if (validation_issues.Count > 0)
+            ps["validation_issues"] = new FwList(validation_issues);
         ps["is_showform"] = true; // flag for template that we are in show form
 
         //for RBAC
@@ -283,6 +286,8 @@ public partial class FwDynamicController : FwController
 
         removeEditReadonlyFields(id, item);
         Validate(id, item);
+        if (validation_issues.Count > 0)
+            validateCheckResult();
         // load old record if necessary
         // var itemOld = modelOne(id);
 
@@ -327,6 +332,79 @@ public partial class FwDynamicController : FwController
     }
 
     #region Validation
+    /// <summary>
+    /// Adds optional feedback with the configured field's tab/row metadata. Attempted values require
+    /// validation_show_value=true; sensitive controls never echo them. Legacy errors stay authoritative.
+    /// </summary>
+    protected override void addValidationIssue(string severity, string field, string message,
+        string? tab = null, string? row_id = null, object? attempted_value = null)
+    {
+        var resolved = resolveValidationField(field);
+        base.addValidationIssue(severity, field, message, tab ?? resolved.tab, row_id ?? resolved.rowId,
+            isValidationValueAllowed(resolved.definition) ? attempted_value : null);
+    }
+
+    protected static bool isValidationValueAllowed(FwDict? definition)
+    {
+        if (definition?["validation_show_value"] is not true)
+            return false;
+
+        return definition["type"].toStr().ToLowerInvariant() switch
+        {
+            "password" or "hidden" or "credential" or "secret" or "token" or "api_key" => false,
+            _ => true,
+        };
+    }
+
+    protected (FwDict? definition, string logicalField, string subtable, string? rowId, string? tab) resolveValidationField(string issueField)
+    {
+        var match = Regex.Match(issueField, @"^item-(?<subtable>.+?)#(?<row>[^\[]+)\[(?<field>[^\]]+)\]$");
+        var logicalField = match.Success ? match.Groups["field"].Value : issueField;
+        var subtable = match.Success ? match.Groups["subtable"].Value : string.Empty;
+        var rowId = match.Success ? match.Groups["row"].Value : null;
+
+        foreach (var candidate in validationFieldDefinitions())
+        {
+            var def = candidate.definition;
+            if (subtable.Length == 0)
+            {
+                if (def["field"].toStr() == logicalField || def["issue_field"].toStr() == issueField)
+                    return (def, logicalField, subtable, rowId, candidate.tab);
+                continue;
+            }
+
+            if (def["type"].toStr() != "subtable_edit" || def["field"].toStr() != subtable)
+                continue;
+
+            foreach (FwDict childDef in getSubtableFormFields(def))
+                if (childDef["field"].toStr() == logicalField)
+                    return (childDef, logicalField, subtable, rowId, candidate.tab);
+
+            return (null, logicalField, subtable, rowId, candidate.tab);
+        }
+
+        return (null, logicalField, subtable, rowId, null);
+    }
+
+    private IEnumerable<(FwDict definition, string? tab)> validationFieldDefinitions()
+    {
+        if (config["showform_fields"] is IList baseFields)
+            foreach (FwDict def in new FwList(baseFields))
+                yield return (def, null);
+
+        if (config["form_tabs"] is not IList tabs)
+            yield break;
+
+        foreach (FwDict tabDef in new FwList(tabs))
+        {
+            var tab = tabDef["tab"].toStr();
+            if (tab.Length == 0)
+                continue;
+            foreach (FwDict def in getConfigShowFormFieldsByTab("showform_fields", tab))
+                yield return (def, tab);
+        }
+    }
+
     /// <summary>
     /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
     /// If more complex validation required - just override this and call just necessary validation

@@ -31,4 +31,14 @@ public class AdminDemosDynamicController : FwDynamicController
         // allow sorting by display-friendly date to map to real DB field
         list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
+
+    public override void Validate(int id, FwDict item)
+    {
+        base.Validate(id, item);
+        var title = item["iname"].toStr();
+        if (title == "validation-error")
+            addValidationIssue("error", "iname", fw.parsePageInstance().langMap("Demo error: choose a different title."));
+        else if (title == "validation-warning")
+            addValidationIssue("warning", "iname", fw.parsePageInstance().langMap("Demo warning: this title was saved; please review it."));
+    }
 }

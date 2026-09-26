@@ -1605,20 +1605,36 @@ For custom persistence, override `fwStoreActions.saveColumnWidths(changes)`, whe
 
 ### Validation issues
 
-`FwVueController` supports neutral issues alongside the existing `FormErrors` response. In an application validation override, call:
+`FormErrors` and JSON `error.details` remain the base error contract. Controllers may add optional structured feedback using the protected `FwController.addValidationIssue()` method. In an application validation override, call:
 
 ```csharp
 addValidationIssue("error", "title", "Check this value.");
 addValidationIssue("warning", "title", "Review this value before continuing.");
 ```
 
-The save response adds `validation_issues`, an array with `severity`, `field`, and `message`; optional `tab` identifies a form tab and `row_id` identifies a repeated row. Errors block the save and retain HTTP 400 plus legacy `error.details`. Warnings do not block a successful save. The UI renders messages as text with one field-feedback renderer for both structured and legacy errors. Failed saves show a danger toast; repeated identical failures on the same form/tab do not repeat the toast until that tab succeeds. Field validation uses an unsaved hint and failed-tab indicators instead of a generic top danger alert. Transport, authorization, and unrelated server failures remain separate save alerts. Failed saves retain entered form values and do not reload or navigate the list. A failed tab keeps its error even if another tab saves successfully; success navigation resumes only after each failed tab saves successfully. These structured issues remain scoped to `FwVueController`; Dynamic forms and the base controller keep their existing validation contracts.
+`afterSave()` adds `validation_issues` only when the controller has collected issues. Each issue has `severity`, `field`, and `message`; optional `tab` identifies a form tab and `row_id` identifies a repeated row. Adding an error fills a missing `FormErrors[field]` without replacing an existing legacy code. Warnings never enter `FormErrors`. Dynamic and Vue standard saves check errors before writing; plain controllers/custom save actions must still call `validateCheckResult()` before persistence. A `ValidationException` with collected issues returns HTTP 400 with both contracts. Authorization and unrelated server exceptions retain their separate handling. Existing validators need no changes; base and Dynamic controllers do not automatically convert their legacy errors into issues.
+
+#### Optional Dynamic feedback
+
+Opt a classic Dynamic form into extra field messages by adding this attribute to its opening form tag:
+
+```html
+data-validation-issues="<~validation_issues json>"
+```
+
+`ShowFormAction()` supplies issues when re-rendering a failed HTML post. `fw.js` renders escaped messages next to matching inputs on initial display and autosave responses. Errors retain the existing danger toast/highlighting; structured feedback replaces the matching legacy field message to avoid duplicates. Warnings appear as non-blocking field text after an autosave. Successful ordinary HTML posts use the existing warning flash message across the redirect. Forms without the attribute keep their existing frontend behavior. Custom AJAX/modal submit handlers can call `fw.process_validation_issues(form, response.validation_issues)` after their normal legacy error handling; automatic integration covers standard forms and autosave only.
+
+There is no additional Dynamic summary, tab navigation, or save coordinator. The helper matches the exact input name or `item[field]`, including posted subtable keys. Apps can customize the renderer or consume the issue array themselves. `/Admin/DemosDynamic` opts in: set **Title** to `validation-error` to block saving, or `validation-warning` to save with a warning. Other titles use ordinary validation.
+
+#### Vue presentation
+
+Vue additionally converts legacy errors into issues so its existing UI can render both consistently. Failed saves show a danger toast; repeated identical failures on the same form/tab do not repeat the toast until that tab succeeds. Field validation uses an unsaved hint and failed-tab indicators instead of a generic top danger alert. Transport, authorization, and unrelated server failures remain separate save alerts. Failed saves retain entered form values and do not reload or navigate the list. A failed tab keeps its error even if another tab saves successfully; success navigation resumes only after each failed tab saves successfully.
 
 Set `fwStoreState.uioptions.edit.is_validation_summary` to `true` to show a compact, wrapping danger summary (warning styling when only warnings exist). It defaults to `false` in the shared store and is enabled in DemosVue for demonstration. Summary buttons include field labels and select the tab, open containing fieldsets, and focus the control. Customize `common/vue/form-issues.html` for a vertical list or another presentation. `fwStoreActions.issueLabel(issue)` can customize labels; subtable labels include the row identifier and use the child definition's label when available, otherwise its field name.
 
 The demo subtable uses a single anchored tooltip per invalid cell, visible on hover or focus, with the invalid control styling retained. Tooltips do not increase row height; inputs reference their messages with `aria-describedby`. Custom scrollable subtables should check clipping and overlap when adopting this presentation. Bootstrap validation tooltips have accessibility limitations; applications can retain inline feedback where appropriate.
 
-An optional attempted `value` is included only for a field definition with JSON boolean `validation_show_value: true`. Leave that setting absent for sensitive values. Password and hidden controls do not expose attempted values. Messages themselves must also avoid sensitive data; the framework cannot determine which application text is confidential.
+For Dynamic and Vue, an optional attempted `value` is included only for a field definition with JSON boolean `validation_show_value: true`. Leave that setting absent for sensitive values. Password and hidden controls do not expose attempted values. Plain controllers have no field definitions: callers must ensure any explicitly supplied `attempted_value` is safe to return. Messages themselves must also avoid sensitive data; the framework cannot determine which application text is confidential.
 
 Built-in validation text lives in `common/vue/validation-messages.sel` and uses the current template language (`lang/<language>.txt`). Initial HTML supplies the same translated messages to the Vue store for legacy error codes and inline errors. Custom issue messages remain application-provided text; translate them before passing them to `addValidationIssue()`. The issue summary labels also use template language markers.
 

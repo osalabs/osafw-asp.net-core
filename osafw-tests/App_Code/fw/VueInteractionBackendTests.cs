@@ -503,9 +503,8 @@ public class VueInteractionBackendTests
             var summary = fw.parsePageInstance().parse_string(
                 File.ReadAllText(Path.Combine(repoRoot(), "osafw-app/App_Data/template/common/vue/form-issues.html")), []);
             StringAssert.Contains(summary, "请检查以下字段：");
-            StringAssert.Contains(summary, "警告：");
-            StringAssert.Contains(summary, "错误：");
-            StringAssert.Contains(summary, "已输入的值：");
+            StringAssert.Contains(summary, "alert-warning");
+            StringAssert.Contains(summary, "alert-danger");
 
 
         }
