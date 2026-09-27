@@ -6,7 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace osafw;
 
@@ -17,8 +20,18 @@ public class AdminSettingsController : FwAdminController
     private static readonly HashSet<string> allowedActions = new(StringComparer.OrdinalIgnoreCase)
     {
         "", FW.ACTION_INDEX, FW.ACTION_SHOW, FW.ACTION_SHOW_FORM, FW.ACTION_SAVE,
-        "Reveal", "Migrate"
+        "Reveal", "Export", "Import", "SaveEmail", "SaveAWS", "TestEmail", "Migrate"
     };
+
+    private static readonly string[] SMTP_CODES =
+    [
+        "mail.host", "mail.port", "mail.is_ssl", "mail.username", "mail.password"
+    ];
+
+    private static readonly string[] AWS_CODES =
+    [
+        "AWS_CREDENTIAL_SOURCE", "AWSAccessKey", "AWSSecretKey"
+    ];
 
     protected Settings model = null!;
 
@@ -44,6 +57,11 @@ public class AdminSettingsController : FwAdminController
         access_actions_to_permissions = new FwDict
         {
             ["Reveal"] = Permissions.PERMISSION_VIEW,
+            ["Export"] = Permissions.PERMISSION_VIEW,
+            ["Import"] = Permissions.PERMISSION_EDIT,
+            ["SaveEmail"] = Permissions.PERMISSION_EDIT,
+            ["SaveAWS"] = Permissions.PERMISSION_EDIT,
+            ["TestEmail"] = Permissions.PERMISSION_EDIT,
             ["Migrate"] = Permissions.PERMISSION_EDIT,
         };
         base.checkAccess();
@@ -82,6 +100,9 @@ public class AdminSettingsController : FwAdminController
         ps["has_icat_filter"] = hasIcatFilter();
         ps["settings_categories"] = listVisibleCategories();
         ps["is_site_admin"] = isSiteAdmin();
+
+        if (isSiteAdmin())
+            addGroupState(ps);
 
         return ps;
     }
@@ -178,6 +199,47 @@ select icat
         };
     }
 
+    public FwDict? ExportAction()
+    {
+        enforcePost();
+        requireSiteAdmin();
+
+        string json = model.exportJson();
+        noStore();
+        fw.response.ContentType = "application/json; charset=utf-8";
+        fw.response.Headers.ContentDisposition = "attachment; filename=\"settings-export.json\"";
+        HttpResponseWritingExtensions.WriteAsync(fw.response, json).Wait();
+        return null;
+    }
+
+    public FwDict? ImportAction()
+    {
+        enforcePost();
+        checkReadOnly();
+        requireSiteAdmin();
+
+        var file = fw.request.Form.Files.GetFile("settings_file");
+        if (file == null || file.Length == 0)
+            throw new UserException("Select a Settings JSON file.");
+        if (file.Length > Settings.MAX_TRANSFER_BYTES)
+            throw new UserException("Settings import is too large.");
+
+        string json;
+        try
+        {
+            using var reader = new StreamReader(file.OpenReadStream(), new UTF8Encoding(false, true), true);
+            json = reader.ReadToEnd();
+        }
+        catch (DecoderFallbackException)
+        {
+            throw new UserException("Settings import must be UTF-8 JSON.");
+        }
+
+        int count = model.importJson(json);
+        fw.flash("success", $"Imported {count} settings.");
+        return afterSave(true, new FwDict { ["updated"] = count });
+    }
+
     public FwDict? MigrateAction()
     {
         enforcePost();
@@ -187,6 +249,82 @@ select icat
         int count = model.migratePlaintextCredentials();
         fw.flash("success", $"Migrated {count} credential settings.");
         return afterSave(true, new FwDict { ["updated"] = count });
+    }
+
+    public FwDict? SaveEmailAction()
+    {
+        enforcePost();
+        checkReadOnly();
+        requireSiteAdmin();
+
+        var form = reqh("smtp");
+        var rows = editableRows(SMTP_CODES);
+        List<Settings.ValueChange> changes =
+        [
+            change("mail.host", form["host"].toStr()),
+            change("mail.port", form["port"].toStr().Trim()),
+            change("mail.is_ssl", form.ContainsKey("is_ssl") ? "1" : "0"),
+            change("mail.username", form["username"].toStr()),
+        ];
+
+        string password = form["password"].toStr();
+        if (form["password_clear"].toBool())
+            changes.Add(change("mail.password", ""));
+        else if (password.Length > 0)
+            changes.Add(change("mail.password", password));
+
+        authorizeChanges(rows, changes);
+        int count = model.writeBatch(changes);
+        form.Remove("password");
+        fw.flash("success", "SMTP settings updated.");
+        return afterSave(true, new FwDict { ["updated"] = count });
+    }
+
+    public FwDict? SaveAWSAction()
+    {
+        enforcePost();
+        checkReadOnly();
+        requireSiteAdmin();
+
+        var form = reqh("aws");
+        var rows = editableRows(AWS_CODES);
+        string source = form["source"].toStr();
+        string accessKey = form["access_key"].toStr();
+        string secretKey = form["secret_key"].toStr();
+        List<Settings.ValueChange> changes = [change("AWS_CREDENTIAL_SOURCE", source)];
+
+        if (source == "sdk")
+        {
+            changes.Add(change("AWSAccessKey", ""));
+            changes.Add(change("AWSSecretKey", ""));
+        }
+        else if (accessKey.Length > 0 || secretKey.Length > 0)
+        {
+            if (accessKey.Length == 0 || secretKey.Length == 0)
+                throw new UserException("Enter both AWS static credential values.");
+            changes.Add(change("AWSAccessKey", accessKey));
+            changes.Add(change("AWSSecretKey", secretKey));
+        }
+
+        authorizeChanges(rows, changes);
+        int count = model.writeBatch(changes);
+        form.Remove("access_key");
+        form.Remove("secret_key");
+        fw.flash("success", "AWS credential settings updated.");
+        return afterSave(true, new FwDict { ["updated"] = count });
+    }
+
+    public FwDict? TestEmailAction()
+    {
+        enforcePost();
+        checkReadOnly();
+        requireSiteAdmin();
+
+        string recipient = fw.resolveTestEmailRecipient();
+        if (!fw.sendEmail("", recipient, "Settings SMTP test", "SMTP settings test from " + model.read("SITE_NAME") + "."))
+            throw new UserException("SMTP test email failed.");
+        fw.flash("success", "SMTP test email sent.");
+        return afterSave(true, new FwDict { ["sent"] = true });
     }
 
     private void Validate(int id, FwDict item, FwDict setting)
@@ -244,6 +382,61 @@ select icat
         else if (!isEditor && Settings.maskPolicy(row) != Settings.MASK_NONE)
             result["ivalue"] = "";
         return result;
+    }
+
+    private void addGroupState(FwDict ps)
+    {
+        var smtpRows = visibleRows(SMTP_CODES);
+        ps["smtp"] = new FwDict
+        {
+            ["host"] = model.getValue("mail.host"),
+            ["port"] = model.getValue("mail.port"),
+            ["is_ssl"] = model.getValue("mail.is_ssl").toBool(),
+            ["username"] = model.getValue("mail.username"),
+            ["password_display"] = model.display(smtpRows["mail.password"]),
+        };
+
+        var awsRows = visibleRows(AWS_CODES);
+        ps["aws"] = new FwDict
+        {
+            ["source"] = model.getValue("AWS_CREDENTIAL_SOURCE"),
+            ["access_display"] = model.display(awsRows["AWSAccessKey"]),
+            ["secret_display"] = model.display(awsRows["AWSSecretKey"]),
+        };
+    }
+
+    private Dictionary<string, FwDict> visibleRows(IEnumerable<string> codes, bool isEdit = false)
+    {
+        var result = new Dictionary<string, FwDict>(StringComparer.Ordinal);
+        foreach (string code in codes)
+        {
+            var row = model.oneByIcode(code);
+            model.authorize(row, isEdit);
+            result.Add(code, row);
+        }
+        return result;
+    }
+
+    private Dictionary<string, FwDict> editableRows(IEnumerable<string> codes)
+    {
+        return visibleRows(codes, true);
+    }
+
+    private static Settings.ValueChange change(string code, string value)
+    {
+        return new Settings.ValueChange
+        {
+            icode = code,
+            basis = Settings.BASIS_VALUE,
+            ivalue = value,
+        };
+    }
+
+    private static void authorizeChanges(Dictionary<string, FwDict> rows, IEnumerable<Settings.ValueChange> changes)
+    {
+        foreach (var item in changes)
+            if (!rows.ContainsKey(item.icode))
+                throw new AuthException();
     }
 
     private bool isSiteAdmin()
