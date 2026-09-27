@@ -219,7 +219,10 @@ public class FW : IDisposable
         {
             var dbconfig = config("db") as FwDict ?? [];
             FwDict conf = dbconfig[config_name] as FwDict ?? [];
-            db = new DB(conf, config_name);
+            var resolvedConf = conf.ContainsKey("connection_string_secret")
+                ? FwDbConnections.Shared.Resolve(conf, config_name)
+                : conf;
+            db = new DB(resolvedConf, config_name);
         }
 
         dbInstances.Add(db);

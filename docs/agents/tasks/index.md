@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-27-appsettings.md` - Moved operational configuration into encrypted/cached Site Settings, added guarded Admin transfer and migrations, and optional cached Secrets Manager DB resolution.
 - `summary-2026-09-27-select2-minimal.md` - Reduced Select2 styling to existing geometry and minimal dark surfaces, then removed approved unused Vue scaffolding.
 - `summary-2026-09-27-select2-scaffold-acceptance.md` - Themed Select2, excluded demo validation from generated controllers, fixed Vue tab initialization, and completed live interaction checks and disposable-data cleanup.
 - `summary-2026-09-27-combined-pr-acceptance.md` - Consolidated PR #298 to master, reviewed the combined contracts, added demo feedback examples and guarded manual navigation, with automated and live acceptance evidence.
