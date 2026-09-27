@@ -1,4 +1,4 @@
-<a href="<~/admin/sendemail/url>/new?item[to]=<~i[email]>" class="btn btn-default"><~/common/icons/envelope>`Send Email`</a>
+<~send_email ifeq="SESSION[access_level]" value="100" inline><a href="<~/admin/sendemail/url>/new?item[to]=<~i[email]>" class="btn btn-default"><~/common/icons/envelope>`Send Email`</a></~send_email>
 
 <~btn_roles ifeq="SESSION[access_level]" value="100" inline>
 <~btn_roles2 if="is_roles" inline>

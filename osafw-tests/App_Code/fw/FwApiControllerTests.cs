@@ -6,6 +6,11 @@ namespace osafw.Tests;
 [TestClass]
 public class FwApiControllerTests
 {
+    private sealed class StubSettings : Settings
+    {
+        public override string readSecret(string code) => code == "API_KEY" ? "secret" : "";
+    }
+
     private class TestApiController : FwApiController
     {
         public void InvokePrepare(bool isAuth = true) => base.prepare(isAuth);
@@ -17,7 +22,7 @@ public class FwApiControllerTests
         var settings = FwConfig.GetCurrentSettings();
         settings["hostname"] = "example.com";
         settings["API_ALLOW_ORIGIN"] = "http://allowed.test";
-        settings["API_KEY"] = "secret";
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
         return fw;
     }
 

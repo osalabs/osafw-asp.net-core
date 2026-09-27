@@ -9,60 +9,71 @@ namespace osafw;
 
 public class AdminSendEmailController : FwAdminController
 {
-    public static new int access_level = Users.ACL_ADMIN;
+    public static new int access_level = Users.ACL_SITEADMIN;
 
     protected Users model = null!;
 
     public override void init(FW fw)
     {
+        FwSettingsProtection.markSensitiveRequest(fw);
         base.init(fw);
         model = fw.model<Users>();
         model0 = model;
 
         base_url = "/Admin/SendEmail";
         required_fields = "from to subject";
-        save_fields = "from to subject body host port username password";
+        save_fields = "from to subject body host port username";
         save_fields_checkboxes = "is_ssl|0";
 
-        var mailSettings = fw.config("mail") as FwDict ?? [];
+        var settings = fw.model<Settings>();
         form_new_defaults = new FwDict
         {
-            ["from"] = fw.config("mail_from").toStr(),
-            ["host"] = mailSettings["host"].toStr(),
-            ["port"] = mailSettings["port"].toInt(),
-            ["username"] = mailSettings["username"].toStr(),
-            ["password"] = mailSettings["password"].toStr(),
-            ["is_ssl"] = mailSettings["is_ssl"].toBool()
+            ["from"] = settings.read("mail_from"),
+            ["host"] = settings.read("mail.host"),
+            ["port"] = settings.readInt("mail.port", 587),
+            ["username"] = settings.read("mail.username"),
+            ["password"] = "",
+            ["is_ssl"] = settings.readBool("mail.is_ssl", true)
         };
     }
 
     public override FwDict? IndexAction()
     {
+        requireSiteAdmin();
         fw.redirect(base_url + "/new");
         return null;
     }
 
     public override FwDict ShowFormAction(int id = 0)
     {
+        requireSiteAdmin();
         var ps = base.ShowFormAction(id)!;
+        if (ps["i"] is FwDict item)
+            item.Remove("password");
         ps["test_email"] = fw.resolveTestEmailRecipient();
         return ps;
     }
 
     public override FwDict? SaveAction(int id = 0)
     {
+        enforcePost();
+        checkReadOnly();
+        requireSiteAdmin();
+
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         if (this.save_fields == null)
             throw new Exception("No fields to save defined, define in save_fields");
+
+        FwDict item = reqh("item");
+        var submittedPassword = item["password"].toStr();
+        item.Remove("password");
 
         if (isRefreshOnlyRequest())
         {
             fw.routeRedirect(FW.ACTION_SHOW_FORM, [id]);
             return null;
         }
-
-        FwDict item = reqh("item");
 
         Validate(id, item);
         // load old record if necessary
@@ -71,9 +82,13 @@ public class AdminSendEmailController : FwAdminController
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
+        var smtp = FormUtils.filter(itemdb, "host port is_ssl username");
+        if (!string.IsNullOrEmpty(submittedPassword))
+            smtp["password"] = submittedPassword;
+
         var options = new FwDict
         {
-            ["smtp"] = FormUtils.filter(itemdb, "host port is_ssl username password")
+            ["smtp"] = smtp
         };
         var is_sent = fw.sendEmail(itemdb["from"].toStr(), itemdb["to"].toStr(), itemdb["subject"].toStr(), itemdb["body"].toStr(), null, null, "", options);
 
@@ -96,6 +111,12 @@ public class AdminSendEmailController : FwAdminController
         //}
 
         this.validateCheckResult();
+    }
+
+    private void requireSiteAdmin()
+    {
+        if (fw.userAccessLevel < Users.ACL_SITEADMIN)
+            throw new AuthException();
     }
 
 }
