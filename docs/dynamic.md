@@ -1588,3 +1588,105 @@ Configuration example:
 Each entry defines the tab code (`tab`) and the text shown on the tab (`label`).
 Fields for a tab should be placed in `show_fields_TAB` and `showform_fields_TAB` arrays where `TAB` is the value from `form_tabs`. If only one tab is defined the tab bar is hidden.
 Active tab is set by `tab` parameter in the URL, e.g. `/Admin/DemosDynamic/123?tab=advanced`. If no tab is specified, the default tab is active.
+
+## Form issues
+
+Base, Dynamic, and Vue controllers share one request-owned `fw.FormIssues` collection. Only two severities are supported: `error` blocks saving; `warning` provides feedback while allowing saving. Controller helpers supply the structured entries:
+
+```csharp
+addFormError("email", "EMAIL");
+addFormError("title", message: "Check this value.");
+addFormWarning("title", message: "Review this value before continuing.");
+// For code that selects the severity dynamically:
+addFormIssue(FW.ISSUE_WARNING, "title", message: "Review this value.");
+```
+
+Use `FW.ISSUE_ERROR` and `FW.ISSUE_WARNING` when a severity value is needed. Each entry has `severity`, `field`, and a translated or application-provided `message`; optional `code`, `tab`, `row_id`, and `value` carry validation metadata. An empty field represents a form-wide issue. Adding the same severity/field/row again replaces that entry; an error and warning may coexist for the same field.
+
+`fw.getFormErrors()` derives a fresh field/code map from errors only. Required fields project as `true`; the `REQUIRED` or `INVALID` summary flag supports existing message templates. Warnings never appear in this map. JSON `error.details` remains the supported generic error-details contract, including explicit application-provided details. It is not limited to form validation.
+
+Standard save responses include `form_issues` when there are issues. Validation failures return HTTP 400 with `error.details` and structured errors; warning-only saves remain successful. Dynamic and Vue saves check errors before persistence. Plain controllers/custom actions must still call `validateCheckResult()` before writing. A false validation result without a specific error adds a form-wide error. Authorization and unrelated server exceptions keep their separate handling.
+
+### Dynamic and classic forms
+
+The existing `data-errors` attribute accepts either the field/code map or the structured array. Existing template bindings stay valid; opt into structured feedback on the initial HTML render by changing only the value:
+
+```html
+data-errors="<~error[details] json>"
+<!-- or, for errors and warnings with messages: -->
+data-errors="<~form_issues json>"
+```
+
+`fw.process_form_errors(form, payload)` accepts both shapes and replaces feedback only inside that form. Standard autosave uses `response.form_issues` when present and otherwise uses `response.error.details`. Errors retain the danger toast and invalid-field highlighting. Coded errors use the existing matching `err-CODE` template when available, preserving field-specific translations and application customizations; otherwise the escaped structured message is shown. For a custom message that overrides a template, add the issue with `message:` and no code. Warnings appear as non-blocking field text; an error takes precedence when the same field also has a warning. Successful ordinary HTML posts retain the warning flash message across the redirect. Custom AJAX/modal handlers can pass `response.form_issues ?? response.error?.details` to the same helper.
+
+There is no additional Dynamic summary, tab navigation, or save coordinator. The renderer matches the exact input name or `item[field]`, including posted subtable keys. Form-wide errors use the existing save error/toast rather than manufacturing a field. Apps can customize the renderer or consume the array themselves.
+
+Both `/Admin/DemosDynamic` and `/Admin/DemosVue` demonstrate structured feedback. With otherwise valid fields, set **Title** to `validation-error` to block saving, `validation-warning` to allow saving with a title warning, or `validation-both` to show a title error and an email warning together (the error blocks saving). Other titles use ordinary validation. Warning messages describe what needs review without claiming that a save succeeded.
+
+### Vue presentation
+
+Vue consumes `form_issues` and also accepts field errors from `error.details`. Failed saves show a danger toast; repeated identical failures on the same form/tab do not repeat the toast until that tab succeeds. Field validation uses the existing save-status badge and failed-tab indicators, without a duplicate unsaved row or generic top danger alert. Transport, authorization, and unrelated server failures remain separate save alerts. Failed saves retain entered form values and do not reload or navigate the list. A failed tab keeps its error even if another tab saves successfully; success navigation resumes only after each failed tab saves successfully. Manual screen changes ask before leaving a failed form; cancelling preserves the draft. Browser history cancellation restores its current URL, and hard navigation uses the browser unsaved-change warning.
+
+Set `fwStoreState.uioptions.edit.is_validation_summary` to `true` to show a compact, wrapping danger summary (warning styling when only warnings exist). It defaults to `false` in the shared store and is enabled in DemosVue for demonstration. Summary buttons include field labels and select the tab, open containing fieldsets, and focus the control. Customize `common/vue/form-issues.html` for a vertical list or another presentation. `fwStoreActions.issueLabel(issue)` can customize labels; subtable summaries use "Subtable Field: Message" (using the configured subtable and child labels when available). Row identifiers stay internal for focusing the matching row; the child field name is the fallback when no label is defined.
+
+Vue resolves subtable controls by component name `subtable_<field>`. Register application-specific components in the controller's `index/vue_components.html`. The example belongs to `admin/demosvue/index/vue/subtable_demos_items.html`; the common virtual-controller bundle does not load demo-specific components.
+
+The demo subtable uses a single anchored tooltip per invalid cell, visible on hover or focus, with the invalid control styling retained. Tooltips do not increase row height; inputs reference their messages with `aria-describedby`. Custom scrollable subtables should check clipping and overlap when adopting this presentation. Bootstrap validation tooltips have accessibility limitations; applications can retain inline feedback where appropriate.
+
+For Dynamic and Vue, an optional attempted `value` is included only for a field definition with JSON boolean `validation_show_value: true`. Leave that setting absent for sensitive values. Password and hidden controls do not expose attempted values. Plain controllers have no field definitions: callers must ensure any explicitly supplied `attempted_value` is safe to return. Messages themselves must also avoid sensitive data; the framework cannot determine which application text is confidential.
+
+Built-in validation text lives in `common/form/validation-messages.sel` and uses the current template language (`lang/<language>.txt`). Initial HTML supplies the same translated messages to the Vue store for error codes and inline errors. Custom issue messages remain application-provided text; translate them before passing them to the helpers. The issue summary labels also use template language markers.
+
+Repeated-row issues use the exact posted field key, for example `item-lines#22[quantity]`, and `row_id: "22"`. A custom subtable field wrapper should provide matching `data-fw-field` and `data-fw-row` attributes and `tabindex="-1"`. If it uses the common form group, pass `def.issue_field` with the posted key and `form.row_id` with the row id. `fwStore.fieldIssues(def, form)` provides matching messages. The supplied editable subtable examples demonstrate the same contract.
+
+### Migrating C# form validation
+
+`FW.FormErrors` has been replaced by `FW.FormIssues`; there is no second mutable error dictionary to synchronize. Update application writers and readers:
+
+| Previous code | Replacement |
+| --- | --- |
+| `fw.FormErrors["email"] = "EMAIL";` | `addFormError("email", "EMAIL");` |
+| `fw.FormErrors["title"] = true;` | `addFormError("title", "REQUIRED");` |
+| `fw.FormErrors["title"] = "Custom message";` | `addFormError("title", message: "Custom message");` |
+| Read `fw.FormErrors` | Read `fw.getFormErrors()` for the field/code map, or `fw.FormIssues` for structured entries |
+| `fw.FormErrors.Clear();` | `fw.FormIssues.Clear();` (clears both errors and warnings) |
+
+Remove explicit `REQUIRED`/`INVALID` marker writes; the projection derives these flags. Use `validateCheckResult()` to enforce blocking validation instead of treating any non-empty issue collection as failure. The optional dictionary parameter of `validateRequired()` still collects local errors without adding request-wide issues. Re-rendered controllers share the request collection; initializing another controller does not clear it. The small `prepareSaveFields()` helper shares standard Dynamic/Vue validation and field filtering; authorization and persistence remain in the action flow.
+
+## Vue interaction behavior
+
+The shared behavior is exported from `wwwroot/assets/js/vue-interactions.js` and imported by the common Vue templates. Copy that asset and the updated `site.css` alongside the templates; application `fwStoreActions` overrides still take precedence.
+
+### Saved column widths
+
+Vue list headers support dragging the right-edge resize control, pressing Left/Right for ten-pixel steps, Home/End for the limits, and double-clicking to fit visible text. Ctrl+double-click fits all visible data columns in one save, using the current page's content and preserving hidden-column widths. The eight-pixel grab area shows a one-pixel divider on hover or keyboard focus, with a resize cursor. Widths are rounded and limited to 60–800 pixels. The `user_views.widths` JSON map stores up to 100 configured columns, alongside the existing fields and density. Unknown columns and invalid widths are discarded. Resizing saves the current default view; saving a named view copies the current widths, loading a view restores them, and resetting a view clears them. Hidden configured columns retain their widths; removed columns are ignored.
+
+Resizing one column preserves the current rendered widths of the other columns, including after Reset to Defaults. Only explicitly resized or auto-fitted data columns receive saved widths. Unconfigured columns use their natural layout when a table or view loads. The selection and action columns are not resizable; actions stay on one line with room for configured buttons and slots.
+
+Width, density, reset, and named-view writes run in request order for each store. A pending resize completes before a later reset or view selection, so older width requests cannot restore widths after the reset. Failed width writes retain the last confirmed widths without replacing a newer resize.
+
+Apply the provider's additive `upd2026-09-08-user-view-widths.sql` update before copying these model/controller changes into an existing application. Fresh SQL Server, SQLite, and MySQL schemas include the column. The saved-view action still requires POST and the current XSS token, and existing owner/system authorization remains in force.
+
+For custom persistence, override `fwStoreActions.saveColumnWidths(changes)`, where `changes` maps field names to widths. Both batch fitting and the standard `saveColumnWidth(field, width)` action use it; existing single-column overrides still apply to single-column gestures.
+
+### Action availability and fields that are read-only on edit
+
+Initial Vue state contains `capabilities: { create, edit, delete }`. It reflects controller/user restrictions. Per-row `_capabilities` can further restrict actions; it cannot widen the controller's permissions. `getCapabilities()` and `getListRowCapabilities(row)` are the server extension points. Read-only rows and virtual controllers participate in the same shape. Common action controls use this metadata, while actual actions retain server authorization checks. Missing metadata in an older custom frontend retains its previous defaults.
+
+Set `is_edit_readonly: true` on a form field to allow entry when creating a row and display its value without an editable control afterward. Existing-row updates ignore submitted changes to that field, including forged requests; ordinary full-form submissions remain usable. New rows retain the field. Editable subtables can declare child fields in their nested `showform_fields`, using the same metadata. Custom subtable controls must also honor those child definitions for presentation. This metadata governs the standard controller save paths; model writes and custom actions must enforce any application-wide immutability requirement separately.
+
+Both `/Admin/DemosDynamic` and `/Admin/DemosVue` demonstrate this with the existing Code (`icode`) field, without an additional database column. Open Add New to enter a Code, then edit an existing record to see its read-only value. Both states show the help text "Set when creating the record; read-only when editing."
+
+### Filter visibility and quick edit
+
+The filter panel starts open and remembers its visibility in browser storage. Keys include origin, application/controller URL, list/edit mode, and related-record context. Hiding the panel preserves its filter values. If storage is unavailable, the panel remains usable with an open default. A small bump toggle above the panel's upper-right edge stays in place when collapsed without reserving vertical space in either state; its tooltip and accessible label switch between "Hide filters" and "Show filters". The toggle is part of `list-filters`, so custom screen templates should keep that component mounted and let it manage its form's visibility.
+
+Quick-edit context retention is opt-in (`is_quick_edit_keep_context` replaces the unreleased `quick_edit_keep_context` spelling):
+
+```json
+"store": {
+  "is_quick_edit_keep_context": true
+}
+```
+
+After a successful quick edit, the client fetches current list rows, count, paging, filtering and ordering from the server while preserving the open pane, input focus and selection. The server remains responsible for whether an edited row still matches the list. A refresh failure reports that the save succeeded but the list needs reloading. Existing save triggers remain unchanged; this option adds no new autosave trigger. Identical simultaneous saves of the same form are suppressed, while newer requests for the same form and tab are coalesced into one followup. Explicitly requested tabs retain their first-request order; delayed autosaves keep the tab where they originated. Requests for different forms are tracked separately. Reconciliation uses only subtables processed for the requested tab, preserves child edits, additions and removals made after a request starts, and applies assigned IDs before a queued save. Navigation alone does not request a save; newer unsaved edits prevent a response from reloading or leaving their form. Explicit failed deletions do not clear selection or reload the list.

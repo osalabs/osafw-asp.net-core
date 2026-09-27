@@ -131,8 +131,7 @@ public class AdminSettingsController : FwAdminController
         bool isClearableTestEmail = setting["icode"].toStr() == Settings.ICODE_TEST_EMAIL;
         if (requiresSubmittedValue(input) && !isClearableTestEmail && !hasSubmittedValue(item))
         {
-            fw.FormErrors["ivalue"] = true;
-            fw.FormErrors["REQUIRED"] = true;
+            addFormError("ivalue", "REQUIRED");
             result = false;
         }
 
@@ -220,7 +219,7 @@ public class AdminSettingsController : FwAdminController
         if (options.ContainsKey(value))
             return true;
 
-        fw.FormErrors["ivalue"] = "INVALID";
+        addFormError("ivalue", "INVALID");
         return false;
     }
 
@@ -233,7 +232,7 @@ public class AdminSettingsController : FwAdminController
 
             if (!options.ContainsKey(value))
             {
-                fw.FormErrors["ivalue"] = "INVALID";
+                addFormError("ivalue", "INVALID");
                 return false;
             }
         }
@@ -248,7 +247,7 @@ public class AdminSettingsController : FwAdminController
 
         if (!tryParseDecimal(rawValue, out decimal value))
         {
-            fw.FormErrors["ivalue"] = "NUMBER";
+            addFormError("ivalue", "NUMBER");
             return false;
         }
 
@@ -258,13 +257,13 @@ public class AdminSettingsController : FwAdminController
         var meta = inputMetadata(setting);
         if (meta.TryGetValue("min", out object? minRaw) && tryParseDecimal(minRaw.toStr(), out decimal min) && value < min)
         {
-            fw.FormErrors["ivalue"] = "MIN";
+            addFormError("ivalue", "MIN");
             return false;
         }
 
         if (meta.TryGetValue("max", out object? maxRaw) && tryParseDecimal(maxRaw.toStr(), out decimal max) && value > max)
         {
-            fw.FormErrors["ivalue"] = "MAX";
+            addFormError("ivalue", "MAX");
             return false;
         }
 
@@ -273,7 +272,7 @@ public class AdminSettingsController : FwAdminController
             decimal baseValue = meta.TryGetValue("min", out object? rangeMinRaw) && tryParseDecimal(rangeMinRaw.toStr(), out decimal rangeMin) ? rangeMin : 0;
             if ((value - baseValue) % step != 0)
             {
-                fw.FormErrors["ivalue"] = "STEP";
+                addFormError("ivalue", "STEP");
                 return false;
             }
         }

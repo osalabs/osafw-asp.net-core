@@ -80,6 +80,7 @@ Use this fallback only under the conditions above; otherwise use the built-in CL
 3. **Controller**
    - Copy the closest demo controller (static: `AdminDemosController`; dynamic: `AdminDemosDynamic` or `AdminDemosVue`) and rename the class/file.
    - Adjust `base_url`, `required_fields`, `save_fields`, and related model wiring in `init`. Tailor list/show/showform logic and validation to your schema.
+   - Remove `DemoOnly` regions when copying controllers manually. Developer Tools and CLI scaffolding strip these regions automatically, so sample validation rules stay in the demos.
    - Expose extra actions (autocomplete, file uploads, junction updates) as needed by your feature.
 
 4. **Templates and config**

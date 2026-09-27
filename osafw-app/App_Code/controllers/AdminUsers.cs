@@ -226,18 +226,15 @@ public class AdminUsersController : FwDynamicController
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw(required_fields));
-        if (!result)
-            fw.FormErrors["REQ"] = 1;
-
         if (result && model.isExists(item["email"].toStr(), id))
         {
             result = false;
-            fw.FormErrors["ehack"] = "EXISTS";
+            addFormError("ehack", "EXISTS");
         }
         if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
-            fw.FormErrors["ehack"] = "EMAIL";
+            addFormError("ehack", "EMAIL");
         }
 
         // uncomment if project requires good password strength

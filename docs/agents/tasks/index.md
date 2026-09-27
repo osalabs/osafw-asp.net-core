@@ -2,6 +2,23 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-27-select2-minimal.md` - Reduced Select2 styling to existing geometry and minimal dark surfaces, then removed approved unused Vue scaffolding.
+- `summary-2026-09-27-select2-scaffold-acceptance.md` - Themed Select2, excluded demo validation from generated controllers, fixed Vue tab initialization, and completed live interaction checks and disposable-data cleanup.
+- `summary-2026-09-27-combined-pr-acceptance.md` - Consolidated PR #298 to master, reviewed the combined contracts, added demo feedback examples and guarded manual navigation, with automated and live acceptance evidence.
+- `summary-2026-09-27-demo-subtable.md` - Restored the demo-owned Vue subtable, removed virtual demo loading, and verified rendered component boundaries and browser behavior.
+- `summary-2026-09-27-form-issues.md` - Unified request-owned errors/warnings, preserved error-details and data-errors consumers, and shared Dynamic/Vue save preparation with an explicit C# migration.
+- `summary-2026-09-27-migration-policy.md` - Recorded benefit-based breaking-refactor guidance, practical migration verification, and proportional compatibility support; validation redesign remains discussion only.
+- `summary-2026-09-27-vue-review-fixes.md` - Ordered saved-view writes, corrected Add New availability and save-failure initialization, and shared subtable/column-width rendering.
+- `summary-2026-09-26-vue-validation-cleanup.md` - Removed the redundant unsaved-tab row, aligned summary links with the label, and verified failed-tab/navigation behavior with six browser cases.
+- `summary-2026-09-26-optional-validation-issues.md` - Added optional base/Dynamic structured feedback while preserving legacy errors, demonstrated errors/warnings, and verified controller and classic autosave compatibility.
+- `summary-2026-09-22-vue-filter-toggle.md` - Replaced the Vue filter text button with a fixed-position raised-tab/pill toggle, preserved visibility behavior, and verified keyboard and browser geometry.
+- `summary-2026-09-22-readonly-code-demo.md` - Demonstrated read-only-on-edit Code in both demos, added Dynamic read-only rendering, preserved help text, and verified creation/editing and save filtering.
+- `summary-2026-09-22-vue-validation-presentation.md` - Consolidated Vue validation feedback, enabled the optional compact summary in DemosVue, and added non-expanding subtable tooltips with save-failure regression checks.
+- `summary-2026-09-22-vue-subtable-heading.md` - Matched the Vue demo subtable headings to Dynamic; inspected validation duplication without changing validation behavior.
+- `summary-2026-09-22-vue-resize-layout.md` - Preserved rendered widths on the first column resize, kept row actions on one line, and verified browser regressions plus live Chrome geometry.
+- `summary-2026-09-22-vue-acceptance.md` - Authenticated browser acceptance captures, fixed action-column wrapping and link bindings, and verified 52 browser cases.
+- `summary-2026-09-22-vue-resize-feedback.md` - Narrowed the upgrade changelog, refined resize handles and Ctrl+double-click auto-fit, bumped the asset version, and verified 50 browser cases with Bootstrap.
+- `summary-2026-09-21-vue-review-followup.md` - Simplified Vue interaction assets/styles and repaired save acknowledgment, failure separation, and width rollback; focused browser/backend, SQLite, and RBAC checks recorded.
 - `summary-2026-09-21-agent-learning-pilot.md` - Added optional learning signals, a bounded committed-summary collector, and a manual two-cycle pilot with portable checks and scenarios.
 - `summary-2026-09-20-instruction-optimization.md` - Applied an FPF/DPF instruction review: streamlined guidance, clarified authority and verification, and repaired pack-version and Markdown-link validation.
 - `summary-2026-09-20-fpf-integration.md` - Added portable FPF/DPF source caching, reviewed revisions, bounded retrieval and copied-application instruction-pack integration.
@@ -191,6 +208,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-09-05-pr279-review-followup.md` - Simplified runtime model construction, expanded cache-sharing and invalid-type coverage, and refreshed PR #279 against master.
 - `summary-2026-09-08-framework-testability.md` - Added explicit DB factories and scoped configuration; verified repeatable disposal, logger restoration, SQLite ownership, simpler fixtures, deterministic cron cancellation, and current stable dependencies with clean NuGet audits.
 - `summary-2026-09-08-r02-calculated-list-columns.md` - Added dependency-aware calculated list columns across Dynamic/Vue selection, search, filtering, sorting, JSON, and export paths, using a single map format with the legacy Vue adapter.
+- `summary-2026-09-08-vue-interactions.md` - Saved Vue widths, validation issues, scoped filters, action capabilities, read-only-on-edit fields and optional quick-edit retention; master sync and localized validation feedback verified with 79 focused tests.
 - `summary-2026-09-08-pdf-local-assets.md` - Opt-in PDF local assets with bounded ConvUtils helpers, shared best-effort Utils.deleteFile cleanup and stale-file retries; recorded constant/boolean naming and readable-source rules.
 - `summary-2026-09-08-error-page-guidance.md` - Translated, overridable status-specific HTML error guidance with direct conditional includes, safe messages and direct anonymous-403 sign-in links.
 - `summary-2026-09-08-schema-codegen-metadata.md` - Added neutral schema comments, schema-qualified SQL Server and cold OLE metadata handling, safer typed-row generation, and framework-table exclusion from the `/Dev/Manage` model picker.

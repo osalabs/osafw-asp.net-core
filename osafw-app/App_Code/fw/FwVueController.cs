@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace osafw;
 
@@ -29,6 +30,56 @@ public class FwVueController : FwDynamicController
     protected override void setListFields()
     {
         list_fields = buildListFields(list_headers.Select(header => ((FwDict)header)["field_name"].toStr()));
+    }
+
+    /// <summary>
+    /// Returns the current request's create, edit, and delete capabilities from read-only and RBAC checks.
+    /// </summary>
+    protected virtual FwDict getCapabilities()
+    {
+        return new FwDict
+        {
+            ["create"] = !is_readonly && rbac[Permissions.PERMISSION_ADD].toBool(),
+            ["edit"] = !is_readonly && rbac[Permissions.PERMISSION_EDIT].toBool(),
+            ["delete"] = !is_readonly && rbac[Permissions.PERMISSION_DELETE].toBool(),
+        };
+    }
+
+    /// <summary>
+    /// Returns optional server-produced restrictions for one row. Overrides may return false values to narrow
+    /// the page capabilities; true values never grant an action denied at page level.
+    /// </summary>
+    protected virtual FwDict getListRowCapabilities(FwDict row)
+    {
+        return row["_capabilities"] as FwDict ?? [];
+    }
+
+    /// <summary>
+    /// Sanitizes and intersects one row's capability metadata with the page capability boundary.
+    /// </summary>
+    protected virtual void applyListRowCapabilities(FwDict row)
+    {
+        var restrictions = getListRowCapabilities(row);
+        var isRestricted = restrictions.Count > 0 || row.ContainsKey("_capabilities");
+        var capabilities = getCapabilities();
+
+        foreach (var action in new[] { "create", "edit", "delete" })
+        {
+            if (restrictions.ContainsKey(action) && !restrictions[action].toBool())
+                capabilities[action] = false;
+        }
+
+        if (row["_meta"] is FwDict meta && meta["is_ro"].toBool())
+        {
+            capabilities["edit"] = false;
+            capabilities["delete"] = false;
+            isRestricted = true;
+        }
+
+        if (isRestricted)
+            row["_capabilities"] = capabilities;
+        else
+            row.Remove("_capabilities");
     }
 
     /// <summary>
@@ -105,6 +156,8 @@ public class FwVueController : FwDynamicController
         ps["global"] = global;
 
         setViewList(false); // initialize list_headers and related
+        list_user_view ??= [];
+        list_user_view["widths"] = normalizeUserViewWidths(list_user_view["widths"]);
 
         // userviews customization support
         ps["all_list_columns"] = getViewListArr(getViewListUserFields(), true); // list all fields
@@ -132,6 +185,7 @@ public class FwVueController : FwDynamicController
 
         ps["list_user_view"] = this.list_user_view;
         ps["list_headers"] = this.list_headers;
+        ps["capabilities"] = getCapabilities();
 
         // other static params
         ps["related_id"] = this.related_id;
@@ -166,6 +220,9 @@ public class FwVueController : FwDynamicController
         // if export - no need further processing - just return asap
         if (export_format.Length > 0)
             return;
+
+        foreach (FwDict row in list_rows)
+            applyListRowCapabilities(row);
 
         ps["list_rows"] = this.list_rows;
         ps["count"] = this.list_count;
@@ -311,6 +368,11 @@ public class FwVueController : FwDynamicController
 
                 return ps;
             }
+
+            var validationMessages = new FwDict();
+            foreach (var code in Utils.qw("REQUIRED EXISTS EMAIL WRONG INVALID SAVE_FAILED"))
+                validationMessages[code] = formIssueMessage(code);
+            ps["validation_messages"] = validationMessages;
 
             // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
             // if url is /ID or /ID/edit or /new - add screen, id to ps so Vue app will switch to related screen
@@ -515,6 +577,7 @@ public class FwVueController : FwDynamicController
         }
 
         model0.filterForJson(item);
+        applyListRowCapabilities(item);
 
         ps["id"] = id;
         ps["i"] = item;
@@ -562,12 +625,7 @@ public class FwVueController : FwDynamicController
         var success = true;
         var is_new = (id == 0);
 
-        Validate(id, item);
-        // load old record if necessary
-        // var itemOld = modelOne(id);
-
-        FwDict itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        FwDict itemdb = prepareSaveFields(id, item);
 
         id = this.modelAddOrUpdate(id, itemdb);
 

@@ -17,7 +17,9 @@ let mainApp = {
         this.fwStore.saveToStore(this.$el.parentElement.dataset);
         this.fwStore.initApi();
 
+        this.fwStore.initFormTabFromLocation();
         await this.fwStore.loadInitial();
+        this.fwStore.restoreFilterVisibility();
         if (this.fwStore.current_screen) {
             await this.fwStore.setCurrentScreen(this.fwStore.current_screen, this.fwStore.current_id, { replace: true });
         } else {
@@ -36,6 +38,9 @@ let mainApp = {
     },
     updated() {
         //console.log('mainApp updated');
+    },
+    unmounted() {
+        window.removeEventListener('beforeunload', this.fwStore.warnBeforeUnload);
     },
     methods: {
         reload() {

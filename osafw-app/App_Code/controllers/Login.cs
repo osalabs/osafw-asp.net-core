@@ -88,7 +88,7 @@ public class LoginController : FwController
 
             if (login.Length == 0 || pwd.Length == 0)
             {
-                fw.FormErrors["REGISTER"] = true;
+                addFormError("REGISTER", "REQUIRED");
                 throw new UserException("");
             }
 

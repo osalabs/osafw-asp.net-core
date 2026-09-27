@@ -78,6 +78,45 @@ public class FwDynamicControllerTests
     }
 
     [TestMethod]
+    public void ReadonlyOnEdit_RendersPlainValueAndHelpOnlyForExistingRows()
+    {
+        var fw = TestHelpers.CreateFw();
+        var controller = new TestDynamicController(new StrList());
+        controller.init(fw);
+        const string help = "Set when creating the record; read-only when editing.";
+        controller.loadControllerConfig(new FwDict
+        {
+            ["showform_fields"] = new FwList
+            {
+                new FwDict { ["field"] = "icode", ["type"] = "input", ["is_edit_readonly"] = true, ["help_text"] = help },
+                new FwDict { ["field"] = "title", ["type"] = "input" },
+                new FwDict { ["field"] = "secret", ["type"] = "password", ["is_edit_readonly"] = true }
+            }
+        });
+        var root = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.AppContext.BaseDirectory, "../../../.."));
+        var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = System.IO.Path.Combine(root, "osafw-app/App_Data/template") });
+
+        foreach (var id in new[] { 7, 0 })
+        {
+            var fields = controller.prepareShowFormFields(new FwDict { ["id"] = id, ["icode"] = "<Code>", ["title"] = "Editable", ["secret"] = "hidden-secret" }, []);
+            var codeHtml = parser.parse_page("", "common/form/showform/one_fieldsel.html", (FwDict)fields[0]);
+            var titleHtml = parser.parse_page("", "common/form/showform/one_fieldsel.html", (FwDict)fields[1]);
+            var passwordHtml = parser.parse_page("", "common/form/showform/one_fieldsel.html", (FwDict)fields[2]);
+            StringAssert.Contains(codeHtml, help);
+            StringAssert.Contains(codeHtml, "&lt;Code&gt;");
+            StringAssert.Contains(titleHtml, "name=\"item[title]\"");
+            Assert.AreEqual(id == 0, codeHtml.Contains("name=\"item[icode]\""));
+            if (id > 0)
+            {
+                StringAssert.Contains(codeHtml, "fw-edit-readonly");
+                StringAssert.Contains(passwordHtml, "••••••");
+                Assert.IsFalse(passwordHtml.Contains("hidden-secret"));
+                Assert.IsFalse(passwordHtml.Contains("<input"));
+            }
+        }
+    }
+
+    [TestMethod]
     public void PrepareFields_PrettyPrintsPlaintextJsonAndKeepsInvalidText()
     {
         var fw = TestHelpers.CreateFw();

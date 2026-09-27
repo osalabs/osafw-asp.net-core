@@ -19,6 +19,7 @@ public class FwVirtualController : FwVueController
         //constructor will not load config.json as base_url is not yet set
 
         this.base_url = fwcontroller["url"].toStr();
+        var is_edit_allowed = fw.model<Users>().isAccessLevel(fwcontroller["access_level_edit"].toInt());
         string controller_basedir = this.base_url.ToLower();
         string template_root = fw.config("template") + controller_basedir;
 
@@ -41,7 +42,7 @@ public class FwVirtualController : FwVueController
                         { "url", fwcontroller["url"] },
                         { "title", fwcontroller["iname"] },
                         { "type", "vue" },
-                        { "is_dynamic_index_edit", fw.model<Users>().isAccessLevel(fwcontroller["access_level_edit"].toInt()) }
+                        { "is_dynamic_index_edit", is_edit_allowed }
                     }
                 }
             };
@@ -89,6 +90,8 @@ public class FwVirtualController : FwVueController
         }
 
         loadControllerConfig(con_config);
+        if (!is_edit_allowed)
+            is_readonly = true;
     }
 
 }

@@ -186,7 +186,7 @@ public class AdminAttController : FwAdminController
         if (itemdb["fsize"].toInt() == 0)
         {
             if (!hasPostedFile())
-                fw.FormErrors["file1"] = "NOFILE";
+                addFormError("file1", "NOFILE");
         }
 
         this.validateCheckResult();

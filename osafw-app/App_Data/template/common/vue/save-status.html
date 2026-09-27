@@ -1,0 +1,6 @@
+<div v-for="(failure,index) in fwStore.formSaveErrors" :key="index" class="alert alert-danger" role="alert">
+    {{failure.message}}
+</div>
+<div v-if="fwStore.edit_data?.save_result?.is_list_refresh_failed" class="alert alert-warning" role="alert">
+    `Saved, but the list could not refresh. Reload the list to see current values.`
+</div>

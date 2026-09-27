@@ -308,9 +308,9 @@ public class AdminReportsController : FwController
         if (!string.IsNullOrEmpty(item["icode"].toStr()))
         {
             if (FwReportsBase.isHardcodedReport(item["icode"].toStr()))
-                fw.FormErrors["icode"] = "HARDCODED";
+                addFormError("icode", "HARDCODED");
             else if (fw.model<FwReports>().isExistsByField(item["icode"].toStr(), id, "icode"))
-                fw.FormErrors["icode"] = "EXISTS";
+                addFormError("icode", "EXISTS");
         }
 
         validateCheckResult();

@@ -4,7 +4,10 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 namespace osafw;
 
@@ -19,6 +22,7 @@ public class UserViews : FwModel<UserViews.Row>
         public int is_system { get; set; }
         public int is_shared { get; set; }
         public string density { get; set; } = string.Empty;
+        public string widths { get; set; } = string.Empty;
         public int status { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
@@ -122,7 +126,7 @@ public class UserViews : FwModel<UserViews.Row>
     }
 
     // add view for logged user with icode, fields, iname
-    public int addSimple(string icode, string fields, string iname, string density = "")
+    public int addSimple(string icode, string fields, string iname, string density = "", string widths = "")
     {
         var result = add(new FwDict()
         {
@@ -130,24 +134,28 @@ public class UserViews : FwModel<UserViews.Row>
             { field_iname, iname },
             { "fields", fields },
             { "density", density },
+            { "widths", widths },
             { field_add_users_id, fw.userId },
         });
         return result;
     }
 
     // add or update view for logged user
-    public int addOrUpdateByUK(string icode, string fields, string iname)
+    public virtual int addOrUpdateByUK(string icode, string fields, string iname, string? widths = null)
     {
         int id;
         var item = oneByUK(icode, iname);
         if (item.Count > 0)
         {
             id = item["id"].toInt();
-            update(id, DB.h("fields", fields));
+            var itemdb = DB.h("fields", fields);
+            if (widths != null)
+                itemdb["widths"] = widths;
+            update(id, itemdb);
         }
         else
         {
-            id = addSimple(icode, fields, iname);
+            id = addSimple(icode, fields, iname, widths: widths ?? "");
         }
         return id;
     }
@@ -192,7 +200,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// </summary>
     /// <param name="itemdb">Fields to persist on the default view row.</param>
     /// <returns>The saved <c>user_views.id</c>.</returns>
-    public int updateByIcode(string icode, FwDict itemdb)
+    public virtual int updateByIcode(string icode, FwDict itemdb)
     {
         var item = oneByIcode(icode);
         int result;
@@ -219,7 +227,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// </summary>
     /// <param name="fields">Comma-separated field list to store.</param>
     /// <returns>The saved <c>user_views.id</c>.</returns>
-    public int updateByIcodeFields(string icode, string fields)
+    public virtual int updateByIcodeFields(string icode, string fields)
     {
         return updateByIcode(icode, DB.h("fields", fields));
     }
@@ -227,7 +235,7 @@ public class UserViews : FwModel<UserViews.Row>
     /// <summary>
     /// Lists named owner/system views for a screen; unnamed default views stay hidden from the selector.
     /// </summary>
-    public FwList listSelectByIcode(string icode)
+    public virtual FwList listSelectByIcode(string icode)
     {
         var cacheKey = cacheKeySelect(icode);
         if (FwCache.getValue(cacheKey) is FwList cached)
@@ -260,12 +268,84 @@ public class UserViews : FwModel<UserViews.Row>
     /// <summary>
     /// replace current default view for icode using view in id
     /// </summary>
-    public void setViewForIcode(string icode, int id)
+    public virtual void setViewForIcode(string icode, int id)
     {
         var item = oneByIcodeId(icode, id);
         if (item.Count == 0) return;
 
         updateByIcodeFields(icode, item["fields"]);
+    }
+
+    /// <summary>
+    /// Normalizes persisted column widths against server-controlled column names.
+    /// </summary>
+    /// <remarks>
+    /// Accepts either a decoded JSON object or a JSON object string. Unknown columns, invalid values, and
+    /// entries beyond the first 100 accepted values are discarded. Valid widths are rounded and clamped
+    /// to 60 through 800 pixels.
+    /// </remarks>
+    /// <param name="raw">Decoded width map or JSON object string.</param>
+    /// <param name="allowedColumns">Server-controlled list column names.</param>
+    /// <returns>A safe width map ready for JSON serialization.</returns>
+    public static FwDict normalizeWidths(object? raw, IEnumerable<string> allowedColumns)
+    {
+        object? decoded = raw;
+        if (raw is string rawString)
+        {
+            if (string.IsNullOrWhiteSpace(rawString))
+                return [];
+
+            try
+            {
+                decoded = Utils.jsonDecode(rawString);
+            }
+            catch
+            {
+                return [];
+            }
+        }
+
+        if (decoded is not IDictionary values)
+            return [];
+
+        var input = decoded as FwDict ?? new FwDict(values);
+        var result = new FwDict();
+        foreach (var field in allowedColumns
+            .Where(field => !string.IsNullOrWhiteSpace(field))
+            .Distinct(StringComparer.Ordinal))
+        {
+            if (!input.TryGetValue(field, out var rawWidth) || !tryWidth(rawWidth, out var width))
+                continue;
+
+            var clamped = Math.Clamp(width, 60d, 800d);
+            result[field] = (int)Math.Round(clamped, MidpointRounding.AwayFromZero);
+            if (result.Count == 100)
+                break;
+        }
+
+        return result;
+    }
+
+    private static bool tryWidth(object? raw, out double width)
+    {
+        width = 0;
+        if (raw == null)
+            return false;
+
+        if (raw is bool or char || raw is not (string or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal))
+            return false;
+
+        try
+        {
+            width = raw is string text
+                ? double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture)
+                : Convert.ToDouble(raw, CultureInfo.InvariantCulture);
+            return double.IsFinite(width) && width > 0;
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
+        {
+            return false;
+        }
     }
 
     private string cacheKeyDefault(string icode)

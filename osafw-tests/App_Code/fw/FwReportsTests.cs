@@ -319,7 +319,7 @@ public class FwReportsTests
             ["sql_template"] = "select 1 as id"
         };
         Assert.ThrowsExactly<ValidationException>(() => controller.validateCustomReport(0, item));
-        Assert.AreEqual("HARDCODED", fw.FormErrors["icode"]);
+        Assert.AreEqual("HARDCODED", fw.getFormErrors()["icode"]);
     }
 
     [TestMethod]

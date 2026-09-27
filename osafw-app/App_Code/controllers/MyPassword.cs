@@ -85,26 +85,23 @@ public class MyPasswordController : FwController
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw("email old_pwd pwd pwd2"));
-        if (!result)
-            fw.FormErrors["REQ"] = 1;
-
         var email = item["email"].toStr();
 
         if (result && model.isExists(email, id))
         {
             result = false;
-            fw.FormErrors["email"] = "EXISTS";
+            addFormError("email", "EXISTS");
         }
         if (result && !FormUtils.isEmail(email))
         {
             result = false;
-            fw.FormErrors["email"] = "EMAIL";
+            addFormError("email", "EMAIL");
         }
 
         if (result && model.cleanPwd(item["pwd"].toStr()) != model.cleanPwd(item["pwd2"].toStr()))
         {
             result = false;
-            fw.FormErrors["pwd2"] = "NOTEQUAL";
+            addFormError("pwd2", "NOTEQUAL");
         }
 
         // uncomment if project requires good password strength
@@ -118,7 +115,7 @@ public class MyPasswordController : FwController
             var itemdb = model.one(id);
             if (!fw.model<Users>().checkPwd(item["old_pwd"].toStr(), itemdb["pwd"]))
             {
-                fw.FormErrors["old_pwd"] = "WRONG";
+                addFormError("old_pwd", "WRONG");
             }
         }
 

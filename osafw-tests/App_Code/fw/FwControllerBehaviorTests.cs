@@ -65,6 +65,7 @@ public class FwControllerBehaviorTests
 
         public FwDict CurrentFilter => list_filter;
         public string CurrentOrderBy => list_orderby;
+        public void Error(string field, string? code = null, string? message = null) => addFormError(field, code, message);
     }
 
     private static (FW fw, StubModel model, TestController controller) BuildController(bool expectJson = false)
@@ -88,15 +89,16 @@ public class FwControllerBehaviorTests
         var result = controller.validateRequired(0, item, new[] { "present", "missing" });
 
         Assert.IsFalse(result);
-        Assert.IsTrue(fw.FormErrors.ContainsKey("missing"));
-        Assert.IsTrue(fw.FormErrors.ContainsKey("REQUIRED"));
+        var errors = fw.getFormErrors();
+        Assert.IsTrue(errors.ContainsKey("missing"));
+        Assert.IsTrue(errors.ContainsKey("REQUIRED"));
     }
 
     [TestMethod]
     public void ValidateCheckResult_ThrowsWhenErrorsPresent()
     {
         var (fw, _, controller) = BuildController();
-        fw.FormErrors["field"] = "invalid";
+        controller.Error("field", message: "invalid");
 
         try
         {
@@ -106,7 +108,7 @@ public class FwControllerBehaviorTests
         catch (ValidationException)
         {
         }
-        Assert.IsTrue(fw.FormErrors.ContainsKey("INVALID"));
+        Assert.IsTrue(fw.getFormErrors().ContainsKey("INVALID"));
     }
 
     [TestMethod]
@@ -126,7 +128,7 @@ public class FwControllerBehaviorTests
     {
         var (fw, _, controller) = BuildController(expectJson: true);
         fw.G["err_msg"] = "boom";
-        fw.FormErrors["field"] = "missing";
+        controller.Error("field", message: "missing");
 
         var ps = controller.afterSave(false, 9, false, "ShowForm", "/items/9");
 

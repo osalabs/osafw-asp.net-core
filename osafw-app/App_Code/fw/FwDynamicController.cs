@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -17,6 +18,8 @@ public partial class FwDynamicController : FwController
 
     protected FwModel? model_related;
     protected FwDict subtable_save_row_ids = [];
+    // Preserve creation context for the existing virtual post-save hook after an insert assigns its id.
+    private bool is_new_model_save;
 
     protected static readonly string[] DEF_TYPES_STRUCTURE = ["row", "row_end", "col", "col_end", "header", "fieldset", "fieldset_end"];
 
@@ -218,26 +221,40 @@ public partial class FwDynamicController : FwController
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["tab"] = form_tab;
+        if (fw.FormIssues.Count > 0)
+            ps["form_issues"] = new FwList(fw.FormIssues);
         ps["is_showform"] = true; // flag for template that we are in show form
 
         //for RBAC
         ps["rbac"] = rbac;
 
-        if (fw.FormErrors.Count > 0)
-            logger(fw.FormErrors);
+        var formErrors = fw.getFormErrors();
+        if (formErrors.Count > 0)
+            logger(formErrors);
 
         return ps;
     }
 
     public override int modelAddOrUpdate(int id, FwDict fields)
     {
+        var isNew = id == 0;
         if (is_dynamic_showform)
             processSaveShowFormFields(id, fields);
 
         id = base.modelAddOrUpdate(id, fields);
 
         if (is_dynamic_showform)
-            processSaveShowFormFieldsAfter(id, fields);
+        {
+            is_new_model_save = isNew;
+            try
+            {
+                processSaveShowFormFieldsAfter(id, fields);
+            }
+            finally
+            {
+                is_new_model_save = false;
+            }
+        }
 
         return id;
     }
@@ -268,12 +285,7 @@ public partial class FwDynamicController : FwController
         var success = true;
         var is_new = (id == 0);
 
-        Validate(id, item);
-        // load old record if necessary
-        // var itemOld = modelOne(id);
-
-        FwDict itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        FwDict itemdb = prepareSaveFields(id, item);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -312,6 +324,91 @@ public partial class FwDynamicController : FwController
     }
 
     #region Validation
+    /// <summary>
+    /// Adds form feedback with the configured field's tab/row metadata. Attempted values require
+    /// validation_show_value=true; sensitive controls never echo them.
+    /// </summary>
+    protected override void addFormIssue(string severity, string field, string? code = null, string? message = null,
+        string? tab = null, string? row_id = null, object? attempted_value = null)
+    {
+        var resolved = resolveValidationField(field);
+        object? safeAttemptedValue = null;
+        if (isValidationValueAllowed(resolved.definition))
+        {
+            safeAttemptedValue = attempted_value;
+            if (safeAttemptedValue == null && resolved.logicalField.Length > 0)
+            {
+                safeAttemptedValue = resolved.subtable.Length > 0
+                    ? reqh($"item-{resolved.subtable}#{resolved.rowId}")[resolved.logicalField]
+                    : reqh("item")[resolved.logicalField];
+            }
+        }
+
+        base.addFormIssue(severity, field, code, message, tab ?? resolved.tab, row_id ?? resolved.rowId,
+            safeAttemptedValue);
+    }
+
+    protected static bool isValidationValueAllowed(FwDict? definition)
+    {
+        if (definition?["validation_show_value"] is not true)
+            return false;
+
+        return definition["type"].toStr().ToLowerInvariant() switch
+        {
+            "password" or "hidden" or "credential" or "secret" or "token" or "api_key" => false,
+            _ => true,
+        };
+    }
+
+    protected (FwDict? definition, string logicalField, string subtable, string? rowId, string? tab) resolveValidationField(string issueField)
+    {
+        var match = Regex.Match(issueField, @"^item-(?<subtable>.+?)#(?<row>[^\[]+)\[(?<field>[^\]]+)\]$");
+        var logicalField = match.Success ? match.Groups["field"].Value : issueField;
+        var subtable = match.Success ? match.Groups["subtable"].Value : string.Empty;
+        var rowId = match.Success ? match.Groups["row"].Value : null;
+
+        foreach (var candidate in validationFieldDefinitions())
+        {
+            var def = candidate.definition;
+            if (subtable.Length == 0)
+            {
+                if (def["field"].toStr() == logicalField || def["issue_field"].toStr() == issueField)
+                    return (def, logicalField, subtable, rowId, candidate.tab);
+                continue;
+            }
+
+            if (def["type"].toStr() != "subtable_edit" || def["field"].toStr() != subtable)
+                continue;
+
+            foreach (FwDict childDef in getSubtableFormFields(def))
+                if (childDef["field"].toStr() == logicalField)
+                    return (childDef, logicalField, subtable, rowId, candidate.tab);
+
+            return (null, logicalField, subtable, rowId, candidate.tab);
+        }
+
+        return (null, logicalField, subtable, rowId, null);
+    }
+
+    private IEnumerable<(FwDict definition, string? tab)> validationFieldDefinitions()
+    {
+        if (config["showform_fields"] is IList baseFields)
+            foreach (FwDict def in new FwList(baseFields))
+                yield return (def, null);
+
+        if (config["form_tabs"] is not IList tabs)
+            yield break;
+
+        foreach (FwDict tabDef in new FwList(tabs))
+        {
+            var tab = tabDef["tab"].toStr();
+            if (tab.Length == 0)
+                continue;
+            foreach (FwDict def in getConfigShowFormFieldsByTab("showform_fields", tab))
+                yield return (def, tab);
+        }
+    }
+
     /// <summary>
     /// Performs submitted form validation for required field and simple validations: exits, isemail, isphone, isdate, isfloat.
     /// If more complex validation required - just override this and call just necessary validation
@@ -392,27 +489,27 @@ public partial class FwDynamicController : FwController
 
                     if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
                     {
-                        fw.FormErrors[field] = "EXISTS";
+                        addFormError(field, "EXISTS");
                         result = false;
                     }
                     if (val.ContainsKey("isemail") && !Utils.isEmpty(field_value) && !FormUtils.isEmail(field_value))
                     {
-                        fw.FormErrors[field] = "EMAIL";
+                        addFormError(field, "EMAIL");
                         result = false;
                     }
                     if (val.ContainsKey("isphone") && !Utils.isEmpty(field_value) && !FormUtils.isPhone(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        addFormError(field, "WRONG");
                         result = false;
                     }
                     if (val.ContainsKey("isdate") && !Utils.isEmpty(field_value) && !Utils.isDate(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        addFormError(field, "WRONG");
                         result = false;
                     }
                     if (val.ContainsKey("isfloat") && !Utils.isEmpty(field_value) && !Utils.isFloat(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        addFormError(field, "WRONG");
                         result = false;
                     }
                 }
@@ -457,8 +554,10 @@ public partial class FwDynamicController : FwController
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
+            removeEditReadonlySubtableFields(row_id, row_item, def);
             FwDict itemdb = FormUtils.filter(row_item, save_fields);
             FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
+            removeEditReadonlySubtableFields(row_id, itemdb, def);
 
             if (row_id.StartsWith("new-"))
                 itemdb[sub_model.junction_field_main_id] = id;
@@ -469,7 +568,7 @@ public partial class FwDynamicController : FwController
     }
 
     /// <summary>
-    /// validate single subtable row using def[required_fields] and fill fw.FormErrors with row errors if any
+    /// Validates a subtable row using def[required_fields] and adds row-scoped form errors.
     /// Override in controller and add custom validation if needed
     /// </summary>
     /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
@@ -487,17 +586,89 @@ public partial class FwDynamicController : FwController
         result = this.validateRequired(id, item, req_fields, row_errors);
         if (!result)
         {
-            //fill global fw.FormErrors with row errors
             var field = def["field"].toStr();
             foreach (var field_name in row_errors.Keys)
             {
                 // row input names format: item-<~field>#<~id>[field_name]
-                fw.FormErrors[$"item-{field}#{row_id}[{field_name}]"] = true;
+                addFormError($"item-{field}#{row_id}[{field_name}]", "REQUIRED");
             }
-            fw.FormErrors["REQUIRED"] = true; // also set global error
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Applies the shared Dynamic/Vue save preparation sequence before persistence.
+    /// </summary>
+    protected virtual FwDict prepareSaveFields(int id, FwDict item)
+    {
+        removeEditReadonlyFields(id, item);
+        Validate(id, item);
+        validateCheckResult();
+
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        removeEditReadonlyFields(id, itemdb);
+        return itemdb;
+    }
+
+    /// <summary>
+    /// Removes configured read-only-on-edit values from an existing main-row payload before validation or persistence.
+    /// New rows retain these values so a field can be set once during creation.
+    /// </summary>
+    /// <param name="id">Existing row id, or zero for a new row.</param>
+    /// <param name="item">Submitted main-row values.</param>
+    protected virtual void removeEditReadonlyFields(int id, FwDict item)
+    {
+        if (id == 0 || item.Count == 0)
+            return;
+
+        foreach (FwDict def in collectFormFields("showform_fields"))
+        {
+            if (!def["is_edit_readonly"].toBool() || def["type"].toStr() == "subtable_edit")
+                continue;
+
+            removeSubmittedFieldValue(item, def["field"].toStr());
+        }
+    }
+
+    /// <summary>
+    /// Removes read-only-on-edit child-field values from existing subtable rows. Child field definitions are supplied
+    /// through the subtable definition's optional <c>showform_fields</c> list.
+    /// </summary>
+    /// <param name="row_id">Existing numeric child id or a <c>new-</c> temporary id.</param>
+    /// <param name="item">Submitted child-row values.</param>
+    /// <param name="def">The parent <c>subtable_edit</c> field definition.</param>
+    protected virtual void removeEditReadonlySubtableFields(string row_id, FwDict item, FwDict def)
+    {
+        if (row_id.StartsWith("new-", StringComparison.Ordinal) || item.Count == 0)
+            return;
+
+        foreach (FwDict childDef in getSubtableFormFields(def))
+        {
+            if (childDef["is_edit_readonly"].toBool())
+                removeSubmittedFieldValue(item, childDef["field"].toStr());
+        }
+    }
+
+    /// <summary>
+    /// Returns optional child field metadata for a dynamic subtable.
+    /// </summary>
+    protected virtual FwList getSubtableFormFields(FwDict def)
+    {
+        return def["showform_fields"] is IList fields ? new FwList(fields) : [];
+    }
+
+    private static void removeSubmittedFieldValue(FwDict item, string field)
+    {
+        if (string.IsNullOrEmpty(field))
+            return;
+
+        item.Remove(field);
+        item.Remove(field + "_iname");
+        item.Remove(field + "_day");
+        item.Remove(field + "_mon");
+        item.Remove(field + "_year");
     }
     #endregion
 
@@ -705,19 +876,38 @@ public partial class FwDynamicController : FwController
 
     public virtual FwDict? SaveUserViewsAction()
     {
+        enforcePost();
+
         var fld = reqh("fld");
         var load_id = reqi("load_id");
         var is_reset = reqb("is_reset");
         var density = reqs("density");
+        var is_widths_supplied = req("widths") != null;
         var is_list_edit = reqb("is_list_edit");
         var icode = base_url + (is_list_edit ? "/edit" : "");
+        FwDict? saved_widths = null;
 
         if (load_id > 0)
-            // set fields from specific view
-            fw.model<UserViews>().setViewForIcode(icode, load_id);
+        {
+            // set fields and normalized widths from a specific available view
+            var views = fw.model<UserViews>();
+            var selected = views.oneByIcodeId(icode, load_id);
+            if (selected.Count > 0)
+            {
+                saved_widths = normalizeUserViewWidths(selected["widths"]);
+                views.updateByIcode(icode, DB.h(
+                    "fields", selected["fields"],
+                    "widths", Utils.jsonEncode(saved_widths)));
+            }
+        }
         else if (is_reset)
+        {
             // reset fields to defaults
-            fw.model<UserViews>().updateByIcodeFields(icode, view_list_defaults);
+            saved_widths = [];
+            fw.model<UserViews>().updateByIcode(icode, DB.h(
+                "fields", view_list_defaults,
+                "widths", Utils.jsonEncode(saved_widths)));
+        }
         else if (density.Length > 0)
         {
             // save density
@@ -725,6 +915,11 @@ public partial class FwDynamicController : FwController
             if (!"table-sm table-dense table-normal".Contains(density))
                 density = "";
             fw.model<UserViews>().updateByIcode(icode, DB.h("density", density));
+        }
+        else if (is_widths_supplied)
+        {
+            var widths = normalizeUserViewWidths(req("widths"));
+            fw.model<UserViews>().updateByIcode(icode, DB.h("widths", Utils.jsonEncode(widths)));
         }
         else
         {
@@ -743,13 +938,23 @@ public partial class FwDynamicController : FwController
             if (!string.IsNullOrEmpty(iname))
             {
                 // create new view by name or update if this name exists
-                fw.model<UserViews>().addOrUpdateByUK(icode, fields, iname);
+                var widths = normalizeUserViewWidths(getListUserView()["widths"]);
+                fw.model<UserViews>().addOrUpdateByUK(icode, fields, iname, Utils.jsonEncode(widths));
             }
             // update default view with fields
             fw.model<UserViews>().updateByIcodeFields(icode, fields);
         }
 
-        return afterSave(true, null, false, "no_action", return_url);
+        return afterSave(true, null, false, "no_action", return_url,
+            saved_widths == null ? null : new FwDict { ["widths"] = saved_widths });
+    }
+
+    /// <summary>
+    /// Normalizes saved widths against this controller's configured list columns.
+    /// </summary>
+    protected virtual FwDict normalizeUserViewWidths(object? raw)
+    {
+        return UserViews.normalizeWidths(raw, view_list_map.Keys);
     }
     #endregion
 
@@ -1029,6 +1234,8 @@ public partial class FwDynamicController : FwController
             def["record_id"] = id;
             string dtype = def["type"].toStr(); // type is required
             string field = def["field"].toStr();
+
+            def["is_edit_readonly_active"] = id > 0 && def["is_edit_readonly"].toBool();
 
             // for just loaded forms for existing items - pre-load filter's values into "item"
             if (is_get_existing && def.TryGetValue("filter_for", out object? value))
@@ -1402,6 +1609,9 @@ public partial class FwDynamicController : FwController
         {
             string field = def["field"].toStr();
             string type = def["type"].toStr();
+            if (!is_new_model_save && def["is_edit_readonly"].toBool())
+                continue;
+
             if (type == "att_links_edit")
             {
                 var att_post_prefix = "att";
@@ -1555,8 +1765,10 @@ public partial class FwDynamicController : FwController
             if (row_id == del_id) continue; //skip deleted row
 
             var row_item = reqh("item-" + field + "#" + row_id);
+            removeEditReadonlySubtableFields(row_id, row_item, def);
             FwDict itemdb = FormUtils.filter(row_item, save_fields);
             FormUtils.filterCheckboxes(itemdb, row_item, save_fields_checkboxes, isPatch());
+            removeEditReadonlySubtableFields(row_id, itemdb, def);
 
             itemdb[junction_field_status] = FwModel.STATUS_ACTIVE; // mark new and updated existing rows as active
 

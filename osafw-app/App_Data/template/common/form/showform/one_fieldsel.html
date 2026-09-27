@@ -1,3 +1,8 @@
+<~readonly_control if="is_edit_readonly_active" inline>
+<p class="form-control-plaintext fw-edit-readonly"><~password ifeq="type" value="password" inline>••••••</~password><~text ifne="type" value="password" inline><~value nl2br></~text></p>
+<~/common/form/showform/help_block if="help_text">
+</~readonly_control>
+<~editable_control unless="is_edit_readonly_active" inline>
 <~/common/form/showform/id ifeq="type" value="id">
 <~/common/form/showform/group_id ifeq="type" value="group_id">
 <~/common/form/showform/group_id_addnew ifeq="type" value="group_id_addnew">
@@ -25,3 +30,4 @@
 <~/common/form/showform/date_combo ifeq="type" value="date_combo">
 
 <~/common/form/show/one_fieldsel>
+</~editable_control>

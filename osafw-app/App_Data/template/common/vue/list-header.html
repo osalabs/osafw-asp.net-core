@@ -36,7 +36,7 @@
                 <div class="btn-group" v-if="uioptions.btnAddNew || $slots.group || $slots['group-prepend']">
                     <slot name="group-prepend"></slot>
 
-                    <button v-if="uioptions.btnAddNew"
+                    <button v-if="uioptions.btnAddNew && fwStore.canAction('create')"
                             type="button"
                             class="btn btn-primary"
                             @click="onAddNew"
@@ -73,9 +73,13 @@
         }),
         computed: {
             ...mapStores(fwStore), //accessible via this.fwStore
+            visibilityKey() { return this.fwStore.filterVisibilityKey(); },
             uioptions() {
                 return this.fwStore.uioptions.list.header ?? false;
             }
+        },
+        watch: {
+            visibilityKey: { immediate: true, handler() { this.fwStore.restoreFilterVisibility(); } }
         },
         methods: {
             onAddNew(e) {

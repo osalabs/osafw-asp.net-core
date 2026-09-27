@@ -16,7 +16,7 @@ Trace the changed behavior through every affected consumer surface:
 ## Questions
 
 - Did the implementation search real callers, overrides, templates, generated examples, and app customization points before changing the contract?
-- Can existing copied apps continue working through additive behavior or a small compatibility shim? If not, is the break necessary, explicit, and paired with practical migration steps?
+- Does the change follow the [compatibility and migration policy](../../../AGENTS.md#compatibility-schema-and-documentation), with a concrete benefit that justifies any break, proportional compatibility support, and verified migration steps?
 - Does a security fix deliberately prioritize safety while clearly documenting behavioral impact?
 - Are defaults safe for existing apps, not merely convenient for a fresh framework clone?
 - When code classifies provider metadata, config values, routes, generated shapes, or trusted/untrusted content, do tests include attacker or ordinary negative values plus every intended-safe/trusted positive form and preserved baseline consumer?

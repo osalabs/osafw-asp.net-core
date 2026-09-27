@@ -89,18 +89,15 @@ public class MySettingsController : FwController
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw(required_fields));
-        if (!result)
-            fw.FormErrors["REQ"] = 1;
-
         if (result && model.isExists(item["email"].toStr(), id))
         {
             result = false;
-            fw.FormErrors["email"] = "EXISTS";
+            addFormError("email", "EXISTS");
         }
         if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
-            fw.FormErrors["email"] = "EMAIL";
+            addFormError("email", "EMAIL");
         }
 
         //if (result && !SomeOtherValidation())
