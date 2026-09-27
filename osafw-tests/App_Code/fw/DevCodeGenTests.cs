@@ -10,6 +10,69 @@ namespace osafw.Tests;
 [TestClass]
 public class DevCodeGenTests
 {
+    private sealed class MenuDb : DB
+    {
+        public bool IsMenuWritten;
+        public MenuDb() : base("", DBTYPE_SQLSRV) { }
+        public override DBRow row(string table, FwDict where, string order_by = "") => [];
+        public override int insert(string table, FwDict fields)
+        {
+            Assert.AreEqual("menu_items", table);
+            IsMenuWritten = true;
+            return 1;
+        }
+    }
+
+    [TestMethod]
+    [DataRow("dynamic", "AdminDemosDynamic", "demosdynamic", "FwDynamicController")]
+    [DataRow("vue", "AdminDemosVue", "demosvue", "FwVueController")]
+    public void CreateController_ExcludesDemoValidation(string type, string sourceClass, string sourceFolder, string baseClass)
+    {
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+        var tempRoot = Path.Combine(Path.GetTempPath(), "osafw-controller-" + Guid.NewGuid().ToString("N"));
+        var controllerDir = Path.Combine(tempRoot, "App_Code", "controllers");
+        var templateDir = Path.Combine(tempRoot, "App_Data", "template");
+        Directory.CreateDirectory(controllerDir);
+        try
+        {
+            File.Copy(Path.Combine(repoRoot, "osafw-app", "App_Code", "controllers", sourceClass + ".cs"),
+                Path.Combine(controllerDir, sourceClass + ".cs"));
+            Utils.CopyDirectory(Path.Combine(repoRoot, "osafw-app", "App_Data", "template", "admin", sourceFolder),
+                Path.Combine(templateDir, "admin", sourceFolder), true);
+            var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+            {
+                ["appSettings:site_root"] = tempRoot,
+                ["appSettings:template"] = templateDir,
+                ["appSettings:log"] = Path.Combine(tempRoot, "main.log")
+            });
+            var entity = new FwDict
+            {
+                ["model_name"] = "GeneratedWidgets", ["table"] = "generated_widgets", ["is_fw"] = true,
+                ["controller"] = new FwDict { ["url"] = "/Admin/GeneratedWidgets", ["title"] = "Widgets", ["type"] = type },
+                ["fields"] = new FwList
+                {
+                    Field("id", "int", 0, isNullable: false, isIdentity: true),
+                    Field("iname", "varchar", 80, isNullable: false),
+                    Field("status", "int", 0, isNullable: false, defaultValue: "0")
+                },
+                ["foreign_keys"] = new FwList()
+            };
+            var db = new MenuDb();
+            Assert.IsTrue(new DevCodeGen(fw, db).createController(entity, []));
+            var source = File.ReadAllText(Path.Combine(controllerDir, "AdminGeneratedWidgets.cs"));
+            StringAssert.Contains(source, "AdminGeneratedWidgetsController : " + baseClass);
+            StringAssert.Contains(source, "public override void init(FW fw)");
+            Assert.IsFalse(source.Contains("Validate(") || source.Contains("validation-") || source.Contains("DemoOnly"));
+            Assert.IsTrue(db.IsMenuWritten);
+            var config = File.ReadAllText(Path.Combine(templateDir, "admin", "generatedwidgets", "config.json"));
+            Assert.IsFalse(config.Contains("Validation demo:") || config.Contains("validation-both"));
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
     [TestMethod]
     public void CreateController_RejectsReservedApiTypeBeforeGeneration()
     {

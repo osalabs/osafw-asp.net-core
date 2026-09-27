@@ -31,6 +31,7 @@ public class AdminDemosVueController : FwVueController
         // list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
+    #region DemoOnly
     public override void Validate(int id, FwDict item)
     {
         base.Validate(id, item);
@@ -43,4 +44,5 @@ public class AdminDemosVueController : FwVueController
         else if (title == "validation-both")
             addFormWarning("email", message: fw.parsePageInstance().langMap("Demo warning: review this email address."));
     }
+    #endregion
 }

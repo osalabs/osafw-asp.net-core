@@ -11,6 +11,36 @@ namespace osafw.Tests;
 [TestClass]
 public class VueInteractionBrowserTests
 {
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("relations", "relations")]
+    [DataRow("unknown", "")]
+    public async Task StartupPreservesValidTabLinksAndRejectsUnknownTabs(string requestedTab, string expectedTab)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div>Startup test</div>");
+        var appScript = Template("app.js").Replace("const app = createFwApp(mainApp);", "window.testMainApp = mainApp;");
+        await page.AddScriptTagAsync(new() { Type = "module", Content = appScript });
+        await page.WaitForFunctionAsync("() => !!window.testMainApp");
+        await page.EvaluateAsync("""
+            async tab => {
+                history.replaceState({}, '', '/Admin/Test/7/edit?tab=' + tab);
+                testStore.base_url = '/Admin/Test';
+                testStore.current_screen = 'edit'; testStore.current_id = 7;
+                testStore.initApi = () => {};
+                testStore.api.get = async () => ({
+                    form_tabs: [{tab:'',label:'Main'},{tab:'relations',label:'Relations'}],
+                    showform_fields: [], showform_fields_tabs: {relations:[]}
+                });
+                testStore.loadItem = async () => {};
+                await testMainApp.mounted.call({fwStore:testStore,$el:document.body.firstElementChild});
+            }
+            """, requestedTab);
+        Assert.AreEqual(expectedTab, await page.EvaluateAsync<string>("() => testStore.activeFormTab"));
+        Assert.AreEqual(expectedTab, await page.EvaluateAsync<string>("() => new URLSearchParams(location.search).get('tab') || ''"));
+        await AssertNoClientErrors(page);
+    }
+
     private static string RepoRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
 
     private static string Template(string name)
@@ -664,6 +694,33 @@ public class VueInteractionBrowserTests
         Assert.IsFalse(await addNew.IsEnabledAsync(), "An active save still guards navigation to a new record.");
         await page.EvaluateAsync("() => { testStore.edit_save_states=[]; testStore.is_readonly=true; }");
         Assert.AreEqual(0, await page.GetByRole(AriaRole.Button, new() { Name = "Add New", Exact = false }).CountAsync(), "Read-only mode still removes create actions.");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task QuickEditPaneAutosavesFromListScreen()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-edit-pane></list-edit-pane>");
+        await page.EvaluateAsync("""
+            async () => {
+                testStore.current_screen='list'; testStore.current_id=0;
+                testStore.is_quick_edit_keep_context=true; testStore.is_initial_load=false;
+                testStore.showform_fields=[{field:'title',type:'input',label:'Title'},{field:'description',type:'textarea',label:'Description'}];
+                window.posts=[];
+                testStore.api.get=async id => id===7
+                    ? {id:7,i:{id:7,title:'Before',description:''},subtables:{}}
+                    : {list_rows:[{id:7,title:'After'}],count:1};
+                testStore.api.post=async (_,req) => { posts.push(req); return {id:7}; };
+                await testStore.openEditPane(7);
+            }
+            """);
+        await page.Locator("[data-fw-field='title'] input").FillAsync("After");
+        await page.Locator("[data-fw-field='description'] textarea").ClickAsync();
+        await page.WaitForFunctionAsync("() => posts.length===1");
+        Assert.AreEqual("After", await page.EvaluateAsync<string>("() => posts[0].item.title"));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.is_list_edit_pane && testStore.savedStatus===true"));
         await AssertNoClientErrors(page);
     }
 

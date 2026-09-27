@@ -687,6 +687,9 @@ END" + Environment.NewLine;
         if (mdemo == "")
             throw new ApplicationException($"Can't open {controller_from_class}.cs");
 
+        // Keep runnable demo examples out of generated application controllers.
+        mdemo = Regex.Replace(mdemo, @"(?ms)^\s*#region DemoOnly\r?\n.*?^\s*#endregion[^\r\n]*\r?\n", "\r\n");
+
         // replace: DemoDicts => ModelName, demo_dicts => table_name
         mdemo = mdemo.Replace(controller_from_class, controller_name);
         mdemo = mdemo.Replace(controller_from_url, controller_url);

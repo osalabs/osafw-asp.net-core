@@ -714,7 +714,6 @@ let actions = {
             Toast(this.flash.success, { theme: 'text-bg-success' });
         if (this.flash.error)
             Toast(this.flash.error, { theme: 'text-bg-danger' });
-        this.initFormTabFromLocation();
     },
 
     warnBeforeUnload(event) {

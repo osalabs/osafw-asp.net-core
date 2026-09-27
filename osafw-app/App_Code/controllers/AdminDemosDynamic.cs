@@ -32,6 +32,7 @@ public class AdminDemosDynamicController : FwDynamicController
         list_sortmap["fdate_pop_str"] = "fdate_pop";
     }
 
+    #region DemoOnly
     public override void Validate(int id, FwDict item)
     {
         base.Validate(id, item);
@@ -44,4 +45,5 @@ public class AdminDemosDynamicController : FwDynamicController
         else if (title == "validation-both")
             addFormWarning("email", message: fw.parsePageInstance().langMap("Demo warning: review this email address."));
     }
+    #endregion
 }

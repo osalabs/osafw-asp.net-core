@@ -17,6 +17,7 @@ let mainApp = {
         this.fwStore.saveToStore(this.$el.parentElement.dataset);
         this.fwStore.initApi();
 
+        this.fwStore.initFormTabFromLocation();
         await this.fwStore.loadInitial();
         this.fwStore.restoreFilterVisibility();
         if (this.fwStore.current_screen) {
