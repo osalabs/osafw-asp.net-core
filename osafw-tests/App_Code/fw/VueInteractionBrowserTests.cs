@@ -129,15 +129,22 @@ public class VueInteractionBrowserTests
     }
 
     [TestMethod]
-    public void SubtableEntryTemplatesResolveSharedAccessiblePresentation()
+    public void DemoSubtableIsIncludedOnlyInDemoComponentBundle()
     {
-        var demo = TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html");
-        var virtualController = TemplatePath("common/virtual/index/vue/subtable_demos_items.html");
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(RepoRoot, "osafw-app/App_Data/template"),
+        });
+        var demo = parser.parse_page("/admin/demosvue/index", "vue_components.html", []);
+        var virtualController = parser.parse_page("/common/virtual/index", "vue_components.html", []);
 
-        Assert.AreEqual(demo, virtualController);
+        StringAssert.Contains(demo, "fwApp.component('subtable_demos_items'");
         StringAssert.Contains(demo, "class=\"invalid-tooltip fw-subtable-feedback\"");
-        StringAssert.Contains(demo, ":aria-describedby=\"feedbackId(row, 'idesc')\"");
-        StringAssert.Contains(demo, "let nextFeedbackId = 0;");
+        StringAssert.Contains(virtualController, "fwApp.component('form-one-control'");
+        StringAssert.Contains(virtualController, ":is=\"'subtable_'+def.field\"");
+        Assert.IsFalse(virtualController.Contains("subtable_demos_items"));
+        Assert.IsFalse(virtualController.Contains("DemoDicts"));
+        Assert.IsFalse(virtualController.Contains("/Admin/Demos/"));
     }
 
     [TestMethod, TestCategory("VueBrowser")]

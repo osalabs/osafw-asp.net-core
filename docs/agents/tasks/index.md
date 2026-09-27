@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-27-demo-subtable.md` - Restored the demo-owned Vue subtable, removed virtual demo loading, and verified rendered component boundaries and browser behavior.
 - `summary-2026-09-27-form-issues.md` - Unified request-owned errors/warnings, preserved error-details and data-errors consumers, and shared Dynamic/Vue save preparation with an explicit C# migration.
 - `summary-2026-09-27-migration-policy.md` - Recorded benefit-based breaking-refactor guidance, practical migration verification, and proportional compatibility support; validation redesign remains discussion only.
 - `summary-2026-09-27-vue-review-fixes.md` - Ordered saved-view writes, corrected Add New availability and save-failure initialization, and shared subtable/column-width rendering.
