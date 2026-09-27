@@ -103,7 +103,7 @@ public class VueInteractionBrowserTests
             foreach (var name in new[] { "list-cell-ro.html", "list-cell-input.html", "list-cell-checkbox.html" })
                 components += Regex.Replace(Template(name), @"<~[^>]+>", "");
         }
-        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-control-help-block.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-form.html", "list-header.html" })
+        foreach (var name in new[] { "list-table-header.html", "list-row-btn.html", "list-table-row.html", "list-table.html", "list-edit-pane.html", "form-control-help-block.html", "form-one-control.html", "form-one-group.html", "form-one-form-row.html", "form-one-row.html", "form-one-col.html", "form-one-fieldset.html", "form-one-def.html", "edit-header.html", "edit-form.html", "list-header.html" })
             components += Regex.Replace(Template(name).Replace("<~GLOBAL[ASSETS_URL]>", "").Replace("<~GLOBAL[SITE_VERSION]>", "test"), @"<~[^>]+>", "");
         components += Regex.Replace(TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html"), @"<~[^>]+>", "");
         foreach (var name in new[] { "list-filters.html", "list-filters-table-btn.html" })
@@ -126,6 +126,18 @@ public class VueInteractionBrowserTests
     {
         if (!File.Exists(playwright.Chromium.ExecutablePath)) Assert.Inconclusive("Install matching Chromium for Vue browser checks.");
         return await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chromium" });
+    }
+
+    [TestMethod]
+    public void SubtableEntryTemplatesResolveSharedAccessiblePresentation()
+    {
+        var demo = TemplatePath("admin/demosvue/index/vue/subtable_demos_items.html");
+        var virtualController = TemplatePath("common/virtual/index/vue/subtable_demos_items.html");
+
+        Assert.AreEqual(demo, virtualController);
+        StringAssert.Contains(demo, "class=\"invalid-tooltip fw-subtable-feedback\"");
+        StringAssert.Contains(demo, ":aria-describedby=\"feedbackId(row, 'idesc')\"");
+        StringAssert.Contains(demo, "let nextFeedbackId = 0;");
     }
 
     [TestMethod, TestCategory("VueBrowser")]
@@ -621,6 +633,34 @@ public class VueInteractionBrowserTests
     }
 
     [TestMethod, TestCategory("VueBrowser")]
+    public async Task AddNewUsesCreateCapabilityWhileExistingRowEditIsDenied()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<edit-header></edit-header>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.current_screen='edit'; testStore.current_id=7;
+                testStore.capabilities={create:true,edit:false};
+                testStore.edit_data={id:7,i:{id:7,title:'Read only row',_capabilities:{edit:false}},subtables:{},save_result:{}};
+                window.opened=[]; testStore.openEditScreen=async id => opened.push(id);
+            }
+            """);
+
+        var addNew = page.GetByRole(AriaRole.Button, new() { Name = "Add New", Exact = false });
+        Assert.IsFalse(await page.EvaluateAsync<bool>("() => testStore.canSaveForm()"));
+        Assert.IsTrue(await addNew.IsEnabledAsync());
+        await addNew.ClickAsync();
+        CollectionAssert.AreEqual(new[] { 0 }, await page.EvaluateAsync<int[]>("() => opened"));
+
+        await page.EvaluateAsync("() => { testStore.edit_save_states.push({form:testStore.edit_data,requests:[]}); }");
+        Assert.IsFalse(await addNew.IsEnabledAsync(), "An active save still guards navigation to a new record.");
+        await page.EvaluateAsync("() => { testStore.edit_save_states=[]; testStore.is_readonly=true; }");
+        Assert.AreEqual(0, await page.GetByRole(AriaRole.Button, new() { Name = "Add New", Exact = false }).CountAsync(), "Read-only mode still removes create actions.");
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
     public async Task QuickEditSaveRefreshesListAndPreservesFocusedDraftContext()
     {
         using var playwright = await Playwright.CreateAsync();
@@ -733,6 +773,206 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("async () => { releaseWidth(); await Promise.all(widthSaves); }");
         Assert.AreEqual(expected, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"));
         CollectionAssert.AreEqual(new[] { 200, 300 }, await page.EvaluateAsync<int[]>("() => widthRequests.map(widths=>widths.title)"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow("reset", 0)]
+    [DataRow("load", 450)]
+    [DataRow("density", 300)]
+    [DataRow("named-save", 300)]
+    public async Task UserViewMutationWaitsForPendingWidthsAndRemainsLast(string mutation, int expectedWidth)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            mutation => {
+                testStore.list_headers=[{field_name:'title'}];
+                testStore.list_user_view={widths:{title:100},density:'table-sm'};
+                testStore.XSS='first-token'; testStore.is_list_edit=false;
+                window.serverWidths={title:100}; window.viewRequests=[]; window.reloads=0;
+                testStore.api.post=async (_,request) => {
+                    viewRequests.push(JSON.parse(JSON.stringify(request)));
+                    if(viewRequests.length===1) await new Promise(resolve=>window.releaseFirstWidth=resolve);
+                    if(request.widths) serverWidths=JSON.parse(request.widths);
+                    if(request.is_reset) serverWidths={};
+                    if(request.load_id) serverWidths={title:450};
+                    return {success:true};
+                };
+                testStore.reloadIndex=async () => {
+                    reloads++;
+                    testStore.list_user_view={widths:{...serverWidths},density:'table-sm'};
+                };
+                const firstWidth = testStore.saveColumnWidth('title',200);
+                const secondWidth = testStore.saveColumnWidth('title',300);
+                const finalWrite = mutation==='reset' ? testStore.saveUserViews({is_reset:true})
+                    : mutation==='load' ? testStore.saveUserViews({load_id:17})
+                    : mutation==='density' ? testStore.setListDensity('table-normal')
+                    : testStore.saveUserViews({fld:{title:1},item:{iname:'Named view'}});
+                window.orderedWrites=[firstWidth,secondWidth,finalWrite];
+                testStore.XSS='later-token';
+            }
+            """, mutation);
+
+        await page.WaitForFunctionAsync("() => viewRequests.length===1 && typeof releaseFirstWidth==='function'");
+        Assert.AreEqual(300, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"), "Queued resize remains optimistic while the first request is pending.");
+        await page.EvaluateAsync("async () => { releaseFirstWidth(); await Promise.all(orderedWrites); }");
+
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => viewRequests.length===3
+                && JSON.parse(viewRequests[0].widths).title===200
+                && JSON.parse(viewRequests[1].widths).title===300
+                && viewRequests.every(request => request.XSS==='first-token' && request.is_list_edit===false)
+                && reloads===1
+            """));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            mutation => mutation==='reset' ? viewRequests[2].is_reset===true
+                : mutation==='load' ? viewRequests[2].load_id===17
+                : mutation==='density' ? viewRequests[2].density==='table-normal'
+                : viewRequests[2].fld.title===1 && viewRequests[2].item.iname==='Named view'
+            """, mutation));
+        Assert.AreEqual(expectedWidth, await page.EvaluateAsync<int>("() => testStore.columnWidths().title ?? 0"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task ColumnResizeAfterViewMutationUsesRefreshedWidths(bool isLoad, bool isWidthSuccess)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            options => {
+                testStore.list_headers=['title','old','loaded'].map(field_name=>({field_name}));
+                testStore.list_user_view={widths:{title:100,old:250}};
+                window.serverWidths={title:100,old:250}; window.viewRequests=[];
+                testStore.api.post=async (_,request)=>{
+                    viewRequests.push(request);
+                    if(!request.widths) {
+                        await new Promise(resolve=>window.releaseMutation=resolve);
+                        serverWidths=options.isLoad ? {title:450,loaded:175} : {};
+                        return {success:true};
+                    }
+                    if(options.isWidthSuccess) serverWidths=JSON.parse(request.widths);
+                    return {success:options.isWidthSuccess};
+                };
+                testStore.reloadIndex=async()=>{ testStore.list_user_view={widths:{...serverWidths}}; };
+                window.viewWrites=[testStore.saveUserViews(options.isLoad ? {load_id:17} : {is_reset:true}), testStore.saveColumnWidth('title',300)];
+            }
+            """, new { isLoad, isWidthSuccess });
+        await page.WaitForFunctionAsync("() => typeof releaseMutation==='function'");
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => viewRequests.length"));
+        await page.EvaluateAsync("async()=>{ releaseMutation(); await Promise.all(viewWrites); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => viewRequests.length===2 && JSON.parse(viewRequests[1].widths).title===300
+                && !('old' in JSON.parse(viewRequests[1].widths))
+                && JSON.stringify(testStore.columnWidths())===JSON.stringify(serverWidths)
+            """));
+        Assert.AreEqual(isLoad ? 175 : 0, await page.EvaluateAsync<int>("() => testStore.columnWidths().loaded ?? 0"));
+        Assert.AreEqual(isWidthSuccess ? 300 : isLoad ? 450 : 0, await page.EvaluateAsync<int>("() => testStore.columnWidths().title ?? 0"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task ColumnResizeUsesMutationResultWhenRefreshCannotRun(bool isLoad, bool isContextChange)
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            options => {
+                testStore.list_headers=['title','old','loaded'].map(field_name=>({field_name}));
+                testStore.list_user_view={widths:{old:250}}; testStore.is_list_edit=false;
+                window.serverWidths={old:250}; window.viewRequests=[];
+                testStore.api.post=async (_,request)=>{
+                    viewRequests.push(request);
+                    if(!request.widths) {
+                        await new Promise(resolve=>window.releaseMutation=resolve);
+                        serverWidths=options.isLoad ? {loaded:175} : {};
+                        return {success:true,widths:{...serverWidths}};
+                    }
+                    serverWidths=JSON.parse(request.widths);
+                    return {success:true};
+                };
+                testStore.reloadIndex=async()=>{ throw new Error('refresh failed'); };
+                window.viewWrites=[testStore.saveUserViews(options.isLoad ? {load_id:17} : {is_reset:true}), testStore.saveColumnWidth('title',300)];
+                if(options.isContextChange) {
+                    testStore.api={post:()=>{throw new Error('Wrong origin API');}}; testStore.is_list_edit=true;
+                    testStore.list_user_view={widths:{title:777}};
+                }
+                // Observe rejection before releasing the intentionally failed refresh.
+                window.finishedViews=Promise.allSettled(viewWrites);
+            }
+            """, new { isLoad, isContextChange });
+        await page.WaitForFunctionAsync("() => typeof releaseMutation==='function'");
+        await page.EvaluateAsync("async()=>{ releaseMutation(); await finishedViews; }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => viewRequests.length===2 && viewRequests.every(request=>request.is_list_edit===false)
+                && serverWidths.title===300 && !('old' in serverWidths)
+            """));
+        Assert.AreEqual(isLoad ? 175 : 0, await page.EvaluateAsync<int>("() => serverWidths.loaded ?? 0"));
+        Assert.AreEqual(isContextChange ? 777 : 300, await page.EvaluateAsync<int>("() => testStore.columnWidths().title"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task ColumnResizeWaitsForKnownLoadedWidths()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        Assert.IsFalse(await page.EvaluateAsync<bool>("""
+            async () => {
+                testStore.list_headers=[{field_name:'title'}]; testStore.list_user_view={widths:{title:250}};
+                window.viewRequests=[];
+                testStore.api.post=async (_,request)=>{ viewRequests.push(request); return {success:true}; };
+                testStore.reloadIndex=async()=>{}; // An older server response plus a failed refresh supplies no usable base.
+                const load=testStore.saveUserViews({load_id:17}); const resize=testStore.saveColumnWidth('title',300);
+                await load;
+                return await resize;
+            }
+            """));
+        Assert.AreEqual(1, await page.EvaluateAsync<int>("() => viewRequests.length"));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
+    public async Task WidthWritesAcrossViewRefreshKeepNewerResizes()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<div></div>");
+        await page.EvaluateAsync("""
+            () => {
+                testStore.list_headers=['title','notes','old'].map(field_name=>({field_name}));
+                testStore.list_user_view={widths:{old:250}};
+                window.serverWidths={old:250}; window.viewRequests=[];
+                testStore.api.post=async (_,request)=>{
+                    viewRequests.push(request);
+                    if(request.is_reset) { serverWidths={}; return {success:true}; }
+                    if(viewRequests.length===2) await new Promise(resolve=>window.releaseWidth=resolve);
+                    serverWidths=JSON.parse(request.widths);
+                    return {success:true};
+                };
+                testStore.reloadIndex=async()=>{ testStore.list_user_view={widths:{...serverWidths}}; };
+                window.viewWrites=[testStore.saveUserViews({is_reset:true}), testStore.saveColumnWidth('title',300), testStore.saveColumnWidth('notes',350)];
+            }
+            """);
+        await page.WaitForFunctionAsync("() => typeof releaseWidth==='function'");
+        await page.EvaluateAsync("async()=>{ viewWrites.push(testStore.saveColumnWidth('title',500)); releaseWidth(); await Promise.all(viewWrites); }");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => viewRequests.length===4 && serverWidths.title===500 && serverWidths.notes===350
+                && !('old' in serverWidths) && JSON.stringify(testStore.columnWidths())===JSON.stringify(serverWidths)
+            """));
         await AssertNoClientErrors(page);
     }
 

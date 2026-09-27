@@ -3,7 +3,7 @@ window.fwConst = {
     ERR_CODES_MAP: <~validation_messages json noescape>,
 };
 <~/common/vue/store_core.js>
-import { interactionActions } from '<~GLOBAL[ASSETS_URL]>/js/vue-interactions.js?v<~GLOBAL[SITE_VERSION]>';
+import { interactionActions, queueUserViewWrite } from '<~GLOBAL[ASSETS_URL]>/js/vue-interactions.js?v<~GLOBAL[SITE_VERSION]>';
 
 let state = {
     global: {}, //global config
@@ -1195,23 +1195,37 @@ let actions = {
 
     // *** userviews support ***
     async saveUserViews(params) {
-        try {
-            const req = { XSS: this.XSS, is_list_edit: this.is_list_edit, ...params };
-
-            //console.log('saveUserViews req', req);
-            const response = await this.api.post('/(SaveUserViews)', req);
-            //console.log('saveUserViews response', response);
-
-            if (!params.is_reset && !params.density && !params.load_id) {
-                Toast("View saved", { theme: 'text-bg-success' });
+        const api = this.api;
+        const req = { XSS: this.XSS, is_list_edit: this.is_list_edit, ...params };
+        return queueUserViewWrite(this, async context => {
+            try {
+                const response = await api.post('/(SaveUserViews)', req);
+                if (response?.error || response?.success === false) {
+                    throw { body: response };
+                }
+                if (req.is_reset || req.load_id) {
+                    // The POST result is authoritative even if refreshing the list fails or is skipped.
+                    context.widths = response.widths ?? (req.is_reset ? {} : undefined);
+                }
+                if (!req.is_reset && !req.density && !req.load_id) {
+                    Toast("View saved", { theme: 'text-bg-success' });
+                }
+                return true;
+            } catch (error) {
+                this.handleError(error, 'saveUserViews');
+                return false;
+            } finally {
+                // Finish the refresh before a later view write can change its result.
+                if (this.api === api && this.is_list_edit === req.is_list_edit) {
+                    const userView = this.list_user_view;
+                    await this.reloadIndex();
+                    if (context.widths === undefined && this.api === api
+                        && this.is_list_edit === req.is_list_edit && this.list_user_view !== userView) {
+                        context.widths = this.columnWidths();
+                    }
+                }
             }
-
-        } catch (error) {
-            this.handleError(error, 'saveUserViews');
-        } finally {
-            //reload as whole as columns can be changed
-            this.reloadIndex();
-        }
+        });
     },
     async deleteUserViews(id) {
         try {

@@ -53,7 +53,7 @@
                             type="button"
                             class="btn btn-default"
                             @click="onAddNew"
-                            :disabled="!fwStore.canSaveForm() || fwStore.is_saving_edit"><~/common/icons/plus-lg>`Add New`</button>
+                            :disabled="!fwStore.canAction('create') || fwStore.is_saving_edit"><~/common/icons/plus-lg>`Add New`</button>
                 </div>
 
                 <button v-if="current_id"

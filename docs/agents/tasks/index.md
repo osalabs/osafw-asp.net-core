@@ -3,6 +3,7 @@
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
 - `summary-2026-09-27-migration-policy.md` - Recorded benefit-based breaking-refactor guidance, practical migration verification, and proportional compatibility support; validation redesign remains discussion only.
+- `summary-2026-09-27-vue-review-fixes.md` - Ordered saved-view writes, corrected Add New availability and save-failure initialization, and shared subtable/column-width rendering.
 - `summary-2026-09-26-vue-validation-cleanup.md` - Removed the redundant unsaved-tab row, aligned summary links with the label, and verified failed-tab/navigation behavior with six browser cases.
 - `summary-2026-09-26-optional-validation-issues.md` - Added optional base/Dynamic structured feedback while preserving legacy errors, demonstrated errors/warnings, and verified controller and classic autosave compatibility.
 - `summary-2026-09-22-vue-filter-toggle.md` - Replaced the Vue filter text button with a fixed-position raised-tab/pill toggle, preserved visibility behavior, and verified keyboard and browser geometry.
