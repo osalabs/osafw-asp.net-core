@@ -133,10 +133,10 @@ public class AdminKBArticlesController : FwDynamicController
         item["icode"] = buildArticleCode(item["icode"].toStr(), id);
 
         if (isValid && model.isExistsByField(item["icode"].toStr(), id, "icode"))
-            fw.FormErrors["icode"] = "EXISTS";
+            addFormError("icode", "EXISTS");
 
         if (!fw.model<Users>().isSiteAdmin() && item["access_level"].toInt(Users.ACL_MEMBER) > fw.userAccessLevel)
-            fw.FormErrors["access_level"] = "ACCESS";
+            addFormError("access_level", "ACCESS");
 
         validateCheckResult();
     }

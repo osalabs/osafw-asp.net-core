@@ -120,8 +120,9 @@ public class FwAdminController : FwController
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["is_showform"] = true; // flag for template that we are in show form
-        if (fw.FormErrors.Count > 0)
-            logger(fw.FormErrors);
+        var formErrors = fw.getFormErrors();
+        if (formErrors.Count > 0)
+            logger(formErrors);
 
         return ps;
     }

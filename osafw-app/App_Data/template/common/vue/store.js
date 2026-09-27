@@ -278,7 +278,7 @@ function retainEditFormSaveFailures(form, context, isSaved, issues) {
         success: false,
         failed_tabs: [...failures].map(([tab, failure]) => ({
             tab, label: failure.tabLabel, message: failure.message,
-            is_validation: failure.issues.some(issue => issue.severity === 'error' && issue.field)
+            is_validation: failure.issues.some(issue => issue.severity === 'error')
         })),
         error: {
             ...firstFailure.response?.error,
@@ -287,7 +287,7 @@ function retainEditFormSaveFailures(form, context, isSaved, issues) {
             }).join('; '),
             details: Object.assign({}, ...outstanding.map(failure => failure.response?.error?.details ?? {})),
         },
-        validation_issues: [
+        form_issues: [
             ...(isSaved ? issues.map(issue => ({ ...issue, tab: issue.tab ?? context.tab })) : []),
             ...outstanding.flatMap(failure => failure.issues),
         ],
@@ -492,7 +492,7 @@ let getters = {
     savedStatus: (state) => {
         let sr = state.edit_data?.save_result ?? null;
         if (!sr) return null; // no save initiated yet
-        return !!sr.id && sr.success !== false && !sr.error && !(sr.validation_issues ?? []).some(issue => issue.severity !== 'warning');
+        return !!sr.id && sr.success !== false && !sr.error && !(sr.form_issues ?? []).some(issue => issue.severity !== 'warning');
     },
     savedErrorMessage: (state) => {
         return state.edit_data?.save_result?.error?.message ?? '';
@@ -503,7 +503,7 @@ let getters = {
         if (response?.failed_tabs) {
             return response.failed_tabs.filter(failure => !failure.is_validation);
         }
-        return response?.error && !state.formIssues().some(issue => issue.severity === 'error' && issue.field)
+        return response?.error && !state.formIssues().some(issue => issue.severity === 'error')
             ? [{ message: response.error.message }] : [];
     }
 };
@@ -1081,6 +1081,9 @@ let actions = {
                 } catch (error) {
                     isSaved = false;
                     form.save_result = error.body ?? { error: { message: 'Server error' } };
+                    if (form.save_result.error && form.save_result.error.code === undefined) {
+                        form.save_result.error.code = error.response?.status ?? error.response;
+                    }
                     if (error.response >= 500) {
                         serverError = error;
                         this.handleError(error, 'saveEditData', true);

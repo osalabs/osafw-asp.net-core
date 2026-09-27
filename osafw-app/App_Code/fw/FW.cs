@@ -43,6 +43,9 @@ public class FW : IDisposable
     public const string ACTION_MORE_EDIT = "edit";
     public const string ACTION_MORE_DELETE = "delete";
 
+    public const string ISSUE_ERROR = "error";
+    public const string ISSUE_WARNING = "warning";
+
     public const string FW_NAMESPACE_PREFIX = "osafw.";
     public static FwDict METHOD_ALLOWED = Utils.qh("GET POST PUT PATCH DELETE");
     internal const string GENERIC_SERVER_ERROR_MESSAGE = "Server Error. Please, contact site administrator!";
@@ -80,7 +83,13 @@ public class FW : IDisposable
     public FwDict FORM = [];
     public FwDict postedJson = []; // parsed JSON from request body
     public FwDict G = []; // for storing global vars - used in template engine, also stores "_flash"
-    public FwDict FormErrors = []; // for storing form id's with error messages, put to ps['error']['details'] for parser
+
+    /// <summary>
+    /// Request-owned form feedback. Every entry contains severity, field, and resolved message; code, tab,
+    /// row_id, and value are optional. Controllers add entries through their form-issue helpers and callers use
+    /// <see cref="getFormErrors()"/> for a read-only error-details projection.
+    /// </summary>
+    public FwList FormIssues = [];
 
     public FwCache cache = new(); // cache instance
     public DB db;
@@ -980,15 +989,19 @@ public class FW : IDisposable
     {
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
-        if (this.FormErrors.Count > 0)
+        var formErrors = getFormErrors();
+        if (formErrors.Count > 0)
         {
             if (!ps.ContainsKey("error"))
                 ps["error"] = new FwDict();
 
             if (ps["error"] is FwDict errorTable && !errorTable.ContainsKey("details"))
-                errorTable["details"] = this.FormErrors; // add form errors if any
-            logger(LogLevel.DEBUG, "Form errors:", this.FormErrors);
+                errorTable["details"] = formErrors;
+            logger(LogLevel.DEBUG, "Form errors:", formErrors);
         }
+
+        if (FormIssues.Count > 0 && !ps.ContainsKey("form_issues"))
+            ps["form_issues"] = new FwList(FormIssues);
 
         string format = this.getResponseExpectedFormat();
         if (format == "json")
@@ -1093,6 +1106,46 @@ public class FW : IDisposable
         // no need to set content type here, as it's set in Startup.cs
         //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
         responseWrite(page);
+    }
+
+    /// <summary>
+    /// Projects error-severity form issues into the generic response details contract.
+    /// The returned dictionary is a new snapshot and cannot mutate request issue state.
+    /// </summary>
+    public FwDict getFormErrors()
+    {
+        var result = new FwDict();
+        var isErrorPresent = false;
+        var isRequiredPresent = false;
+
+        foreach (var issue in FormIssues)
+        {
+            if (issue["severity"].toStr() != ISSUE_ERROR)
+                continue;
+
+            isErrorPresent = true;
+            var field = issue["field"].toStr();
+            var code = issue["code"].toStr();
+            var message = issue["message"].toStr();
+
+            if (code == "REQUIRED")
+            {
+                isRequiredPresent = true;
+                if (field.Length > 0)
+                    result[field] = true;
+                continue;
+            }
+
+            if (field.Length > 0)
+                result[field] = code.Length > 0 ? code : message.Length > 0 ? message : true;
+        }
+
+        if (isRequiredPresent)
+            result["REQUIRED"] = true;
+        else if (isErrorPresent)
+            result["INVALID"] = true;
+
+        return result;
     }
 
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)

@@ -11,7 +11,7 @@ namespace osafw.Tests;
 public class OptionalValidationBrowserTests
 {
     [TestMethod]
-    public async Task DynamicAutosave_OptInFeedbackPreservesLegacyFormsAndClearsAfterSuccess()
+    public async Task DynamicForms_AcceptBothDataErrorsFormatsAndKeepFeedbackScoped()
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
         var assets = Environment.GetEnvironmentVariable("FW_BROWSER_ASSETS_ROOT") ?? Path.Combine(root, "osafw-app/wwwroot/assets");
@@ -21,11 +21,11 @@ public class OptionalValidationBrowserTests
         var errors = new List<string>();
         page.PageError += (_, error) => errors.Add(error);
         await page.SetContentAsync("""
-            <form id="optional" data-autosave data-validation-issues="[]">
+            <form id="structured" data-autosave data-errors='[{"severity":"warning","field":"email","message":"Check before saving."}]'>
                 <div class="form-row"><div><input name="item[email]"><p class="err-EMAIL">Invalid email</p></div></div>
                 <div class="form-row"><div><input name="item-lines#new-1[title]"></div></div>
             </form>
-            <form id="legacy" data-autosave>
+            <form id="mapped" data-autosave data-errors='{"email":"EMAIL"}'>
                 <div class="form-row"><div><input name="item[email]"><p class="err-EMAIL">Invalid email</p></div></div>
             </form>
             """);
@@ -41,6 +41,7 @@ public class OptionalValidationBrowserTests
                     completed++;
                 };
                 fw.setup_autosave_form_handlers();
+                fw.process_form_errors();
             }
             """);
 
@@ -54,37 +55,55 @@ public class OptionalValidationBrowserTests
 
         const string failure = """
             {"error":{"message":"Please review your input","details":{"email":"EMAIL"}},
-             "validation_issues":[{"severity":"error","field":"email","message":"Check <b>this</b> address."}]}
+             "form_issues":[{"severity":"error","field":"email","message":"Check <b>this</b> address."}]}
             """;
-        await Save("optional", failure, true);
-        Assert.AreEqual(1, await page.Locator("#optional input.is-invalid").CountAsync());
-        Assert.AreEqual(1, await page.Locator("#optional .invalid-feedback").CountAsync());
-        Assert.AreEqual("Check <b>this</b> address.", await page.Locator("#optional .fw-validation-issue").TextContentAsync());
-        Assert.AreEqual(0, await page.Locator("#optional .fw-validation-issue b").CountAsync());
-        Assert.AreEqual(0, await page.Locator("#legacy .is-invalid").CountAsync());
+        Assert.AreEqual("Check before saving.", await page.Locator("#structured .fw-form-issue.text-warning").TextContentAsync());
+        Assert.AreEqual(0, await page.Locator("#structured .is-invalid").CountAsync());
+        Assert.AreEqual(1, await page.Locator("#mapped .err-EMAIL.invalid-feedback").CountAsync());
+        await Save("structured", failure, true);
+        Assert.AreEqual(1, await page.Locator("#structured input.is-invalid").CountAsync());
+        Assert.AreEqual(1, await page.Locator("#structured .invalid-feedback").CountAsync());
+        Assert.AreEqual("Check <b>this</b> address.", await page.Locator("#structured .fw-form-issue").TextContentAsync());
+        Assert.AreEqual(0, await page.Locator("#structured .fw-form-issue b").CountAsync());
+        Assert.AreEqual(1, await page.Locator("#mapped .err-EMAIL.invalid-feedback").CountAsync());
         Assert.AreEqual(1, await page.EvaluateAsync<int>("toasts.length"));
 
-        await Save("optional", """
+        await Save("structured", """
             {"error":{"message":"Please review your input","details":{"email":"Check this value: [email]."}},
-             "validation_issues":[{"severity":"error","field":"email","message":"Check this value: [email]."}]}
+             "form_issues":[{"severity":"warning","field":"email","message":"Secondary warning."},
+                 {"severity":"error","field":"email","message":"Check this value: [email]."}]}
             """);
-        Assert.AreEqual(1, await page.Locator("#optional .invalid-feedback").CountAsync());
-        Assert.AreEqual("Check this value: [email].", await page.Locator("#optional .fw-validation-issue").TextContentAsync());
+        Assert.AreEqual(1, await page.Locator("#structured .invalid-feedback").CountAsync());
+        Assert.AreEqual(0, await page.Locator("#structured .text-warning").CountAsync());
+        Assert.AreEqual("Check this value: [email].", await page.Locator("#structured .fw-form-issue").TextContentAsync());
 
-        await Save("legacy", failure);
-        Assert.AreEqual(1, await page.Locator("#legacy .err-EMAIL.invalid-feedback").CountAsync());
-        Assert.AreEqual(0, await page.Locator("#legacy .fw-validation-issue").CountAsync());
+        await Save("mapped", """{"error":{"message":"Please review your input","details":{"email":"EMAIL"}}}""");
+        Assert.AreEqual(1, await page.Locator("#mapped .err-EMAIL.invalid-feedback").CountAsync());
+        Assert.AreEqual(0, await page.Locator("#mapped .fw-form-issue").CountAsync());
 
-        await Save("optional", """
-            {"success":true,"validation_issues":[{"severity":"warning","field":"item-lines#new-1[title]","message":"Saved; please review."}]}
+        await Save("mapped", failure);
+        Assert.AreEqual(0, await page.Locator("#mapped .err-EMAIL.invalid-feedback").CountAsync());
+        Assert.AreEqual("Check <b>this</b> address.", await page.Locator("#mapped .fw-form-issue").TextContentAsync());
+
+        await Save("mapped", """
+            {"error":{"message":"Please review your input","details":{"email":"EMAIL"}},
+             "form_issues":[{"severity":"error","field":"email","code":"EMAIL","message":"Generic email message"}]}
             """);
-        Assert.AreEqual(0, await page.Locator("#optional .is-invalid").CountAsync());
-        Assert.AreEqual("Saved; please review.", await page.Locator("#optional .fw-validation-issue.text-warning").TextContentAsync());
-        Assert.IsFalse(await page.EvaluateAsync<bool>("$('#optional').data('is-changed')"));
-        Assert.AreEqual(1, await page.Locator("#legacy .is-invalid").CountAsync());
+        Assert.AreEqual("Invalid email", await page.Locator("#mapped .invalid-feedback").TextContentAsync());
+        Assert.AreEqual(0, await page.Locator("#mapped .fw-form-issue").CountAsync());
 
-        await Save("optional", "{\"success\":true}");
-        Assert.AreEqual(0, await page.Locator("#optional .fw-validation-issue").CountAsync());
+        await Save("structured", """
+            {"success":true,"form_issues":[{"severity":"warning","field":"item-lines#new-1[title]","message":"Saved; please review."}]}
+            """);
+        Assert.AreEqual(0, await page.Locator("#structured .is-invalid").CountAsync());
+        Assert.AreEqual("Saved; please review.", await page.Locator("#structured .fw-form-issue.text-warning").TextContentAsync());
+        Assert.IsFalse(await page.EvaluateAsync<bool>("$('#structured').data('is-changed')"));
+        Assert.AreEqual(1, await page.Locator("#mapped .is-invalid").CountAsync());
+
+        await Save("structured", "{\"success\":true}");
+        Assert.AreEqual(0, await page.Locator("#structured .fw-form-issue").CountAsync());
+        await Save("mapped", """{"error":{"code":500,"message":"Save failed","details":{"email":"EMAIL"}}}""", true);
+        Assert.AreEqual(0, await page.Locator("#mapped .is-invalid,#mapped .invalid-feedback").CountAsync(), "Generic server details must not become field validation.");
         Assert.IsEmpty(errors, string.Join("; ", errors));
     }
 }

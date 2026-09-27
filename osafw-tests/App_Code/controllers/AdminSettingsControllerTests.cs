@@ -196,7 +196,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("NUMBER", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("NUMBER", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]
@@ -208,7 +208,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("STEP", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("STEP", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]
@@ -220,7 +220,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("MIN", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("MIN", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]
@@ -232,7 +232,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("MAX", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("MAX", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]
@@ -244,7 +244,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("STEP", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("STEP", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]
@@ -256,7 +256,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("INVALID", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("INVALID", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]
@@ -268,7 +268,7 @@ public class AdminSettingsControllerTests
 
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
-        Assert.AreEqual("INVALID", fw.FormErrors["ivalue"]);
+        Assert.AreEqual("INVALID", fw.getFormErrors()["ivalue"]);
     }
 
     [TestMethod]

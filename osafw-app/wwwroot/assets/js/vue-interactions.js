@@ -188,10 +188,17 @@ export const interactionActions = {
     },
     formIssues(form = this.edit_data) {
         const response = form?.save_result ?? {};
-        const issues = Array.isArray(response.validation_issues) ? response.validation_issues : [];
+        const status = Number(response.error?.code);
+        if (!response.failed_tabs && status > 400 && status !== 422) {
+            return [];
+        }
+        const issues = Array.isArray(response.form_issues) ? response.form_issues : [];
         const result = issues
             .filter(issue => issue && typeof issue.message === 'string')
             .map(issue => ({ ...issue, severity: issue.severity === 'warning' ? 'warning' : 'error' }));
+        if (response.failed_tabs) {
+            return result; // Already collected per tab, including separation of non-validation failures.
+        }
         const details = response.error?.details;
         if (details && typeof details === 'object') {
             Object.entries(details).forEach(([field, code]) => {

@@ -112,6 +112,7 @@ public class VueInteractionBackendTests
         protected override FwDict getListUserView() => currentView;
         public FwDict InitialState() { FwDict ps = []; setScopeInitial(ps); return ps; }
         public void ApplyCapabilities(FwDict row) => applyListRowCapabilities(row);
+        public void Error(string field, string? code = null, string? message = null) => addFormError(field, code, message);
     }
 
     private sealed class WarningController : InteractionController
@@ -119,7 +120,7 @@ public class VueInteractionBackendTests
         public override void Validate(int id, FwDict item)
         {
             base.Validate(id, item);
-            addValidationIssue("warning", "title", "Review this title", attempted_value: item["title"]);
+            addFormWarning("title", message: "Review this title", attempted_value: item["title"]);
         }
     }
 
@@ -128,7 +129,7 @@ public class VueInteractionBackendTests
         public override void Validate(int id, FwDict item)
         {
             base.Validate(id, item);
-            addValidationIssue("error", "title", "This title is not allowed");
+            addFormError("title", message: "This title is not allowed");
         }
     }
 
@@ -366,15 +367,44 @@ public class VueInteractionBackendTests
         var exception = Assert.ThrowsExactly<ValidationException>(() => controller.SaveAction(7));
         var response = controller.actionError(exception, new object[] { 7 });
         var json = (FwDict)response!["_json"]!;
-        var issue = ((FwList)json["validation_issues"]!).Single();
+        var issue = ((FwList)json["form_issues"]!).Single();
 
         Assert.AreEqual(400, fw.response.StatusCode);
         Assert.AreEqual("item-lines#22[quantity]", issue["field"]);
+        Assert.AreEqual("REQUIRED", issue["code"]);
         Assert.AreEqual("22", issue["row_id"]);
         Assert.AreEqual("details", issue["tab"]);
         Assert.AreEqual("Required field", issue["message"]);
         Assert.IsFalse(issue.ContainsKey("value"));
         Assert.IsTrue(((FwDict)((FwDict)json["error"]!)["details"]!)["item-lines#22[quantity]"].toBool());
+    }
+
+    [TestMethod]
+    public void RequiredValidation_ReturnsAutomaticallyOptedInAttemptedValue()
+    {
+        var definition = basicSaveDefinition(new FwList
+        {
+            new FwDict
+            {
+                ["field"] = "title",
+                ["type"] = "text",
+                ["required"] = true,
+                ["validation_show_value"] = true,
+            },
+        }, "title");
+        var fw = createFw();
+        var model = new RecordingModel();
+        var controller = new InteractionController();
+        controller.Configure(fw, model, definition);
+        fw.FORM["item"] = new FwDict { ["title"] = string.Empty };
+
+        var exception = Assert.ThrowsExactly<ValidationException>(() => controller.SaveAction(0));
+        var response = controller.actionError(exception, [0]);
+        var issue = ((FwList)((FwDict)response!["_json"]!)["form_issues"]!).Single();
+
+        Assert.AreEqual("REQUIRED", issue["code"]);
+        Assert.AreEqual(string.Empty, issue["value"]);
+        Assert.AreEqual(0, model.LastAdded.Count);
     }
 
     [TestMethod]
@@ -392,7 +422,7 @@ public class VueInteractionBackendTests
 
         var response = controller.SaveAction(0);
         var json = (FwDict)response!["_json"]!;
-        var issue = ((FwList)json["validation_issues"]!).Single();
+        var issue = ((FwList)json["form_issues"]!).Single();
 
         Assert.IsTrue(json["success"].toBool());
         Assert.AreEqual("warning", issue["severity"]);
@@ -416,7 +446,7 @@ public class VueInteractionBackendTests
         var exception = Assert.ThrowsExactly<ValidationException>(() => controller.SaveAction(0));
         var response = controller.actionError(exception, new object[] { 0 });
         var json = (FwDict)response!["_json"]!;
-        var issue = ((FwList)json["validation_issues"]!).Single();
+        var issue = ((FwList)json["form_issues"]!).Single();
 
         Assert.AreEqual(0, model.LastAdded.Count);
         Assert.AreEqual(400, fw.response.StatusCode);
@@ -441,7 +471,7 @@ public class VueInteractionBackendTests
         fw.FORM["item"] = new FwDict { ["title"] = "sensitive" };
 
         var response = controller.SaveAction(0);
-        var issue = ((FwList)((FwDict)response!["_json"]!)["validation_issues"]!).Single();
+        var issue = ((FwList)((FwDict)response!["_json"]!)["form_issues"]!).Single();
 
         Assert.IsFalse(issue.ContainsKey("value"));
     }
@@ -472,25 +502,26 @@ public class VueInteractionBackendTests
         using var scope = FwConfig.beginScope();
         var root = Path.Combine(Path.GetTempPath(), "vue-validation-" + Guid.NewGuid().ToString("N"));
         var language = "zh-" + Guid.NewGuid().ToString("N");
+        Directory.CreateDirectory(Path.Combine(root, "common", "form"));
         Directory.CreateDirectory(Path.Combine(root, "common", "vue"));
         Directory.CreateDirectory(Path.Combine(root, "lang"));
 
         try
         {
-            File.Copy(Path.Combine(repoRoot(), "osafw-app/App_Data/template/common/vue/validation-messages.sel"),
-                Path.Combine(root, "common/vue/validation-messages.sel"));
+            File.Copy(Path.Combine(repoRoot(), "osafw-app/App_Data/template/common/form/validation-messages.sel"),
+                Path.Combine(root, "common/form/validation-messages.sel"));
             File.Copy(Path.Combine(repoRoot(), "osafw-app/App_Data/template/lang/zh.txt"),
                 Path.Combine(root, "lang", language + ".txt"));
             var (fw, _, controller) = buildController(basicSaveDefinition([], "title"));
             FwConfig.GetCurrentSettings()["template"] = root;
             fw.G["lang"] = language;
-            fw.FormErrors["title"] = true;
-            fw.FormErrors["email"] = "EMAIL";
-            fw.FormErrors["empty"] = "";
-            fw.FormErrors["custom"] = "Application message";
+            controller.Error("title", "REQUIRED");
+            controller.Error("email", "EMAIL");
+            controller.Error("empty", "INVALID");
+            controller.Error("custom", message: "Application message");
 
             var response = controller.actionError(new ValidationException("Invalid"), []);
-            var issues = (FwList)((FwDict)response!["_json"]!)["validation_issues"]!;
+            var issues = (FwList)((FwDict)response!["_json"]!)["form_issues"]!;
             Assert.AreEqual("必填字段", issues.Single(issue => issue["field"].toStr() == "title")["message"]);
             Assert.AreEqual("电子邮件无效", issues.Single(issue => issue["field"].toStr() == "email")["message"]);
             Assert.AreEqual("无效值", issues.Single(issue => issue["field"].toStr() == "empty")["message"]);

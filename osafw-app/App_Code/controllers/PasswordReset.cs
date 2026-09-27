@@ -94,13 +94,10 @@ public class PasswordResetController : FwController
     {
         bool result = true;
         result &= validateRequired(id, item, Utils.qw("pwd pwd2"));
-        if (!result)
-            fw.FormErrors["REQ"] = 1;
-
         if (result && item["pwd"].toStr() != item["pwd2"].toStr())
         {
             result = false;
-            fw.FormErrors["pwd2"] = "NOTEQUAL";
+            addFormError("pwd2", "NOTEQUAL");
         }
 
         this.validateCheckResult();

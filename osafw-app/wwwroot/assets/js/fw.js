@@ -724,9 +724,6 @@ window.fw={
     fw.setup_cancel_form_handlers();
     fw.setup_autosave_form_handlers();
     fw.process_form_errors();
-    $('form[data-validation-issues]').each(function () {
-      fw.process_validation_issues(this, $(this).data('validation-issues'));
-    });
     fw.setup_file_drop_area();
     fw.setup_att_files_upload();
 
@@ -1053,13 +1050,10 @@ window.fw={
       $f.data('is-ajaxsubmit', false);
     }
 
-    function form_handle_errors($f, data, hint_options){
-        if ($f.is('[data-validation-issues]')) fw.clean_form_errors($f);
-        if (data.error?.details) {
-            //auto-save error - highlight errors
-            fw.process_form_errors($f, data.error?.details);
-        }
-        fw.process_validation_issues($f, data.validation_issues);
+    function form_handle_errors($f, data, hint_options, status){
+        status = Number(status || data.error?.code);
+        var issues = status > 400 && status !== 422 ? {} : data.form_issues ?? data.error?.details ?? {};
+        fw.process_form_errors($f, issues);
         fw.error(data.error?.message || fw.MSG_AUTOSAVE_ERROR, hint_options);
     }
 
@@ -1085,10 +1079,9 @@ window.fw={
               form_reset_state($f);
               //console.log('ajaxSubmit success', data);
               $('#fw-form-msg').hide();
-              fw.clean_form_errors($f);
               if (!data.error) {
                   fw.set_form_saved_status($f, false); // saved
-                  fw.process_validation_issues($f, data.validation_issues);
+                  fw.process_form_errors($f, data.form_issues ?? []);
                   if (data.is_new && data.location) {
                       window.location = data.location; //reload screen for new items
                   }
@@ -1102,7 +1095,7 @@ window.fw={
               form_reset_state($f);
               // console.log('ajaxSubmit error', e);
               let data = e.responseJSON??{};
-              form_handle_errors($f, data, hint_options);
+              form_handle_errors($f, data, hint_options, e.status);
               $f.trigger('autosave-error',[e]);
           }
       });
@@ -1116,68 +1109,55 @@ window.fw={
     }
   },
 
-  //cleanup any exisitng form errors
+  // Clear feedback only in this form.
   clean_form_errors: function ($form) {
     $form=$($form);
     $form.find('.has-danger').removeClass('has-danger');
     $form.find('.is-invalid').removeClass('is-invalid');
     $form.find('[class^="err-"]').removeClass('invalid-feedback');
-    $form.find('.fw-validation-issue').remove();
+    $form.find('.fw-form-issue').remove();
   },
 
   //form - optional, if set - just this form processed
-  //err_json - optional, if set - this error json used instead of form's data-errors
+  // Accept a field/code map or structured issues, including in the existing data-errors attribute.
   process_form_errors: function (form, err_json) {
-    //console.log(form, err_json);
-    var selector= 'form[data-errors]';
-    if (form) selector=$(form);
-    $(selector).each(function (i, el) {
+    $(form || 'form[data-errors]').each(function (i, el) {
       var $f = $(el);
-      var errors = err_json ? err_json : $f.data('errors');
-      if (errors) console.log(errors);
-      if ($.isPlainObject(errors)){
-        //highlight error fields
-        $.each(errors,function(key, errcode) {
-          var $input = $f.find('[name="item['+key+']"],[name="'+key+'"]');
-          if ($input.length){
-            var $p=$input.parent();
-            if ($p.is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $p = $p.parent();
-            if (!$p.closest('form, table').is('table')){//does not apply to inputs in subtables
-              $input.closest('.form-group, .form-row').not('.noerr').addClass('has-danger'); //highlight whole row (unless .noerr exists)
-            }
-            $input.addClass('is-invalid'); //mark input itself
-            $input.parent('.input-group,.dropdown,.twitter-typeahead').addClass('is-invalid'); //mark input group container
-            if (errcode!==true && errcode.length){
-              $p.find('.' + CSS.escape('err-' + errcode)).addClass('invalid-feedback'); // codes or plain-text messages are not selectors
-            }
-          }
+      var errors = err_json ?? $f.data('errors');
+      fw.clean_form_errors($f);
+      var issues = Array.isArray(errors) ? errors : [];
+      if ($.isPlainObject(errors)) {
+        issues = Object.entries(errors).map(([field, code]) => ({ field, code, severity: 'error' }));
+      }
+      var error_fields = new Set(issues.filter(issue => issue && issue.severity !== 'warning').map(issue => issue.field));
+      var $controls = $f.find(':input[name]');
+      issues.forEach(function (issue) {
+        if (!issue || !issue.field) return;
+        var is_warning = issue.severity === 'warning';
+        if (is_warning && error_fields.has(issue.field)) return;
+        var $inputs = $controls.filter(function () {
+          return this.name === issue.field || this.name === 'item[' + issue.field + ']';
         });
-      }
-    });
-  },
-
-  // Optional field feedback; legacy error.details remains responsible for validation failures.
-  process_validation_issues: function (form, issues) {
-    var $form = $(form);
-    if (!$form.is('[data-validation-issues]')) return;
-    $form.find('.fw-validation-issue').remove();
-    if (!Array.isArray(issues)) return;
-    issues.forEach(function (issue) {
-      if (!issue.field || !issue.message) return;
-      var $inputs = $form.find(':input[name]').filter(function () {
-        return this.name === issue.field || this.name === 'item[' + issue.field + ']';
+        if (!$inputs.length) return;
+        var $anchor = $inputs.last();
+        if ($anchor.parent().is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $anchor = $anchor.parent();
+        if (!is_warning) {
+          if (!$anchor.closest('form, table').is('table')) {
+            $inputs.closest('.form-group,.form-row').not('.noerr').addClass('has-danger');
+          }
+          $inputs.addClass('is-invalid');
+          $inputs.parent('.input-group,.dropdown,.twitter-typeahead').addClass('is-invalid');
+        }
+        var $codedFeedback = typeof issue.code === 'string' && issue.code.length
+          ? $anchor.parent().find('.' + CSS.escape('err-' + issue.code)) : $();
+        if (!is_warning && $codedFeedback.length) {
+          // Preserve field-specific translations and application template customizations.
+          $codedFeedback.addClass('invalid-feedback');
+        } else if (typeof issue.message === 'string' && issue.message.length) {
+          $('<div>', { class: 'fw-form-issue small ' + (is_warning ? 'text-warning' : 'invalid-feedback d-block') })
+            .text(issue.message).insertAfter($anchor);
+        }
       });
-      if (!$inputs.length) return;
-      var is_warning = issue.severity === 'warning';
-      if (is_warning && $inputs.is('.is-invalid')) return;
-      var $anchor = $inputs.last();
-      if ($anchor.parent().is('.input-group,.custom-control,.dropdown,.twitter-typeahead')) $anchor = $anchor.parent();
-      if (!is_warning) {
-        $inputs.addClass('is-invalid');
-        $anchor.parent().find('[class^="err-"]').removeClass('invalid-feedback');
-      }
-      $('<div>', { class: 'fw-validation-issue small ' + (is_warning ? 'text-warning' : 'invalid-feedback d-block') })
-        .text(issue.message).insertAfter($anchor);
     });
   },
 

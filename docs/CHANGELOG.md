@@ -2,6 +2,10 @@
 
 This changelog records only breaking framework changes and the actions needed to upgrade an existing application. Entries are grouped by the date of the breaking change, not by followup commits. Additive features, internal refactoring, bug fixes, and renames within an unreleased branch belong in the relevant feature documentation or task summary. Coverage starts at 2025-06-01.
 
+## 2026-09-27
+
+- C# source change: `FW.FormErrors` is replaced by the request-owned `FW.FormIssues` collection. In controllers, replace dictionary assignments with `addFormError(field, code)` or `addFormError(field, message: text)`; use `addFormWarning` for non-blocking feedback. Replace dictionary reads with `fw.getFormErrors()` and remove manual `REQUIRED`/`INVALID` marker writes. JSON `error.details` and field-map `data-errors` bindings remain supported. Copy the shared `common/form/validation-messages.sel` template with the updated framework files. See the [migration examples](dynamic.md#migrating-c-form-validation).
+
 ## 2026-09-08
 
 - Breaking: updated saved-view controllers/models require the `user_views.widths` column. Apply the active provider's additive `upd2026-09-08-user-view-widths.sql` before deploying them into an existing application. See [Vue interaction upgrade requirements](dynamic.md#vue-interaction-behavior).

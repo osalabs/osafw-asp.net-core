@@ -45,7 +45,13 @@ public class ErrorPageGuidanceTests
             }, context);
             var fw = scope.Fw;
             if (loggedIn) fw.Session("user_id", "7");
-            fw.FormErrors["iname"] = "REQUIRED";
+            fw.FormIssues.Add(new FwDict
+            {
+                ["severity"] = FW.ISSUE_ERROR,
+                ["field"] = "iname",
+                ["code"] = "REQUIRED",
+                ["message"] = "Required field",
+            });
             fw.response.Body = new MemoryStream();
             fw.errMsg(message, ex);
             Assert.AreEqual(code, fw.response.StatusCode);
@@ -61,7 +67,7 @@ public class ErrorPageGuidanceTests
                 Assert.IsFalse(error.ContainsKey("title"));
                 Assert.IsFalse(error.ContainsKey("description"));
                 Assert.IsFalse(error.ContainsKey("show_login"));
-                Assert.AreEqual("REQUIRED", ((FwDict)error["details"]!)["iname"]);
+                Assert.IsTrue(((FwDict)error["details"]!)["iname"].toBool());
                 var shouldOfferLogin = code == 403 && !loggedIn;
                 Assert.AreEqual(shouldOfferLogin, error.ContainsKey("login_url"));
                 if (shouldOfferLogin)

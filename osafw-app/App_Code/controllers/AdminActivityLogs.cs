@@ -41,7 +41,8 @@ public class AdminActivityLogsController : FwController
         if (!Utils.isEmpty(fw.G["err_msg"]))
         {
             fw.flash("error", fw.G["err_msg"]!);
-            if (fw.FormErrors.Count > 0) logger(fw.FormErrors);
+            var formErrors = fw.getFormErrors();
+            if (formErrors.Count > 0) logger(formErrors);
         }
         fw.redirect(return_url);
         return null;
@@ -106,7 +107,7 @@ public class AdminActivityLogsController : FwController
 
         // comment or user event should be related to some item
         if (result && item["item_id"].toInt() == 0)
-            fw.FormErrors["REQUIRED"] = true;
+            addFormError(string.Empty, "REQUIRED");
 
         // If result AndAlso Not SomeOtherValidation() Then
         // FW.FERR("other field name") = "HINT_ERR_CODE"

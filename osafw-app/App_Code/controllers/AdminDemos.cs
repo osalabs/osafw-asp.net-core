@@ -156,9 +156,9 @@ public class AdminDemosController : FwAdminController
         bool result = this.validateRequired(id, item, this.required_fields);
 
         if (result && model.isExists(item["email"].toStr(), id))
-            fw.FormErrors["email"] = "EXISTS";
+            addFormError("email", "EXISTS");
         if (result && !FormUtils.isEmail(item["email"].toStr()))
-            fw.FormErrors["email"] = "EMAIL";
+            addFormError("email", "EMAIL");
 
         //if (result && !SomeOtherValidation())
         //{

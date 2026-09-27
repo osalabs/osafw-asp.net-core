@@ -187,11 +187,11 @@ public class AdminSpagesController : FwAdminController
         bool result = this.validateRequired(id, item, this.required_fields);
 
         if (result && model.isExistsByUrl(item["url"].toStr(), item["parent_id"].toInt(), id))
-            fw.FormErrors["url"] = "EXISTS";
+            addFormError("url", "EXISTS");
 
         var redirect_url = item["redirect_url"].toStr();
         if (result && !Utils.isEmpty(redirect_url) && !Utils.isAppUrl(redirect_url, fw.config("ROOT_DOMAIN").toStr()))
-            fw.FormErrors["redirect_url"] = "APP_URL";
+            addFormError("redirect_url", "APP_URL");
 
         if (result)
         {
@@ -201,7 +201,7 @@ public class AdminSpagesController : FwAdminController
             {
                 if (parent_id == id)
                 {
-                    fw.FormErrors["parent_id"] = true;
+                    addFormError("parent_id", "INVALID");
                     throw new UserException("Page cannot be its own parent");
                 }
                 // Check if parent_id is a descendant of current page
@@ -210,7 +210,7 @@ public class AdminSpagesController : FwAdminController
                 {
                     if (parentItem["id"].toInt() == id)
                     {
-                        fw.FormErrors["parent_id"] = true;
+                        addFormError("parent_id", "INVALID");
                         throw new UserException("Page cannot be a parent of its own descendant");
                     }
                 }

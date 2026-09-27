@@ -31,7 +31,6 @@ public abstract partial class FwController
     protected FW fw = null!;
     protected DB db = null!;
     protected FwModel model0 = null!;
-    protected FwList validation_issues = []; // optional request-local feedback; FormErrors remains the error contract
     protected FwDict config = [];                  // controller config, loaded from template dir/config.json
     protected FwDict access_actions_to_permissions = []; // optional, controller-level custom actions to permissions mapping for role-based access checks, e.g. "UIMain" => Permissions.PERMISSION_VIEW . Can also be used to override default actions to permissions
 
@@ -102,7 +101,6 @@ public abstract partial class FwController
     {
         this.fw = fw;
         this.db = fw.db;
-        validation_issues = [];
 
         is_readonly = fw.model<Users>().isReadOnly();
 
@@ -539,34 +537,44 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Adds optional structured feedback alongside legacy FormErrors. Errors populate a missing field error;
-    /// warnings do not block saves. Existing error codes are never overwritten. Plain controllers must call
-    /// validateCheckResult before writing. Explicit attempted values must be safe to return to the client;
-    /// Dynamic/Vue controllers additionally require field-level opt-in and exclude sensitive control types.
+    /// Adds request-owned structured form feedback. An empty field represents a form-wide issue, and at least one
+    /// of code or message is required. A later issue with the same severity, field, and row replaces the earlier
+    /// entry. Plain controllers must call <see cref="validateCheckResult"/> before writing. Explicit attempted
+    /// values must be safe to return to the client; Dynamic/Vue controllers additionally require field-level opt-in
+    /// and exclude sensitive control types.
     /// </summary>
-    protected virtual void addValidationIssue(
+    protected virtual void addFormIssue(
         string severity,
         string field,
-        string message,
+        string? code = null,
+        string? message = null,
         string? tab = null,
         string? row_id = null,
         object? attempted_value = null)
     {
-        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(message))
-            return;
+        if (severity != FW.ISSUE_ERROR && severity != FW.ISSUE_WARNING)
+            throw new ArgumentException($"Unsupported form issue severity: {severity}", nameof(severity));
 
-        if (validation_issues.Any(existing =>
-            existing["severity"].toStr() == (severity == "warning" ? "warning" : "error")
+        code = string.IsNullOrWhiteSpace(code) ? null : code;
+        message = string.IsNullOrWhiteSpace(message) ? null : message;
+        if (code == null && message == null)
+            throw new ArgumentException("A form issue requires a code or message.", nameof(code));
+
+        message ??= formIssueMessage(code!);
+
+        var existingIndex = fw.FormIssues.FindIndex(existing =>
+            existing["severity"].toStr() == severity
             && existing["field"].toStr() == field
-            && existing["row_id"].toStr() == row_id.toStr()))
-            return;
+            && existing["row_id"].toStr() == row_id.toStr());
 
         var issue = new FwDict
         {
-            ["severity"] = severity == "warning" ? "warning" : "error",
+            ["severity"] = severity,
             ["field"] = field,
             ["message"] = message,
         };
+        if (code != null)
+            issue["code"] = code;
         if (!string.IsNullOrEmpty(tab))
             issue["tab"] = tab;
         if (!string.IsNullOrEmpty(row_id))
@@ -574,31 +582,42 @@ public abstract partial class FwController
         if (attempted_value != null)
             issue["value"] = attempted_value;
 
-        validation_issues.Add(issue);
-        if (issue["severity"].toStr() == "error" && !fw.FormErrors.ContainsKey(field))
-            fw.FormErrors[field] = message;
+        if (existingIndex >= 0)
+            fw.FormIssues[existingIndex] = issue;
+        else
+            fw.FormIssues.Add(issue);
+    }
+
+    protected void addFormError(string field, string? code = null, string? message = null,
+        string? tab = null, string? row_id = null, object? attempted_value = null)
+    {
+        addFormIssue(FW.ISSUE_ERROR, field, code, message, tab, row_id, attempted_value);
+    }
+
+    protected void addFormWarning(string field, string? code = null, string? message = null,
+        string? tab = null, string? row_id = null, object? attempted_value = null)
+    {
+        addFormIssue(FW.ISSUE_WARNING, field, code, message, tab, row_id, attempted_value);
+    }
+
+    protected string formIssueMessage(string code)
+    {
+        var message = FormUtils.selectTplName("/common/form/validation-messages.sel", code);
+        return message.Length > 0 ? fw.parsePageInstance().langMap(message) : code;
     }
 
     /// <summary>
-    /// Validate required fields are non-empty and set global fw.FormErrors[field] values in case of errors
+    /// Validates that required fields are non-empty.
     /// </summary>
     /// <param name="id">id of the record, 0 if new record to add (for existing records - do not require fields not present in item)</param>
     /// <param name="item">fields/values to validate</param>
     /// <param name="fields">field names required to be non-empty (trim used)</param>
     /// <param name="form_errors">optional - form errors to fill</param>
     /// <returns>true if all required field names non-empty</returns>
-    /// <remarks>also set global fw.FormErrors[REQUIRED]=true in case of validation error if no form_errors defined</remarks>
+    /// <remarks>A supplied dictionary remains local. Otherwise request-owned REQUIRED form issues are added.</remarks>
     public virtual bool validateRequired(int id, FwDict item, IList fields, FwDict? form_errors = null)
     {
         bool result = true;
-
-        var is_global_errors = false;
-        if (form_errors == null)
-        {
-            //if no form_errors passed - use global fw.FormErrors
-            form_errors = fw.FormErrors;
-            is_global_errors = true;
-        }
 
         if (fields.Count > 0)
         {
@@ -614,14 +633,14 @@ public abstract partial class FwController
                 if (!string.IsNullOrEmpty(fld) && (!is_fld_exists || string.IsNullOrEmpty(fldValue.Trim())))
                 {
                     result = false;
-                    form_errors[fld] = true;
+                    if (form_errors != null)
+                        form_errors[fld] = true;
+                    else
+                        addFormError(fld, "REQUIRED");
                 }
             }
         }
         //else - no required fields defined - valid
-
-        if (!result && is_global_errors)
-            form_errors["REQUIRED"] = true; // set global error
 
         return result;
     }
@@ -632,25 +651,18 @@ public abstract partial class FwController
     }
 
     /// <summary>
-    /// Converts collected form errors into framework validation flags and throws on failure.
+    /// Throws when collected error issues or an external validation failure block persistence.
     /// </summary>
     /// <param name="result">External validation result to combine with collected form errors.</param>
-    /// <remarks>Sets <c>INVALID</c> when non-required form errors exist without an existing <c>REQUIRED</c> marker.</remarks>
     public virtual void validateCheckResult(bool result = true)
     {
-        var hasRequired = fw.FormErrors.ContainsKey("REQUIRED") && fw.FormErrors["REQUIRED"] is true;
-        if (hasRequired)
-            result = false;
+        var isErrorPresent = fw.FormIssues.Any(issue => issue["severity"].toStr() == FW.ISSUE_ERROR);
+        if (!result && !isErrorPresent)
+            addFormError(string.Empty, "INVALID");
 
-        if (fw.FormErrors.Count > 0 && !hasRequired)
+        if (!result || isErrorPresent)
         {
-            fw.FormErrors["INVALID"] = true;
-            result = false;
-        }
-
-        if (!result)
-        {
-            logger(LogLevel.DEBUG, "Validation failed:", fw.FormErrors);
+            logger(LogLevel.DEBUG, "Validation failed:", fw.getFormErrors());
             throw new ValidationException();
         }
 
@@ -1306,19 +1318,20 @@ public abstract partial class FwController
                 _json["error"] = new FwDict() { { "message", fw.G["err_msg"] } };
             }
 
-            // add FormErrors field errors to response if any
-            if (fw.FormErrors.Count > 0)
+            if (more_json != null)
+                Utils.mergeHash(_json, more_json);
+
+            var formErrors = fw.getFormErrors();
+            if (formErrors.Count > 0)
             {
                 var error = _json["error"] as FwDict ?? [];
-                error["details"] = fw.FormErrors;
+                if (!error.ContainsKey("details"))
+                    error["details"] = formErrors;
                 _json["error"] = error;
             }
 
-            if (validation_issues.Count > 0)
-                _json["validation_issues"] = new FwList(validation_issues);
-
-            if (more_json != null)
-                Utils.mergeHash(_json, more_json);
+            if (fw.FormIssues.Count > 0)
+                _json["form_issues"] = new FwList(fw.FormIssues);
 
             ps["_json"] = _json;
             return ps;
@@ -1329,7 +1342,7 @@ public abstract partial class FwController
             // If save Then failed - Return back To add/edit form
             if (success)
             {
-                var warnings = validation_issues.Where(issue => issue["severity"].toStr() == "warning").Select(issue => issue["message"].toStr());
+                var warnings = fw.FormIssues.Where(issue => issue["severity"].toStr() == FW.ISSUE_WARNING).Select(issue => issue["message"].toStr());
                 if (warnings.Any())
                     fw.flash("warning", string.Join("\n", warnings));
                 fw.redirect(location);
@@ -1371,7 +1384,8 @@ public abstract partial class FwController
     //called when unhandled error happens in action
     public virtual FwDict? actionError(Exception? ex, object[] args)
     {
-        if (fw.isJsonExpected() && ex is ValidationException && validation_issues.Count > 0)
+        if (fw.isJsonExpected() && ex is ValidationException
+            && fw.FormIssues.Any(issue => issue["severity"].toStr() == FW.ISSUE_ERROR))
         {
             fw.G["err_msg"] = ex.Message;
             if (!fw.response.HasStarted)

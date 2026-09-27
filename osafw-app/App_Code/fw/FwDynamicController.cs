@@ -221,15 +221,16 @@ public partial class FwDynamicController : FwController
         ps["related_id"] = related_id;
         ps["is_readonly"] = is_readonly;
         ps["tab"] = form_tab;
-        if (validation_issues.Count > 0)
-            ps["validation_issues"] = new FwList(validation_issues);
+        if (fw.FormIssues.Count > 0)
+            ps["form_issues"] = new FwList(fw.FormIssues);
         ps["is_showform"] = true; // flag for template that we are in show form
 
         //for RBAC
         ps["rbac"] = rbac;
 
-        if (fw.FormErrors.Count > 0)
-            logger(fw.FormErrors);
+        var formErrors = fw.getFormErrors();
+        if (formErrors.Count > 0)
+            logger(formErrors);
 
         return ps;
     }
@@ -284,16 +285,7 @@ public partial class FwDynamicController : FwController
         var success = true;
         var is_new = (id == 0);
 
-        removeEditReadonlyFields(id, item);
-        Validate(id, item);
-        if (validation_issues.Count > 0)
-            validateCheckResult();
-        // load old record if necessary
-        // var itemOld = modelOne(id);
-
-        FwDict itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        removeEditReadonlyFields(id, itemdb);
+        FwDict itemdb = prepareSaveFields(id, item);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
@@ -333,15 +325,27 @@ public partial class FwDynamicController : FwController
 
     #region Validation
     /// <summary>
-    /// Adds optional feedback with the configured field's tab/row metadata. Attempted values require
-    /// validation_show_value=true; sensitive controls never echo them. Legacy errors stay authoritative.
+    /// Adds form feedback with the configured field's tab/row metadata. Attempted values require
+    /// validation_show_value=true; sensitive controls never echo them.
     /// </summary>
-    protected override void addValidationIssue(string severity, string field, string message,
+    protected override void addFormIssue(string severity, string field, string? code = null, string? message = null,
         string? tab = null, string? row_id = null, object? attempted_value = null)
     {
         var resolved = resolveValidationField(field);
-        base.addValidationIssue(severity, field, message, tab ?? resolved.tab, row_id ?? resolved.rowId,
-            isValidationValueAllowed(resolved.definition) ? attempted_value : null);
+        object? safeAttemptedValue = null;
+        if (isValidationValueAllowed(resolved.definition))
+        {
+            safeAttemptedValue = attempted_value;
+            if (safeAttemptedValue == null && resolved.logicalField.Length > 0)
+            {
+                safeAttemptedValue = resolved.subtable.Length > 0
+                    ? reqh($"item-{resolved.subtable}#{resolved.rowId}")[resolved.logicalField]
+                    : reqh("item")[resolved.logicalField];
+            }
+        }
+
+        base.addFormIssue(severity, field, code, message, tab ?? resolved.tab, row_id ?? resolved.rowId,
+            safeAttemptedValue);
     }
 
     protected static bool isValidationValueAllowed(FwDict? definition)
@@ -485,27 +489,27 @@ public partial class FwDynamicController : FwController
 
                     if (val.ContainsKey("exists") && model0.isExistsByField(field_value, id, field))
                     {
-                        fw.FormErrors[field] = "EXISTS";
+                        addFormError(field, "EXISTS");
                         result = false;
                     }
                     if (val.ContainsKey("isemail") && !Utils.isEmpty(field_value) && !FormUtils.isEmail(field_value))
                     {
-                        fw.FormErrors[field] = "EMAIL";
+                        addFormError(field, "EMAIL");
                         result = false;
                     }
                     if (val.ContainsKey("isphone") && !Utils.isEmpty(field_value) && !FormUtils.isPhone(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        addFormError(field, "WRONG");
                         result = false;
                     }
                     if (val.ContainsKey("isdate") && !Utils.isEmpty(field_value) && !Utils.isDate(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        addFormError(field, "WRONG");
                         result = false;
                     }
                     if (val.ContainsKey("isfloat") && !Utils.isEmpty(field_value) && !Utils.isFloat(field_value))
                     {
-                        fw.FormErrors[field] = "WRONG";
+                        addFormError(field, "WRONG");
                         result = false;
                     }
                 }
@@ -564,7 +568,7 @@ public partial class FwDynamicController : FwController
     }
 
     /// <summary>
-    /// validate single subtable row using def[required_fields] and fill fw.FormErrors with row errors if any
+    /// Validates a subtable row using def[required_fields] and adds row-scoped form errors.
     /// Override in controller and add custom validation if needed
     /// </summary>
     /// <param name="row_id">row_id can start with "new-" (for new rows) or be numerical id (existing rows)</param>
@@ -582,17 +586,30 @@ public partial class FwDynamicController : FwController
         result = this.validateRequired(id, item, req_fields, row_errors);
         if (!result)
         {
-            //fill global fw.FormErrors with row errors
             var field = def["field"].toStr();
             foreach (var field_name in row_errors.Keys)
             {
                 // row input names format: item-<~field>#<~id>[field_name]
-                fw.FormErrors[$"item-{field}#{row_id}[{field_name}]"] = true;
+                addFormError($"item-{field}#{row_id}[{field_name}]", "REQUIRED");
             }
-            fw.FormErrors["REQUIRED"] = true; // also set global error
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Applies the shared Dynamic/Vue save preparation sequence before persistence.
+    /// </summary>
+    protected virtual FwDict prepareSaveFields(int id, FwDict item)
+    {
+        removeEditReadonlyFields(id, item);
+        Validate(id, item);
+        validateCheckResult();
+
+        FwDict itemdb = FormUtils.filter(item, this.save_fields);
+        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
+        removeEditReadonlyFields(id, itemdb);
+        return itemdb;
     }
 
     /// <summary>

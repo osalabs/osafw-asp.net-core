@@ -371,7 +371,7 @@ public class FwVueController : FwDynamicController
 
             var validationMessages = new FwDict();
             foreach (var code in Utils.qw("REQUIRED EXISTS EMAIL WRONG INVALID SAVE_FAILED"))
-                validationMessages[code] = validationIssueMessage(code);
+                validationMessages[code] = formIssueMessage(code);
             ps["validation_messages"] = validationMessages;
 
             // else - this is initial non-json page load - return layout/js to the browser, then Vue will load data via API
@@ -625,80 +625,13 @@ public class FwVueController : FwDynamicController
         var success = true;
         var is_new = (id == 0);
 
-        removeEditReadonlyFields(id, item);
-        Validate(id, item);
-        if (validation_issues.Count > 0)
-            validateCheckResult();
-        // load old record if necessary
-        // var itemOld = modelOne(id);
-
-        FwDict itemdb = FormUtils.filter(item, this.save_fields);
-        FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
-        removeEditReadonlyFields(id, itemdb);
+        FwDict itemdb = prepareSaveFields(id, item);
 
         id = this.modelAddOrUpdate(id, itemdb);
 
         var moreJson = buildSubtableSavePayload(id);
 
         return this.afterSave(success, id, is_new, FW.ACTION_SHOW_FORM, "", moreJson.Count > 0 ? moreJson : null);
-    }
-
-    /// <summary>
-    /// Converts legacy field-error details into neutral Vue validation issues without echoing submitted values by default.
-    /// </summary>
-    protected virtual void addFormErrorValidationIssues()
-    {
-        foreach (var entry in fw.FormErrors)
-        {
-            if (entry.Key is "REQUIRED" or "INVALID")
-                continue;
-
-            var resolved = resolveValidationField(entry.Key);
-            object? attemptedValue = null;
-            if (isValidationValueAllowed(resolved.definition))
-            {
-                attemptedValue = resolved.subtable.Length > 0
-                    ? reqh($"item-{resolved.subtable}#{resolved.rowId}")[resolved.logicalField]
-                    : reqh("item")[resolved.logicalField];
-            }
-
-            addValidationIssue(
-                "error",
-                entry.Key,
-                validationIssueMessage(entry.Value),
-                resolved.tab,
-                resolved.rowId,
-                attemptedValue);
-        }
-    }
-
-    private string validationIssueMessage(object? code)
-    {
-        var value = code is true ? "REQUIRED" : code.toStr();
-        if (value.Length == 0)
-            value = "INVALID";
-
-        var message = FormUtils.selectTplName("/common/vue/validation-messages.sel", value);
-        return message.Length > 0 ? fw.parsePageInstance().langMap(message) : value;
-    }
-
-    /// <summary>
-    /// Returns a structured 400 response for Vue validation failures while preserving the legacy error details map.
-    /// </summary>
-    public override FwDict? actionError(Exception? ex, object[] args)
-    {
-        if (fw.isJsonExpected() && ex is ValidationException validationException)
-        {
-            addFormErrorValidationIssues();
-            fw.G["err_msg"] = validationException.Message;
-            if (!fw.response.HasStarted)
-                fw.response.StatusCode = 400;
-
-            var moreJson = new FwDict { ["validation_issues"] = new FwList(validation_issues) };
-            return afterSave(false, args.Length > 0 ? args[0] : null, more_json: moreJson);
-        }
-
-        return base.actionError(ex, args);
     }
 
     /// <summary>

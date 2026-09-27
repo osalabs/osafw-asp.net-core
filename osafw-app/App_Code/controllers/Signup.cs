@@ -86,18 +86,18 @@ public class SignupController : FwController
         if (result && model.isExists(item["email"].toStr(), 0))
         {
             result = false;
-            fw.FormErrors["email"] = "EXISTS";
+            addFormError("email", "EXISTS");
         }
         if (result && !FormUtils.isEmail(item["email"].toStr()))
         {
             result = false;
-            fw.FormErrors["email"] = "EMAIL";
+            addFormError("email", "EMAIL");
         }
 
         if (result && item["pwd"].toStr() != item["pwd2"].toStr())
         {
             result = false;
-            fw.FormErrors["pwd2"] = "WRONG";
+            addFormError("pwd2", "WRONG");
         }
 
         if (!result)

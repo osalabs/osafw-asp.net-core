@@ -69,7 +69,7 @@ public class VueInteractionBrowserTests
         if (validationMessages == null)
         {
             validationMessages = [];
-            foreach (var line in File.ReadAllLines(Path.Combine(RepoRoot, "osafw-app/App_Data/template/common/vue/validation-messages.sel")))
+            foreach (var line in File.ReadAllLines(Path.Combine(RepoRoot, "osafw-app/App_Data/template/common/form/validation-messages.sel")))
             {
                 var pair = line.Split('|', 2);
                 validationMessages[pair[0]] = parser.parse_string(pair[1], []);
@@ -485,7 +485,7 @@ public class VueInteractionBrowserTests
                 testStore.uioptions.edit.is_validation_summary=true;
                 testStore.form_tabs=[{tab:'',label:'Main'},{tab:'details',label:'Details'}];
                 testStore.showform_fields_tabs={'':[],details:[{type:'fieldset',label:'Values'},{field:'code',type:'input',label:'Code',is_edit_readonly:true,help_text:'Set when creating the record; read-only when editing.'},{field:'title',type:'input',label:'Title'},{type:'end_fieldset'}]};
-                testStore.edit_data={id:7,i:{id:7,code:'Fixed',title:'Entered'},save_result:{error:{message:'Review'},validation_issues:[{severity:'error',field:'title',tab:'details',message:'Check title',value:'<img src=x onerror=alert(1)>'},{severity:'warning',field:'code',message:'Check code'}]}};
+                testStore.edit_data={id:7,i:{id:7,code:'Fixed',title:'Entered'},save_result:{error:{message:'Review'},form_issues:[{severity:'error',field:'title',tab:'details',message:'Check title',value:'<img src=x onerror=alert(1)>'},{severity:'warning',field:'code',message:'Check code'}]}};
             }
             """);
         await page.GetByRole(AriaRole.Button, new() { Name = "Title: Check title", Exact = true }).ClickAsync();
@@ -502,7 +502,7 @@ public class VueInteractionBrowserTests
         Assert.IsTrue(await page.EvaluateAsync<bool>("""
             () => {
                 testStore.edit_data.save_result={error:{details:{title:true,REQUIRED:true,other:true,INVALID:true}},
-                    validation_issues:[{severity:'error',field:'title',message:'Structured title'}]};
+                    form_issues:[{severity:'error',field:'title',message:'Structured title'}]};
                 const issues=testStore.formIssues();
                 return issues.length===2 && issues[0].field==='title' && issues[0].message==='Structured title'
                     && issues[1].field==='other' && issues[1].message==='Required field';
@@ -523,7 +523,7 @@ public class VueInteractionBrowserTests
                 testStore.showform_fields=[{field:'email',type:'email',label:'Email'},{field:'title',type:'input',label:'Title'}];
                 testStore.edit_data={id:7,i:{id:7,email:'bad',title:''}};
                 window.invalidResponse={error:{message:'Please review your input',details:{email:'EMAIL',title:true}},
-                    validation_issues:[{severity:'error',field:'email',message:'Invalid Email'}]};
+                    form_issues:[{severity:'error',field:'email',message:'Invalid Email'}]};
                 testStore.api.post=async()=>invalidResponse;
                 await testStore.saveEditData();
             }
@@ -551,7 +551,7 @@ public class VueInteractionBrowserTests
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField==='email'");
         await page.EvaluateAsync("""
             async () => {
-                testStore.api.post=async()=>({id:7,validation_issues:[{severity:'warning',field:'email',message:'Check address'}]});
+                testStore.api.post=async()=>({id:7,form_issues:[{severity:'warning',field:'email',message:'Check address'}]});
                 await testStore.saveEditData();
             }
             """);
@@ -612,12 +612,12 @@ public class VueInteractionBrowserTests
                 testStore.base_url='/Items'; testStore.current_screen='list'; testStore.is_list_edit_pane=true;
                 testStore.edit_data={id:7,i:{id:7,title:'Draft'}};
                 window.reloads=0; testStore.loadIndex=async () => reloads++;
-                window.posts=0; testStore.api.post=async () => { posts++; return {error:{message:'No'},validation_issues:[{severity:'error',field:'title',message:'Invalid'}]}; };
+                window.posts=0; testStore.api.post=async () => { posts++; return {error:{message:'No'},form_issues:[{severity:'error',field:'title',message:'Invalid'}]}; };
             }
             """);
         await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
         Assert.AreEqual(0, await page.EvaluateAsync<int>("() => reloads"));
-        await page.EvaluateAsync("async () => { testStore.api.post=async () => { posts++; await new Promise(resolve=>setTimeout(resolve,50)); return {id:7,validation_issues:[{severity:'warning',field:'title',message:'Review'}]}; }; await Promise.all([testStore.saveEditData(),testStore.saveEditData()]); }");
+        await page.EvaluateAsync("async () => { testStore.api.post=async () => { posts++; await new Promise(resolve=>setTimeout(resolve,50)); return {id:7,form_issues:[{severity:'warning',field:'title',message:'Review'}]}; }; await Promise.all([testStore.saveEditData(),testStore.saveEditData()]); }");
         Assert.AreEqual(2, await page.EvaluateAsync<int>("() => posts"));
         Assert.AreEqual(1, await page.EvaluateAsync<int>("() => reloads"));
         await page.EvaluateAsync("() => { testStore.capabilities={create:false,edit:false,delete:false}; }");
@@ -1227,7 +1227,8 @@ public class VueInteractionBrowserTests
 
     [TestMethod, TestCategory("VueBrowser")]
     [DataRow("structured")]
-    [DataRow("legacy")]
+    [DataRow("form-wide")]
+    [DataRow("details")]
     [DataRow("transport")]
     [DataRow("authorization")]
     [DataRow("server")]
@@ -1245,9 +1246,13 @@ public class VueInteractionBrowserTests
                 window.tabSaveFailure=req => {
                     if(req.tab || req['item-lines#11'].idesc!=='Invalid detail') return;
                     if(kind==='transport') throw new Error('Connection lost');
-                    if(kind==='authorization' || kind==='server') throw {response:kind==='authorization'?403:500,body:{error:{message:'Request failed'}}};
+                    if(kind==='authorization' || kind==='server') throw {response:kind==='authorization'?403:500,body:{error:{message:'Request failed',details:{'item-lines#11[idesc]':'Technical detail'}}}};
                     const failure={success:false,error:{message:'Details failed',details:{'item-lines#11[idesc]':'WRONG'}}};
-                    if(kind==='structured') failure.validation_issues=[{severity:'error',field:'item-lines#11[idesc]',row_id:'11',message:'Correct detail'}];
+                    if(kind==='structured') failure.form_issues=[{severity:'error',field:'item-lines#11[idesc]',row_id:'11',message:'Correct detail'}];
+                    if(kind==='form-wide') {
+                        failure.error.details={INVALID:true};
+                        failure.form_issues=[{severity:'error',field:'',message:'Review this form'}];
+                    }
                     return failure;
                 };
                 window.firstSave=testStore.saveEditData();
@@ -1258,8 +1263,8 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("async () => { releaseFirst(); await firstSave; }");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Original detail' && databaseRows.links[0].idesc==='Requested relation' && originalDetail.idesc==='Invalid detail'"));
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details') && navigations===0"), "A successful Relations save cannot resolve the failed Details tab or navigate away.");
-        var isValidation = failureKind is "structured" or "legacy";
-        Assert.AreEqual(isValidation, await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='')"), "Only validation failures belong in field issues.");
+        var isValidation = failureKind is "structured" or "details" or "form-wide";
+        Assert.AreEqual(isValidation, await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='')"), "Only validation failures belong in form issues.");
         Assert.AreEqual(isValidation ? 0 : 1, await page.GetByRole(AriaRole.Alert).CountAsync());
         Assert.AreEqual(0, await page.GetByRole(AriaRole.Status).CountAsync(), "No redundant unsaved-status row above the form.");
         Assert.AreEqual(1, await page.Locator(".nav-link .text-danger").CountAsync(), "The failed tab remains marked.");
@@ -1283,7 +1288,7 @@ public class VueInteractionBrowserTests
             """);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => otherFormSucceeded && testStore.savedStatus===false && navigations===0"), "Failures belong to the captured form.");
 
-        if (!isValidation) await page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("^Details") }).ClickAsync();
+        if (!isValidation || failureKind == "form-wide") await page.GetByRole(AriaRole.Link, new() { NameRegex = new Regex("^Details") }).ClickAsync();
         else
         {
             await page.Locator(".fw-validation-summary button").Filter(new() { HasText = failureKind == "structured" ? "Correct detail" : "Invalid" }).ClickAsync();
@@ -1385,7 +1390,7 @@ public class VueInteractionBrowserTests
                 testStore.api.post=async (id, req) => {
                     payloads.push({id,item:JSON.parse(JSON.stringify(req.item))});
                     await new Promise(resolve => releases[id]=resolve);
-                    return {id,validation_issues:[{severity:'warning',field:'title',message:'Saved '+req.item.title}]};
+                    return {id,form_issues:[{severity:'warning',field:'title',message:'Saved '+req.item.title}]};
                 };
                 window.firstSave=testStore.saveEditData();
                 testStore.current_id=8; testStore.edit_data={id:8,i:{id:8,title:'B'},subtables:{},save_result:{}};
@@ -1576,7 +1581,7 @@ public class VueInteractionBrowserTests
                 testStore.edit_data={id:7,i:{id:7},subtables:{lines:[
                     {id:11,demo_dicts_id:1,iname:'First',idesc:'First notes',is_checkbox:1},
                     {id:22,demo_dicts_id:2,iname:'Second',idesc:'Second notes',is_checkbox:0}
-                ]},save_result:{error:{details:{'item-lines#22[idesc]':'WRONG'}},validation_issues:[{severity:'error',field:'item-lines#22[idesc]',row_id:'22',message:'Review second notes'}]}};
+                ]},save_result:{error:{details:{'item-lines#22[idesc]':'WRONG'}},form_issues:[{severity:'error',field:'item-lines#22[idesc]',row_id:'22',message:'Review second notes'}]}};
             }
             """);
         var rows = page.Locator("#subtable-form tbody tr");
@@ -1615,7 +1620,7 @@ public class VueInteractionBrowserTests
         await page.EvaluateAsync("""
             () => {
                 const row = testStore.edit_data.subtables.lines.at(-1);
-                testStore.edit_data.save_result = {validation_issues:[{severity:'error',field:`item-lines#${row.id}[idesc]`,row_id:String(row.id),message:'Required field'}]};
+                testStore.edit_data.save_result = {form_issues:[{severity:'error',field:`item-lines#${row.id}[idesc]`,row_id:String(row.id),message:'Required field'}]};
             }
             """);
         Assert.AreEqual("Subtable Notes: Required field", await page.Locator("#subtable-issue").InnerTextAsync());
