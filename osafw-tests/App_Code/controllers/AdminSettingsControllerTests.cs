@@ -329,7 +329,138 @@ public class AdminSettingsControllerTests
         Assert.ThrowsExactly<AuthException>(() => controller.RevealAction(1));
     }
 
+    [TestMethod]
+    public void ExportAction_RequiresSiteAdmin()
+    {
+        var (_, _, controller) = BuildController(
+            Setting(Settings.INPUT_TEXT, "value"),
+            [],
+            accessLevel: Users.ACL_ADMIN);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.ExportAction());
+    }
+
+    [TestMethod]
+    public void ExportAction_RejectsWrongXssToken()
+    {
+        var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT, "value"), []);
+        fw.FORM["XSS"] = "wrong";
+
+        Assert.ThrowsExactly<AuthException>(() => controller.ExportAction());
+    }
+
+    [TestMethod]
+    public void ImportAction_RequiresPostBeforeReadingUpload()
+    {
+        var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
+        fw.route.method = "GET";
+
+        Assert.ThrowsExactly<AuthException>(() => controller.ImportAction());
+    }
+
+    [TestMethod]
+    public void ImportAction_RequiresSiteAdminBeforeReadingUpload()
+    {
+        var (_, _, controller) = BuildController(
+            Setting(Settings.INPUT_TEXT),
+            [],
+            accessLevel: Users.ACL_ADMIN);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.ImportAction());
+    }
+
+    [TestMethod]
+    public void SettingsIndexTemplate_RendersTransferAndGroupedControlsOnlyForSiteAdmin()
+    {
+        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+        var session = new TestHelpers.FakeSession();
+        session.Set("XSS", System.Text.Encoding.UTF8.GetBytes("token"));
+        var parser = new ParsePage(new ParsePageOptions
+        {
+            TemplatesRoot = Path.Combine(root, "osafw-app", "App_Data", "template"),
+            Session = session,
+        });
+        var state = new FwDict
+        {
+            ["is_site_admin"] = true,
+            ["is_readonly"] = false,
+            ["smtp"] = new FwDict { ["host"] = "smtp.example.test", ["port"] = "587", ["username"] = "mailer", ["password_display"] = "***" },
+            ["aws"] = new FwDict { ["source"] = "sdk", ["access_display"] = "Not configured", ["secret_display"] = "Not configured" },
+            ["settings_categories"] = new FwList(),
+            ["list_rows"] = new FwList(),
+        };
+
+        string siteAdminHtml = parser.parse_page("/admin/settings/index", "main.html", state);
+        StringAssert.Contains(siteAdminHtml, "/(SaveEmail)");
+        StringAssert.Contains(siteAdminHtml, "/(SaveAWS)");
+        StringAssert.Contains(siteAdminHtml, "/(Export)");
+        StringAssert.Contains(siteAdminHtml, "name=\"settings_file\"");
+
+        state["is_site_admin"] = false;
+        string adminHtml = parser.parse_page("/admin/settings/index", "main.html", state);
+        Assert.DoesNotContain("/(SaveEmail)", adminHtml);
+        Assert.DoesNotContain("/(SaveAWS)", adminHtml);
+        Assert.DoesNotContain("/(Export)", adminHtml);
+        Assert.DoesNotContain("name=\"settings_file\"", adminHtml);
+
+        var revealState = new FwDict
+        {
+            ["can_reveal"] = true,
+            ["id"] = 7,
+            ["i"] = new FwDict { ["ivalue_display"] = "***" },
+        };
+        string revealControl = parser.parse_page("/admin/settings/showform", "input_credential.html", revealState);
+        string revealScript = parser.parse_page("/admin/settings/showform", "load_script.html", revealState);
+        StringAssert.Contains(revealControl, "id=\"setting_reveal\"");
+        StringAssert.Contains(revealScript, "method: 'POST'");
+        StringAssert.Contains(revealScript, "XSS: 'token'");
+
+        revealState["can_reveal"] = false;
+        string hiddenControl = parser.parse_page("/admin/settings/showform", "input_credential.html", revealState);
+        string hiddenScript = parser.parse_page("/admin/settings/showform", "load_script.html", revealState);
+        Assert.DoesNotContain("id=\"setting_reveal\"", hiddenControl);
+        Assert.DoesNotContain("method: 'POST'", hiddenScript);
+    }
+
 #if isSQLite
+    [TestMethod]
+    public void ExportAction_SiteAdminWritesPlaintextPortableJsonAttachment()
+    {
+        using var fixture = new TransferFixture();
+        int secretId = fixture.Seed("OPENAI_API_KEY", Settings.INPUT_CREDENTIAL);
+        fixture.Model.update(secretId, DB.h("ivalue", "portable-secret", "basis", Settings.BASIS_VALUE));
+
+        fixture.Controller.ExportAction();
+
+        fixture.Fw.response.Body.Position = 0;
+        using var reader = new StreamReader(fixture.Fw.response.Body, leaveOpen: true);
+        string json = reader.ReadToEnd();
+        StringAssert.Contains(json, "portable-secret");
+        Assert.AreEqual("application/json; charset=utf-8", fixture.Fw.response.ContentType);
+        StringAssert.Contains(fixture.Fw.response.Headers.ContentDisposition.ToString(), "settings-export.json");
+        Assert.AreEqual("no-store", fixture.Fw.response.Headers.CacheControl.ToString());
+    }
+
+    [TestMethod]
+    public void ImportAction_SiteAdminAcceptsJsonFileAndEncryptsCredential()
+    {
+        using var fixture = new TransferFixture();
+        int secretId = fixture.Seed("OPENAI_API_KEY", Settings.INPUT_CREDENTIAL);
+        const string json = """
+            {"version":1,"settings":[
+              {"icode":"OPENAI_API_KEY","basis":1,"ivalue":"imported-secret"}
+            ]}
+            """;
+        fixture.SetUpload(json);
+
+        Assert.ThrowsExactly<RedirectException>(() => fixture.Controller.ImportAction());
+
+        string stored = fixture.Db.value("settings", DB.h("id", secretId), "ivalue").toStr();
+        Assert.StartsWith(FwSettingsProtection.PREFIX, stored);
+        Assert.DoesNotContain("imported-secret", stored);
+        Assert.AreEqual("imported-secret", fixture.Model.readSecret("OPENAI_API_KEY"));
+    }
+
     [TestMethod]
     public void RevealAction_ThroughFrameworkDispatchReturnsValueAndFinalNoStoreHeader()
     {
@@ -371,6 +502,27 @@ public class AdminSettingsControllerTests
         fw.route.action = "QuickSearch";
 
         Assert.ThrowsExactly<AuthException>(() => controller.checkAccess());
+    }
+
+    [TestMethod]
+    public void SaveAWS_RejectsHalfEnteredStaticPairBeforeWriting()
+    {
+        var (fw, model, controller) = BuildController(
+            Setting(Settings.INPUT_SELECT, "sdk", accessLevel: Users.ACL_SITEADMIN, code: "AWS_CREDENTIAL_SOURCE"),
+            []);
+        model.Rows[2] = Setting(Settings.INPUT_CREDENTIAL, "", accessLevel: Users.ACL_SITEADMIN, code: "AWSAccessKey");
+        model.Rows[2]["id"] = 2;
+        model.Rows[3] = Setting(Settings.INPUT_CREDENTIAL, "", accessLevel: Users.ACL_SITEADMIN, code: "AWSSecretKey");
+        model.Rows[3]["id"] = 3;
+        fw.FORM["aws"] = new FwDict
+        {
+            ["source"] = "static",
+            ["access_key"] = "only-one-value",
+            ["secret_key"] = "",
+        };
+
+        Assert.ThrowsExactly<UserException>(() => controller.SaveAWSAction());
+        Assert.AreEqual(0, model.UpdateCalls);
     }
 
     [TestMethod]
