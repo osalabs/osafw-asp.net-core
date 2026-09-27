@@ -60,24 +60,10 @@
 
     fwApp.component('edit-form', {
         template: '#edit-form-template',
-        props: {
-            sampleProp: {
-                type: String,
-                required: false,
-                default: ''
-            }
-        },
-        emits: ['on-sample-event'],
-        data: () => ({
-            sample_value: 0,
-        }),
         computed: {
             ...mapStores(fwStore), //accessible via this.fwStore
             current_id() {
                 return this.fwStore.current_id ?? 0;
-            },
-            save_result() {
-                return this.fwStore.edit_data?.save_result;
             },
             preparedDefs() {
                 if (this.current_id) {
@@ -90,15 +76,6 @@
                 });
                 return this.fwStore.fieldsToTree(fields);
             }
-        },
-        async mounted() {
-            console.log('edit-form mounted');
-        },
-        unmounted() {
-            console.log('edit-form unmounted');
-        },
-        updated() {
-            //console.log('edit-form updated');
         },
         methods: {
             onUpdateFormField({ field, value }) {

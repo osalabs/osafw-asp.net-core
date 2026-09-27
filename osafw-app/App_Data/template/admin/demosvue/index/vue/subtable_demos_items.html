@@ -140,7 +140,6 @@
         },
         data: () => ({
             feedbackPrefix: 'subtable-feedback-' + nextFeedbackId++,
-            sample_value: 0,
             autocomplete_url: '/Admin/Demos/(Autocomplete)?q='
         }),
         computed: {
@@ -148,15 +147,6 @@
             list_rows() {
                 return this.form.subtables?.[this.def.field] ?? [];
             },
-        },
-        mounted() {
-            console.log('subtable-demos_items mounted');
-        },
-        unmounted() {
-            console.log('subtable-demos_items unmounted');
-        },
-        updated() {
-            //console.log('subtable-demos_items updated');
         },
         methods: {
             issueField(row, field) { return 'item-' + this.def.field + '#' + row.id + '[' + field + ']'; },

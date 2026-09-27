@@ -43,28 +43,8 @@
 
     fwApp.component('view-form', {
         template: '#view-form-template',
-        props: {
-            sampleProp: {
-                type: String,
-                required: false,
-                default: ''
-            }
-        },
-        emits: ['on-sample-event'],
-        data: () => ({
-            sample_value: 0,
-        }),
         computed: {
             ...mapStores(fwStore) //accessible via this.fwStore
-        },
-        async mounted() {
-            console.log('view-form mounted');
-        },
-        unmounted() {
-            console.log('view-form unmounted');
-        },
-        updated() {
-            //console.log('view-form updated');
         },
         methods: {
             onUpdateFormField({ field, value }) {
