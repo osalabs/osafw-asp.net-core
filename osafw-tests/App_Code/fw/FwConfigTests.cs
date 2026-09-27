@@ -59,6 +59,55 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void Defaults_AreDbIndependentAndDeploymentConfigurationWinsOverAppHook()
+        {
+            using var scope = FwConfig.beginScope();
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["appSettings:timezone"] = "UTC",
+                    ["appSettings:route_prefixes:/Custom"] = "true",
+                })
+                .Build();
+
+            var startupSettings = FwConfig.settingsForEnvironment(config);
+            Assert.AreEqual("UTC", startupSettings["timezone"]);
+            Assert.AreEqual("DELETE /Login/1", ((FwDict)startupSettings["routes"]!)["/Logoff"]);
+
+            FwConfig.init(null, config);
+            var settings = FwConfig.GetCurrentSettings();
+            var routePrefixes = (FwDict)settings["route_prefixes"]!;
+            var routes = (FwDict)settings["routes"]!;
+
+            Assert.AreEqual("UTC", settings["timezone"]);
+            Assert.AreEqual("en", settings["lang"]);
+            Assert.AreEqual("/Main", settings["LOGGED_DEFAULT_URL"]);
+            Assert.AreEqual("/layout.html", settings["PAGE_LAYOUT"]);
+            Assert.AreEqual("osafw", settings["DATA_PROTECTION_APPLICATION_NAME"]);
+            Assert.IsTrue(routePrefixes.ContainsKey("/Custom"));
+            Assert.AreEqual("DELETE /Login/1", routes["/Logoff"]);
+        }
+
+        [TestMethod]
+        public void AppHook_ReturnsFreshPolicyMapsForIndependentScopes()
+        {
+            var config = new ConfigurationBuilder().Build();
+
+            using (FwConfig.beginScope())
+            {
+                FwConfig.init(null, config);
+                ((FwDict)FwConfig.GetCurrentSetting("routes")!)["/Logoff"] = "changed";
+            }
+
+            using (FwConfig.beginScope())
+            {
+                FwConfig.init(null, config);
+                var routes = (FwDict)FwConfig.GetCurrentSetting("routes")!;
+                Assert.AreEqual("DELETE /Login/1", routes["/Logoff"]);
+            }
+        }
+
+        [TestMethod]
         public void SettingsForEnvironment_AppliesEnvironmentOverrideToFlatSettings()
         {
             var previousEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");

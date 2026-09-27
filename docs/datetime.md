@@ -11,13 +11,11 @@
   - Datetime: `YYYY-MM-DD HH:mm:ss`
 - On output, real datetimes can be converted to the user's timezone and formatted with the user's date/time formats. Date-only values keep the same calendar day for every user.
 
-## Global defaults (appsettings.json)
-`appSettings` keys define defaults applied for anonymous users or when there's no per-user override:
-- `appSettings.date_format` - default date format id (see constants below). Example: `0` (MDY)
-- `appSettings.time_format` - default time format id. Example: `0` (12h)
-- `appSettings.timezone` - default timezone id. Example: `"UTC"`
+## Global defaults
 
-These values are available at runtime via `fw.config("date_format")`, `fw.config("time_format")`, `fw.config("timezone")` and are copied into `fw.G`.
+`FwConfig` supplies DB-independent defaults for anonymous users and users without a profile override: English, MDY dates, 12-hour time, and UTC. Applications customize policy in the pure `FwHooks.configure(FwDict)` hook; the shipped application changes the default timezone to `Central Standard Time`. These values are available during startup and offline commands, before any Settings table can be read.
+
+The resolved values remain available through `fw.config("date_format")`, `fw.config("time_format")`, and `fw.config("timezone")` and are copied into `fw.G`. Do not put these application defaults in `appsettings.json`; reserve that file for deployment/bootstrap values. Per-database `appSettings.db.<name>.timezone` remains a deployment setting because it describes how that database stores datetimes.
 
 ## Per-user overrides
 On each request FW pulls user-specific settings from session, if present:
@@ -105,7 +103,7 @@ In `/My/Settings`, `auto` stores an empty `users.timezone` preference and uses t
 
 If an invalid timezone is supplied, `DateUtils.convertTimezone` logs the issue and returns the original `DateTime`.
 
-- Ensure `appsettings.json` has sensible defaults for `date_format`, `time_format`, `timezone`, and optional per-DB `timezone` overrides.
+- Set application defaults in `FwHooks.configure(FwDict)` and keep optional per-DB `timezone` overrides in `appsettings.json`.
 - Set session values to emulate a user preference and verify formatting on pages and API responses.
 
 ## Related source
