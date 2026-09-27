@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-27-demo-subtable.md` - Restored the demo-owned Vue subtable, removed virtual demo loading, and verified rendered component boundaries and browser behavior.
 - `summary-2026-09-27-vue-review-fixes.md` - Ordered saved-view writes, corrected Add New availability and save-failure initialization, and shared subtable/column-width rendering.
 - `summary-2026-09-26-vue-validation-cleanup.md` - Removed the redundant unsaved-tab row, aligned summary links with the label, and verified failed-tab/navigation behavior with six browser cases.
 - `summary-2026-09-22-vue-filter-toggle.md` - Replaced the Vue filter text button with a fixed-position raised-tab/pill toggle, preserved visibility behavior, and verified keyboard and browser geometry.
