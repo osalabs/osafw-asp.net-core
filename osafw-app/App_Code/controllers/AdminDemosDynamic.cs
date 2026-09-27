@@ -36,9 +36,12 @@ public class AdminDemosDynamicController : FwDynamicController
     {
         base.Validate(id, item);
         var title = item["iname"].toStr();
-        if (title == "validation-error")
+        if (title == "validation-error" || title == "validation-both")
             addFormError("iname", message: fw.parsePageInstance().langMap("Demo error: choose a different title."));
-        else if (title == "validation-warning")
-            addFormWarning("iname", message: fw.parsePageInstance().langMap("Demo warning: this title was saved; please review it."));
+
+        if (title == "validation-warning")
+            addFormWarning("iname", message: fw.parsePageInstance().langMap("Demo warning: review this title."));
+        else if (title == "validation-both")
+            addFormWarning("email", message: fw.parsePageInstance().langMap("Demo warning: review this email address."));
     }
 }

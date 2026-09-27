@@ -38,6 +38,9 @@ let mainApp = {
     updated() {
         //console.log('mainApp updated');
     },
+    unmounted() {
+        window.removeEventListener('beforeunload', this.fwStore.warnBeforeUnload);
+    },
     methods: {
         reload() {
             window.location.reload();

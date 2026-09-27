@@ -1,6 +1,7 @@
 // define some global constants
 window.fwConst = {
     ERR_CODES_MAP: <~validation_messages json noescape>,
+    LEAVE_FAILED_FORM: '`Some changes were not saved. Leave this form?`',
 };
 <~/common/vue/store_core.js>
 import { interactionActions, queueUserViewWrite } from '<~GLOBAL[ASSETS_URL]>/js/vue-interactions.js?v<~GLOBAL[SITE_VERSION]>';
@@ -599,6 +600,15 @@ let actions = {
     },
     // screen navigation
     async setCurrentScreen(screen, id, options = {}) {
+        if (editFormSaveFailures.has(this.edit_data)
+            && !await window.confirm(window.fwConst.LEAVE_FAILED_FORM)) {
+            if (options.skipHistory) {
+                window.history.replaceState({ screen: this.current_screen, id: this.current_id }, '',
+                    this.buildScreenUrl(this.current_screen, this.current_id, this.activeFormTab));
+            }
+            return false;
+        }
+
         // console.log("setCurrentScreen:", screen, id);
         const previous_screen = this.current_screen;
         const is_same_mode = (previous_screen === screen) && (screen === 'view' || screen === 'edit');
@@ -698,12 +708,20 @@ let actions = {
 
     // called when app mounted
     async afterMounted() {
+        window.addEventListener('beforeunload', this.warnBeforeUnload);
         //show flash success or error message if exists
         if (this.flash.success)
             Toast(this.flash.success, { theme: 'text-bg-success' });
         if (this.flash.error)
             Toast(this.flash.error, { theme: 'text-bg-danger' });
         this.initFormTabFromLocation();
+    },
+
+    warnBeforeUnload(event) {
+        if (editFormSaveFailures.has(this.edit_data)) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
     },
 
     // load init and lookup scopes only

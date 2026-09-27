@@ -579,6 +579,7 @@
                     "field": "iname",
                     "label": "Title",
                     "type": "input",
+                    "help_text": "Validation demo: validation-error blocks saving; validation-warning allows saving; validation-both shows an error and a warning.",
                     "required": true,
                     "maxlength": 64
                 },

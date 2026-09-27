@@ -13,3 +13,7 @@ Error: === 错误：
 Entered value: === 已输入的值：
 Saved, but the list could not refresh. Reload the list to see current values. === 已保存，但列表无法刷新。请重新加载列表以查看最新值。
 Drag or use arrow keys to resize; double-click to fit; Ctrl+double-click to fit all columns === 拖动或使用方向键调整宽度；双击自动调整当前列；Ctrl+双击自动调整所有列
+Demo error: choose a different title. === 演示错误：请选择其他标题。
+Demo warning: review this title. === 演示警告：请检查此标题。
+Demo warning: review this email address. === 演示警告：请检查此电子邮件地址。
+Some changes were not saved. Leave this form? === 某些更改尚未保存。要离开此表单吗？

@@ -1277,6 +1277,30 @@ public class VueInteractionBrowserTests
         Assert.AreEqual(1, await page.Locator(".nav-link .text-danger").CountAsync(), "The failed tab remains marked.");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.failedFormTabs.length===1 && testStore.failedFormTabs[0].label==='Details'"));
 
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            async () => {
+                const form = testStore.edit_data, screen = testStore.current_screen, id = testStore.current_id;
+                const url = location.href;
+                window.confirm = async () => false;
+                const result = await testStore.setCurrentScreen('view', 99);
+                return result === false && testStore.edit_data === form && testStore.current_screen === screen
+                    && testStore.current_id === id && location.href === url;
+            }
+            """), "Cancelling manual navigation must preserve the failed draft and URL.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            async () => {
+                const tab = testStore.current_form_tab;
+                await testStore.afterMounted();
+                testStore.current_form_tab = tab;
+                const event = new Event('beforeunload', { cancelable: true });
+                window.dispatchEvent(event);
+                history.replaceState({screen:'view',id:99}, '', '/99');
+                await testStore.setCurrentScreen('view', 99, {skipHistory:true});
+                return event.defaultPrevented && history.state.screen === 'edit' && history.state.id === 7
+                    && location.pathname === testStore.buildScreenUrl('edit', 7, tab).split('?')[0];
+            }
+            """), "Hard navigation warns, and declining browser history navigation restores the current URL.");
+
         await page.EvaluateAsync("async () => { originalRelation.idesc='Later relation'; await testStore.saveEditData(); }");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.savedStatus===false && navigations===0 && databaseRows.links[0].idesc==='Later relation'"), "The failure must outlive the original request queue.");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => { testStore.saveEditDataDebounced(20); return testStore.savedStatus===false && testStore.savedErrorMessage.includes('Details'); }"), "Debouncing must not hide an unresolved failure.");
@@ -1304,6 +1328,20 @@ public class VueInteractionBrowserTests
         await page.Locator("[data-fw-row='11'] textarea").FillAsync("Corrected detail");
         await page.EvaluateAsync("async () => { await testStore.saveEditData(); }");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => databaseRows.lines[0].idesc==='Corrected detail' && databaseRows.links[0].idesc==='Later relation' && testStore.savedStatus===true && !testStore.formIssues().some(issue=>issue.severity==='error') && navigations===1"), "A successful retry of Details clears its failure and restores normal navigation.");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            async () => {
+                originalDetail.idesc = 'Invalid detail';
+                await testStore.saveEditData();
+                let isPrompted = false;
+                window.confirm = async () => { isPrompted = true; return true; };
+                testStore.loadItem = async () => {};
+                await testStore.setCurrentScreen('view', 7);
+                const event = new Event('beforeunload', { cancelable: true });
+                window.dispatchEvent(event);
+                return isPrompted && testStore.current_screen === 'view' && testStore.edit_data === null
+                    && !event.defaultPrevented;
+            }
+            """), "A user can explicitly leave an unresolved failed form.");
         await AssertNoClientErrors(page);
     }
 
