@@ -1,9 +1,3 @@
-<div v-if="fwStore.failedFormTabs.length" class="small text-body-secondary mb-2" role="status">
-    `Not saved`
-    <template v-for="failure in fwStore.failedFormTabs" :key="failure.tab">
-        <span v-if="failure.label"> &middot; <button type="button" class="btn btn-link btn-sm p-0 text-danger" @click="fwStore.setFormTab(failure.tab)">{{failure.label}}</button></span>
-    </template>
-</div>
 <div v-for="(failure,index) in fwStore.formSaveErrors" :key="index" class="alert alert-danger" role="alert">
     {{failure.message}}
 </div>

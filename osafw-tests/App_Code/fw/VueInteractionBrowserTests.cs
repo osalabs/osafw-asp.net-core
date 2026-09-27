@@ -526,6 +526,15 @@ public class VueInteractionBrowserTests
         Assert.AreEqual(1, await page.EvaluateAsync<int>("() => toasts.length"), "Repeated autosave failures must not repeat the same toast.");
         Assert.AreEqual(1, await page.Locator(".fw-validation-summary.alert-danger").CountAsync());
         Assert.AreEqual(0, await page.Locator(".fw-validation-summary ul,.fw-validation-summary li").CountAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("""
+            () => {
+                const summary = document.querySelector('.fw-validation-summary');
+                const label = document.createRange(), link = document.createRange();
+                label.selectNodeContents(summary.querySelector('.fw-semibold'));
+                link.selectNodeContents(summary.querySelector('button'));
+                return Math.abs(label.getBoundingClientRect().top - link.getBoundingClientRect().top) < 1;
+            }
+            """), "Summary label and field-link text must share the same baseline.");
         await page.GetByRole(AriaRole.Button, new() { Name = "Email: Invalid Email", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-field]')?.dataset.fwField==='email'");
         await page.EvaluateAsync("""
@@ -1012,7 +1021,8 @@ public class VueInteractionBrowserTests
         var isValidation = failureKind is "structured" or "legacy";
         Assert.AreEqual(isValidation, await page.EvaluateAsync<bool>("() => testStore.formIssues().some(issue=>issue.severity==='error' && issue.tab==='')"), "Only validation failures belong in field issues.");
         Assert.AreEqual(isValidation ? 0 : 1, await page.GetByRole(AriaRole.Alert).CountAsync());
-        Assert.IsTrue(await page.GetByRole(AriaRole.Status).IsVisibleAsync());
+        Assert.AreEqual(0, await page.GetByRole(AriaRole.Status).CountAsync(), "No redundant unsaved-status row above the form.");
+        Assert.AreEqual(1, await page.Locator(".nav-link .text-danger").CountAsync(), "The failed tab remains marked.");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => testStore.failedFormTabs.length===1 && testStore.failedFormTabs[0].label==='Details'"));
 
         await page.EvaluateAsync("async () => { originalRelation.idesc='Later relation'; await testStore.saveEditData(); }");
@@ -1312,7 +1322,7 @@ public class VueInteractionBrowserTests
         await using var browser = await Browser(playwright);
         var page = await Page(browser, """
             <form id="subtable-form" v-if="fwStore.edit_data">
-                <button id="subtable-issue" type="button" @click="fwStore.focusFormIssue(fwStore.formIssues()[0], $event.currentTarget.closest('form'))">Review second notes</button>
+                <button v-if="fwStore.formIssues().length" id="subtable-issue" type="button" @click="fwStore.focusFormIssue(fwStore.formIssues()[0], $event.currentTarget.closest('form'))">{{fwStore.issueLabel(fwStore.formIssues()[0])}}: {{fwStore.formIssues()[0].message}}</button>
                 <subtable_demos_items
                     :def="{field:'lines',type:'subtable_edit',showform_fields:[{field:'demo_dicts_id',is_edit_readonly:true},{field:'iname',is_edit_readonly:true},{field:'idesc',is_edit_readonly:true},{field:'is_checkbox',is_edit_readonly:true}]}"
                     :lookups="fwStore.lookups" :form="fwStore.edit_data"></subtable_demos_items>
@@ -1322,6 +1332,7 @@ public class VueInteractionBrowserTests
             () => {
                 testStore.current_screen='edit'; testStore.current_id=7;
                 testStore.lookups={DemoDicts:[{id:1,iname:'One'},{id:2,iname:'Two'}]};
+                testStore.showform_fields=[{field:'lines',label:'Subtable',type:'subtable_edit',showform_fields:[{field:'idesc',label:'Notes'}]}];
                 testStore.edit_data={id:7,i:{id:7},subtables:{lines:[
                     {id:11,demo_dicts_id:1,iname:'First',idesc:'First notes',is_checkbox:1},
                     {id:22,demo_dicts_id:2,iname:'Second',idesc:'Second notes',is_checkbox:0}
@@ -1334,6 +1345,7 @@ public class VueInteractionBrowserTests
         var tooltip = rows.Nth(1).Locator(".fw-subtable-feedback");
         Assert.AreEqual(1, await tooltip.CountAsync(), "Legacy and structured errors share one subtable message.");
         Assert.IsFalse(await tooltip.IsVisibleAsync());
+        Assert.AreEqual("Subtable Notes: Review second notes", await page.Locator("#subtable-issue").InnerTextAsync());
         await page.Locator("#subtable-issue").ClickAsync();
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('[data-fw-row]')?.dataset.fwRow==='22'");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.tagName==='TEXTAREA' && document.activeElement.closest('[data-fw-field]')?.dataset.fwField==='item-lines#22[idesc]'"));
@@ -1360,6 +1372,16 @@ public class VueInteractionBrowserTests
         Assert.IsFalse(await added.Locator("input[type=checkbox]").IsDisabledAsync());
         Assert.AreEqual(1, await added.Locator("input:not([type=checkbox])").CountAsync());
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.closest('tr') === document.querySelector('#subtable-form tbody tr:last-child')"));
+        await page.EvaluateAsync("""
+            () => {
+                const row = testStore.edit_data.subtables.lines.at(-1);
+                testStore.edit_data.save_result = {validation_issues:[{severity:'error',field:`item-lines#${row.id}[idesc]`,row_id:String(row.id),message:'Required field'}]};
+            }
+            """);
+        Assert.AreEqual("Subtable Notes: Required field", await page.Locator("#subtable-issue").InnerTextAsync());
+        await page.Locator("#subtable-issue").ClickAsync();
+        await page.WaitForFunctionAsync("() => document.activeElement?.tagName==='TEXTAREA' && document.activeElement.closest('tr') === document.querySelector('#subtable-form tbody tr:last-child')");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.tagName==='TEXTAREA' && document.activeElement.closest('tr') === document.querySelector('#subtable-form tbody tr:last-child')"));
         await AssertNoClientErrors(page);
     }
 }

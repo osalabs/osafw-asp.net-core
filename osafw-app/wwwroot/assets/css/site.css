@@ -1329,6 +1329,12 @@ form [class^="err-"] {
   display: none;
 }
 
+.fw-validation-summary .btn {
+  font: inherit;
+  vertical-align: baseline;
+  border: 0;
+}
+
 .fw-subtable-validation {
   position: relative;
 }
