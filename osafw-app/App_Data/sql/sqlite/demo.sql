@@ -1,5 +1,8 @@
 -- SQLite demo tables, use for reference/development, remove when not required
 
+INSERT INTO settings (is_user_edit, input, access_level, mask, basis, icat, icode, ivalue, iname, idesc, allowed_values) VALUES
+(1, 10, 90, 0, 1, '', 'test', 'novalue', 'test settings', 'description', '');
+
 PRAGMA foreign_keys = OFF;
 
 DROP TABLE IF EXISTS demos_items;

@@ -75,13 +75,9 @@ public class SecurityGroup9ATests
     }
 
     [TestMethod]
-    public void Auth_MixedCaseActionDoesNotBypassAccessLevelRule()
+    public void Auth_MixedCaseActionUsesControllerAuthorizationAfterCsrfGate()
     {
         var fw = TestHelpers.CreateFw();
-        fw.config()["access_levels"] = new FwDict
-        {
-            ["/AdminUsers/Save"] = Users.ACL_SITEADMIN
-        };
         fw.Session("access_level", Users.ACL_MEMBER.toStr());
         var route = new FwRoute
         {
@@ -92,7 +88,7 @@ public class SecurityGroup9ATests
 
         var result = fw._auth(route, is_die: false);
 
-        Assert.AreEqual(0, result);
+        Assert.AreEqual(1, result);
         Assert.AreEqual(FW.ACTION_SAVE, route.action);
     }
 
@@ -274,22 +270,100 @@ public class SecurityGroup9ATests
     }
 
     [TestMethod]
+    public void SettingsRequestsNeverLogSubmittedValuesWhenPiiLoggingIsEnabled()
+    {
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:log_pii"] = "true",
+        });
+        fw.route.controller = "AdminSettings";
+        fw.FORM["item"] = new FwDict
+        {
+            ["icode"] = "mail.password",
+            ["ivalue"] = "plaintext-secret",
+        };
+
+        var logged = fw.requestFormForLog();
+
+        Assert.IsInstanceOfType<StrList>(logged);
+        var text = FwLogger.dumper(logged);
+        Assert.IsFalse(text.Contains("plaintext-secret", StringComparison.Ordinal));
+        Assert.IsFalse(text.Contains("mail.password", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void SensitiveSettingsMarkerRedactsCustomConsumerRequests()
+    {
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:log_pii"] = "true",
+        });
+        fw.route.controller = "CustomSettings";
+        fw.context.Items["OSAFW.SensitiveSettings"] = true;
+        fw.FORM["ivalue"] = "plaintext-secret";
+
+        var logged = fw.requestFormForLog();
+
+        Assert.IsInstanceOfType<StrList>(logged);
+        Assert.IsFalse(FwLogger.dumper(logged).Contains("plaintext-secret", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void SensitiveSettingsMarkerRedactsDetailedErrorResponse()
+    {
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:IS_DEV"] = "true",
+            ["appSettings:log_pii"] = "true",
+        });
+        fw.context.Items["OSAFW.SensitiveSettings"] = true;
+        fw.request.Headers.Accept = "application/json";
+        fw.response.Body = new MemoryStream();
+        fw.FORM["ivalue"] = "plaintext-secret";
+
+        fw.errMsg("Settings failure", new ApplicationException("Settings failure"));
+
+        fw.response.Body.Position = 0;
+        var body = new StreamReader(fw.response.Body).ReadToEnd();
+        Assert.IsFalse(body.Contains("plaintext-secret", StringComparison.Ordinal));
+        Assert.IsTrue(body.Contains("DUMP_FORM", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void PiiLoggingPreservesOrdinaryFormValuesButRedactsCredentialFields()
+    {
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:log_pii"] = "true",
+        });
+        fw.route.controller = "Contact";
+        fw.FORM["email"] = "person@example.test";
+        fw.FORM["password"] = "plaintext-secret";
+
+        var logged = fw.requestFormForLog() as FwDict;
+
+        Assert.IsNotNull(logged);
+        Assert.AreEqual("person@example.test", logged["email"]);
+        Assert.AreEqual("[REDACTED]", logged["password"]);
+    }
+
+    [TestMethod]
     public void Appsettings_SentryDefaultsDoNotSendPiiOrRequestBodies()
     {
         var appsettingsPath = findRepoFile("osafw-app", "appsettings.json");
         using var doc = JsonDocument.Parse(File.ReadAllText(appsettingsPath));
         var sentry = doc.RootElement.GetProperty("Sentry");
         var appSettings = doc.RootElement.GetProperty("appSettings");
-        var developmentOverride = appSettings.GetProperty("override").GetProperty("Development");
+        var developmentPath = findRepoFile("osafw-app", "appsettings.Development.json");
+        using var developmentDoc = JsonDocument.Parse(File.ReadAllText(developmentPath));
+        var developmentSettings = developmentDoc.RootElement.GetProperty("appSettings");
 
         Assert.IsFalse(sentry.GetProperty("SendDefaultPii").GetBoolean());
         Assert.AreEqual("None", sentry.GetProperty("MaxRequestBodySize").GetString());
-        Assert.IsFalse(appSettings.GetProperty("log_pii").GetBoolean());
-        Assert.IsTrue(developmentOverride.GetProperty("log_pii").GetBoolean());
-        Assert.IsTrue(appSettings.TryGetProperty("access_levels", out var accessLevels));
+        Assert.IsFalse(appSettings.TryGetProperty("log_pii", out _));
+        Assert.IsTrue(developmentSettings.GetProperty("log_pii").GetBoolean());
+        Assert.IsFalse(appSettings.TryGetProperty("access_levels", out _));
         Assert.IsFalse(appSettings.TryGetProperty("accesss_levels", out _));
-        Assert.IsTrue(accessLevels.TryGetProperty("/Main", out var mainAccessLevel));
-        Assert.AreEqual(Users.ACL_MEMBER, mainAccessLevel.GetInt32());
     }
 
     private static bool hasUsersIdScope(FwDict parameters)

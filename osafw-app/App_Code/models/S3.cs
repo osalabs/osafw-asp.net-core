@@ -48,9 +48,9 @@ public class S3 : FwModel
 #if isS3
     public const bool IS_ENABLED = true;
     public AmazonS3Client client = null!;
-    // params defined in web.config:
-    // fw.config("AWSAccessKey") - access key
-    // fw.config("AWSSecretKey") - secret key
+    // credentials are stored as protected site settings when static keys are used:
+    // Settings "AWSAccessKey" - access key
+    // Settings "AWSSecretKey" - secret key
     // fw.config("AWSRegion") - region "us-west-2"
     // fw.config("S3Bucket") - bucket name "xyz"
     // fw.config("S3Root") - root folder under bucket, default ""
@@ -116,19 +116,33 @@ public class S3 : FwModel
     // root should end with "/" if non-empty
     public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
-        string akey = (!string.IsNullOrEmpty(access_key) ? access_key : fw.config("AWSAccessKey")).toStr();
-        string skey = (!string.IsNullOrEmpty(secret_key) ? secret_key : fw.config("AWSSecretKey")).toStr();
-        // region is defined in web.config "AWSRegion"
+        var settings = fw.model<Settings>();
+        var hasExplicitCredentials = !string.IsNullOrEmpty(access_key) || !string.IsNullOrEmpty(secret_key);
+        var credentialSource = hasExplicitCredentials ? "static" : settings.read("AWS_CREDENTIAL_SOURCE", "sdk");
+        string akey = "";
+        string skey = "";
+        if (credentialSource.Equals("static", StringComparison.OrdinalIgnoreCase))
+        {
+            akey = !string.IsNullOrEmpty(access_key) ? access_key : settings.readSecret("AWSAccessKey");
+            skey = !string.IsNullOrEmpty(secret_key) ? secret_key : settings.readSecret("AWSSecretKey");
+        }
+    // deployment configuration owns the S3 region and storage location
 
         this.region = (!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion")).toStr();
         this.bucket = (!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket")).toStr();
         this.root = (!string.IsNullOrEmpty(root) ? root : fw.config("S3Root")).toStr();
 
-        //throw exception if region/bucket/akey/skey is not defined
-        if (string.IsNullOrEmpty(this.region) || string.IsNullOrEmpty(this.bucket) || string.IsNullOrEmpty(akey) || string.IsNullOrEmpty(skey))
+        if (string.IsNullOrEmpty(this.region) || string.IsNullOrEmpty(this.bucket)
+            || credentialSource.Equals("static", StringComparison.OrdinalIgnoreCase)
+                && (string.IsNullOrEmpty(akey) || string.IsNullOrEmpty(skey)))
             throw new System.ApplicationException("S3 storage is not configured");
 
-        client = new AmazonS3Client(akey, skey, Amazon.RegionEndpoint.GetBySystemName(this.region)); // , Amazon.RegionEndpoint.USWest2
+        var endpoint = Amazon.RegionEndpoint.GetBySystemName(this.region);
+        client = credentialSource.Equals("sdk", StringComparison.OrdinalIgnoreCase)
+            ? new AmazonS3Client(endpoint)
+            : credentialSource.Equals("static", StringComparison.OrdinalIgnoreCase)
+                ? new AmazonS3Client(akey, skey, endpoint)
+                : throw new System.ApplicationException("S3 credential source is not supported");
 
         return client;
     }

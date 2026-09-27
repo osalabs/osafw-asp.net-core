@@ -55,6 +55,7 @@ public class FW : IDisposable
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = new(StringComparer.OrdinalIgnoreCase); // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
+    private const string SensitiveSettingsContextKey = "OSAFW.SensitiveSettings";
     private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, string> CanonicalActions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -79,6 +80,8 @@ public class FW : IDisposable
         [ACTION_MORE_DELETE] = ACTION_MORE_DELETE,
     };
     private ParsePage? pp_instance; // for parsePage()
+    private bool isSettingsGlobalsLoaded;
+    private bool isRenderingError;
 
     public FwDict FORM = [];
     public FwDict postedJson = []; // parsed JSON from request body
@@ -277,7 +280,9 @@ public class FW : IDisposable
             db = getDB();
             DB.SQL_QUERY_CTR = 0; // reset query counter
 
-            G = Utils.cloneHashDeep(config())!; // by default G contains conf
+            G = Utils.cloneHashDeep(config())!; // by default G contains non-secret configuration
+            removeBootstrapSecretsFromGlobals(G);
+            G["SITE_NAME"] = Settings.DEFAULT_VALUES["SITE_NAME"];
 
             // per request settings
             G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -737,7 +742,9 @@ public class FW : IDisposable
             logger(LogLevel.DEBUG, Ex.Message);
             if (!isLogged)
             {
-                var url = config("UNLOGGED_DEFAULT_URL").toStr();
+                var url = isSettingsUpgradeRoute()
+                    ? config("UNLOGGED_DEFAULT_URL").toStr()
+                    : model<Settings>().read("UNLOGGED_DEFAULT_URL", config("UNLOGGED_DEFAULT_URL").toStr());
                 // Preserve page navigation through login, without replaying form/API requests.
                 if (HttpMethods.IsGet(request.Method) && route.method == "GET" && getResponseExpectedFormat() == "")
                 {
@@ -776,7 +783,7 @@ public class FW : IDisposable
             {
                 // it's ApplicationException, so just warning
                 var logPii = config("log_pii").toBool();
-                logger(LogLevel.NOTICE, "REQUEST FORM:", logPii ? (object)FORM : new StrList(FORM.Keys));
+                logger(LogLevel.NOTICE, "REQUEST FORM:", requestFormForLog());
                 logger(LogLevel.NOTICE, "SESSION:", logPii ? (object)context.Session : new StrList(context.Session.Keys));
                 logger(LogLevel.WARN, Ex.Message, Ex.ToString());
 
@@ -792,7 +799,7 @@ public class FW : IDisposable
         {
             // it's general Exception, so something more severe occur, log as error and notify admin
             var logPii = config("log_pii").toBool();
-            logger(LogLevel.NOTICE, "REQUEST FORM:", logPii ? (object)FORM : new StrList(FORM.Keys));
+            logger(LogLevel.NOTICE, "REQUEST FORM:", requestFormForLog());
             logger(LogLevel.NOTICE, "SESSION:", logPii ? (object)context.Session : new StrList(context.Session.Keys));
             logger(LogLevel.ERROR, Ex.Message, Ex.ToString());
 
@@ -853,27 +860,7 @@ public class FW : IDisposable
             }
         }
 
-        string path = "/" + route.controller + "/" + route.action;
-        string path2 = "/" + route.controller;
-
-        // pre-check controller's access level by url
-        int current_level = userAccessLevel;
-
-        FwDict rules = (FwDict?)config("access_levels") ?? [];
-        if (Utils.tryGetValueIgnoreCase(rules, path, out var pathRule))
-        {
-            if (current_level >= pathRule.toInt())
-                result = 2;
-        }
-        else if (Utils.tryGetValueIgnoreCase(rules, path2, out var controllerRule))
-        {
-            if (current_level >= controllerRule.toInt())
-                result = 2;
-        }
-        else
-        {
-            result = 1; // need to check Controller.access_level after _auth
-        }
+        result = 1; // check Controller.access_level and optional RBAC after the CSRF gate
 
         if (result == 0 && is_die)
             throw new AuthException("Bad access - Not authorized");
@@ -950,6 +937,104 @@ public class FW : IDisposable
         FORM = f;
     }
 
+    private static void removeBootstrapSecretsFromGlobals(FwDict globals)
+    {
+        globals.Remove("db");
+        globals.Remove("override");
+        globals.Remove("mail");
+        globals.Remove("AWSAccessKey");
+        globals.Remove("AWSSecretKey");
+        globals.Remove("OPENAI_API_KEY");
+        globals.Remove("API_KEY");
+    }
+
+    internal object requestFormForLog()
+    {
+        var isSettingsRequest = route.controller.Equals("AdminSettings", StringComparison.OrdinalIgnoreCase)
+            || context.Items.ContainsKey(SensitiveSettingsContextKey);
+        if (isSettingsRequest || !config("log_pii").toBool())
+            return new StrList(FORM.Keys);
+
+        return redactSensitiveFormValues(FORM);
+    }
+
+    private static FwDict redactSensitiveFormValues(FwDict source)
+    {
+        var result = new FwDict();
+        foreach (var entry in source)
+        {
+            if (isSensitiveFormKey(entry.Key))
+            {
+                result[entry.Key] = "[REDACTED]";
+                continue;
+            }
+
+            result[entry.Key] = entry.Value is FwDict nested
+                ? redactSensitiveFormValues(nested)
+                : entry.Value;
+        }
+
+        return result;
+    }
+
+    private static bool isSensitiveFormKey(string key)
+    {
+        return key.Contains("password", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("secret", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("token", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("api_key", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("apikey", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("api-key", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("ivalue", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private object formErrorsForLog(FwDict formErrors)
+    {
+        if (!route.controller.Equals("AdminSettings", StringComparison.OrdinalIgnoreCase)
+            && !context.Items.ContainsKey(SensitiveSettingsContextKey))
+            return formErrors;
+
+        return new FwDict
+        {
+            ["count"] = formErrors.Count,
+            ["fields"] = new StrList(formErrors.Keys),
+        };
+    }
+
+    /// <summary>
+    /// Loads non-secret site settings only when a rendered response needs them. The request
+    /// constructor remains free of Settings reads, and DevConfigure can render while the
+    /// Settings table is being bootstrapped.
+    /// </summary>
+    private void ensureSettingsGlobals()
+    {
+        if (isSettingsGlobalsLoaded || isRenderingError || isSettingsUpgradeRoute())
+            return;
+
+        var settings = model<Settings>();
+        G["SITE_NAME"] = settings.read("SITE_NAME");
+        G["feedback_email"] = settings.read("feedback_email");
+        G["support_email"] = settings.read("support_email");
+        G["mail_from"] = settings.read("mail_from");
+        G["is_list_btn_left"] = settings.readBool("is_list_btn_left");
+        G["UNLOGGED_DEFAULT_URL"] = settings.read("UNLOGGED_DEFAULT_URL", config("UNLOGGED_DEFAULT_URL").toStr());
+        G["LOGGED_DEFAULT_URL"] = settings.read("LOGGED_DEFAULT_URL", config("LOGGED_DEFAULT_URL").toStr());
+
+        if (string.IsNullOrEmpty(Session("ui_theme")))
+            G["ui_theme"] = settings.readInt("ui_theme");
+        if (string.IsNullOrEmpty(Session("ui_mode")))
+            G["ui_mode"] = settings.readInt("ui_mode");
+
+        isSettingsGlobalsLoaded = true;
+    }
+
+    private bool isSettingsUpgradeRoute()
+    {
+        return route.controller.Equals("DevConfigure", StringComparison.OrdinalIgnoreCase)
+            || route.controller.Equals("AdminFwUpdates", StringComparison.OrdinalIgnoreCase)
+            || route.controller.Equals("DevUpdates", StringComparison.OrdinalIgnoreCase);
+    }
+
     public void logger(params object?[] args)
     {
         if (args.Length == 0)
@@ -987,6 +1072,8 @@ public class FW : IDisposable
     //   - (not for json) to perform redirect - set hf("_redirect")="url"
     public void parser(string basedir, FwDict ps)
     {
+        ensureSettingsGlobals();
+
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
         var formErrors = getFormErrors();
@@ -997,7 +1084,7 @@ public class FW : IDisposable
 
             if (ps["error"] is FwDict errorTable && !errorTable.ContainsKey("details"))
                 errorTable["details"] = formErrors;
-            logger(LogLevel.DEBUG, "Form errors:", formErrors);
+            logger(LogLevel.DEBUG, "Form errors:", formErrorsForLog(formErrors));
         }
 
         if (FormIssues.Count > 0 && !ps.ContainsKey("form_issues"))
@@ -1518,7 +1605,7 @@ public class FW : IDisposable
     /// <summary>
     /// Send Email
     /// </summary>
-    /// <param name="mail_from">if empty - config mail_from used</param>
+    /// <param name="mail_from">If empty, the Site Settings mail_from value is used.</param>
     /// <param name="mail_to">may contain several emails delimited by ,; or space</param>
     /// <param name="mail_subject">subject</param>
     /// <param name="mail_body">body, if starts with !DOCTYPE or html tag - html email will be sent</param>
@@ -1540,8 +1627,9 @@ public class FW : IDisposable
 
         try
         {
+            var settings = model<Settings>();
             if (mail_from.Length == 0)
-                mail_from = this.config("mail_from").toStr(); // default mail from
+                mail_from = settings.read("mail_from");
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
             bool is_test = this.config("is_test").toBool();
@@ -1647,7 +1735,14 @@ public class FW : IDisposable
                 }
             }
 
-            FwDict mailSettings = Utils.cloneHashDeep(this.config("mail") as FwDict) ?? [];
+            FwDict mailSettings = new()
+            {
+                ["host"] = settings.read("mail.host"),
+                ["port"] = settings.readInt("mail.port", 587),
+                ["is_ssl"] = settings.readBool("mail.is_ssl", true),
+                ["username"] = settings.read("mail.username"),
+                ["password"] = settings.readSecret("mail.password"),
+            };
             if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
             {
                 // Per-send overrides must not mutate the shared configuration dictionary.
@@ -1686,15 +1781,13 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// Resolves the test-mode recipient from Site Settings, application configuration, or the logged-in user.
+    /// Resolves the test-mode recipient from Site Settings or the logged-in user.
     /// </summary>
     /// <remarks>A database read failure is allowed to propagate so callers do not mistake an outage for a missing setting.</remarks>
     /// <returns>The selected address, or the current session login for an empty value or the <c>current_user</c> sentinel.</returns>
     public string resolveTestEmailRecipient()
     {
         string test_email = model<Settings>().read(Settings.ICODE_TEST_EMAIL).Trim();
-        if (test_email.Length == 0)
-            test_email = config("test_email").toStr().Trim();
 
         if (test_email.Length == 0 || test_email.Equals("current_user", StringComparison.OrdinalIgnoreCase))
             return Session("login").Trim();
@@ -1716,7 +1809,7 @@ public class FW : IDisposable
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
+        this.sendEmail("", model<Settings>().read("admin_email"), msg[..512], msg);
     }
 
     private bool isDetailedErrorVisible()
@@ -1799,11 +1892,19 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? []);
+            ps["DUMP_FORM"] = FwLogger.dumper(requestFormForLog());
             ps["DUMP_SESSION"] = session != null ? FwLogger.dumper(session) : "null";
         }
 
-        parser(tpl_dir, ps);
+        isRenderingError = true;
+        try
+        {
+            parser(tpl_dir, ps);
+        }
+        finally
+        {
+            isRenderingError = false;
+        }
     }
 
     // return model object by type

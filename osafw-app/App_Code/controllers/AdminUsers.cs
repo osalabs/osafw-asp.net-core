@@ -269,7 +269,7 @@ public class AdminUsersController : FwDynamicController
 
         model.doLogin(id);
 
-        fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
+        fw.redirect(fw.model<Settings>().read("LOGGED_DEFAULT_URL", fw.config("LOGGED_DEFAULT_URL").toStr()));
     }
 
     /// <summary>

@@ -22,7 +22,7 @@ public class SignupController : FwController
         fw.G["PAGE_LAYOUT"] = fw.G["PAGE_LAYOUT_PUBLIC"];
 
         if (!fw.config("IS_SIGNUP").toBool())
-            fw.redirect(fw.config("UNLOGGED_DEFAULT_URL").toStr());
+            fw.redirect(fw.model<Settings>().read("UNLOGGED_DEFAULT_URL", fw.config("UNLOGGED_DEFAULT_URL").toStr()));
     }
 
     public void IndexAction()
@@ -72,7 +72,7 @@ public class SignupController : FwController
         fw.sendEmailTpl(itemdb["email"].toStr(), "signup.txt", itemdb);
 
         model.doLogin(id);
-        fw.redirect(fw.config("LOGGED_DEFAULT_URL").toStr());
+        fw.redirect(fw.model<Settings>().read("LOGGED_DEFAULT_URL", fw.config("LOGGED_DEFAULT_URL").toStr()));
     }
 
     public bool Validate(FwDict item)

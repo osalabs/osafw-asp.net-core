@@ -48,7 +48,7 @@ public class MyMFAController : FwController
         fw.Session("mfa_secret", secret);
 
         FwDict ps = [];
-        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.config("SITE_NAME").toStr());
+        ps["qr_code"] = model.generateMFAQRCode(secret, user["email"], fw.model<Settings>().read("SITE_NAME"));
         return ps;
     }
 
