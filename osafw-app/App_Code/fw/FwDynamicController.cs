@@ -790,6 +790,7 @@ public partial class FwDynamicController : FwController
         var is_widths_supplied = req("widths") != null;
         var is_list_edit = reqb("is_list_edit");
         var icode = base_url + (is_list_edit ? "/edit" : "");
+        FwDict? saved_widths = null;
 
         if (load_id > 0)
         {
@@ -798,16 +799,20 @@ public partial class FwDynamicController : FwController
             var selected = views.oneByIcodeId(icode, load_id);
             if (selected.Count > 0)
             {
+                saved_widths = normalizeUserViewWidths(selected["widths"]);
                 views.updateByIcode(icode, DB.h(
                     "fields", selected["fields"],
-                    "widths", Utils.jsonEncode(normalizeUserViewWidths(selected["widths"]))));
+                    "widths", Utils.jsonEncode(saved_widths)));
             }
         }
         else if (is_reset)
+        {
             // reset fields to defaults
+            saved_widths = [];
             fw.model<UserViews>().updateByIcode(icode, DB.h(
                 "fields", view_list_defaults,
-                "widths", Utils.jsonEncode(new FwDict())));
+                "widths", Utils.jsonEncode(saved_widths)));
+        }
         else if (density.Length > 0)
         {
             // save density
@@ -845,7 +850,8 @@ public partial class FwDynamicController : FwController
             fw.model<UserViews>().updateByIcodeFields(icode, fields);
         }
 
-        return afterSave(true, null, false, "no_action", return_url);
+        return afterSave(true, null, false, "no_action", return_url,
+            saved_widths == null ? null : new FwDict { ["widths"] = saved_widths });
     }
 
     /// <summary>

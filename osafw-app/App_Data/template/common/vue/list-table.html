@@ -12,7 +12,7 @@
                     <colgroup v-if="tableWidthStyle">
                         <col :style="{ width: columnLayout.selection + 'px' }">
                         <col v-if="uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnLayout.controls + 'px' }">
-                        <col v-for="header in fwStore.list_headers" :key="header.field_name" :style="{ width: (fwStore.columnWidths()[header.field_name] || columnLayout.fields[header.field_name]) + 'px' }">
+                        <col v-for="header in fwStore.list_headers" :key="header.field_name" :style="{ width: (columnWidths[header.field_name] || columnLayout.fields[header.field_name]) + 'px' }">
                         <col v-if="!uioptions.isButtonsLeft && uioptions.rowButtons !== false" :style="{ width: columnLayout.controls + 'px' }">
                     </colgroup>
                     <list-table-header @prepare-resize="captureColumnLayout" />
@@ -92,8 +92,11 @@
         }),
         computed: {
             ...mapStores(fwStore),
+            columnWidths() {
+                return this.fwStore.columnWidths();
+            },
             tableWidthStyle() {
-                const widths = this.fwStore.columnWidths();
+                const widths = this.columnWidths;
                 if (!Object.keys(widths).length || !this.columnLayout
                     || this.fwStore.list_headers.some(header => !this.columnLayout.fields[header.field_name])) {
                     return null;
@@ -160,7 +163,7 @@
                 this.columnLayout = { fields, controls, selection: cells[0].getBoundingClientRect().width };
             },
             updateColumnLayout(isBodyChanged = false) {
-                if (!Object.keys(this.fwStore.columnWidths()).length || (this.tableWidthStyle && !isBodyChanged)) {
+                if (!Object.keys(this.columnWidths).length || (this.tableWidthStyle && !isBodyChanged)) {
                     return;
                 }
                 if (!this.tableWidthStyle) {

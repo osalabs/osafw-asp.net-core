@@ -35,20 +35,44 @@ function normalizedColumnWidths(value, headers) {
     return widths;
 }
 
-const columnWidthWrites = new WeakMap();
+const userViewWrites = new WeakMap();
 
-function columnWidthWriteState(store) {
-    let state = columnWidthWrites.get(store);
+function userViewWriteState(store) {
+    let state = userViewWrites.get(store);
     if (!state) {
         state = {
             tail: Promise.resolve(),
-            confirmedByView: new WeakMap(),
+            nextWidthId: 0,
+            contexts: new WeakMap(),
             latestByView: new WeakMap()
         };
-        columnWidthWrites.set(store, state);
+        userViewWrites.set(store, state);
     }
 
     return state;
+}
+
+// Widths, reset, named views, and density all update the same saved user view.
+export function queueUserViewWrite(store, write) {
+    const state = userViewWriteState(store);
+    let modes = state.contexts.get(store.api);
+    if (!modes) {
+        modes = new Map();
+        state.contexts.set(store.api, modes);
+    }
+    let context = modes.get(store.is_list_edit);
+    if (!context) {
+        context = { pending: 0, widths: {}, view: null };
+        modes.set(store.is_list_edit, context);
+    }
+    if (!context.pending && (context.widths !== undefined || context.view !== store.list_user_view)) {
+        context.widths = store.columnWidths();
+        context.view = store.list_user_view;
+    }
+    context.pending++;
+    const pending = state.tail.then(() => write(context)).finally(() => context.pending--);
+    state.tail = pending.catch(() => {});
+    return pending;
 }
 
 export const interactionActions = {
@@ -107,23 +131,35 @@ export const interactionActions = {
         return this.saveColumnWidths({ [field]: width });
     },
     async saveColumnWidths(changes) {
-        const userView = this.list_user_view;
+        let userView = this.list_user_view;
         const api = this.api;
         const xss = this.XSS;
         const isListEdit = this.is_list_edit;
         const headers = this.all_list_columns?.length ? this.all_list_columns : this.list_headers;
-        const state = columnWidthWriteState(this);
+        const state = userViewWriteState(this);
+        const entry = { id: ++state.nextWidthId };
 
-        if (!state.latestByView.has(userView)) {
-            state.confirmedByView.set(userView, normalizedColumnWidths(userView.widths, headers));
-        }
+        const write = queueUserViewWrite(this, async context => {
+            // A preceding reset/load refreshes the view. Apply this resize to that new base.
+            if (this.api === api && this.is_list_edit === isListEdit && this.list_user_view !== userView) {
+                if (state.latestByView.get(userView) === entry) {
+                    state.latestByView.delete(userView);
+                }
+                userView = this.list_user_view;
+                if ((state.latestByView.get(userView)?.id ?? 0) < entry.id) {
+                    state.latestByView.set(userView, entry);
+                }
+            }
 
-        const widths = normalizedColumnWidths({ ...this.columnWidths(), ...changes }, headers);
-        userView.widths = widths;
-
-        let write;
-        write = state.tail.then(async () => {
             try {
+                const confirmed = context.widths;
+                if (confirmed === undefined) {
+                    throw { body: { error: { message: window.fwConst.ERR_CODES_MAP.SAVE_FAILED } } };
+                }
+                const widths = normalizedColumnWidths({ ...confirmed, ...changes }, headers);
+                if (state.latestByView.get(userView) === entry) {
+                    userView.widths = widths;
+                }
                 const response = await api.post('/(SaveUserViews)', {
                     XSS: xss,
                     is_list_edit: isListEdit,
@@ -133,24 +169,21 @@ export const interactionActions = {
                     throw { body: response };
                 }
 
-                state.confirmedByView.set(userView, widths);
+                context.widths = widths;
                 return true;
             } catch (error) {
-                if (state.latestByView.get(userView) === write) {
-                    userView.widths = state.confirmedByView.get(userView) ?? {};
-                }
-
                 this.handleError(error, 'saveColumnWidths');
                 return false;
             } finally {
-                if (state.latestByView.get(userView) === write) {
+                if (state.latestByView.get(userView) === entry) {
+                    userView.widths = context.widths ?? {};
                     state.latestByView.delete(userView);
                 }
             }
         });
 
-        state.tail = write;
-        state.latestByView.set(userView, write);
+        userView.widths = normalizedColumnWidths({ ...this.columnWidths(), ...changes }, headers);
+        state.latestByView.set(userView, entry);
         return write;
     },
     formIssues(form = this.edit_data) {

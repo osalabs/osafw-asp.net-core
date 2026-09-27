@@ -272,12 +272,17 @@ public class VueInteractionBackendTests
         fw.Session("XSS", "token");
         fw.FORM = new FwDict { ["XSS"] = "token", ["load_id"] = "9" };
 
-        controller.SaveUserViewsAction();
+        var response = (FwDict)controller.SaveUserViewsAction()!["_json"]!;
 
         Assert.AreEqual("notes", views.LastUpdate["fields"]);
         var stored = Utils.jsonDecode(views.LastUpdate["widths"].toStr()) as FwDict ?? [];
         Assert.AreEqual(800, stored["notes"].toInt());
         Assert.IsFalse(stored.ContainsKey("secret"));
+        Assert.AreEqual(Utils.jsonEncode(stored), Utils.jsonEncode(response["widths"]!));
+
+        fw.FORM = new FwDict { ["XSS"] = "token", ["is_reset"] = true };
+        response = (FwDict)controller.SaveUserViewsAction()!["_json"]!;
+        Assert.AreEqual(0, ((FwDict)response["widths"]!).Count);
     }
 
     [TestMethod]
@@ -499,13 +504,13 @@ public class VueInteractionBackendTests
             Assert.AreEqual("无效值", messages["INVALID"]);
             Assert.AreEqual("数据库中已存在此名称", messages["EXISTS"]);
             Assert.AreEqual("无效", messages["WRONG"]);
+            Assert.AreEqual("保存失败", messages["SAVE_FAILED"]);
 
             var summary = fw.parsePageInstance().parse_string(
                 File.ReadAllText(Path.Combine(repoRoot(), "osafw-app/App_Data/template/common/vue/form-issues.html")), []);
             StringAssert.Contains(summary, "请检查以下字段：");
-            StringAssert.Contains(summary, "警告：");
-            StringAssert.Contains(summary, "错误：");
-            StringAssert.Contains(summary, "已输入的值：");
+            StringAssert.Contains(summary, "alert-warning");
+            StringAssert.Contains(summary, "alert-danger");
 
 
         }

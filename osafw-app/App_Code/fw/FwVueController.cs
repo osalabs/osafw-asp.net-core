@@ -373,7 +373,7 @@ public class FwVueController : FwDynamicController
             }
 
             var validationMessages = new FwDict();
-            foreach (var code in Utils.qw("REQUIRED EXISTS EMAIL WRONG INVALID"))
+            foreach (var code in Utils.qw("REQUIRED EXISTS EMAIL WRONG INVALID SAVE_FAILED"))
                 validationMessages[code] = validationIssueMessage(code);
             ps["validation_messages"] = validationMessages;
 

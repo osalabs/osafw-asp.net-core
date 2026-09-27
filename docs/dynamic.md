@@ -1599,6 +1599,8 @@ Vue list headers support dragging the right-edge resize control, pressing Left/R
 
 Resizing one column preserves the current rendered widths of the other columns, including after Reset to Defaults. Only explicitly resized or auto-fitted data columns receive saved widths. Unconfigured columns use their natural layout when a table or view loads. The selection and action columns are not resizable; actions stay on one line with room for configured buttons and slots.
 
+Width, density, reset, and named-view writes run in request order for each store. A pending resize completes before a later reset or view selection, so older width requests cannot restore widths after the reset. Failed width writes retain the last confirmed widths without replacing a newer resize.
+
 Apply the provider's additive `upd2026-09-08-user-view-widths.sql` update before copying these model/controller changes into an existing application. Fresh SQL Server, SQLite, and MySQL schemas include the column. The saved-view action still requires POST and the current XSS token, and existing owner/system authorization remains in force.
 
 For custom persistence, override `fwStoreActions.saveColumnWidths(changes)`, where `changes` maps field names to widths. Both batch fitting and the standard `saveColumnWidth(field, width)` action use it; existing single-column overrides still apply to single-column gestures.
