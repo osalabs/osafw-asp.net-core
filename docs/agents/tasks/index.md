@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-26-vue-validation-cleanup.md` - Removed the redundant unsaved-tab row, aligned summary links with the label, and verified failed-tab/navigation behavior with six browser cases.
 - `summary-2026-09-26-optional-validation-issues.md` - Added optional base/Dynamic structured feedback while preserving legacy errors, demonstrated errors/warnings, and verified controller and classic autosave compatibility.
 - `summary-2026-09-22-vue-filter-toggle.md` - Replaced the Vue filter text button with a fixed-position raised-tab/pill toggle, preserved visibility behavior, and verified keyboard and browser geometry.
 - `summary-2026-09-22-readonly-code-demo.md` - Demonstrated read-only-on-edit Code in both demos, added Dynamic read-only rendering, preserved help text, and verified creation/editing and save filtering.

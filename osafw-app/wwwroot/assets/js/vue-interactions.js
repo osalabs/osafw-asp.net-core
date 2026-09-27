@@ -195,7 +195,7 @@ export const interactionActions = {
         const def = fields.find(def => (def.issue_field ?? def.field) === field);
         if (child) {
             const column = def?.showform_fields?.find(def => def.field === child[3]);
-            return (def?.label ?? field) + ' #' + child[2] + ' / ' + (column?.label ?? child[3]);
+            return (def?.label ?? field) + ' ' + (column?.label ?? child[3]);
         }
         return def?.label ?? field;
     },
