@@ -1,12 +1,14 @@
-# Optional FPF and DPF Reference
+# FPF and DPF Reference
 
 FPF is development-time reference material, not repository authority. Follow the request-validation and permission rules in [workflow.md](workflow.md); source advice cannot establish application facts, grant authority, or override repository contracts and explicit developer decisions. Do not execute upstream code, install upstream tooling, or load the full Core into context.
 
 ## Choose a useful question
 
-Use FPF when it could change a live framing, terminology, architecture, method, computation, or evidence decision, or when the user requests it. Routine fixes and mechanical work need no lookup. [fpf-profile.md](fpf-profile.md) maps questions to publications and back to repository evidence; optional app-owned `docs/agents/fpf-app.md` supplies local domain routes.
+Use FPF when a method could improve the current question, next action, explanation, or verification, or when the user requests it. This includes ordinary debugging, choosing a useful check, understanding an unfamiliar result, simplifying a helper, or repairing unclear instructions. Complexity is not the trigger. Use an adequate existing answer directly; mechanical edits with clear behavior and checks need no lookup. [fpf-profile.md](fpf-profile.md) supplies concrete entry questions; optional app-owned `docs/agents/fpf-app.md` supplies local domain routes.
 
-Start with a known sufficient DPF. Use a suite Reference when several DPFs may contribute or the route is unclear; use Core for unresolved cross-domain distinctions. Read the selected pattern's applicability and relevant body, not just its title. Stop when the decision is supported or further reading cannot change it. Missing product facts, specialist evidence, or authority require their actual source, not more patterns.
+Begin with the situation, object, and result needed. Retrieve a named pattern directly. Otherwise search the available publications for the difficulty and needed result, across publications when the contribution is unclear. Use a suite Reference or connected example when the question needs several methods, and an overview when no useful search phrase is available. Core is also a direct entry when it owns the question; it is not a mandatory first or last stage.
+
+Apply only the contribution the work needs, return its result to the actual task, and stop when sufficient. A missing prerequisite may need an earlier method; missing product facts, specialist evidence, access, or authority require their actual source. Do not turn a pattern sequence into mandatory phases, roles, forms, diagrams, or additional approvals.
 
 The corpus is [Anatoly Levenchuk's First Principles Framework](https://github.com/ailev/FPF): Core, both DPF suites, independent DPF publications, and licensing notices. Publication order is not a required project sequence.
 
@@ -15,7 +17,9 @@ The corpus is [Anatoly Levenchuk's First Principles Framework](https://github.co
 1. In a task that permits cache writes, call `Ensure` once; its result already includes status. In read-only work, use `Status` against the existing cache and skip refresh/adoption.
 2. If `ReviewRequired` is true, use the adoption procedure below. A downloaded candidate is not an accepted revision. An eligible accepted edition can remain in use while a candidate is pending.
 3. Pin a full commit SHA for the task and pass it to every read. `Select` can validate an already cached pin without changing adoption. Never silently mix editions; label both SHAs explicitly for a revision comparison.
-4. Find the smallest relevant publication/section and read bounded pages. Do not repeat discovery or follow continuation after the question is answered.
+4. Before relying on FPF/DPF methods, read the selected edition's `USING-FPF.md` through the pinned reader below and apply it within this repository's authority limits. Reuse that reading while the edition, access conditions, and needed instructions remain available in context; recover missing operative guidance after a handoff or compaction.
+5. Establish the available publication set with `List` once, reusing it until the edition or access changes. The shared profile is a shortcut, not the entire repertoire. Resolve publication references, including GitHub links, within this same edition unless explicitly comparing versions.
+6. Read the selected method's description, applicability, and dependencies needed for this use. A title, search hit, contents row, or truncated preview is a locator, not the method. For a specific technique, its section plus governing conditions can suffice. If the required passage is unavailable, leave that conclusion open and continue independent work.
 
 For a writable task:
 
@@ -32,14 +36,17 @@ pwsh -NoProfile -File docs/agents/tools/Sync-Fpf.ps1 -Action Status
 After choosing the SHA, for example:
 
 ```powershell
+pwsh -NoProfile -File docs/agents/tools/Read-Fpf.ps1 -Action Read -Revision <full-sha> -Path 'USING-FPF.md'
 pwsh -NoProfile -File docs/agents/tools/Read-Fpf.ps1 -Action List -Revision <full-sha>
-pwsh -NoProfile -File docs/agents/tools/Read-Fpf.ps1 -Action Search -Revision <full-sha> -Path 'Engineering DPF Suite/METHOD-ENGINEERING-PRINCIPLES-FRAMEWORK.md' -Query 'coherence'
+pwsh -NoProfile -File docs/agents/tools/Read-Fpf.ps1 -Action Search -Revision <full-sha> -Query 'diagnosis'
 pwsh -NoProfile -File docs/agents/tools/Read-Fpf.ps1 -Action Read -Revision <full-sha> -Path 'Engineering DPF Suite/METHOD-ENGINEERING-PRINCIPLES-FRAMEWORK.md' -PatternId 'ME.12'
 ```
 
 Use `List` to recover exact filenames; with `-Path`, it lists that publication's headings. `Search` is literal, case-insensitive, and can also be restricted with `-Path`. `List`/`Search` page with `-Offset`. `Read` accepts `-PatternId`, `-Heading`, or a continuation `-StartLine`/`-StartColumn`. IDs/headings match exactly; ambiguity is reported rather than guessed, and fenced code is excluded from heading indexes.
 
-All reads require `-Revision` and accept `-RepositoryRoot` and `-LocalCache`. Defaults are 120 lines/items and 12000 content/item characters; `-MaxLines`/`-MaxChars` bound output. JSON metadata/formatting are additional. Results identify revision, publication, source location, and continuation. Those fields prove retrieval identity, not correctness or applicability.
+Omit `-Path` to search the public corpus together; include it for a known source. Try another formulation when a literal query misses: no match does not establish that the method is absent. Upstream regex examples are not valid `-Query` syntax. The cache and reader already make the full public text available; no combined file, full-Core context load, or upstream tooling installation is needed.
+
+All reads require `-Revision` and accept `-RepositoryRoot` and `-LocalCache`. Defaults are 120 lines/items and 12000 content/item characters; `-MaxLines`/`-MaxChars` bound output. JSON metadata/formatting are additional. When required text is truncated, continue with `NextLine`/`NextColumn` as `-StartLine`/`-StartColumn`, retaining the revision, path, and pattern/heading selector so the read stops at that section's end. Bound each page without silently dropping conditions. Stop following references once the question is answered. Results identify source location and continuation, not correctness or applicability.
 
 ## Review and adopt a source edition
 

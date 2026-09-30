@@ -58,7 +58,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 - Deployment or IIS scripts: `deploy.md`.
 - Naming or public method/result conventions: `naming.md`.
 - Agent request validation, permissions, summaries, or staging: `agents/workflow.md`.
-- Material conceptual framing, architecture/system boundaries, method design, computational reasoning, or cross-domain source synthesis: `agents/fpf.md`, then `agents/fpf-profile.md`; skip source lookup when it cannot change the task decision.
+- A useful FPF/DPF question in ordinary or complex work (diagnosis, check selection, explanation, refactoring, computation, methods, or architecture): `agents/fpf.md`, then `agents/fpf-profile.md`; use existing repository evidence directly when sufficient.
 - Build/test/provider/worktree/cleanup decisions: `agents/verification.md` plus the affected canonical topic doc.
 - Review: `agents/review-routing.md`, then `agents/code_reviewer.md` and only the triggered overlay(s).
 - Repository-learning maintenance: `prompts/agent_reflection.md`, then `agents/learning-scenarios.md`; ordinary tasks need neither.

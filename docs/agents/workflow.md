@@ -11,6 +11,8 @@ Follow the startup and local-instruction route in `AGENTS.md`; recheck status be
   - **Copied application:** the framework tree and app code coexist. Preserve deliberate application changes, local docs, schema history, deployment rules, and repository-specific branch policy. Upstream framework guidance is input, not permission to overwrite the app.
 - Determine branch/release policy from the current repository. The canonical framework uses `master`, but copied applications may not and may have different protections.
 
+On resuming interrupted or handed-off work, recover the intended outcome, operative instruction, last established result, unfinished step, and evidence needed next from existing working material. Recheck only conditions that can change the continuation. An old summary or intended action does not prove current state or completion; inspect the result before repeating a consequential side effect. Continue directly when that basis is already available, without a new checkpoint artifact.
+
 ## 2. Validate the request before implementation
 
 1. Restate the desired observable outcome internally; keep it separate from the prompt's suggested implementation. Make a lightweight pass over assumptions, possible conflicts, and the evidence needed to accept the result.
@@ -19,7 +21,7 @@ Follow the startup and local-instruction route in `AGENTS.md`; recheck status be
 4. Report an already-satisfied request without extra edits. For a contract conflict, identify the evidence and a compatible or explicitly authorized migration path. Pause only work that depends on unresolved product/data/authorization choices or unsafe shared-state mutation; continue independent authorized work. Current implementation is evidence of behavior, not a veto on an authorized contract change.
 5. Otherwise choose the smallest implementation that satisfies the outcome. Short prompts should not require the developer to restate facts already discoverable here.
 
-This is an internal reasoning check, not a required artifact or a reason to add process. Consult the optional [FPF/DPF guide](fpf.md) only when its source material could materially change framing, a decision, or verification; routine fixes and mechanical work need no FPF lookup.
+This is an internal reasoning check, not a required artifact. An existing consequential change, demonstration, or handoff can provide a bounded occasion to compare a result with its recipient's use, including a workaround that made it succeed. Choose that comparison only when it has a prospect of informing the work; do not require it at every occurrence. It can reveal a useful question before a failure is reported. Continue directly when existing evidence already supports the use. Consult the [FPF/DPF guide](fpf.md) when a method could help answer a useful question, including during an ordinary fix, check, explanation, or refactor. Task size alone neither requires nor excludes lookup.
 
 Use a focused developer interview only for a broad feature with unresolved choices that materially affect user behavior, authorization, data ownership/lifecycle, public compatibility, or operational cost. Routine fixes and well-specified enhancements should proceed without interview ceremony.
 
@@ -61,6 +63,7 @@ Checkpointed commits can help a long change, but do not authorize Git actions. C
 - Follow the nearest framework/application pattern and canonical topic document.
 - Use task-owned isolation from `verification.md` for build output, ports, databases, browser state, services, and external resources.
 - Run the smallest falsifying check first, then expand only for the touched risk. Do not turn a broad suite into a substitute for a missing behavior-level check.
+- When a requirement, source, assumption, or observed result changes, revisit the conclusions and checks that depend on it; retain evidence whose relevant conditions still hold. Prefer a fresh scoped check when tracing dependencies would cost more. Do not build a dependency ledger for a one-off change.
 - For changed classifiers, defaults, security boundaries, or public/source-copy contracts, inventory the established entry paths and baseline consumers. Verify plausible attacker or ordinary negative controls together with the intended-safe/trusted and preserved-compatibility positive controls at those real entry paths; a new helper or wrapper alone is insufficient evidence.
 - Reinspect the full task diff, including untracked task files. Distinguish pre-existing changes from this task.
 

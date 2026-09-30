@@ -16,7 +16,7 @@
    - build, test, provider, worktree, or cleanup decisions: `docs/agents/verification.md`;
    - meaningful-risk review: `docs/agents/review-routing.md`, then `docs/agents/code_reviewer.md` and only triggered overlays;
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
-   - optional FPF/DPF source lookup for a material conceptual, architecture, or method question: `docs/agents/fpf.md`;
+   - FPF/DPF guidance for a useful question in ordinary or complex work (diagnosis, checks, explanation, refactoring, methods, or architecture): `docs/agents/fpf.md`;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
 5. Match tools and output to the question. Include ignored content (including drafts), large files, vendor files, or task history only with explicit opt-ins when directly relevant.
    - Use `docs/agents/tools/Search-Repo.ps1` for broad discovery; it invokes `rg` with repository exclusions.

@@ -2,6 +2,8 @@
 
 Use the smallest check that can falsify the touched behavior, then add checks in proportion to compatibility, security, persistence, deployment, and downstream risk. Record exact commands/results and material omissions in the active summary or final response.
 
+For a chosen check, know which claim it can establish, for which input, configuration, provider, and consumer. A passing tool or completed checklist does not prove the user's intended result or claims outside that coverage. When adding or changing a reusable check, use a relevant failing case and a legitimate passing case to establish that it distinguishes the condition; more checks or an aggregate pass rate cannot repair a missing distinction. An unavailable observation remains unverified. Record only material limits through the existing task evidence rules.
+
 ## Resource ownership and concurrency
 
 | Resource | Isolation / ownership rule | Cleanup rule |
