@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-09-30-sol61-profiles.md` - Adopted Sol 6.1 High for starting, standard implementation, and ordinary review; retained Astra escalation and verified bounded calibration.
 - `summary-2026-09-30-fpf-refresh.md` - Refreshed the FPF corpus, surveyed all DPF routes, and added selective ordinary-task methods, current source-use instructions and bounded evidence guidance.
 - `summary-2026-09-27-select2-minimal.md` - Reduced Select2 styling to existing geometry and minimal dark surfaces, then removed approved unused Vue scaffolding.
 - `summary-2026-09-27-select2-scaffold-acceptance.md` - Themed Select2, excluded demo validation from generated controllers, fixed Vue tab initialization, and completed live interaction checks and disposable-data cleanup.

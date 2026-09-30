@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.8.0",
+  "packVersion": "1.9.0",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
