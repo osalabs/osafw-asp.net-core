@@ -167,3 +167,7 @@ Startup passes `builder.Environment.EnvironmentName` to `FwConfig.setDefaultOver
 Outside the built-in startup, set the default override before initializing FW when the host has already resolved its environment. Otherwise the framework checks trimmed `ASPNETCORE_ENVIRONMENT`, then trimmed `DOTNET_ENVIRONMENT`, then uses no named environment override. Passing null or whitespace to the setter restores that fallback. Call the setter during initialization, before concurrent requests begin.
 
 The selection belongs to the active `FwConfig.beginScope()` lifetime; nested scopes start independently and restore their parent's selection on disposal. Changing the selection clears that scope's host settings cache. Do not change the selection while dependent FW instances are in use: their configuration reads use the active scope, while their globals were cloned at construction. Explicit trusted hostname overrides and host validation continue to work as before.
+
+## Early application defaults
+
+`FwHooks.configure(FwDict)` supplies application-owned defaults before deployment configuration is applied. It must remain pure and database-independent: web startup, requests, and offline commands share this builder. Put application route/XSS policy, signup availability, API origin policy, and locale defaults here. Framework-owned fallback values remain in `FwConfig`. Explicit deployment configuration still overrides these defaults, including the existing legacy override shim.

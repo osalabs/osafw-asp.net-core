@@ -204,6 +204,7 @@ public static class FwConfig
 
             var tmp = new FwDict();
             initDefaults(null, "", ref tmp);
+            FwHooks.configure(tmp);
             if (currentState.configuration != null)
                 applyAppSettings(currentState.configuration, tmp);
             tmp["app_version_stamp"] = resolveGitFetchHeadVersion(tmp["site_root"].toStr());
@@ -282,13 +283,32 @@ public static class FwConfig
         st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         st["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
 
-        st["lang"] ??= "en"; // default language
-        st["is_lang_update"] ??= false; // default language update flag
-        st["is_fwupdates_auto_apply"] ??= true; // keep the existing dev Home update redirect unless explicitly disabled
+        st["DATA_PROTECTION_APPLICATION_NAME"] = "osafw";
+        st["UPLOAD_DIR"] = "/upload";
+        st["UNLOGGED_DEFAULT_URL"] = "/";
+        st["LOGGED_DEFAULT_URL"] = "/Main";
 
-        st["date_format"] ??= DateUtils.DATE_FORMAT_MDY;
-        st["time_format"] ??= DateUtils.TIME_FORMAT_12;
-        st["timezone"] ??= DateUtils.TZ_UTC;
+        st["PAGE_LAYOUT"] = "/layout.html";
+        st["PAGE_LAYOUT_PUBLIC"] = "/layout_public.html";
+        st["PAGE_LAYOUT_PJAX"] = "/layout_pjax.html";
+        st["PAGE_LAYOUT_PJAX_NOJS"] = "/layout_pjax_nojs.html";
+        st["PAGE_LAYOUT_MODAL"] = "/layout_modal.html";
+        st["PAGE_LAYOUT_MIN"] = "/layout_min.html";
+        st["PAGE_LAYOUT_PRINT"] = "/layout_print.html";
+        st["PAGE_LAYOUT_EMAIL"] = "/layout_email.html";
+        st["PAGE_LAYOUT_VUE"] = "/layout_vue.html";
+
+        st["log_level"] = LogLevel.INFO;
+        st["log_pii"] = false;
+        st["is_test"] = false;
+        st["IS_DEV"] = false;
+        st["is_lang_update"] = false;
+        st["is_fwupdates_auto_apply"] = true;
+
+        st["lang"] = "en";
+        st["date_format"] = DateUtils.DATE_FORMAT_MDY;
+        st["time_format"] = DateUtils.TIME_FORMAT_12;
+        st["timezone"] = DateUtils.TZ_UTC;
     }
 
     /// <summary>
@@ -444,10 +464,10 @@ public static class FwConfig
         setConfiguration(cfg);
 
         var environment = getConfiguredEnvironmentName();
-        FwDict st = [];
-        applyAppSettings(cfg, st);
+        var st = Utils.cloneHashDeep(getBaseSettings()) ?? [];
 
-        // Override by name if environment-based overrides are used
+        // Small compatibility shim for copied applications that have not yet
+        // moved their legacy override block into environment configuration.
         overrideSettingsByName(environment, st);
 
         return st;
