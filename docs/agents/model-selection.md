@@ -1,19 +1,20 @@
 # Optional Model-Selection Advice
 
-Snapshot: 2026-09-30. Use when choosing a developer starting model or deliberately recalibrating profiles. This is dated advice, not a required read or binding routing policy. The current developer choice, explicit constraints, runtime availability, and [workflow](workflow.md) take precedence. Do not change user settings or introduce a primary/project-wide model pin.
+Snapshot: 2026-10-01. Use when choosing a developer starting model or deliberately recalibrating profiles. This is dated advice, not a required read or binding routing policy. The current developer choice, explicit constraints, runtime availability, and [workflow](workflow.md) take precedence. Do not change user settings or introduce a primary/project-wide model pin.
 
 ## Recommended starting points
 
 - **GPT-6.1 Sol High:** recommended starting model for normal framework and copied-application development. The standard implementation profile `implementation_sol_high` and ordinary independent reviewer `reviewer_high` also select this model and effort.
 - **GPT-6 Astra:** retain for difficult work and deeper reviews. `reviewer_astra_high` supplies the deeper review alternative; Extra High implementation, architecture, and review profiles follow their existing risk/recovery gates. A consequential task may start with the appropriate Astra profile without first failing with Sol.
-- Keep existing inexpensive discovery and small-implementation helpers for bounded work. Max remains subject to the existing profile and review-router consequence gates. Older alternatives remain available when explicit constraints or availability justify them.
+- **GPT-6 Luna:** use Medium in `discovery_fast` for bounded repository research and contract tracing, and High in `implementation_fast` for small, low-risk changes with deterministic checks. Low is suitable for mechanical lookup or extraction when deliberately selected; it is not the configured discovery default.
+- **GPT-6.1 Sol Max:** `implementation_max`, `architect_max`, and `reviewer_max` remain alternatives when explicit constraints or availability favor them. Their existing profile and review-router gates still apply; Astra remains preferred for qualifying difficult work and deeper reviews.
 - Add effort only for the actual packet's demands. A primary model choice does not require every child to use the same model or generation.
 
 These are operating recommendations, not claims about the product's built-in default or universal model superiority. Profile TOML files own executable model and effort settings. Select a role-appropriate available profile; settings in a pinned profile take precedence over spawn overrides. A Sol starting choice permits Astra delegation unless an explicit developer constraint rules it out. The workflow and [review router](review-routing.md) own selection, fallback, independence, and the short selection reason.
 
 ## External evidence
 
-The current Artificial Analysis Intelligence Index v4.3.2 reports:
+The 2026-09-30 Artificial Analysis Intelligence Index v4.3.2 snapshot reports:
 
 | Configuration | Intelligence Index | Average API cost per index task |
 | --- | --- | --- |
@@ -28,6 +29,8 @@ The [previous GPT-6 Sol High](https://artificialanalysis.ai/models/releases/gpt-
 Throughput, first-answer latency, reasoning-token use, tool time, and retries contribute differently to completed-task time. Artificial Analysis reported higher output throughput for Sol 6.1 High than Astra Medium, but a longer first-answer wait; these measurements vary. This recommendation does not claim that Sol finishes our tasks faster.
 
 [Official Codex model guidance](https://learn.chatgpt.com/docs/models) recommends Sol 6.1 for complex coding when available and retains Astra for the most demanding work. High is our selected starting effort, not a universal product default or a cross-model quality equivalence. [Codex pricing](https://learn.chatgpt.com/docs/pricing) publishes Standard paid-credit input/output rates one-fifth Astra's for Sol 6.1; API prices and credit rates do not imply a fixed ratio of completed tasks within included subscription limits. Speed modes and actual token use also affect consumption. Check the active runtime for availability and effective settings.
+
+[Official subagent guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents) recommends GPT-6 Luna for narrow, repeatable work and uses Luna High for focused code fixes. Our Medium discovery and High small-implementation settings are role-specific starting choices, not measured equivalents of the previous helpers. [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna) supports `none`, `low`, `medium`, `high`, `xhigh`, and `max`; its standard API input/output rates are one-twentieth those of [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol). Actual task cost and Codex subscription consumption also depend on token use, speed mode, and retries. Historical task records retain the model settings actually used.
 
 ## Lightweight calibration
 
