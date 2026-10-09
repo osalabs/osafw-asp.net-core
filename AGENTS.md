@@ -7,7 +7,7 @@
 
 # Start and Route
 
-1. Inspect `git status`, the requested outcome, and the nearest implementation/contract before proposing a change.
+1. Inspect `git status`, the requested outcome, and the nearest implementation/contract before proposing a change. Keep the result needed by the user or next action, its constraints, and sufficient evidence in view as work introduces decisions or changes assumptions.
 2. Read ignored `docs/agents/local_instructions.md` when present. In a linked worktree where it is absent, resolve the absolute Git common directory and check the primary checkout (the common directory's parent) for the same ignored file. Never expose or commit it.
 3. Determine whether this is framework development or copied-application development. Use the remote, repository docs, app customizations, and task context; ask only when ambiguity would materially change the result.
 4. Use `docs/README.md` as the documentation router. Load only the routes needed:
@@ -16,7 +16,7 @@
    - build, test, provider, worktree, or cleanup decisions: `docs/agents/verification.md`;
    - meaningful-risk review: `docs/agents/review-routing.md`, then `docs/agents/code_reviewer.md` and only triggered overlays;
    - optional external/IDE/MCP capabilities: `docs/agents/mcp.md`;
-   - FPF/DPF guidance for a useful question in ordinary or complex work (diagnosis, checks, explanation, refactoring, methods, or architecture): `docs/agents/fpf.md`;
+   - FPF Library guidance for a useful question at any point in ordinary or complex work: `docs/agents/fpf.md`; before relying on a method, read and apply the selected edition's `USING-FPF.md` through that guide;
    - historical recall: search `docs/agents/tasks/index.md` before opening targeted summaries.
 5. Match tools and output to the question. Include ignored content (including drafts), large files, vendor files, or task history only with explicit opt-ins when directly relevant.
    - Use `docs/agents/tools/Search-Repo.ps1` for broad discovery; it invokes `rg` with repository exclusions.

@@ -28,8 +28,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
 - [agents/reviewers/](agents/reviewers/): focused overlays loaded only for agent workflow, consumer compatibility, performance, security, or state-integrity risk.
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
-- [agents/fpf.md](agents/fpf.md): optional development-time FPF/DPF source cache, revision, bounded-reading, authority, provenance, and licensing workflow.
-- [agents/fpf-profile.md](agents/fpf-profile.md): repository and copied-application routing from concrete work questions to FPF Core, the suites, and applicable DPFs.
+- [agents/fpf.md](agents/fpf.md): development-time FPF Library access, selective reading, daily update checks, reviewed revisions, provenance, and licensing.
+- [agents/fpf-profile.md](agents/fpf-profile.md): ordinary and larger development questions, including result sufficiency, wording, naming, checks, computation, and source access, routed to FPF Core and relevant DPFs.
 - [agents/learning-scenarios.md](agents/learning-scenarios.md): optional manual probes for the repository-learning pilot; load during maintenance or when changing that workflow.
 - [agents/model-selection.md](agents/model-selection.md): optional dated starting-model advice, benchmark evidence, and lightweight profile calibration; not required for ordinary tasks.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
@@ -44,7 +44,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 - Canonical framework docs above: detailed behavior, commands, and public contracts.
 - `docs/agents/workflow.md` and `verification.md`: task-routed workflow detail and verification/isolation guidance.
-- `docs/agents/fpf.md` and `fpf-profile.md`: optional FPF source-use contract and repository/copy-specific publication routing; current code, canonical docs, ADRs, and developer decisions remain authoritative.
+- `docs/agents/fpf.md` and `fpf-profile.md`: FPF Library source-use contract and repository/copy-specific method routing; current code, canonical docs, ADRs, and developer decisions remain authoritative.
 - `docs/agents/review-routing.md`, `code_reviewer.md`, and `reviewers/`: adaptive review router, sole integrator verdict, and triggered specialist evidence.
 - `docs/agents/tasks/summary-*.md`: current-task evidence and decisions, not reusable policy. Historical bodies are immutable.
 - `docs/agents/domain.md`, `glossary.md`, and `heuristics.md`: stable facts, terms, and non-duplicated recurring heuristics respectively.
@@ -58,7 +58,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 - Deployment or IIS scripts: `deploy.md`.
 - Naming or public method/result conventions: `naming.md`.
 - Agent request validation, permissions, summaries, or staging: `agents/workflow.md`.
-- A useful FPF/DPF question in ordinary or complex work (diagnosis, check selection, explanation, refactoring, computation, methods, or architecture): `agents/fpf.md`, then `agents/fpf-profile.md`; use existing repository evidence directly when sufficient.
+- A useful FPF Library question at any point in development: `agents/fpf.md`, then `agents/fpf-profile.md`; use an adequate existing answer directly and read the pinned `USING-FPF.md` before relying on methods.
 - Build/test/provider/worktree/cleanup decisions: `agents/verification.md` plus the affected canonical topic doc.
 - Review: `agents/review-routing.md`, then `agents/code_reviewer.md` and only the triggered overlay(s).
 - Repository-learning maintenance: `prompts/agent_reflection.md`, then `agents/learning-scenarios.md`; ordinary tasks need neither.

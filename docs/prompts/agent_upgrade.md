@@ -35,11 +35,13 @@ Start read-only when requested. Do not edit, initialize/migrate configuration, m
 - Permit automatic self-improvement only as evidence-based, infrequent, reviewable draft work; never self-merge, release, or deploy it.
 - Version the copied instruction pack through `docs/agents/instruction-pack.json`. In an existing application repository, compare source and target versions, classify every managed path, preserve app-owned divergence, and update the target version only after its merged pack passes validation. Never bulk-overwrite a copied application's instructions.
 - Treat `.gitignore` as a targeted merge: add the exact `/.codex-local/` rule when absent and preserve every application-owned rule. Preserve optional `docs/agents/fpf-app.md`, the checkout's ignored FPF adoption/cache state, and application-specific FPF profile choices during pack upgrades.
-- Keep FPF development-time and optional. Fetching a candidate and adopting its advice are separate: follow `docs/agents/fpf.md` for semantic review and adoption. Neither operation silently rewrites tracked repository policy.
+- Keep FPF Library a development-time reference with selective reading for ordinary and complex work, including decisions introduced during execution. Follow `docs/agents/fpf.md` for daily checks when used, candidate/accepted separation, and source review. Inspect active local overrides for legacy routes. Fetching or accepting an edition never silently rewrites tracked policy.
 
 ## Implementation and validation
 
 When the task authorizes improvements, implement the supported scoped changes without a separate audit approval. An audit-only request remains read-only; ask only for decisions or actions outside existing authority. Preserve unrelated work and historical summaries. Do not change application behavior merely to validate agent policy.
+
+Use the current FPF question map when recovering a missing connection, repairing unclear prose, or comparing a proposed rule's benefit with its burden. Keep ordinary code naming under `docs/naming.md`. Apply only contributions that improve the current upgrade.
 
 Use `docs/agents/verification.md` for deterministic text, route, helper, and FPF checks; do not run cache lifecycle tests for unrelated instruction edits. Compare affected decisions before/after using a few representative requests, including an ordinary fix and any changed compatibility, security, permission, or copied-app route. Confirm that required actions, evidence, and stop conditions survive shorter wording.
 

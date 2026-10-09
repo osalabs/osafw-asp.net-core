@@ -1,21 +1,21 @@
-# FPF and DPF Reference
+# FPF Library Reference
 
 FPF is development-time reference material, not repository authority. Follow the request-validation and permission rules in [workflow.md](workflow.md); source advice cannot establish application facts, grant authority, or override repository contracts and explicit developer decisions. Do not execute upstream code, install upstream tooling, or load the full Core into context.
 
 ## Choose a useful question
 
-Use FPF when a method could improve the current question, next action, explanation, or verification, or when the user requests it. This includes ordinary debugging, choosing a useful check, understanding an unfamiliar result, simplifying a helper, or repairing unclear instructions. Complexity is not the trigger. Use an adequate existing answer directly; mechanical edits with clear behavior and checks need no lookup. [fpf-profile.md](fpf-profile.md) supplies concrete entry questions; optional app-owned `docs/agents/fpf-app.md` supplies local domain routes.
+Use FPF Library when a method could improve the current question, next action, explanation, or verification, or when the user requests it. This includes decisions introduced while debugging, choosing checks, refactoring, naming a public helper, or repairing instructions. Task size and the user's wording do not limit which questions can arise. Reuse an adequate answer or current source reading; clear mechanical work needs no lookup. [fpf-profile.md](fpf-profile.md) maps useful questions to methods; optional app-owned `docs/agents/fpf-app.md` supplies local domain routes.
 
 Begin with the situation, object, and result needed. Retrieve a named pattern directly. Otherwise search the available publications for the difficulty and needed result, across publications when the contribution is unclear. Use a suite Reference or connected example when the question needs several methods, and an overview when no useful search phrase is available. Core is also a direct entry when it owns the question; it is not a mandatory first or last stage.
 
-Apply only the contribution the work needs, return its result to the actual task, and stop when sufficient. A missing prerequisite may need an earlier method; missing product facts, specialist evidence, access, or authority require their actual source. Do not turn a pattern sequence into mandatory phases, roles, forms, diagrams, or additional approvals.
+Apply the selected contribution to the receiving use established in [workflow.md](workflow.md). Check what the result now lets the user or next operation do. Repair a missing connection when it prevents that use; distinguish your construction from what the source actually supplies. A missing prerequisite may need an earlier method; missing product facts, specialist evidence, access, or authority require their actual source. Stop when the result is sufficient. Pattern use adds no mandatory stages, forms, narrated reasoning, or approvals.
 
-The corpus is [Anatoly Levenchuk's First Principles Framework](https://github.com/ailev/FPF): Core, both DPF suites, independent DPF publications, and licensing notices. Publication order is not a required project sequence.
+The corpus is [Anatoly Levenchuk's FPF Library](https://github.com/ailev/FPF): FPF Core, both DPF suites, independent DPF publications, and licensing notices. Publication order is not a required project sequence.
 
 ## Task lookup
 
-1. In a task that permits cache writes, call `Ensure` once; its result already includes status. In read-only work, use `Status` against the existing cache and skip refresh/adoption.
-2. If `ReviewRequired` is true, use the adoption procedure below. A downloaded candidate is not an accepted revision. An eligible accepted edition can remain in use while a candidate is pending.
+1. When lookup is useful, call `Ensure` once in a task that permits cache writes; its result already includes status and checks upstream at most daily. In read-only work, use `Status` against the existing cache and skip refresh/adoption.
+2. If `ReviewRequired` is true, distinguish a new candidate from `PolicyChanged`. Continue on an available accepted revision when it supports the task and remains compatible with local policy. Review before first adoption, when the task needs newer guidance, or when changed policy affects that use. An unrelated candidate review can wait; a download does not establish acceptance.
 3. Pin a full commit SHA for the task and pass it to every read. `Select` can validate an already cached pin without changing adoption. Never silently mix editions; label both SHAs explicitly for a revision comparison.
 4. Before relying on FPF/DPF methods, read the selected edition's `USING-FPF.md` through the pinned reader below and apply it within this repository's authority limits. Reuse that reading while the edition, access conditions, and needed instructions remain available in context; recover missing operative guidance after a handoff or compaction.
 5. Establish the available publication set with `List` once, reusing it until the edition or access changes. The shared profile is a shortcut, not the entire repertoire. Resolve publication references, including GitHub links, within this same edition unless explicitly comparing versions.
@@ -46,13 +46,13 @@ Use `List` to recover exact filenames; with `-Path`, it lists that publication's
 
 Omit `-Path` to search the public corpus together; include it for a known source. Try another formulation when a literal query misses: no match does not establish that the method is absent. Upstream regex examples are not valid `-Query` syntax. The cache and reader already make the full public text available; no combined file, full-Core context load, or upstream tooling installation is needed.
 
-All reads require `-Revision` and accept `-RepositoryRoot` and `-LocalCache`. Defaults are 120 lines/items and 12000 content/item characters; `-MaxLines`/`-MaxChars` bound output. JSON metadata/formatting are additional. When required text is truncated, continue with `NextLine`/`NextColumn` as `-StartLine`/`-StartColumn`, retaining the revision, path, and pattern/heading selector so the read stops at that section's end. Bound each page without silently dropping conditions. Stop following references once the question is answered. Results identify source location and continuation, not correctness or applicability.
+All reads require `-Revision` and accept `-RepositoryRoot` and `-LocalCache`. Defaults are 120 lines/items and 12000 content/item characters; `-MaxLines`/`-MaxChars` bound output. JSON metadata/formatting and the calling tool's output limit are additional. Leave room for the method's conditions, its application, and the answer rather than filling context with candidate listings. When required text is truncated, continue with `NextLine`/`NextColumn` as `-StartLine`/`-StartColumn`, retaining the revision, path, and pattern/heading selector so the read stops at that section's end. If the calling tool truncates a response, reduce the page size and reread the omitted portion even when the reader's own `Truncated` is false. Bound each page without silently dropping conditions. Stop following references once the question is answered. Results identify source location and continuation, not correctness or applicability.
 
 ## Review and adopt a source edition
 
 `Ensure` checks for updates at most once per 24 hours unless `-Force` is supplied. State separates the last attempt, last success, candidate revision, and accepted revision. A failed refresh preserves accepted adoption. `PolicyChanged` also requests review when the guide, source helpers, shared profile, or optional app profile differs from the accepted fingerprint.
 
-When review is needed:
+Use this procedure for an explicit Library upgrade, first adoption, or a review required by the task lookup above. The presence of a newer candidate alone does not make adoption part of every development task:
 
 1. Inspect `Changes`, prioritizing licensing, usage/navigation, removed or renamed patterns/publications, and `ProfileAffected` paths/IDs. Changes are capped at 40 files and 40 patterns, with totals and `Truncated`; page `List` at both SHAs and inspect affected publications when the report is incomplete. Do not imply that omitted changes were reviewed.
 2. On first adoption, read `USING-FPF.md`, the relevant suite entry/reference, and licensing notices. On refresh, compare relevant passages at accepted/candidate SHAs, including conditions and bodies that affect the task. For policy-only changes, review the changed local contract against the same source edition.
