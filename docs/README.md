@@ -22,7 +22,9 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 ## Agent Docs
 
-- [agents/workflow.md](agents/workflow.md): request validation, framework/application role detection, work staging, permissions, summaries, and safe self-improvement.
+- [agents/workflow.md](agents/workflow.md): request validation, direct execution, delegation eligibility, permissions, summaries, and safe self-improvement.
+- [agents/delegation.md](agents/delegation.md): role/profile selection, packets, file ownership, and fallback; load only for selected delegation or reviewer profile selection.
+- [agents/instruction-upgrade-scenarios.md](agents/instruction-upgrade-scenarios.md): optional instruction-only import probes for varied runtimes, layouts, and local customizations.
 - [agents/verification.md](agents/verification.md): proportional verification entrypoints and worktree/resource-isolation matrix.
 - [agents/review-routing.md](agents/review-routing.md): reviewer selection, specialist triggers, review handoff and summary audit, and local fallback.
 - [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
@@ -43,7 +45,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 ## Canonical Owners
 
 - Canonical framework docs above: detailed behavior, commands, and public contracts.
-- `docs/agents/workflow.md` and `verification.md`: task-routed workflow detail and verification/isolation guidance.
+- `docs/agents/workflow.md`: request/execution/evidence and delegation eligibility; `delegation.md`: delegated role/profile/ownership details; `verification.md`: verification/isolation.
 - `docs/agents/fpf.md` and `fpf-profile.md`: FPF Library source-use contract and repository/copy-specific method routing; current code, canonical docs, ADRs, and developer decisions remain authoritative.
 - `docs/agents/review-routing.md`, `code_reviewer.md`, and `reviewers/`: adaptive review router, sole integrator verdict, and triggered specialist evidence.
 - `docs/agents/tasks/summary-*.md`: current-task evidence and decisions, not reusable policy. Historical bodies are immutable.

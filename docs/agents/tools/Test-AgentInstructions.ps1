@@ -420,6 +420,8 @@ $requiredFiles = @(
     "CLAUDE.md",
     "docs/README.md",
     "docs/agents/workflow.md",
+    "docs/agents/delegation.md",
+    "docs/agents/instruction-upgrade-scenarios.md",
     "docs/agents/verification.md",
     "docs/agents/review-routing.md",
     "docs/agents/code_reviewer.md",
@@ -491,6 +493,8 @@ foreach ($route in $rootRoutes) {
 
 $mapRoutes = @(
     "agents/workflow.md",
+    "agents/delegation.md",
+    "agents/instruction-upgrade-scenarios.md",
     "agents/verification.md",
     "agents/review-routing.md",
     "agents/code_reviewer.md",
@@ -553,13 +557,25 @@ if (-not ($failures | Where-Object { $_ -like 'FPF guide*' -or $_ -like 'FPF pro
     Add-Pass "Optional FPF routes, cache boundary, profile families, attribution, and exact ignored cache rule are connected."
 }
 
+$delegationConsumers = @{
+    "docs/agents/workflow.md" = "delegation.md"
+    "docs/agents/review-routing.md" = "docs/agents/delegation.md"
+    "docs/prompts/orchestrator.md" = "docs/agents/delegation.md"
+}
+foreach ($consumer in $delegationConsumers.Keys) {
+    $consumerText = Read-StrictUtf8 (Get-RepoPath $consumer)
+    if ($consumerText.IndexOf($delegationConsumers[$consumer], [System.StringComparison]::Ordinal) -lt 0) {
+        Add-Failure "Delegation consumer does not reach its role/profile owner: $consumer"
+    }
+}
+
 $roleOwners = @{}
 foreach ($role in $profileFiles.Values) {
     $roleOwners[$role] = if ($role.StartsWith("reviewer_", [System.StringComparison]::Ordinal)) {
         "docs/agents/review-routing.md"
     }
     else {
-        "docs/agents/workflow.md"
+        "docs/agents/delegation.md"
     }
 }
 foreach ($role in $roleOwners.Keys) {
@@ -676,6 +692,7 @@ foreach ($relativePath in $profileFiles.Keys) {
 $semanticPolicyFiles = @(
     "AGENTS.md",
     "docs/agents/workflow.md",
+    "docs/agents/delegation.md",
     "docs/agents/review-routing.md",
     "docs/agents/fpf.md",
     "docs/agents/fpf-profile.md",
@@ -852,6 +869,8 @@ try {
     }
     $requiredManagedPaths = @{
         ".gitignore" = "merge-ignore-rule"
+        "docs/agents/delegation.md" = "merge"
+        "docs/agents/instruction-upgrade-scenarios.md" = "merge"
         "docs/agents/fpf.md" = "merge"
         "docs/agents/fpf-profile.md" = "merge"
         "docs/agents/learning-scenarios.md" = "merge"
@@ -917,6 +936,8 @@ $policyFiles = @(
     "CLAUDE.md",
     "docs/README.md",
     "docs/agents/workflow.md",
+    "docs/agents/delegation.md",
+    "docs/agents/instruction-upgrade-scenarios.md",
     "docs/agents/verification.md",
     "docs/agents/review-routing.md",
     "docs/agents/code_reviewer.md",

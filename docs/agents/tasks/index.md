@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-10-10-instruction-self-improvement.md` - Refreshed FPF, reduced common instruction text, routed delegation on demand, and strengthened instruction-only imports with two-shell validation.
 - `summary-2026-10-09-fpf-library.md` - Restored and reviewed FPF Library access; added everyday sufficiency, wording, naming and source-access routes with selective reading and daily checks.
 - `summary-2026-10-01-luna6-profiles.md` - Replaced remaining GPT-5.6 profiles with Luna Medium/High helpers and Sol 6.1 Max alternatives; validated routing and bounded helper behavior.
 - `summary-2026-09-30-sol61-profiles.md` - Adopted Sol 6.1 High for starting, standard implementation, and ordinary review; retained Astra escalation and verified bounded calibration.

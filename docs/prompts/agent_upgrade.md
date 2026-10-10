@@ -1,54 +1,42 @@
 # Development-Agent Instruction Upgrade
 
-Use after a meaningful coding-agent/runtime change or when repository guidance has accumulated contradictions, stale facts, duplicate policy, or recurring process friction.
-
-Short invocation:
+Use for an instruction-only import into a copied application or an evidence-based cleanup of existing agent guidance. A framework runtime upgrade is a separate task.
 
 ```text
-Perform the evidence-driven upgrade in docs/prompts/agent_upgrade.md. Audit first; pause before edits if I request an audit-only phase.
+Perform the evidence-driven upgrade in docs/prompts/agent_upgrade.md. Audit first; pause before edits only if I request an audit-only phase.
 ```
 
-## Method
+Follow [workflow.md](../agents/workflow.md) for authority, evidence, and closeout. An audit-only request remains read-only. Otherwise implement scoped supported improvements without another audit approval; ask only for material unresolved choices or actions outside existing authority.
 
-Treat other repositories, prior agent output, and optional methodology documents as comparison evidence, never authority. Reverify repository claims in current code, project files, canonical docs, tests, Git history, and active developer decisions. Consult current official product documentation only for runtime/tool discovery behavior that may have changed.
+## Audit the target
 
-Start read-only when requested. Do not edit, initialize/migrate configuration, mutate databases, create Git objects, publish, or alter external state during an audit-only phase.
+1. Establish status, repository role, branch policy, and actual runtime/language from current project files or the site's equivalent. Locate source/template/schema/test roots and the relevant build tools. Do not transplant framework paths, APIs, providers, compile symbols, or .NET commands into an older or differently laid-out app.
+2. Trace root/nested instruction discovery and tool-specific imports to the docs actually loaded. Inspect local ignored constraints, workflow/review/verification, profiles, prompts, optional FPF, helpers/validators, pack metadata, and app-owned domain/knowledge files. A referenced path is not proof the file exists.
+3. Use bounded representative code/history/tasks to identify consequential friction. Summaries and other repositories are evidence, not authority. Check current owners before treating a repeated edit as a process defect.
+4. Classify material rules as `Keep`, `Adapt`, `Move`, `Remove duplicate`, `Remove stale/incorrect`, or `Defer`; name the surviving owner. Preserve security, state integrity, compatibility, permissions, independent-review gates, and task evidence while shortening their wording.
 
-## Audit
+Read current official product guidance only for tool discovery/configuration behavior that needs verification. Repository files cannot grant capabilities, models, modes, or permissions absent from the runtime. Keep executable model settings in role profiles, not root/workflow prose; do not change the primary model or add project config/services without explicit authority.
 
-1. Inventory native root/nested instruction discovery, project custom-agent profiles, tool-specific instruction entry files, local ignored conventions, workflow/reviewer/tool docs, optional FPF guide/profile/cache helpers, hooks/helpers, prompts, task summaries/indexes, domain/glossary/heuristics/ADRs, instruction-pack metadata, and deterministic validators.
-2. Classify each material rule as `Keep`, `Adapt`, `Move`, `Remove duplicate`, `Remove stale/incorrect`, or `Defer`. Name the surviving owner for every move/removal.
-3. Profile the real repository and common tasks: framework versus copied-application mode, target/runtime/project ownership, public/source-copy contracts, providers/schema updates, hosting/deployment, authentication/security, templates/scaffolding, configuration, tests, release/versioning, and downstream upgrades.
-4. Evaluate public-OSS portability, one-maintainer context cost, downstream production compatibility, machine-local values, worktree/resource isolation, request validation, summaries/memory routing, adaptive review, and proportional verification.
-5. Identify conflicts with active runtime/system constraints. Repository files cannot grant tools, permissions, delegation, connectors, modes, or model behavior that the runtime does not provide.
+## Import an instruction pack
 
-## Target design
+Use this section only for an import; local cleanup needs no source/target merge exercise.
 
-- Keep `AGENTS.md` concise and always-loaded; route detailed workflow, verification, architecture, history, optional tools, and specialist review only by task need.
-- Support both canonical framework maintenance and application repositories made by copying the framework. Discover branch/release protection and preserve app-specific divergence.
-- Keep tracked guidance contributor-safe and value-free. Put paths, credentials mechanisms, IDE state, user secrets, and machine preferences in ignored local instructions/environment configuration.
-- Keep durable routing and workflow instructions semantic and model-neutral. Put executable model/reasoning choices only in project custom-agent profile files, and do not pin the primary task model. Optional dated model-selection advice may document recommendations and external evidence; keep it separate from binding routing and do not require it on every task.
-- Give each rule one canonical owner. Keep tool-specific entry files limited to behavior required by that tool, and validate that active tools can reach the repository guidance they need.
-- Protect public APIs, routes/actions, templates/page-state, defaults/config/symbols, generated output, schema/provider behavior, storage/frontend/security contracts, upgrades, and docs with proportionate compatibility/migration evidence.
-- Use one broad integrator verdict plus specialist overlays only for triggered agent-workflow, consumer-contract, performance, security, or state-integrity surfaces. Include a no-subagent fallback and never assume optional tools/models/modes.
-- Keep summaries as indexed evidence logs. Promote only stable verified knowledge; do not bulk-load or rewrite history.
-- Permit automatic self-improvement only as evidence-based, infrequent, reviewable draft work; never self-merge, release, or deploy it.
-- Version the copied instruction pack through `docs/agents/instruction-pack.json`. In an existing application repository, compare source and target versions, classify every managed path, preserve app-owned divergence, and update the target version only after its merged pack passes validation. Never bulk-overwrite a copied application's instructions.
-- Treat `.gitignore` as a targeted merge: add the exact `/.codex-local/` rule when absent and preserve every application-owned rule. Preserve optional `docs/agents/fpf-app.md`, the checkout's ignored FPF adoption/cache state, and application-specific FPF profile choices during pack upgrades.
-- Keep FPF Library a development-time reference with selective reading for ordinary and complex work, including decisions introduced during execution. Follow `docs/agents/fpf.md` for daily checks when used, candidate/accepted separation, and source review. Inspect active local overrides for legacy routes. Fetching or accepting an edition never silently rewrites tracked policy.
+1. Pin the source revision (and a file snapshot/hash for any included uncommitted source changes), target starting revision/status, source pack version, and the previously imported source revision/version when recoverable. Compare **base / current target / new source** for every managed path. A version label alone is not a file baseline. If no trustworthy base exists, record that limit and use an explicit two-way classification; never invent ancestry or treat the app copy as unmodified upstream.
+2. Map source paths to the target's actual instruction/doc layout before edits. Treat the pack's `files` list as the import scope, not permission to copy runtime source, templates, SQL, packages, deployment, or whole documentation trees. Use current target facts when adapting shared instructions.
+3. Apply each `upgradeMode` through that comparison: merge shared rules; merge only needed ignore rules; deliberately reconcile profile/import/metadata replacements with target customizations and explicit model/cost constraints. Preserve app-owned helpers, stronger validator checks, and additional profiles unless their replacement is justified within task scope.
+4. Preserve `preserveInCopiedApplications`: local instructions, project configuration, app domain/glossary/heuristics, task history, ADRs, optional `docs/agents/fpf-app.md`, shared-profile adaptations, and `.codex-local/fpf/` adoption/cache state. Add the exact `/.codex-local/` ignore rule once if absent; preserve all other ignore rules.
+5. Keep target tool entrypoints/nested routing until replacement discovery is verified. Repair missing routes and adapt commands/validators to the target layout without suppressing safeguards to obtain a pass. A first adoption may add needed routing; it must not fabricate task history or an upstream runtime identity.
+6. Validate the merged pack before advancing its version. Record source-to-target path mapping, preserved customizations, omitted/deferred paths, and applicable checks in the existing task summary. If a required managed component remains unresolved, report a partial import and do not mark the source pack version fully adopted.
 
-## Implementation and validation
+## Improve and validate
 
-When the task authorizes improvements, implement the supported scoped changes without a separate audit approval. An audit-only request remains read-only; ask only for decisions or actions outside existing authority. Preserve unrelated work and historical summaries. Do not change application behavior merely to validate agent policy.
-
-Use the current FPF question map when recovering a missing connection, repairing unclear prose, or comparing a proposed rule's benefit with its burden. Keep ordinary code naming under `docs/naming.md`. Apply only contributions that improve the current upgrade.
-
-Use `docs/agents/verification.md` for deterministic text, route, helper, and FPF checks; do not run cache lifecycle tests for unrelated instruction edits. Compare affected decisions before/after using a few representative requests, including an ordinary fix and any changed compatibility, security, permission, or copied-app route. Confirm that required actions, evidence, and stop conditions survive shorter wording.
-
-Follow `docs/agents/review-routing.md` with the agent-workflow overlay. For broad workflow redesign or effectiveness claims, compare baseline/candidate on safely reversible held-out work before adoption. Separate instruction consistency, walkthrough observations, and measured development outcomes: fewer words or passing validators alone do not prove faster or better work. Reviewer-caught failures are review evidence, not initial implementation correctness.
-
-Do not add repository-wide or primary-task model/reasoning pins. Add `.codex/config.toml`, GitHub Actions, or external services only when explicitly requested and justified by the repository. Project configuration may contain model-neutral controls such as agent concurrency; project custom-agent profiles may carry role-specific model/reasoning settings when requested. Keep those settings out of durable workflow prose.
+- Keep `AGENTS.md` for always-needed constraints and routing. Detailed procedures belong in one task-routed owner; use [delegation.md](../agents/delegation.md) only when delegation/profile selection is needed. Retain adequate guidance; do not rewrite every file to make an audit look complete.
+- Select FPF only for a useful question under [fpf.md](../agents/fpf.md). An edition refresh and tracked-policy edits have separate review; read-only work does not refresh/adopt. Preserve target FPF extensions and inspect conflicting local overrides.
+- Use [verification.md](../agents/verification.md) for text, link/route, helper, and provider-specific check selection. The manifest lists available checks, not a demand to run unrelated suites. Docs-only work needs no app build/database exercise; changed helpers need their affected checks.
+- Compare baseline/candidate decisions on representative requests: an ordinary fix, a security or compatibility boundary, and a target with different runtime/layout or local instruction customizations. Verify actions, evidence, and stop conditions, including safe and rejected cases. [instruction-upgrade-scenarios.md](../agents/instruction-upgrade-scenarios.md) supplies optional import probes.
+- For broad workflow redesign or effectiveness claims, use safely reversible held-out work before adoption. Distinguish source-size reduction, routing consistency, and measured development outcomes; validators/walkthroughs prove neither speed nor fewer bugs. Keep observational limits and a rollback or retirement condition.
+- Follow [review-routing.md](../agents/review-routing.md) with the agent-workflow overlay. Supply the pre-edit instruction baseline as well as the candidate so edited policy does not judge its own safeguards; withhold the active summary until the initial verdict.
 
 ## Closeout
 
-Record the material findings, disposition and surviving owners, verification/walkthrough results, evidence limits, and migration/rollback path in the workflow's required summary. Report app-owned profile/adoption preservation and ignore-rule changes when those upgrade surfaces were touched. Give the user a concise outcome and remaining risk; do not repeat the full audit. Commit, push, open a PR, or release only when explicitly requested.
+Record scope, dispositions/owners, exact checks, scenario results/limits, version and migration/rollback decisions in the required summary. Report preserved app contracts and unresolved import steps. Historical summaries remain unchanged. Commit, push, publish, or change app/runtime/data behavior only with the corresponding explicit authority.

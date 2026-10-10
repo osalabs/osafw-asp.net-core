@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.11.0",
+  "packVersion": "1.12.0",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
@@ -10,6 +10,8 @@
     { "path": "CLAUDE.md", "upgradeMode": "replace-import", "benchmarkMode": "preserve-existing" },
     { "path": "docs/README.md", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/workflow.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/delegation.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/instruction-upgrade-scenarios.md", "upgradeMode": "merge" },
     { "path": "docs/agents/learning-scenarios.md", "upgradeMode": "merge" },
     { "path": "docs/agents/verification.md", "upgradeMode": "merge" },
     { "path": "docs/agents/review-routing.md", "upgradeMode": "merge" },
@@ -66,6 +68,7 @@
     ".codex-local/fpf/",
     "application-specific AGENTS.md additions"
   ],
+  "validationSelection": "Run Test-AgentInstructions, changed-file text checks and git diff --check for every pack change. Run FPF or learning suites only when their helpers/cache behavior or fixtures change; see docs/agents/verification.md. Adapt paths to copied applications without weakening checks.",
   "validation": [
     "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
