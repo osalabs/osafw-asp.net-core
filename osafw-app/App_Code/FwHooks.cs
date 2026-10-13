@@ -8,6 +8,40 @@ namespace osafw;
 
 public sealed class FwHooks
 {
+    /// <summary>
+    /// Applies application-owned defaults before deployment configuration is loaded.
+    /// </summary>
+    /// <remarks>
+    /// This hook must stay pure and DB-independent because startup, requests and offline
+    /// commands all use it. Assign fresh dictionaries so cached configuration buckets do
+    /// not share mutable application policy state.
+    /// </remarks>
+    public static void configure(FwDict defaults)
+    {
+        defaults["no_xss_prefixes"] = new FwDict
+        {
+            ["v1"] = true,
+        };
+        defaults["no_xss"] = new FwDict
+        {
+            ["Login"] = true,
+        };
+        defaults["route_prefixes"] = new FwDict
+        {
+            ["/Sys"] = true,
+            ["/Admin"] = true,
+            ["/My"] = true,
+            ["/Dev"] = true,
+        };
+        defaults["routes"] = new FwDict
+        {
+            ["/Logoff"] = "DELETE /Login/1",
+        };
+
+        defaults["IS_SIGNUP"] = false;
+        defaults["API_ALLOW_ORIGIN"] = "";
+        defaults["timezone"] = "Central Standard Time";
+    }
 
     // called from FW.run before request dispatch
     public static void initRequest(FW fw)
