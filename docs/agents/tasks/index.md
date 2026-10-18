@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-10-18-selective-instruction-port.md` - Instruction pack 1.13.1: bounded agent trials, source-backed artifact reviews, partial-import recovery, and lesson revalidation; docs-only with existing gates and FPF tooling preserved.
 - `summary-2026-10-18-fpf-instruction-port.md` - Instruction pack 1.13.0: verified local FPF snapshots, three-edition retention, cache migration, and protected instruction inventory.
 - `summary-2026-10-10-instruction-self-improvement.md` - Refreshed FPF, reduced common instruction text, routed delegation on demand, and strengthened instruction-only imports with two-shell validation.
 - `summary-2026-10-09-fpf-library.md` - Restored and reviewed FPF Library access; added everyday sufficiency, wording, naming and source-access routes with selective reading and daily checks.

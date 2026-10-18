@@ -24,7 +24,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 - [agents/workflow.md](agents/workflow.md): request validation, direct execution, delegation eligibility, permissions, summaries, and safe self-improvement.
 - [agents/delegation.md](agents/delegation.md): role/profile selection, packets, file ownership, and fallback; load only for selected delegation or reviewer profile selection.
-- [agents/instruction-upgrade-scenarios.md](agents/instruction-upgrade-scenarios.md): optional instruction-only import probes for varied runtimes, layouts, and local customizations.
+- [agents/instruction-upgrade-scenarios.md](agents/instruction-upgrade-scenarios.md): optional import/routing probes and bounded agent execution trials for varied runtimes, layouts, and local customizations.
 - [agents/verification.md](agents/verification.md): proportional verification entrypoints and worktree/resource-isolation matrix.
 - [agents/review-routing.md](agents/review-routing.md): reviewer selection, specialist triggers, review handoff and summary audit, and local fallback.
 - [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
