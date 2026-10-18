@@ -40,6 +40,8 @@ When independent review is triggered and the capability exists, use a fresh sepa
 
 For an eligible local review, or when independent capability is unavailable, perform a deliberate second pass: set aside implementation intent, read `code_reviewer.md` and selected overlays, and inspect the outcome and final diff before the implementation narrative. Disclose local execution and any unavailable capability; keep the same review criteria.
 
+A missing named reviewer profile alone does not establish that independence is unavailable. Use a suitable fresh generic reviewer under the same handoff, permissions, and explicit model constraints before taking the local fallback.
+
 ## Review handoff sequence
 
 This section owns the context-isolation and summary-audit procedure; review profiles and `code_reviewer.md` route here.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.12.0",
+  "packVersion": "1.13.0",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
@@ -30,6 +30,7 @@
     { "path": "docs/agents/tools/Get-LearningSignals.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Test-LearningSignals.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Test-AgentInstructions.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
+    { "path": "docs/agents/tools/Test-AgentInstructionFixtures.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Fpf.Common.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Sync-Fpf.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/tools/Read-Fpf.ps1", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
@@ -68,9 +69,10 @@
     ".codex-local/fpf/",
     "application-specific AGENTS.md additions"
   ],
-  "validationSelection": "Run Test-AgentInstructions, changed-file text checks and git diff --check for every pack change. Run FPF or learning suites only when their helpers/cache behavior or fixtures change; see docs/agents/verification.md. Adapt paths to copied applications without weakening checks.",
+  "validationSelection": "Run Test-AgentInstructions, changed-file text checks and git diff --check for every pack change. Run instruction-validator, FPF or learning fixtures when their helpers/cache behavior or fixtures change; see docs/agents/verification.md. Adapt paths to copied applications without weakening checks.",
   "validation": [
     "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+    "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructionFixtures.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Test-LearningSignals.ps1",
     "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
@@ -78,6 +80,7 @@
   ],
   "windowsPowerShell51Fallback": [
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructionFixtures.ps1",
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1",
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-LearningSignals.ps1",
     "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"

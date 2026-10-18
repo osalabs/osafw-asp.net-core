@@ -4,6 +4,18 @@ Use the smallest check that can falsify the touched behavior, then add checks in
 
 For a chosen check, know which claim it can establish, for which input, configuration, provider, and consumer. A passing tool or completed checklist does not prove the user's intended result or claims outside that coverage. When adding or changing a reusable check, use a relevant failing case and a legitimate passing case to establish that it distinguishes the condition; more checks or an aggregate pass rate cannot repair a missing distinction. An unavailable observation remains unverified. When considering additional checks beyond the required coverage, choose one whose attainable result can change the fix, confidence in a relied-on claim, or next action enough to justify its cost. Use the [FPF question map](fpf-profile.md) if that connection is unclear. Record only material limits through the existing task evidence rules.
 
+## Verification outcomes
+
+Classify material verification in the existing task evidence:
+
+- **Passed:** executed and met the expectation.
+- **Failed:** executed and did not meet it; call a failure pre-existing only with baseline evidence.
+- **Not required:** the affected contracts do not need it; state why.
+- **Skipped:** useful but deliberately omitted; state the reason and remaining risk.
+- **Blocked:** required evidence is unavailable; state the prerequisite. It remains blocking until resolved or explicitly accepted.
+
+A reviewed test is not an executed test. An external cause does not make required evidence optional. Continue independent work, but do not declare completion while a material in-scope requirement or necessary check remains blocked.
+
 ## Resource ownership and concurrency
 
 | Resource | Isolation / ownership rule | Cleanup rule |
@@ -24,7 +36,7 @@ For a chosen check, know which claim it can establish, for which input, configur
 | Queues/background services | Disable when irrelevant or give workers/queues a task-specific namespace. Prevent two instances from consuming the same real queue or running the same cron work. | Stop only task-started workers and reconcile task-created messages/jobs. |
 | Containers | Use unique project/container/network/volume names and host ports. Containers do not make external databases/accounts isolated automatically. | Verify labels/names and remove only task-created resources. |
 | External accounts/services | Prefer a sandbox tenant/account and unique object IDs. External writes, messages, deployment, billing, or destructive cleanup require request authority. | Delete/revert only exact task-created objects when authorized; otherwise report them for human cleanup. |
-| Optional FPF cache | Adoption state and publication cache live under the ignored checkout-local `.codex-local/fpf/`. A linked worktree may reuse a source-only bare Git cache from the primary checkout when accessible, but it keeps its own adoption state; derived indexes follow the shared or local source cache and task pins are explicit. Use the `-LocalCache` switch when sharing is unavailable or inappropriate. | Do not delete shared source caches. Remove only exact task-created fixture/cache paths, and never run upstream repository code as part of source refresh or reading. |
+| Optional FPF cache | Adoption state and publication cache live under the ignored checkout-local `.codex-local/fpf/`. A linked worktree may reuse the primary checkout source cache, local publication snapshots and checksummed indexes, but retains its own adoption. Task pins are explicit. Use the `-LocalCache` switch when sharing is unavailable or inappropriate. | Only writable Ensure performs documented three-edition cleanup under the source lock; older shared-worktree pins can expire. Reads and acceptance never prune. Other cleanup removes only exact task-owned fixtures; never execute upstream code. |
 
 Windows with IIS is the primary real-application development/deployment path. Linux/container support is optional and must not be claimed from a successful Windows-only check. Conversely, optional-platform work must not weaken Windows/IIS behavior or DPAPI/security defaults.
 
@@ -34,7 +46,7 @@ Windows with IIS is the primary real-application development/deployment path. Li
 | --- | --- | --- |
 | Agent/docs-only | Validate links/routes, strict UTF-8/CRLF, summary index entry, and representative prompt routing. Check commands/examples against real paths. | Integrating review plus the `agent-workflow` overlay for shared workflow changes; follow the capability-conditional execution in `review-routing.md`. |
 | FPF guide/profile wording | Agent/docs checks above plus affected publication routes and bounded reads at the selected revision. Include ordinary direct work and a question that needs a method; check that the returned result supports its receiving use. | Review licensing/provenance when source selection or copied expression changes; inspect `PolicyChanged` and review affected policy/source compatibility under the guide's adoption procedure. Wording alone does not require cache lifecycle tests. |
-| FPF source helpers/cache behavior or fixtures | Run `Test-Fpf.ps1` through both supported Windows PowerShell entrypoints. Exercise source discovery, last-good/offline behavior, acceptance/selection, fixed-revision reads, bounds/continuation, ambiguity, and ignored task-owned fixtures without a configured database. | Copied-application/worktree recovery walkthrough for affected behavior. Unix behavior remains unverified until exercised there. |
+| FPF source helpers/cache behavior or fixtures | Run `Test-Fpf.ps1` through both supported Windows PowerShell entrypoints. Exercise legacy/current publication discovery, migration, last-good/offline behavior, adoption, zero-Git/no-write reads, checksums, bounds/continuation and paged comparisons. Test three-edition retention, expired worktree pins, object reclamation, interrupted cleanup and redirected paths using task-owned fixtures. | Copied-application/worktree recovery walkthrough for affected behavior. Unix behavior remains unverified until exercised there. |
 | Learning collector or fixtures | Run `Test-LearningSignals.ps1` through both supported Windows PowerShell entrypoints. It uses disposable local Git fixtures to check pinned ranges, inert notes, encoding, bounds/gaps, and continuation. | For workflow changes, walk through the affected [learning scenarios](learning-scenarios.md); these do not establish productivity gains or count as real maintenance cycles. |
 | C# implementation | Focused compile/test at the nearest public controller/action/model/helper boundary. | `dotnet build osafw-app/osafw-app.csproj`, affected test class, then solution/full tests for shared code. |
 | Public/source-copy contract | Search call sites and overrides; test old and new behavior or a compatibility shim; inspect generated/template/config consumers. | Clean-output solution build, copied-app upgrade thought experiment/diff, migration note, and `docs/CHANGELOG.md`. This repository distributes source and produces no framework NuGet package, so package-compatibility checks do not apply. |
@@ -45,6 +57,8 @@ Windows with IIS is the primary real-application development/deployment path. Li
 | Project/package/config symbols | Restore/build with the exact symbol/config combination and inspect conditional references/output. | Clean-output solution build plus startup/smoke check with value-free config contract. |
 | Deployment/IIS/script | Use script check/dry-run modes first and inspect resolved paths/branch/environment. | Publish to a task-owned target, validate IIS configuration/header/runtime paths, and document rollback. Deploy only when explicitly requested. |
 | Documentation/example/release | Verify every edited path, command, API, config key, sample shape, and link against the current tree. | Run sample commands, perform copied-app upgrade walkthrough, and check dated changelog/migration coverage. This repository has no GitHub Actions gate; report only checks that exist. |
+
+Instruction-validator changes also require `Test-AgentInstructionFixtures.ps1` in both Windows shells. It exercises managed-file coverage, private-path exclusions, preserved application customizations and safe fixture isolation. Pure instruction/helper changes need no application build or database. Run actual-shell pinned reads and record platform coverage; portable code alone does not establish Unix behavior.
 
 ## Common commands
 

@@ -29,7 +29,35 @@ function Add-Pass {
 
 function Get-RepoPath {
     param([string]$RelativePath)
-    return Join-Path $root ($RelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+    if (-not $RelativePath -or $RelativePath -match '(^/|\\|//|[:\x00-\x1f]|(^|/)\.\.?(/|$))') {
+        throw "Instruction path must use canonical repository-relative forward slashes (value omitted)."
+    }
+    foreach ($part in $RelativePath.Split('/')) {
+        if (-not $part -or $part -match '[. ]$|[<>"|?*]|~[0-9]' -or $part -match '^(?i:CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)') {
+            throw "Instruction path has a noncanonical filesystem spelling (value omitted)."
+        }
+    }
+    $path = [IO.Path]::GetFullPath((Join-Path $root ($RelativePath -replace '/', [IO.Path]::DirectorySeparatorChar)))
+    if (-not $path.StartsWith($root.TrimEnd([char[]]"\/") + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Instruction path escapes the repository (value omitted)."
+    }
+    $cursor = $path
+    while ($cursor) {
+        $item = Get-Item -LiteralPath $cursor -Force -ErrorAction SilentlyContinue
+        if ($null -ne $item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "Instruction path traverses a symlink or junction (value omitted)."
+        }
+        if ($cursor -eq $root) { break }
+        $cursor = [IO.Path]::GetDirectoryName($cursor)
+    }
+    return $path
+}
+
+function Test-ActiveInstructionPath {
+    param([string]$Path)
+    if ($Path -match '^docs/agents/(domain|glossary|heuristics|fpf-app|local_instructions)\.md$' -or
+        $Path -match '^docs/agents/(tasks|adr|local|artifacts)/') { return $false }
+    return $Path -match '^docs/agents/[^/]+\.md$|^docs/agents/(tools|reviewers)/|^docs/prompts/(agent_[^/]+|orchestrator)\.md$'
 }
 
 function Read-StrictUtf8 {
@@ -446,6 +474,7 @@ $requiredFiles = @(
     "docs/agents/tools/Get-LearningSignals.ps1",
     "docs/agents/tools/Test-LearningSignals.ps1",
     "docs/agents/tools/Test-AgentInstructions.ps1",
+    "docs/agents/tools/Test-AgentInstructionFixtures.ps1",
     "docs/agents/tools/Fpf.Common.ps1",
     "docs/agents/tools/Sync-Fpf.ps1",
     "docs/agents/tools/Read-Fpf.ps1",
@@ -548,7 +577,7 @@ foreach ($requiredText in $fpfGuideRequirements) {
         Add-Failure "FPF guide is missing required portable contract text: $requiredText"
     }
 }
-foreach ($requiredText in @("Problem Structuring and Decision Support", "Systems Engineering", "Method Engineering", "Computational Thinking", '`CMP`', "docs/agents/fpf-app.md", "FPF Core")) {
+foreach ($requiredText in @("Decision Design", "Systems Engineering", "Computational Thinking", "docs/agents/fpf-app.md", "FPF Core")) {
     if ($fpfProfileText.IndexOf($requiredText, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
         Add-Failure "FPF profile is missing required route text: $requiredText"
     }
@@ -596,37 +625,19 @@ foreach ($relativePath in @("AGENTS.md", ".gitignore", "CLAUDE.md", "docs/README
         $textFiles.Add($path)
     }
 }
-foreach ($directory in @("docs/agents", "docs/agents/reviewers", "docs/agents/tools", "docs/prompts")) {
-    $path = Get-RepoPath $directory
-    if (-not (Test-Path -LiteralPath $path)) {
-        continue
-    }
-    $recurse = $directory -ne "docs/agents"
-    Get-ChildItem -LiteralPath $path -File -Recurse:$recurse |
-        Where-Object {
-            ($_.Extension -eq ".md" -or $_.Extension -eq ".ps1") -and
-            $_.Name -ne "local_instructions.md"
-        } |
-        ForEach-Object {
-            if (-not $textFiles.Contains($_.FullName)) {
-                $textFiles.Add($_.FullName)
-            }
-        }
-}
-foreach ($directory in @(".codex/agents")) {
-    $path = Get-RepoPath $directory
-    if (-not (Test-Path -LiteralPath $path)) {
-        continue
-    }
-    Get-ChildItem -LiteralPath $path -File -Recurse |
-        Where-Object { $_.Extension -in @(".md", ".ps1", ".json", ".toml") } |
-        ForEach-Object {
-            if (-not $textFiles.Contains($_.FullName)) {
-                $textFiles.Add($_.FullName)
-            }
-        }
-}
 $instructionPackPath = Get-RepoPath "docs/agents/instruction-pack.json"
+$trackedInstructionPaths = @(& git -C $root ls-files -- "docs/agents" "docs/prompts" 2>$null)
+if ($LASTEXITCODE -ne 0) { Add-Failure "git ls-files failed while inventorying active instruction filenames." }
+$declaredTextPaths = @()
+try { $declaredTextPaths = @((Read-StrictUtf8 $instructionPackPath | ConvertFrom-Json).files | ForEach-Object { [string]$_.path }) }
+catch { Add-Failure "Cannot read the instruction manifest for scoped text validation." }
+foreach ($relativePath in @($trackedInstructionPaths + $declaredTextPaths + @($profileFiles.Keys) | Select-Object -Unique)) {
+    if (-not (Test-ActiveInstructionPath $relativePath) -and $relativePath -notin $profileFiles.Keys) { continue }
+    $path = Get-RepoPath $relativePath
+    if ([IO.File]::Exists($path) -and [IO.Path]::GetExtension($path) -in @(".md", ".ps1", ".json", ".toml") -and -not $textFiles.Contains($path)) {
+        $textFiles.Add($path)
+    }
+}
 if ((Test-Path -LiteralPath $instructionPackPath) -and -not $textFiles.Contains($instructionPackPath)) {
     $textFiles.Add($instructionPackPath)
 }
@@ -858,6 +869,18 @@ try {
     foreach ($duplicate in @($managedPaths | Group-Object | Where-Object { $_.Count -gt 1 })) {
         Add-Failure "Instruction-pack managed path is duplicated: $($duplicate.Name)"
     }
+    foreach ($relativePath in $trackedInstructionPaths) {
+        if (-not (Test-ActiveInstructionPath $relativePath)) { continue }
+        # A deliberate working-tree deletion may retire its ownership in the same change.
+        if ([IO.File]::Exists((Get-RepoPath $relativePath)) -and $managedPaths -notcontains $relativePath) {
+            Add-Failure "Instruction-pack omits tracked instruction/helper/test file: $relativePath"
+        }
+    }
+    foreach ($relativePath in $managedPaths) {
+        if ($relativePath -match '^docs/agents/(domain|glossary|heuristics|fpf-app|local_instructions)\.md$|^docs/agents/(tasks|adr|local|artifacts)/|^docs/adr/|^\.codex-local/|^\.codex/config\.toml$') {
+            Add-Failure "Instruction-pack must preserve this application/private path: $relativePath"
+        }
+    }
     foreach ($profilePath in $profileFiles.Keys) {
         $entries = @($instructionPack.files | Where-Object { [string]$_.path -ceq $profilePath })
         if ($entries.Count -ne 1 -or [string]$entries[0].upgradeMode -cne "replace-profile") {
@@ -880,6 +903,7 @@ try {
         "docs/agents/tools/Get-LearningSignals.ps1" = "merge"
         "docs/agents/tools/Test-LearningSignals.ps1" = "merge"
         "docs/agents/tools/Test-AgentInstructions.ps1" = "merge"
+        "docs/agents/tools/Test-AgentInstructionFixtures.ps1" = "merge"
         "docs/agents/tools/Fpf.Common.ps1" = "merge"
         "docs/agents/tools/Sync-Fpf.ps1" = "merge"
         "docs/agents/tools/Read-Fpf.ps1" = "merge"
@@ -903,6 +927,7 @@ try {
     $validationCommands = @($instructionPack.validation | ForEach-Object { [string]$_ })
     foreach ($expectedCommand in @(
         "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructionFixtures.ps1",
         "pwsh -NoProfile -File docs/agents/tools/Test-Fpf.ps1",
         "pwsh -NoProfile -File docs/agents/tools/Test-LearningSignals.ps1",
         "pwsh -NoProfile -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>",
@@ -915,6 +940,7 @@ try {
     $windowsPowerShell51Fallback = @($instructionPack.windowsPowerShell51Fallback | ForEach-Object { [string]$_ })
     foreach ($expectedCommand in @(
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructionFixtures.ps1",
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-Fpf.ps1",
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-LearningSignals.ps1",
         "powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Normalize-TextFiles.ps1 -Check <changed-pack-files>"
@@ -961,7 +987,9 @@ if ($null -ne $instructionPack) {
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
     )
 }
-$portableSharedFiles = @($policyFiles + $managedPortableFiles | Select-Object -Unique)
+$portableSharedFiles = @($policyFiles + $managedPortableFiles | Select-Object -Unique | Where-Object {
+    $_ -notmatch '^docs/agents/(domain|glossary|heuristics|fpf-app|local_instructions)\.md$|^docs/agents/(tasks|adr|local|artifacts)/|^docs/adr/|^\.codex-local/|^\.codex/config\.toml$'
+})
 $privateIdentifiers = @($PrivateIdentifier | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 foreach ($relativePath in $portableSharedFiles) {
     $text = Read-StrictUtf8 (Get-RepoPath $relativePath)

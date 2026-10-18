@@ -2,9 +2,19 @@
 
 Use during instruction-pack maintenance or an application import. These are optional manual routing probes, not runtime tests or productivity benchmarks. Compare the baseline and candidate against current target facts; record results in the existing task summary.
 
+Use identical scenario inputs and protected invariants for the comparison. Repeat a trivial case after material routing edits. Structural validity, a routing walkthrough, actual independent-role execution, and real-task outcomes are separate evidence; report only what was observed.
+
 | Case | Required decision / positive control | Rejected shortcut |
 | --- | --- | --- |
 | Routine localized fix | Inspect nearby code and the relevant topic; direct execution, proportional verification, and existing summary/review gates. | Load delegation, every overlay, all history, or FPF solely because they are available. |
+| Read-only diagnosis or a meaning-neutral correction | Read relevant evidence or check touched text; no environment setup, automatic summary or review loop. | Initialize resources or run a maintenance process merely to answer. |
+| Required external evidence is unavailable | Mark the check Blocked and continue independent work; resolve it or obtain explicit acceptance before completion. | Relabel required evidence optional because its prerequisite is external. |
+| Named reviewer profile is unavailable | Use a suitable fresh generic independent agent within live constraints; disclose the substitution. | Waive available independent review or change primary settings. |
+| Interrupted consequential operation | Establish actual effects and remaining work before retrying; retain still-valid evidence. | Treat a planned action as completed or repeat unknown side effects. |
+| FPF is unavailable or uses a legacy cache | Inspect without writes; use a readable pin or leave dependent conclusions open. Writable Ensure owns migration. | Refresh, repair or accept during read-only work. |
+| FPF passage or change report is truncated | Continue with the same full pin, selectors or comparison pins and returned cursor. | Treat a preview as complete or silently mix editions. |
+| FPF cleanup expires a shared-worktree pin | Report unavailable without substitution; keep checkout adoption unchanged. | Silently use the newest candidate or delete during a read. |
+| Workflow improvement appears during a feature task | Capture verified optional learning or propose explicitly scoped maintenance. | Treat the observation as authority to change workflow policy. |
 | Useful FPF question during a small task | Read the selected edition's usage guidance and needed method; return to the task with conditions intact. | Ban lookup because the task is small, or refresh/adopt during read-only review. |
 | Older runtime or classic Web Site | Discover actual language, build tool, layout, and available APIs; adapt instructions while preserving behavior. | Copy upstream runtime identity, C# conventions, project paths, or build commands as app facts. |
 | Root-layout app or newly added test project | Locate current project/test/template paths and repair affected routes. | Trust a generated repo map or a historical no-tests statement over current files. |

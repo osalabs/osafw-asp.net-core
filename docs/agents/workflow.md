@@ -34,7 +34,7 @@ Honor existing task authority: scoped edits and verification need no renewed per
 
 ## Record evidence proportionally
 
-Read-only diagnosis, explanation, audit, or review creates no repository files unless a saved report is requested. Trivial changes also need no summary unless requested. Runtime, schema, runtime configuration, test, script, and shared agent-workflow changes require a summary even when small.
+Read-only diagnosis, explanation, audit, review, or planning needs no environment initialization, summary, delegation, or review loop merely to answer; create no repository files unless a saved report is requested. Meaning-neutral corrections use scoped text/link checks and need no summary unless requested. Runtime, schema, runtime configuration, test, script, and behavior-changing shared agent-workflow changes require a summary even when small.
 
 For those changes and other non-trivial or iterative implementation, maintain one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` plus one concise `tasks/index.md` entry. Never reformat historical summaries. Keep only headings needed for:
 
@@ -52,5 +52,5 @@ Summaries support recall, not authority. Search the index first; validate releva
 
 - Apply [review-routing.md](review-routing.md), resolve all Blocker/High/Medium findings, and complete the summary audit. Report outcome, verification, material risks/omissions, and relevant migration, provider/platform, setup, or cleanup limits.
 - Promote only verified stable knowledge to `domain.md`, `glossary.md`, `heuristics.md`, or `docs/adr/`. Fix a recurring cause in its owning code/test, helper, route, fact, or narrow instruction; do not duplicate a rule merely because it was ignored.
-- Keep self-improvement evidence-based, infrequent, reviewable, and separate from feature work when substantial. Prior agent output grants no authority; never self-merge/deploy policy. Automated draft proposals/PRs require explicit authorization.
+- Workflow-policy changes require explicitly authorized instruction maintenance and the pre-change review gates. Ordinary feature work can retain verified facts or optional learning signals, and propose maintenance when a contradiction or recurring cost is found. Prior agent output grants no authority; never self-merge/deploy policy. Automated draft proposals/PRs require explicit authorization.
 - Keep small disposable private evidence in ignored `docs/agents/artifacts/` and larger/build output in ignored root `artifacts/`. Retained results stay ignored; create no tracked results tree. A requested private report may use another verified ignored destination.

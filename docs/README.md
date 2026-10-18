@@ -30,12 +30,12 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [agents/code_reviewer.md](agents/code_reviewer.md): review criteria, severity, one final verdict, and loop stop rule.
 - [agents/reviewers/](agents/reviewers/): focused overlays loaded only for agent workflow, consumer compatibility, performance, security, or state-integrity risk.
 - [agents/mcp.md](agents/mcp.md): capability-conditional optional tooling, fallback, safety, and official product references.
-- [agents/fpf.md](agents/fpf.md): development-time FPF Library access, selective reading, daily update checks, reviewed revisions, provenance, and licensing.
+- [agents/fpf.md](agents/fpf.md): development-time FPF Library access, verified local snapshots, daily update checks, reviewed revisions, three-edition retention, migration, and licensing.
 - [agents/fpf-profile.md](agents/fpf-profile.md): ordinary and larger development questions, including result sufficiency, wording, naming, checks, computation, and source access, routed to FPF Core and relevant DPFs.
 - [agents/learning-scenarios.md](agents/learning-scenarios.md): optional manual probes for the repository-learning pilot; load during maintenance or when changing that workflow.
 - [agents/model-selection.md](agents/model-selection.md): optional dated starting-model advice, benchmark evidence, and lightweight profile calibration; not required for ordinary tasks.
 - [agents/tasks/index.md](agents/tasks/index.md): compact task-history routing index; use targeted search when the index is insufficient.
-- [agents/tools/](agents/tools/): scoped repository search, optional FPF source/cache access, bounded learning-signal collection, and strict UTF-8/CRLF validation helpers.
+- [agents/tools/](agents/tools/): scoped repository search, optional FPF source/cache access, bounded learning-signal collection, strict UTF-8/CRLF validation, and isolated instruction-inventory fixtures.
 - [agents/instruction-pack.json](agents/instruction-pack.json): version and managed-path metadata for deliberate agent-instruction upgrades in copied applications.
 - [agents/domain.md](agents/domain.md): verified stable framework/domain facts.
 - [agents/glossary.md](agents/glossary.md): stable project terms.

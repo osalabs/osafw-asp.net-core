@@ -13,6 +13,7 @@ param(
     [string]$Path,
     [string]$PatternId,
     [string]$Heading,
+    [string]$ChangesFrom,
     [ValidateRange(0, 2147483647)][int]$StartLine = 0,
     [ValidateRange(1, 2147483647)][int]$StartColumn = 1,
     [ValidateRange(0, 2147483647)][int]$Offset = 0,
@@ -27,12 +28,24 @@ param(
 try {
     $context = Get-FpfContext $RepositoryRoot -LocalCache:$LocalCache
     $manifest = Get-FpfManifest $context $Revision
+    if ($ChangesFrom) {
+        if ($Action -ne "List" -or $Path -or $Query -or $PatternId -or $Heading -or $StartLine -ne 0 -or $StartColumn -ne 1) {
+            throw "ChangesFrom applies only to List without publication or text selectors."
+        }
+        $previous = $null
+        if ($ChangesFrom -cne "empty") { $previous = Get-FpfManifest $context $ChangesFrom }
+        $page = Get-FpfChangePage $previous $manifest $context.RepositoryRoot $Offset $MaxLines $MaxChars
+        $page | Add-Member -NotePropertyName Action -NotePropertyValue "List"
+        $page | Add-Member -NotePropertyName Source -NotePropertyValue $manifest.Source
+        $page | ConvertTo-Json -Depth 8
+        exit 0
+    }
     $files = @($manifest.Files)
     if ($Path) {
         $files = @($files | Where-Object { $_.Path -ceq $Path })
         if ($files.Count -ne 1) { throw "Publication path is missing or ambiguous; use List to find its exact spelling." }
     }
-    $accepted = $null -ne $context.Adoption -and $context.Adoption.AcceptedRevision -ceq $Revision
+    $accepted = $null -ne $context.Adoption -and $context.Adoption.CacheRoot -eq $context.CacheRoot -and $context.Adoption.AcceptedRevision -ceq $Revision
     $result = [ordered]@{ Revision = $Revision; Source = $manifest.Source; IsAccepted = $accepted; Action = $Action }
     if ($Action -ne "Read") {
         if ($PatternId -or $Heading -or $StartLine -ne 0 -or $StartColumn -ne 1) { throw "Pattern, heading and line selectors apply only to Read." }
@@ -47,7 +60,7 @@ try {
                 else { $hits.Add([pscustomobject]@{ Path = $file.Path; Lines = $file.Lines; HeadingCount = @($file.Headings).Count }) }
             }
             else {
-                $lines = @((Get-FpfText $context $Revision $file.Path) -split "`n")
+                $lines = @((Get-FpfText $context $Revision $file.Path $manifest) -split "`n")
                 for ($i = 0; $i -lt $lines.Count; $i++) {
                     $position = $lines[$i].IndexOf($Query, [StringComparison]::OrdinalIgnoreCase)
                     if ($position -ge 0) {
@@ -102,7 +115,7 @@ try {
             if ($StartLine -lt $start -or $StartLine -gt $end) { throw "StartLine is outside the selected source section." }
             $start = $StartLine
         }
-        $lines = @((Get-FpfText $context $Revision $selectedFile.Path) -split "`n")
+        $lines = @((Get-FpfText $context $Revision $selectedFile.Path $manifest) -split "`n")
         if ($end -gt $lines.Count -or $start -lt 1) { throw "The cached index does not match the selected source." }
         $builder = [System.Text.StringBuilder]::new()
         $lineIndex = $start - 1
