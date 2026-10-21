@@ -82,6 +82,8 @@
     <PackageReference Include="System.Data.Odbc" Version="10.0.11" />
     <PackageReference Include="System.Data.OleDb" Version="10.0.11" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.11" />
+    <!-- Security patch for the transitive SqlClient dependency (CVE-2026-70162, CVE-2026-84008). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
     <PackageReference Include="Cronos" Version="0.13.0" />
 
     <PackageReference Include="Sentry.AspNetCore" Version="6.10.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSentry($|;)'))" />

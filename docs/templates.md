@@ -58,6 +58,20 @@ Shared building blocks live under:
 
 If a file is missing, ParsePage usually renders empty output for that slot. Override only the files you actually need.
 
+### Template cache and read failures
+
+Successfully read templates, including intentionally empty files, are cached across requests. Below DEBUG logging, successful entries are reused until the template cache is cleared or the application restarts. DEBUG and higher also check file modification times.
+
+Missing files and directories render empty without warnings, preserving optional includes, but are not cached. I/O or access failures during a file read or modification check also render empty for that access without replacing a successful cache entry. Later access retries without clearing the shared cache. A single optional WARN call in `ParsePage.precache_file` is commented out by default; enable it temporarily to log the filename and exception message. This recovery does not guarantee a complete page during the failing request or detect a successfully read but accidentally empty file. Empty inline templates render empty even without a configured template root.
+
+### Request-local rendering metadata
+
+All `FW.parser` overloads shallow-copy the supplied page dictionary, preserving its comparer, before applying layout overrides, removing the JSON flag, or adding validation metadata. Existing nested `error` dictionaries are copied with their comparer before missing `details` are added. Controller-supplied details and `form_issues` remain authoritative. Rendering therefore cannot leave request-specific layout, validation details, or form issues in cached controller data, or remove its `_json` flag. Large nested datasets remain shared; controllers remain responsible for safe, user-independent cached content and any mutations they perform themselves.
+
+Layout precedence is unchanged: a nonempty query `_layout` (or form `_layout` when the query value is empty) wins, followed by PJAX detection, followed by the explicit parser layout/controller `_layout`, then the default page layout. Templates see the effective override in render-local `_layout`; ordinary default rendering does not add that key. Controllers must not rely on rendering to modify their original dictionaries. The Home example retains its intentional shared-data cache.
+
+At DEBUG and higher, rendering diagnostics record the response format, selected layout (`none` for JSON), and rendered character count, without page bodies.
+
 ## The Most Important Rule
 
 ParsePage conditions and repeat attributes work on ParsePage tags, not plain HTML tags.
