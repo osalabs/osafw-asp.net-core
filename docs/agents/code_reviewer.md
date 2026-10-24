@@ -25,6 +25,8 @@ Check in this order, focusing depth where failure matters:
 7. **Tests/evidence:** Can recorded checks falsify behavior at the nearest practical public boundary? Do fixtures exercise established production entry paths and baseline consumers rather than only new wrappers, injected configuration, or helpers that bypass them? For classifiers, default-deny behavior, security boundaries, and compatibility changes, are attacker/ordinary negative controls paired with intended-safe/trusted and preserved-compatibility positive controls? Are important compile/provider/manual variants or clean-state checks missing?
 8. **Docs/upgrade/release:** Are canonical docs, examples, provider paths, migration guidance, and `docs/CHANGELOG.md` aligned, or is the no-update decision evidenced?
 
+For documentation or other non-code artifacts within the selected review scope, verify material claims against their sources, reconcile contradictions, check required content, and assess whether the intended reader can use the result for its stated purpose. Distinguish observed behavior, requirements, and unverified assumptions. Apply the existing routing and severity gates; these criteria do not make every text edit require independent review or unrelated build/tests.
+
 Consult the canonical specialist document rather than copying its rules: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, `datetime.md`, `deploy.md`, and `assistant.md` as relevant.
 
 ## Adjudication

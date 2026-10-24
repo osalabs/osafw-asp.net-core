@@ -105,6 +105,8 @@ public class FwVueControllerTests
             loadControllerConfig(definition);
         }
 
+        public void SetGlobalKeys(string keys) => global_keys = keys;
+
         public FwDict InitState() { FwDict ps = []; setScopeInitial(ps); return ps; }
         protected override FwDict getListUserView() => [];
 
@@ -337,6 +339,61 @@ public class FwVueControllerTests
         Assert.IsFalse(db.SelectSql.Contains("unknown_calculated", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(db.SelectSql.Contains("calcuated_name", StringComparison.OrdinalIgnoreCase));
         StringAssert.Contains(db.SelectSql, "[title]");
+    }
+
+    [TestMethod]
+    [DataRow("False", false)]
+    [DataRow("True", true)]
+    [DataRow("false", false)]
+    [DataRow("true", true)]
+    [DataRow("0", false)]
+    [DataRow("1", true)]
+    [DataRow("", false)]
+    [DataRow(null, false)]
+    public void InitialStateExportsButtonAlignmentAsJsonBoolean(string? configuredValue, bool expected)
+    {
+        using var scope = new FwTestScope(_ => new RecordingDb(), new System.Collections.Generic.Dictionary<string, string?>
+        {
+            ["appSettings:is_list_btn_left"] = configuredValue,
+            ["appSettings:date_format"] = "yyyy-MM-dd",
+        });
+        TestHelpers.RegisterModel(scope.Fw, (Users)new StubUsers());
+        var controller = new CalculatedVueController();
+        controller.Configure(scope.Fw, null, "title");
+
+        var originalValue = scope.Fw.G["is_list_btn_left"];
+        using var json = System.Text.Json.JsonDocument.Parse(Utils.jsonEncode(controller.InitState()));
+        var global = json.RootElement.GetProperty("global");
+        Assert.AreEqual(expected ? System.Text.Json.JsonValueKind.True : System.Text.Json.JsonValueKind.False,
+            global.GetProperty("is_list_btn_left").ValueKind);
+        Assert.AreEqual("yyyy-MM-dd", global.GetProperty("date_format").GetString());
+        Assert.AreEqual(originalValue, scope.Fw.G["is_list_btn_left"]);
+    }
+
+    [TestMethod]
+    public void InitialStateUsesBooleanPrefixForCustomGlobalsAndPreservesSelection()
+    {
+        using var scope = new FwTestScope(_ => new RecordingDb());
+        TestHelpers.RegisterModel(scope.Fw, (Users)new StubUsers());
+        var controller = new CalculatedVueController();
+        controller.Configure(scope.Fw, null, "title");
+        controller.SetGlobalKeys("is_custom_enabled is_custom_disabled is_native is_missing caption island");
+        scope.Fw.G["is_custom_enabled"] = "True";
+        scope.Fw.G["is_custom_disabled"] = "False";
+        scope.Fw.G["is_native"] = true;
+        scope.Fw.G["caption"] = "False";
+        scope.Fw.G["island"] = "False";
+
+        using var json = System.Text.Json.JsonDocument.Parse(Utils.jsonEncode(controller.InitState()));
+        var global = json.RootElement.GetProperty("global");
+        Assert.IsTrue(global.GetProperty("is_custom_enabled").GetBoolean());
+        Assert.IsFalse(global.GetProperty("is_custom_disabled").GetBoolean());
+        Assert.IsTrue(global.GetProperty("is_native").GetBoolean());
+        Assert.IsFalse(global.GetProperty("is_missing").GetBoolean());
+        Assert.AreEqual("False", global.GetProperty("caption").GetString());
+        Assert.AreEqual("False", global.GetProperty("island").GetString());
+        Assert.IsFalse(global.TryGetProperty("is_list_btn_left", out _));
+        Assert.AreEqual("True", scope.Fw.G["is_custom_enabled"]);
     }
 
     [TestMethod]
