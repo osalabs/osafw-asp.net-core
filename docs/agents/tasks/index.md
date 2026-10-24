@@ -2,6 +2,17 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-10-23-fpf-refresh.md` - Adopted the latest FPF edition, migrated the existing local cache, clarified exact references and method use, and added one optional procedure/capability/support route in instruction pack 1.13.2.
+- `summary-2026-10-21-nuget-refresh.md` - Updated all outdated stable NuGet references, patched Negotiate, and passed default/optional builds, audits, and 207 isolated tests.
+- `summary-2026-10-21-vue-button-boolean.md` - Exported Vue row-button alignment as a server Boolean, preserved simple frontend overrides, and passed server/browser regressions and live login/reload checks after rebuild.
+- `summary-2026-10-21-renderer-cache-recovery.md` - Isolated renderer metadata, recovered template reads, verified browser/regression flows, and patched the vulnerable cryptography dependency.
+- `summary-2026-10-18-selective-instruction-port.md` - Instruction pack 1.13.1: bounded agent trials, source-backed artifact reviews, partial-import recovery, and lesson revalidation; docs-only with existing gates and FPF tooling preserved.
+- `summary-2026-10-18-fpf-instruction-port.md` - Instruction pack 1.13.0: verified local FPF snapshots, three-edition retention, cache migration, and protected instruction inventory.
+- `summary-2026-10-10-instruction-self-improvement.md` - Refreshed FPF, reduced common instruction text, routed delegation on demand, and strengthened instruction-only imports with two-shell validation.
+- `summary-2026-10-09-fpf-library.md` - Restored and reviewed FPF Library access; added everyday sufficiency, wording, naming and source-access routes with selective reading and daily checks.
+- `summary-2026-10-01-luna6-profiles.md` - Replaced remaining GPT-5.6 profiles with Luna Medium/High helpers and Sol 6.1 Max alternatives; validated routing and bounded helper behavior.
+- `summary-2026-09-30-sol61-profiles.md` - Adopted Sol 6.1 High for starting, standard implementation, and ordinary review; retained Astra escalation and verified bounded calibration.
+- `summary-2026-09-30-fpf-refresh.md` - Refreshed the FPF corpus, surveyed all DPF routes, and added selective ordinary-task methods, current source-use instructions and bounded evidence guidance.
 - `summary-2026-09-27-appsettings.md` - Moved operational configuration into encrypted/cached Site Settings, added guarded Admin transfer and migrations, and optional cached Secrets Manager DB resolution.
 - `summary-2026-09-27-select2-minimal.md` - Reduced Select2 styling to existing geometry and minimal dark surfaces, then removed approved unused Vue scaffolding.
 - `summary-2026-09-27-select2-scaffold-acceptance.md` - Themed Select2, excluded demo validation from generated controllers, fixed Vue tab initialization, and completed live interaction checks and disposable-data cleanup.

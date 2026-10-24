@@ -1,6 +1,6 @@
 name = "implementation_max"
 description = "Conditional high-capability implementation escalation for bounded high-risk work where first-pass correctness has exceptional value."
-model = "gpt-5.6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "max"
 sandbox_mode = "workspace-write"
 developer_instructions = """

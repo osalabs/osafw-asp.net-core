@@ -11,6 +11,8 @@ Use this guide when adding new framework code, reviewing method names, or touchi
 
 Do not rename unrelated working code only to satisfy this guide. Preserve public compatibility when callers may already depend on a name.
 
+If a durable public name still hides its meaning after applying these conventions, use the naming route in the [FPF Library profile](agents/fpf-profile.md). Compare the actual result, side effect, domain meaning, and existing caller vocabulary before choosing another label. Ordinary helper names need no separate naming artifact.
+
 ## Why This Matters
 
 The framework has many model methods. Generic `Get*` and `Set*` names quickly become hard to scan because they hide the return shape and the real side effect. Framework names should answer the first question a reader has:

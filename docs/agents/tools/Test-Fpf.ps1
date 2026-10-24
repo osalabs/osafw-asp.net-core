@@ -28,7 +28,7 @@ function Invoke-FpfFixtureGit {
     return (Invoke-FpfGit -Arguments (@("-C", $Root) + $Arguments)).Output.Trim()
 }
 function Start-FpfTestTool {
-    param([string]$Name, [string[]]$Arguments)
+    param([string]$Name, [string[]]$Arguments, [switch]$WithoutGit)
     $info = [System.Diagnostics.ProcessStartInfo]::new()
     $info.FileName = $script:shellPath
     $toolPath = if ([IO.Path]::IsPathRooted($Name)) { $Name } else { Join-Path $PSScriptRoot $Name }
@@ -37,6 +37,7 @@ function Start-FpfTestTool {
     $info.UseShellExecute = $false; $info.CreateNoWindow = $true
     $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true
     $info.StandardOutputEncoding = $script:FpfUtf8
+    if ($WithoutGit) { $info.EnvironmentVariables["PATH"] = Join-Path $script:testRoot "no-executables" }
     $process = [System.Diagnostics.Process]::new(); $process.StartInfo = $info
     [void]$process.Start()
     return [pscustomobject]@{ Process = $process; Output = $process.StandardOutput.ReadToEndAsync(); Error = $process.StandardError.ReadToEndAsync() }
@@ -54,8 +55,30 @@ function Complete-FpfTestTool {
     finally { $Run.Process.Dispose() }
 }
 function Invoke-FpfTestTool {
-    param([string]$Name, [string[]]$Arguments, [int]$ExpectedExit = 0)
-    return Complete-FpfTestTool (Start-FpfTestTool $Name $Arguments) $ExpectedExit
+    param([string]$Name, [string[]]$Arguments, [int]$ExpectedExit = 0, [switch]$WithoutGit)
+    return Complete-FpfTestTool (Start-FpfTestTool $Name $Arguments -WithoutGit:$WithoutGit) $ExpectedExit
+}
+
+function Get-FpfFixtureStamp {
+    param([string]$Root)
+    return (@(Get-FpfTreePaths $Root | Sort-Object | ForEach-Object {
+        $ioPath = Get-FpfIoPath $_
+        if (-not ([IO.File]::GetAttributes($ioPath) -band [IO.FileAttributes]::Directory)) {
+            $_ + "|" + [IO.FileInfo]::new($ioPath).Length + "|" + [IO.File]::GetLastWriteTimeUtc($ioPath).Ticks + "|" + (Get-FpfBytesHash (Read-FpfBytes $_))
+        }
+    }) -join "`n")
+}
+
+function Remove-FpfFixturePath {
+    param([string]$Path)
+    $resolved = [IO.Path]::GetFullPath($Path)
+    $allowed = [IO.Path]::GetFullPath($script:testRoot).TrimEnd([char[]]"\/") + [IO.Path]::DirectorySeparatorChar
+    if (-not $resolved.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) { throw "Fixture cleanup escaped its task root." }
+    foreach ($path in @(Get-FpfTreePaths $resolved)) {
+        $ioPath = Get-FpfIoPath $path
+        if ([IO.Directory]::Exists($ioPath)) { [IO.Directory]::Delete($ioPath, $false) }
+        else { [IO.File]::SetAttributes($ioPath, [IO.FileAttributes]::Normal); [IO.File]::Delete($ioPath) }
+    }
 }
 function New-FpfFixtureApp {
     param([string]$Root)
@@ -74,7 +97,13 @@ try {
     [void][System.IO.Directory]::CreateDirectory($testRoot)
     $upstream = Join-Path $testRoot "upstream source"
     New-FpfFixtureApp $upstream
-    foreach ($path in $script:FpfRequired) {
+    $legacyPublications = @(
+        "Engineering DPF Suite/README.md",
+        "Engineering DPF Suite/SYSTEMS-ENGINEERING-PRINCIPLES-FRAMEWORK.md",
+        "Foundational Thinking DPF Suite/README.md",
+        "Foundational Thinking DPF Suite/COMPUTATIONAL-THINKING-DPF.md"
+    )
+    foreach ($path in @($script:FpfRequired) + $legacyPublications) {
         $text = "# $path`n`n## X.1 - Fixture method`n### X.1:1 - Problem frame`nFixture condition.`n### X.1:4 - Solution`nOriginal fixture result.`n### X.1:End`n"
         if ($path -eq "LICENSE") { $text = "Fixture license text; synthetic test data.`n" }
         Write-FpfFixture (Join-Path $upstream $path) $text
@@ -256,8 +285,9 @@ try {
     $bareGit = Join-Path $app ".codex-local/fpf/corpus.git"
     $sourceBefore = Read-FpfJson $sourceState
     [void](Invoke-FpfGit -GitDirectory $bareGit -Arguments @("config", "--local", "remote.origin.url", "https://example.invalid/not-fpf.git"))
-    $bad = Invoke-FpfTestTool "Sync-Fpf.ps1" ($baseArgs + @("-Action", "Status")) 1
-    Assert-FpfTest ($bad.Notice -like "*identity*" -and $adoptionBefore -ceq [IO.File]::ReadAllText((Join-Path $app ".codex-local/fpf/adoption.json"))) "repository identity mismatch cannot silently consume or rewrite adoption"
+    $localStatus = Invoke-FpfTestTool "Sync-Fpf.ps1" ($baseArgs + @("-Action", "Status"))
+    $bad = Invoke-FpfTestTool "Sync-Fpf.ps1" ($baseArgs + @("-Force"))
+    Assert-FpfTest ($localStatus.AcceptedRevision -eq $revision2 -and $bad.CheckResult -eq "failed" -and $bad.Notice -like "*identity*" -and $adoptionBefore -ceq [IO.File]::ReadAllText((Join-Path $app ".codex-local/fpf/adoption.json"))) "local snapshots remain readable but refresh rejects changed repository identity without rewriting adoption"
     [void](Invoke-FpfGit -GitDirectory $bareGit -Arguments @("config", "--local", "remote.origin.url", $sourceBefore.Source))
     $unavailableApp = Join-Path $testRoot "unavailable first use"
     New-FpfFixtureApp $unavailableApp
@@ -274,6 +304,247 @@ try {
     $primaryResult = Complete-FpfTestTool $primaryRun
     $worktreeResult = Complete-FpfTestTool $worktreeRun
     Assert-FpfTest ($primaryResult.AcceptedRevision -eq $revision2 -and $worktreeResult.CandidateRevision -eq $revision2 -and $null -eq $worktreeResult.AcceptedRevision) "concurrent worktrees preserve independent adoption through a failed source update"
+
+    # Current-layout snapshots and a change report larger than one page.
+    $modernSource = Join-Path $testRoot "current source"
+    $modernApp = Join-Path $testRoot "current application"
+    New-FpfFixtureApp $modernSource
+    New-FpfFixtureApp $modernApp
+    foreach ($path in @($script:FpfRequired) + @("FPF-LIBRARY-REFERENCE.md", "DPFs/README.md")) {
+        Write-FpfFixture (Join-Path $modernSource $path) ("# " + $path + "`n## M.1 - Fixture method`nCurrent layout condition.`n")
+    }
+    for ($number = 1; $number -le 65; $number++) {
+        Write-FpfFixture (Join-Path $modernSource ("DPFs/Fixture Suite/Case-" + $number + ".md")) ("# Case`n## P." + $number + " - Read`nCurrent layout body.`n")
+    }
+    [void](Invoke-FpfFixtureGit $modernSource @("add", "."))
+    [void](Invoke-FpfFixtureGit $modernSource @("commit", "-m", "Publish current layout"))
+    $modernPin = Invoke-FpfFixtureGit $modernSource @("rev-parse", "HEAD")
+    $modernArgs = @("-RepositoryRoot", $modernApp)
+    $modern = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-SourcePath", $modernSource))
+    Assert-FpfTest ($modern.CandidateRevision -eq $modernPin -and $modern.Changes.Truncated) "current DPF layout is indexed recursively without retired publications"
+    $seenChanges = [Collections.Generic.List[string]]::new()
+    $pageOffset = 0
+    do {
+        $page = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernArgs + @("-Action", "List", "-Revision", $modernPin, "-ChangesFrom", "empty", "-Offset", [string]$pageOffset, "-MaxLines", "17", "-MaxChars", "5000"))
+        Assert-FpfTest ($page.Revision -eq $modernPin -and $page.ChangesFrom -eq "empty" -and $page.Items.Count -le 17) "change continuation preserves both pins and item bounds"
+        foreach ($item in $page.Items) { $seenChanges.Add(($item | ConvertTo-Json -Compress)) }
+        $pageOffset = $page.NextOffset
+    } while ($null -ne $pageOffset)
+    Assert-FpfTest ($seenChanges.Count -eq $page.Total -and @($seenChanges | Select-Object -Unique).Count -eq $page.Total) "change pagination returns every file and pattern exactly once"
+    $bad = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernArgs + @("-Action", "List", "-Revision", $modernPin, "-ChangesFrom", "empty", "-Path", "USING-FPF.md")) 1
+    Assert-FpfTest ($bad.Status -eq "error") "change listing rejects a conflicting publication filter"
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Accept", "-Revision", $modernPin, "-ReviewNote", "Synthetic current-layout review."))
+    $modernCache = Join-Path $modernApp ".codex-local/fpf"
+    $modernContext = Get-FpfContext $modernApp
+    $modernStatePath = $modernContext.SourceStatePath
+    $snapshotPath = Join-Path $modernCache ("snapshots/" + $modernPin)
+    $modernReadArgs = $modernArgs + @("-Revision", $modernPin)
+    $referenceRead = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md"))
+    $parkedObjects = Join-Path $testRoot "parked object store"
+    [IO.Directory]::Move($modernContext.GitDirectory, $parkedObjects)
+    $beforeReads = Get-FpfFixtureStamp $modernCache
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Status")) -WithoutGit
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Select", "-Revision", $modernPin)) -WithoutGit
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Offline")) -WithoutGit
+    $null = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Action", "List")) -WithoutGit
+    $null = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Action", "Search", "-Query", "condition", "-Path", "USING-FPF.md")) -WithoutGit
+    $localRead = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md")) -WithoutGit
+    Assert-FpfTest ($localRead.Content -ceq $referenceRead.Content -and $beforeReads -ceq (Get-FpfFixtureStamp $modernCache)) "all six ordinary CLI paths work without Git or objects and preserve hashes and mtimes"
+    [IO.Directory]::Move($parkedObjects, $modernContext.GitDirectory)
+
+    $usingPath = Join-Path $snapshotPath "USING-FPF.md"
+    Write-FpfFixture $usingPath "# Damaged local text`n"
+    $unrelatedRead = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "DPFs/Fixture Suite/Case-1.md")) -WithoutGit
+    $beforeBadRead = Get-FpfFixtureStamp $modernCache
+    $bad = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md")) 1 -WithoutGit
+    Assert-FpfTest ($unrelatedRead.Content -like "*Current layout body*" -and $bad.Notice -like "*pinned Git blob*" -and $beforeBadRead -ceq (Get-FpfFixtureStamp $modernCache)) "scoped reads verify only accessed publications and never repair corruption"
+    $bad = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Status")) 1 -WithoutGit
+    Assert-FpfTest ($bad.Status -eq "error") "status validates the complete selected snapshot"
+    $beforeRepair = Read-FpfJson $modernStatePath
+    $repair = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    Assert-FpfTest ($repair.CheckResult -eq "throttled" -and [DateTimeOffset]$repair.LastAttemptUtc -eq [DateTimeOffset]$beforeRepair.LastAttemptUtc) "writable Ensure repairs local publications without bypassing the fetch throttle"
+    $indexPath = Get-FpfIndexPath $modernContext $modernPin
+    [IO.File]::AppendAllText($indexPath, " ", $script:FpfUtf8)
+    $bad = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Action", "List")) 1 -WithoutGit
+    Assert-FpfTest ($bad.Notice -like "*checksum*") "schema-valid index damage is detected without Git"
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    $indexRecovered = Get-FpfManifest $modernContext $modernPin -VerifyFiles
+    Assert-FpfTest ($indexRecovered.IndexVersion -eq 2) "only writable Ensure reconstructs a damaged index"
+
+    # Construct the prior on-disk format from real pinned objects.
+    $legacyIndex = Get-FpfManifest $modernContext $modernPin
+    $legacyIndex.PSObject.Properties.Remove("IndexVersion")
+    foreach ($file in $legacyIndex.Files) { $file.PSObject.Properties.Remove("Bytes") }
+    Write-FpfJson (Join-Path $modernCache ("indexes/" + $modernPin + ".json")) $legacyIndex
+    $legacyState = Read-FpfJson $modernStatePath
+    foreach ($property in @("IndexVersion", "IndexHashes", "RetentionRevision", "PreviousRevision", "EditionOrder", "PendingAcceptanceOldRevision", "CleanupPending")) { $legacyState.PSObject.Properties.Remove($property) }
+    Write-FpfJson $modernStatePath $legacyState
+    Remove-FpfFixturePath (Join-Path $modernCache "snapshots")
+    Remove-FpfFixturePath (Join-Path $modernCache "indexes/v2")
+    $adoptionPath = Join-Path $modernCache "adoption.json"
+    $adoptionBeforeMigration = [IO.File]::ReadAllText($adoptionPath)
+    $legacyStamp = Get-FpfFixtureStamp $modernCache
+    $legacyStatus = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Status")) -WithoutGit
+    $bad = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md")) 1 -WithoutGit
+    Assert-FpfTest ($legacyStatus.MigrationRequired -and $bad.Notice -like "*migration*" -and $legacyStamp -ceq (Get-FpfFixtureStamp $modernCache)) "legacy inspection reports migration without writes or Git"
+    [void](Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("update-ref", "-d", "refs/fpf/snapshots/$modernPin"))
+    $realGit = (Get-Item -LiteralPath function:Invoke-FpfGit).ScriptBlock
+    function Invoke-FpfGit {
+        param([string[]]$Arguments, [string]$GitDirectory, [int]$TimeoutSeconds = 45, [switch]$AllowFailure, [byte[]]$InputBytes, [switch]$Binary)
+        if ($Arguments[0] -eq "update-ref") { throw "Synthetic migration interruption after index publication." }
+        & $script:realGit @PSBoundParameters
+    }
+    $wasInterrupted = $false
+    try { Restore-FpfSnapshots $modernContext (Read-FpfJson $modernStatePath) }
+    catch { $wasInterrupted = $_.Exception.Message -like "*Synthetic migration interruption*" }
+    finally { Set-Item -LiteralPath function:Invoke-FpfGit -Value $realGit }
+    $partialState = Read-FpfJson $modernStatePath
+    Assert-FpfTest ($wasInterrupted -and (Get-FpfProperty $partialState "IndexVersion" 0) -ne 2 -and -not (Get-FpfProperty (Get-FpfProperty $partialState "IndexHashes") $modernPin) -and $adoptionBeforeMigration -ceq [IO.File]::ReadAllText($adoptionPath)) "interrupted migration cannot publish a receipt before its protective ref"
+    # Also recover the receipt-first interruption possible in an earlier writer.
+    $partialHashes = [pscustomobject]@{}
+    Set-FpfProperty $partialHashes $modernPin (Get-FpfBytesHash (Read-FpfBytes (Get-FpfIndexPath $modernContext $modernPin)))
+    Set-FpfProperty $partialState "IndexHashes" $partialHashes
+    Write-FpfJson $modernStatePath $partialState
+    $migration = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    $migratedRead = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md"))
+    Assert-FpfTest (-not $migration.MigrationRequired -and $migration.CheckResult -eq "throttled" -and $migration.AcceptedRevision -eq $modernPin -and $migratedRead.Content -ceq $referenceRead.Content -and $adoptionBeforeMigration -ceq [IO.File]::ReadAllText($adoptionPath)) "writable migration preserves adoption and same-pin content without fetching"
+    Assert-FpfTest (-not [IO.File]::Exists((Join-Path $modernCache ("indexes/" + $modernPin + ".json")))) "successful migration retires obsolete indexes"
+    $retainedObject = Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("cat-file", "-e", $modernPin) -AllowFailure
+    Assert-FpfTest ($retainedObject.ExitCode -eq 0) "interrupted receipt publication restores its missing ref before object collection"
+    Write-FpfFixture (Join-Path $snapshotPath "USING-FPF.md") "Damaged after migration.`n"
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    $repairedAfterMigration = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md"))
+    Assert-FpfTest ($repairedAfterMigration.Content -ceq $referenceRead.Content) "retained objects still support local repair after interrupted migration and cleanup"
+
+    $retentionWorktree = Join-Path $testRoot "retention worktree"
+    [void](Invoke-FpfFixtureGit $modernApp @("worktree", "add", "--detach", $retentionWorktree, "HEAD"))
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" @("-RepositoryRoot", $retentionWorktree, "-Action", "Accept", "-Revision", $modernPin, "-ReviewNote", "Synthetic shared adoption.")
+    $otherAdoptionPath = Join-Path $retentionWorktree ".codex-local/fpf/adoption.json"
+    $otherAdoptionBefore = [IO.File]::ReadAllText($otherAdoptionPath)
+    $latestWorktree = Join-Path $testRoot "latest acceptance worktree"
+    [void](Invoke-FpfFixtureGit $modernApp @("worktree", "add", "--detach", $latestWorktree, "HEAD"))
+    $editions = [Collections.Generic.List[string]]::new()
+    for ($number = 1; $number -le 5; $number++) {
+        Write-FpfFixture (Join-Path $modernSource "USING-FPF.md") ("# Usage edition " + $number + "`n## Conditions`nPreserve the selected edition.`n")
+        [void](Invoke-FpfFixtureGit $modernSource @("add", "."))
+        [void](Invoke-FpfFixtureGit $modernSource @("commit", "-m", ("Edition " + $number)))
+        $edition = Invoke-FpfFixtureGit $modernSource @("rev-parse", "HEAD")
+        $editions.Add($edition)
+        $updateArgs = if ($number -eq 5) { @("-RepositoryRoot", $retentionWorktree) } else { $modernArgs }
+        $updated = Invoke-FpfTestTool "Sync-Fpf.ps1" ($updateArgs + @("-Force"))
+        Assert-FpfTest ($updated.CheckResult -eq "checked" -and @(Get-ChildItem -LiteralPath (Join-Path $modernCache "snapshots") -Directory).Count -le 3) "writable refresh retains at most three editions"
+        if ($number -eq 1) {
+            $null = Invoke-FpfTestTool "Sync-Fpf.ps1" @("-RepositoryRoot", $latestWorktree, "-Action", "Accept", "-Revision", $edition, "-ReviewNote", "Synthetic newer shared acceptance.")
+        }
+        if ($number -eq 2) {
+            # Fail the real adoption replace after publishing shared acceptance.
+            $before = [IO.File]::ReadAllText($adoptionPath)
+            $adoptionBlock = [IO.File]::Open($adoptionPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+            try {
+                $failedAcceptance = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Accept", "-Revision", $edition, "-ReviewNote", "Synthetic interrupted adoption.")) 1
+            }
+            finally { $adoptionBlock.Dispose() }
+            $pending = Read-FpfJson $modernStatePath
+            Assert-FpfTest ($failedAcceptance.Status -eq "error" -and $pending.PendingAcceptanceOldRevision -eq $modernPin -and $before -ceq [IO.File]::ReadAllText($adoptionPath)) "failed adoption protects the calling checkout pin even when shared acceptance differs"
+            $null = Invoke-FpfTestTool "Sync-Fpf.ps1" @("-RepositoryRoot", $retentionWorktree)
+            $survivors = @(Get-FpfRetainedRevisions (Read-FpfJson $modernStatePath))
+            Assert-FpfTest ($survivors.Count -eq 3 -and $modernPin -in $survivors -and $editions[0] -in $survivors -and $before -ceq [IO.File]::ReadAllText($adoptionPath)) "interrupted acceptance protects prior adoption and the most recent other edition within three slots"
+            $null = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Accept", "-Revision", $edition, "-ReviewNote", "Synthetic retention review."))
+            # Durable state after adoption but before clearing the pending receipt.
+            $pending = Read-FpfJson $modernStatePath
+            Set-FpfProperty $pending "PendingAcceptanceOldRevision" $modernPin
+            Write-FpfJson $modernStatePath $pending
+            $null = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+            $resumed = Read-FpfJson $modernStatePath
+            Assert-FpfTest (-not $resumed.PendingAcceptanceOldRevision -and $resumed.PreviousRevision -eq $editions[0]) "completed acceptance reconciles its receipt and retains the most recent other edition"
+        }
+        if ($number -eq 4) {
+            $pending = Read-FpfJson $modernStatePath
+            Set-FpfProperty $pending "RetentionRevision" $edition
+            Set-FpfProperty $pending "PendingAcceptanceOldRevision" $editions[1]
+            Write-FpfJson $modernStatePath $pending
+        }
+        if ($number -eq 5) {
+            $resumed = Read-FpfJson $modernStatePath
+            $survivors = @(Get-FpfRetainedRevisions $resumed)
+            $stillAdopted = Read-FpfJson $adoptionPath
+            Assert-FpfTest (-not $resumed.PendingAcceptanceOldRevision -and $survivors.Count -eq 3 -and $resumed.RetentionRevision -eq $editions[3] -and $resumed.PreviousRevision -eq $editions[2] -and $stillAdopted.AcceptedRevision -eq $editions[1]) "another checkout can refresh after interrupted acceptance without exceeding retention or rewriting adoption"
+            $null = Invoke-FpfTestTool "Sync-Fpf.ps1" ($modernArgs + @("-Action", "Accept", "-Revision", $edition, "-ReviewNote", "Synthetic retention review."))
+        }
+    }
+    $lastPin = $editions[$editions.Count - 1]
+    $current = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    $expired = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernReadArgs + @("-Path", "USING-FPF.md")) 1 -WithoutGit
+    $otherStatus = Invoke-FpfTestTool "Sync-Fpf.ps1" @("-RepositoryRoot", $retentionWorktree, "-Action", "Status") -WithoutGit
+    $expiredObject = Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("cat-file", "-e", $modernPin) -AllowFailure
+    Assert-FpfTest ($expired.Notice -like "*expired*" -and $otherStatus.UnavailableAcceptedRevision -eq $modernPin -and $otherAdoptionBefore -ceq [IO.File]::ReadAllText($otherAdoptionPath)) "expired worktree pins fail without substitution or rewriting another checkout's adoption"
+    Assert-FpfTest ($expiredObject.ExitCode -ne 0 -and -not [IO.Directory]::Exists($snapshotPath) -and -not [IO.File]::Exists($indexPath)) "retention reclaims expired snapshots indexes and Git objects"
+    foreach ($pin in @(Get-FpfRetainedRevisions (Read-FpfJson $modernStatePath))) {
+        $null = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernArgs + @("-Revision", $pin, "-Path", "USING-FPF.md")) -WithoutGit
+    }
+    Assert-FpfTest ($true) "every retained edition remains readable without Git"
+
+    # Reintroduce an old owned ref and orphan snapshot, then interrupt object collection.
+    [void](Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("fetch", "--depth=1", $modernSource, ($modernPin + ":refs/fpf/snapshots/" + $modernPin)))
+    $orphanPath = Join-Path $modernCache ("snapshots/" + $modernPin)
+    Write-FpfFixture (Join-Path $orphanPath "orphan.md") "# Task-owned interrupted export`n"
+    Write-FpfFixture (Join-Path $modernCache "keep-user-note.txt") "Unfamiliar files stay untouched.`n"
+    $realGit = (Get-Item -LiteralPath function:Invoke-FpfGit).ScriptBlock
+    function Invoke-FpfGit {
+        param([string[]]$Arguments, [string]$GitDirectory, [int]$TimeoutSeconds = 45, [switch]$AllowFailure, [byte[]]$InputBytes, [switch]$Binary)
+        if ($Arguments -contains "gc") { throw "Synthetic interruption before object collection." }
+        & $script:realGit @PSBoundParameters
+    }
+    $wasInterrupted = $false
+    try { Remove-FpfExpiredEditions $modernContext (Read-FpfJson $modernStatePath) -CollectObjects }
+    catch { $wasInterrupted = $_.Exception.Message -like "*Synthetic interruption*" }
+    finally { Set-Item -LiteralPath function:Invoke-FpfGit -Value $realGit }
+    $interruptedState = Read-FpfJson $modernStatePath
+    Assert-FpfTest ($wasInterrupted -and $interruptedState.CleanupPending -and -not [IO.Directory]::Exists($orphanPath)) "interrupted cleanup persists intent after file and ref removal"
+    $retry = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    $expiredObject = Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("cat-file", "-e", $modernPin) -AllowFailure
+    Assert-FpfTest (-not $retry.CleanupPending -and $retry.CheckResult -eq "throttled" -and [DateTimeOffset]$retry.LastAttemptUtc -eq [DateTimeOffset]$interruptedState.LastAttemptUtc -and $expiredObject.ExitCode -ne 0) "cleanup retries object collection inside the fetch throttle"
+    Assert-FpfTest ([IO.File]::Exists((Join-Path $modernCache "keep-user-note.txt"))) "cleanup preserves unfamiliar files"
+
+    $outside = Join-Path $testRoot "redirect destination"
+    Write-FpfFixture (Join-Path $outside "USING-FPF.md") "PRIVATE-FIXTURE-SENTINEL`n"
+    $redirect = Join-Path $modernCache ("snapshots/" + ("f" * 40))
+    [void](New-Item -ItemType Junction -Path $redirect -Target $outside)
+    try {
+        $blockedCleanup = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+        Assert-FpfTest ($blockedCleanup.CheckResult -eq "failed" -and $blockedCleanup.CleanupPending -and [IO.File]::Exists((Join-Path $outside "USING-FPF.md"))) "cleanup rejects redirected expired directories before touching their targets"
+    }
+    finally { [IO.Directory]::Delete($redirect, $false) }
+    $recoveredCleanup = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    Assert-FpfTest (-not $recoveredCleanup.CleanupPending -and -not $recoveredCleanup.Notice) "successful cleanup clears its own failure without waiting for a network refresh"
+    $wrongIndexType = Join-Path $modernCache ("indexes/v2/" + ("e" * 40) + ".json")
+    Write-FpfFixture (Join-Path $wrongIndexType "preserve.txt") "Unexpected directory is not an index.`n"
+    $badType = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    Assert-FpfTest ($badType.CheckResult -eq "failed" -and [IO.File]::Exists((Join-Path $wrongIndexType "preserve.txt"))) "cleanup refuses unexpected target types without deleting their contents"
+    Remove-FpfFixturePath $wrongIndexType
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    $liveSnapshot = Join-Path $modernCache ("snapshots/" + $lastPin)
+    $savedSnapshot = Join-Path $testRoot "saved live snapshot"
+    [IO.Directory]::Move($liveSnapshot, $savedSnapshot)
+    [void](New-Item -ItemType Junction -Path $liveSnapshot -Target $outside)
+    try {
+        $bad = Invoke-FpfTestTool "Read-Fpf.ps1" ($modernArgs + @("-Revision", $lastPin, "-Path", "USING-FPF.md")) 1 -WithoutGit
+        Assert-FpfTest ($bad.Notice -like "*symlink or junction*" -and $script:lastFpfOutput -notlike "*PRIVATE-FIXTURE-SENTINEL*") "publication redirection fails before content disclosure"
+    }
+    finally {
+        [IO.Directory]::Delete($liveSnapshot, $false)
+        [IO.Directory]::Move($savedSnapshot, $liveSnapshot)
+    }
+    [void](Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("config", "--local", "gc.recentObjectsHook", "must-not-execute"))
+    $unsafeState = Read-FpfJson $modernStatePath
+    Set-FpfProperty $unsafeState "CleanupPending" $true
+    Write-FpfJson $modernStatePath $unsafeState
+    $blockedConfig = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+    Assert-FpfTest ($blockedConfig.CheckResult -eq "failed" -and $blockedConfig.CleanupPending -and $blockedConfig.Notice -like "*executable Git configuration*") "cleanup refuses executable Git configuration"
+    [void](Invoke-FpfGit -GitDirectory $modernContext.GitDirectory -Arguments @("config", "--local", "--unset", "gc.recentObjectsHook"))
+    $null = Invoke-FpfTestTool "Sync-Fpf.ps1" $modernArgs
+
+
     $succeeded = $true
 }
 finally {
@@ -282,7 +553,11 @@ finally {
         $resolved = [System.IO.Path]::GetFullPath($testRoot)
         if (-not $resolved.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) { throw "Refusing cleanup outside the test artifacts directory." }
         Assert-FpfDirectory $resolved
-        Remove-Item -LiteralPath $resolved -Recurse -Force
+        foreach ($path in @(Get-FpfTreePaths $resolved)) {
+            $ioPath = Get-FpfIoPath $path
+            if ([IO.Directory]::Exists($ioPath)) { [IO.Directory]::Delete($ioPath, $false) }
+            else { [IO.File]::SetAttributes($ioPath, [IO.FileAttributes]::Normal); [IO.File]::Delete($ioPath) }
+        }
     }
     else { Write-Output "Fixture evidence retained: $testRoot" }
 }

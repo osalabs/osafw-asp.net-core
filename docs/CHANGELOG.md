@@ -2,6 +2,10 @@
 
 This changelog records only breaking framework changes and the actions needed to upgrade an existing application. Entries are grouped by the date of the breaking change, not by followup commits. Additive features, internal refactoring, bug fixes, and renames within an unreleased branch belong in the relevant feature documentation or task summary. Coverage starts at 2025-06-01.
 
+## 2026-10-18
+
+- Development tooling: instruction pack 1.13.0 changes the optional FPF cache to local publication snapshots. Existing object-only caches require one writable `Sync-Fpf.ps1 -Action Ensure` migration; read-only commands report that prerequisite and do not repair it. Ensure now retains only the shared cache's latest explicitly accepted edition, candidate and one previous edition, reclaiming older files and Git objects. Older task/worktree pins can expire without changing their recorded adoption. Preserve independently needed archives before enabling cleanup, and use explicit reviewed acceptance when an adopted pin is unavailable. See [FPF cache migration and retention](agents/fpf.md#cache-migration-retention-and-recovery).
+
 ## 2026-09-27
 
 - C# source change: `FW.FormErrors` is replaced by the request-owned `FW.FormIssues` collection. In controllers, replace dictionary assignments with `addFormError(field, code)` or `addFormError(field, message: text)`; use `addFormWarning` for non-blocking feedback. Replace dictionary reads with `fw.getFormErrors()` and remove manual `REQUIRED`/`INVALID` marker writes. JSON `error.details` and field-map `data-errors` bindings remain supported. Copy the shared `common/form/validation-messages.sel` template with the updated framework files. See the [migration examples](dynamic.md#migrating-c-form-validation).

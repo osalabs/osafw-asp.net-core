@@ -1,0 +1,25 @@
+# Vue row-button Boolean state
+
+## Outcome
+
+`FwVueController.setScopeInitial` exports selected globals with the case-sensitive `is_` prefix as JSON Booleans using the existing framework conversion. This covers `is_list_btn_left` and future flags without per-key special cases. Configuration scalar values arrive through `IConfigurationSection.Value` as strings, even when appsettings JSON uses a Boolean literal. Conversion occurs only at the Vue export boundary: the configuration dictionary and non-prefixed globals are unchanged. Custom exported `is_*` globals must represent flags, not text. The existing `global_keys` selection still applies.
+
+The shared frontend store retains its original simple null-coalescing assignment. Explicit Boolean page overrides win; null or undefined uses the server Boolean. The earlier frontend string-normalization attempt was replaced at the developer's request. Actual row/header/column consumers expect Boolean truthiness, and the component declares a Boolean prop. The export follows the framework Boolean naming convention; no configuration-wide type inference or public API signature changes were introduced. Canonical guidance is in `docs/dynamic.md`.
+
+## Verification
+
+The focused server tests exercise existing initial-state generation and JSON serialization with true/false text in both casing forms, zero/one, empty, and null configuration. They assert JSON Boolean token types, preservation of another string global, and no mutation of the original global. The browser regression exercises both Boolean directions, null/undefined fallback, explicit overrides, rendered alignment, and absence of client errors. Tests use isolated settings, synthetic database responses, and offline browser fixtures; they do not connect to a configured database.
+
+```powershell
+dotnet test osafw-tests/osafw-tests.csproj --no-restore --filter 'FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~VueInteractionBrowserTests' -p:OutDir=artifacts/assistant_vue_boolean/build/net10.0/ --logger 'trx;LogFileName=server-boolean.trx' --results-directory artifacts/assistant_vue_boolean/results --nologo -v quiet
+git diff --check
+./docs/agents/tools/Normalize-TextFiles.ps1 -Check -Path osafw-app/App_Code/fw/FwVueController.cs,osafw-tests/App_Code/fw/FwVueControllerTests.cs,osafw-tests/App_Code/fw/VueInteractionBrowserTests.cs,docs/dynamic.md,docs/agents/tasks/summary-2026-10-21-vue-button-boolean.md,docs/agents/tasks/index.md
+```
+
+Before replacing the single-key check with the prefix convention, 96 tests passed (17 controller tests and 79 browser tests). After the convention change, the focused controller class and row-button browser regression passed all 19 tests, with zero failures or skips. The new custom-global regression covers additional true/false flags, a native Boolean, a missing flag, non-prefixed Boolean-looking strings, exact-prefix matching, global selection, and preservation of the source dictionary. The test build succeeded; diff whitespace and strict UTF-8/CRLF checks passed. The test command was executed with an absolute OutDir resolving to the shown repository-relative location; the browser fixture requires four output directory levels below the repository. Matching Chromium is installed. Results are retained in ignored `artifacts/assistant_vue_boolean/results/server-boolean.trx` and `boolean-convention.trx`. The final focused command used the filter `FullyQualifiedName~FwVueControllerTests|FullyQualifiedName~RowButtonAlignmentUsesBooleanGlobalsAndPreservesOverrides` and log filename `boolean-convention.trx`. An initial run exposed an incorrect test expectation that a null configuration section remains null; the loader represents it as an empty dictionary. The preservation assertion now compares with the original loaded value.
+
+Earlier live login and Demo Vue reload checks passed with the frontend-only version (25 right-aligned action cells and zero Vue warnings; the excluded BrowserLink 404 remained). After the user rebuilt/restarted in Visual Studio, a fresh authenticated smoke test verified the revised C# implementation: login reached the dashboard; Demo Vue loaded 25 rows with 25 right-aligned action cells; both the exported global and resolved alignment value were Boolean false. A full page reload again loaded 25 rows with a Boolean global. Both loads produced zero Vue warnings; the only console error was the excluded BrowserLink 404. Logged out after testing. No business records or schema were edited. BrowserLink was not modified. The user subsequently authorized committing and pushing the task changes after this smoke test passed.
+
+## Review
+
+Local deliberate second pass under `code_reviewer.md` and the consumer-contract overlay: no blocking findings. This localized Boolean export fix has focused server and browser checks; independent review was not required by the router. Inspected final implementation/test/doc diffs, actual consumers, and custom-global prefix/selection behavior, then audited this summary for consistency and privacy. No unrelated configuration coercion or frontend parsing remains. Review loop can stop.
