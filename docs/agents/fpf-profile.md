@@ -19,6 +19,7 @@ Routes apply to framework development and copied applications. Preserve delibera
 | Which upgrade or recovery states remain valid? | Systems Engineering SYSE.34 | Old/new readers and writers, persisted state, migration map, in-flight effects and copied-app consumers. |
 | Does a passing or flaky check answer the requested question? | Systems Engineering SYSE.31 | Revision/configuration/provider, intended and rejected cases, consumer use and missing required evidence under [verification.md](verification.md). |
 | How should agent procedures change and be evaluated? | Systems Engineering SYSE.47 / SYSE.46 | Concrete failed transition, smallest repair, baseline comparison and representative work outcomes; [workflow.md](workflow.md) retains authority. |
+| Must a procedure, its performer and its support change together? | Core C.40.JD | Separate the revised procedure, demonstrated ability under stated support, and needed tooling, access or authority. A text change alone does not establish capability; adequate existing arrangements need no development exercise. |
 | Which alternatives and consequences support a feature decision? | Decision Design PSDA.5, PSDA.7, PSDA.8, PSDA.9 | The same receiving decision and explicit comparison horizon; preserve alternative formulations, differing outcomes, uncertainty, actual users and approved intent. |
 
 Publication carriers in the referenced edition:
@@ -33,4 +34,4 @@ Recover changed carriers and other methods through the pinned Library Reference,
 
 Human capability methods concern people learning for later work. Fluent agent output is not evidence of improved agent capability or human learning. Physical/embodied methods need their stated domain conditions. FPF terminology does not require new classes, mandatory diagrams, forms, a decision matrix or an ADR for ordinary work. Keep app extensions contributor-safe and preserve them during instruction-pack upgrades.
 
-Navigation adapted from Anatoly Levenchuk's [FPF Library at d9c3dd65da3cd9f7df898698e49c5464dd8a6c4b](https://github.com/ailev/FPF/tree/d9c3dd65da3cd9f7df898698e49c5464dd8a6c4b), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: selected software questions and .NET framework contract owners; source methods must be read at use.
+Navigation adapted from Anatoly Levenchuk's [FPF Library at a5ac87ac15e78517d12bc66155b9da3ca254b643](https://github.com/ailev/FPF/tree/a5ac87ac15e78517d12bc66155b9da3ca254b643), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: selected software questions and .NET framework contract owners; source methods must be read at use.

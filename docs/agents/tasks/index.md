@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-10-23-fpf-refresh.md` - Adopted the latest FPF edition, migrated the existing local cache, clarified exact references and method use, and added one optional procedure/capability/support route in instruction pack 1.13.2.
 - `summary-2026-10-21-nuget-refresh.md` - Updated all outdated stable NuGet references, patched Negotiate, and passed default/optional builds, audits, and 207 isolated tests.
 - `summary-2026-10-21-vue-button-boolean.md` - Exported Vue row-button alignment as a server Boolean, preserved simple frontend overrides, and passed server/browser regressions and live login/reload checks after rebuild.
 - `summary-2026-10-21-renderer-cache-recovery.md` - Isolated renderer metadata, recovered template reads, verified browser/regression flows, and patched the vulnerable cryptography dependency.
