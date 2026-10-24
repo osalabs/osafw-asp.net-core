@@ -12,6 +12,11 @@ namespace osafw.Tests;
 [DoNotParallelize]
 public class FwParserIsolationTests
 {
+    private sealed class StubSettings : Settings
+    {
+        public override DBRow oneByIcode(string icode) => [];
+    }
+
     private readonly IConfiguration configuration = new ConfigurationBuilder().Build();
     private string templateRoot = "";
     private string host = "";
@@ -65,6 +70,7 @@ public class FwParserIsolationTests
         context.Response.Body = new MemoryStream();
 
         var fw = new FW(context, configuration, name => new RejectingDb(name));
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
         fw.route = new FwRoute
         {
             controller = "Home", controller_path = "/Home", action = "Index", method = "GET", format = format,
