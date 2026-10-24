@@ -12,6 +12,37 @@ namespace osafw.Tests;
 public class VueInteractionBrowserTests
 {
     [TestMethod, TestCategory("VueBrowser")]
+    public async Task RowButtonAlignmentUsesBooleanGlobalsAndPreservesOverrides()
+    {
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await Browser(playwright);
+        var page = await Page(browser, "<list-row-btn :row='{id:1}' :is-left='fwStore.uioptions.list.table.isButtonsLeft ?? false'></list-row-btn>");
+        var failures = await page.EvaluateAsync<string[]>("""
+            async () => {
+                const cases = [
+                    [false, null, false], [true, null, true],
+                    [false, undefined, false], [true, undefined, true],
+                    [true, false, false], [false, true, true]
+                ];
+                const failures = [];
+                for (const [globalValue, override, expected] of cases) {
+                    testStore.global.is_list_btn_left = globalValue;
+                    testStore.uioptions.list.table.isButtonsLeft = override;
+                    testStore.applyDefaultsAfterLoad({});
+                    await new Promise(requestAnimationFrame);
+                    const actual = testStore.uioptions.list.table.isButtonsLeft;
+                    if (actual !== expected) failures.push(JSON.stringify({globalValue, override, expected, actual}));
+                    const rightAligned = !!document.querySelector('td.text-end');
+                    if (rightAligned !== !expected) failures.push('Rendered alignment differs: ' + JSON.stringify({globalValue, override}));
+                }
+                return failures;
+            }
+            """);
+        Assert.IsEmpty(failures, string.Join("; ", failures));
+        await AssertNoClientErrors(page);
+    }
+
+    [TestMethod, TestCategory("VueBrowser")]
     [DataRow("relations", "relations")]
     [DataRow("unknown", "")]
     public async Task StartupPreservesValidTabLinksAndRejectsUnknownTabs(string requestedTab, string expectedTab)

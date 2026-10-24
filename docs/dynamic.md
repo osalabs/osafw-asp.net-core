@@ -1657,6 +1657,10 @@ Remove explicit `REQUIRED`/`INVALID` marker writes; the projection derives these
 
 The shared behavior is exported from `wwwroot/assets/js/vue-interactions.js` and imported by the common Vue templates. Copy that asset and the updated `site.css` alongside the templates; application `fwStoreActions` overrides still take precedence.
 
+### Row button alignment
+
+`fwStoreState.uioptions.list.table.isButtonsLeft` controls left/right placement of row actions. Set an explicit Boolean to override the global `is_list_btn_left`; null or undefined uses the global. `FwVueController` exports selected globals whose names start with `is_` as JSON Booleans, using the framework Boolean conversion on the server. This includes `global.is_list_btn_left`; additional Boolean globals only need an `is_` name and inclusion in `global_keys`. The prefix is case-sensitive, and missing/null values become false. The shared store uses it directly, without parsing strings. Other exported globals retain their existing types, even strings such as `"False"`. Custom `is_*` globals must represent flags rather than text. Copy the controller change with the Vue templates when upgrading an application.
+
 ### Saved column widths
 
 Vue list headers support dragging the right-edge resize control, pressing Left/Right for ten-pixel steps, Home/End for the limits, and double-clicking to fit visible text. Ctrl+double-click fits all visible data columns in one save, using the current page's content and preserving hidden-column widths. The eight-pixel grab area shows a one-pixel divider on hover or keyboard focus, with a resize cursor. Widths are rounded and limited to 60–800 pixels. The `user_views.widths` JSON map stores up to 100 configured columns, alongside the existing fields and density. Unknown columns and invalid widths are discarded. Resizing saves the current default view; saving a named view copies the current widths, loading a view restores them, and resetting a view clears them. Hidden configured columns retain their widths; removed columns are ignored.

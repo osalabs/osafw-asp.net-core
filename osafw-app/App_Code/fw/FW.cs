@@ -1072,7 +1072,24 @@ public class FW : IDisposable
     //   - (not for json) to perform redirect - set hf("_redirect")="url"
     public void parser(string basedir, FwDict ps)
     {
+        renderPage(basedir, ps, null);
+    }
+
+    /// <summary>
+    /// Renders with request-local metadata so cached controller data survives layout, JSON, and validation processing.
+    /// </summary>
+    /// <param name="basedir">Template directory, or empty to resolve it from the current route.</param>
+    /// <param name="ps">Controller data. Only the top level and modified validation error dictionary are copied; nested datasets remain shared.</param>
+    /// <param name="layoutOverride">Explicit layout from the parser overload, or null to use controller/request defaults.</param>
+    private void renderPage(string basedir, FwDict ps, string? layoutOverride)
+    {
         ensureSettingsGlobals();
+
+        ps = new FwDict(ps, ps.Comparer);
+        if (layoutOverride != null)
+        {
+            ps["_layout"] = layoutOverride;
+        }
 
         if (!this.response.HasStarted) this.response.Headers.CacheControl = cache_control;
 
@@ -1083,7 +1100,11 @@ public class FW : IDisposable
                 ps["error"] = new FwDict();
 
             if (ps["error"] is FwDict errorTable && !errorTable.ContainsKey("details"))
+            {
+                errorTable = new FwDict(errorTable, errorTable.Comparer);
                 errorTable["details"] = formErrors;
+                ps["error"] = errorTable;
+            }
             logger(LogLevel.DEBUG, "Form errors:", formErrorsForLog(formErrors));
         }
 
@@ -1190,6 +1211,11 @@ public class FW : IDisposable
         basedir = basedir.ToLower(); // make sure it's lower case
 
         string page = parsePage(basedir, layout, ps);
+        if (flogger.log_level >= LogLevel.DEBUG)
+        {
+            logger(LogLevel.DEBUG, "Rendered page: format=", format.Length == 0 ? "html" : format, ", layout=", layout, ", chars=", page.Length);
+        }
+
         // no need to set content type here, as it's set in Startup.cs
         //if (!this.response.HasStarted) response.ContentType = "text/html; charset=utf-8";
         responseWrite(page);
@@ -1238,13 +1264,17 @@ public class FW : IDisposable
     // - show page from template  /controller/action = parser('/controller/action/', $layout, $ps)
     public void parser(string basedir, string layout, FwDict ps)
     {
-        ps["_layout"] = layout;
-        parser(basedir, ps);
+        renderPage(basedir, ps, layout);
     }
 
     public void parserJson(object ps)
     {
         string page = parsePageInstance().parse_json(ps);
+        if (flogger.log_level >= LogLevel.DEBUG)
+        {
+            logger(LogLevel.DEBUG, "Rendered page: format=json, layout=none, chars=", page.Length);
+        }
+
         //if (!this.response.HasStarted) response.Headers.Add("Content-type", "application/json; charset=utf-8");
         response.ContentType = "application/json; charset=utf-8";
         responseWrite(page);
