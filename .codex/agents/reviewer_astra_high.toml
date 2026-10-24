@@ -1,5 +1,5 @@
 name = "reviewer_astra_high"
-description = "Ordinary independent high-effort review when review-routing requires a fresh reviewer."
+description = "Deeper independent review when consequential judgment or a developer constraint warrants the Astra alternative."
 model = "gpt-6-astra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"

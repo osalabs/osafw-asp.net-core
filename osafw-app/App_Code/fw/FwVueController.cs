@@ -15,7 +15,7 @@ public class FwVueController : FwDynamicController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    // list of keys from fw.G to pass to Vue
+    // Keys from fw.G to pass to Vue; is_* keys are exported as Booleans.
     protected string global_keys = "ROOT_URL is_list_btn_left date_format time_format timezone";
 
     public override void init(FW fw)
@@ -150,7 +150,8 @@ public class FwVueController : FwDynamicController
         var global = new FwDict();
         foreach (var key in Utils.qw(global_keys))
         {
-            global[key] = fw.G[key];
+            // Configuration providers expose scalars as text; is_* globals follow the Boolean naming convention.
+            global[key] = key.StartsWith("is_", StringComparison.Ordinal) ? fw.G[key].toBool() : fw.G[key];
         }
         global["user_iname"] = fw.model<Users>().iname(fw.userId);
         ps["global"] = global;

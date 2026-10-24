@@ -1,6 +1,6 @@
 # Orchestration Template
 
-Use only when the delegation criteria in `docs/agents/workflow.md` are met. That file owns eligibility, role selection, stage limits, file ownership, fallback, and evidence requirements. `docs/agents/review-routing.md` owns reviewer selection and handoff. This template supplies the task-specific plan and worker packets.
+Use only when the delegation criteria in `docs/agents/workflow.md` are met. That file owns eligibility, stage limits, and task evidence. `docs/agents/delegation.md` owns role/profile selection, file ownership, and fallback. `docs/agents/review-routing.md` owns reviewer selection and handoff. This template supplies the task-specific plan and worker packets.
 
 ## Objective
 
@@ -36,7 +36,7 @@ Stop/escalate if: <ambiguity, overlap, repeated failure, risky contract expansio
 
 ## Integration and verification
 
-Consume returned work and reconcile file leases using the workflow's ownership rules. The primary agent resolves shared contracts and inspects the integrated diff, including generated output and documentation.
+Consume returned work and reconcile file leases using `docs/agents/delegation.md` ownership rules. The primary agent resolves shared contracts and inspects the integrated diff, including generated output and documentation.
 
 Fill only the checks relevant to the changed behavior:
 

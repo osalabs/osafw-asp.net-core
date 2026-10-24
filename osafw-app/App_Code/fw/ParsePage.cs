@@ -278,6 +278,12 @@ public class ParsePage
             return "";
         }
 
+        // An empty inline template has no file to load.
+        if (tpl_name.Length == 0 && page.Length == 0)
+        {
+            return "";
+        }
+
         if (!string.IsNullOrEmpty(tpl_name) && !tpl_name.StartsWith('/'))
             tpl_name = basedir + "/" + tpl_name;
 
@@ -470,7 +476,9 @@ public class ParsePage
     /// <remarks>If a wildcard mask is provided in the filename, the method loads and concatenates the
     /// contents of all matching files. File contents are cached to improve performance on subsequent accesses. When
     /// file modification checking is enabled, the cache is refreshed if the file has changed. For best performance,
-    /// disable modification checking if template files do not change frequently.</remarks>
+    /// disable modification checking if template files do not change frequently. Missing files and failed reads
+    /// are not cached and are retried on the next access. An optional warning is commented out by default.
+    /// Successfully read empty files remain valid cache entries.</remarks>
     /// <param name="filename">The path to the file to be loaded. May include a wildcard mask (e.g., "*.txt") to load and combine multiple
     /// files. The path must refer to an existing file or set of files.</param>
     /// <returns>A string containing the content of the specified file, or the combined content of all files matching the mask if
@@ -501,30 +509,43 @@ public class ParsePage
             filename = filename.Replace('/', path_separator);
         // logger("preacaching [" & filename & "]")
 
-        // check and get from cache
-        if (FILE_CACHE.TryGetValue(filename, out FwDict? cached_item) && cached_item != null)
+        try
         {
-            // if debug is off - don't check modify time for better performance (but app restart would be necessary if template changed)
-            if (is_check_file_modifications)
+            // Check cached content before reading; production skips modification checks.
+            if (FILE_CACHE.TryGetValue(filename, out FwDict? cached_item) && cached_item != null)
+            {
+                if (is_check_file_modifications)
+                {
+                    modtime = File.GetLastWriteTime(filename).ToString();
+                    string mtmp = cached_item["modtime"].toStr();
+                    if (string.IsNullOrEmpty(mtmp) || mtmp == modtime)
+                        return cached_item["data"].toStr();
+                }
+                else
+                {
+                    return cached_item["data"].toStr();
+                }
+            }
+            else if (is_check_file_modifications)
             {
                 modtime = File.GetLastWriteTime(filename).ToString();
-                string mtmp = cached_item["modtime"].toStr();
-                if (string.IsNullOrEmpty(mtmp) || mtmp == modtime)
-                    return cached_item["data"].toStr();
             }
-            else
-                return cached_item["data"].toStr();
-        }
-        else if (is_check_file_modifications)
-            modtime = File.GetLastWriteTime(filename).ToString();
 
-        // logger("ParsePage - try load file " & filename)
-        // get from fs(if not in cache)
-        if (File.Exists(filename))
+            // Read directly so failures are distinguishable from successfully read empty files.
+            file_data = File.ReadAllText(filename);
+        }
+        catch (FileNotFoundException)
         {
-            file_data = Utils.getFileContent(filename);
-            if (is_check_file_modifications && string.IsNullOrEmpty(modtime))
-                modtime = File.GetLastWriteTime(filename).ToString();
+            return ""; // Missing optional includes are quiet and retried on the next access.
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return "";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // logger(LogLevel.WARN, "ParsePage - template read failed; not cached: ", filename, ex.Message);
+            return "";
         }
 
         // get from fs(if not in cache)
