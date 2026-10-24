@@ -19,7 +19,7 @@ public static class FwSettingsProtection
     public static void configure(IServiceCollection services, FwDict settings)
     {
         var definition = (settings["db"] as FwDict)?["main"] as FwDict ?? [];
-        var resolved = definition;
+        var resolved = FwDbConnections.Shared.Resolve(definition, "main");
         var name = settings["DATA_PROTECTION_APPLICATION_NAME"].toStr();
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException("DATA_PROTECTION_APPLICATION_NAME must be configured before using protected data.");

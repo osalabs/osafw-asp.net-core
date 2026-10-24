@@ -225,6 +225,30 @@ public class SecurityGroup1DevConfigureTests
     }
 
     [TestMethod]
+    public void DevConfigure_IndexRecognizesExternalConnectionSourceWithoutDisplayingDescriptor()
+    {
+        var context = createHttpContext("app.example.test");
+        using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+        {
+            ["appSettings:ROOT_DOMAIN"] = CanonicalOrigin,
+            ["appSettings:db:main:connection_string_secret:provider"] = "unsupported-test-provider",
+            ["appSettings:db:main:connection_string_secret:secret_id"] = "SensitiveSecretIdentifier",
+            ["appSettings:db:main:type"] = "SQL",
+        }, context);
+        var fw = scope.Fw;
+        var controller = new DevConfigureController();
+        controller.init(fw);
+
+        var ps = controller.IndexAction();
+        var flattenedValues = string.Join("\n", ps.Values.Select(value => value?.ToString() ?? ""));
+
+        Assert.IsTrue(ps["is_db_config"].toBool());
+        Assert.IsFalse(ps["is_db_conn"].toBool());
+        Assert.IsFalse(flattenedValues.Contains("SensitiveSecretIdentifier", StringComparison.Ordinal));
+        Assert.IsFalse(flattenedValues.Contains("unsupported-test-provider", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public void InitDB_RejectsGetEvenWithToken()
     {
         var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");

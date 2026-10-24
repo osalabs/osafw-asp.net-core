@@ -41,7 +41,7 @@ public class DevConfigureController : FwController
         ps["is_db_config"] = false;
         var configdb = (FwDict?)fw.config("db");
         if (configdb?["main"] is FwDict mainDb
-            && !Utils.isEmpty(mainDb["connection_string"]))
+            && (!Utils.isEmpty(mainDb["connection_string"]) || mainDb.ContainsKey("connection_string_secret")))
             ps["is_db_config"] = true;
 
         DB db;

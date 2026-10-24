@@ -70,6 +70,30 @@ Run with the application pool stopped and select the target deployment environme
 
 The optional override name imports that legacy `appSettings.override.<name>` after the base values. Existing explicit Settings values win. The command also encrypts recognized plaintext credential rows already in the database, requires an explicit stable `DATA_PROTECTION_APPLICATION_NAME`, prints only the number of changed rows, and does not install a runtime fallback. Delete the retained legacy file securely after checking the migrated values.
 
+### Named Database Connections
+
+Every connection is named under `appSettings.db`, including `main` and any application-specific connections. A definition uses either an inline `connection_string` or an external `connection_string_secret`, never both:
+
+```json
+{
+  "appSettings": {
+    "db": {
+      "main": {
+        "type": "SQL",
+        "timezone": "",
+        "connection_string_secret": {
+          "provider": "aws-secrets-manager",
+          "secret_id": "production/app/sql-main",
+          "region": "us-east-1"
+        }
+      }
+    }
+  }
+}
+```
+
+The AWS secret string is the complete connection string. `region` is optional when the AWS SDK can resolve it from the host. The framework fetches each external secret once per application process and shares the cached value between startup and later named-connection use. Restart the IIS application pool after rotating the secret. Prefer an EC2 instance role over static AWS credentials.
+
 ### Data Protection Identity
 
 Set `appSettings.DATA_PROTECTION_APPLICATION_NAME` explicitly and keep it stable across deployments and server moves. Existing applications must set it to their previous effective `SITE_NAME` before upgrading; the framework sample uses `Site Name`. Changing this value isolates the application from its existing Data Protection keys and makes protected Settings credentials unreadable. Branding changes should update the Site Settings `SITE_NAME` row, not this identifier.
