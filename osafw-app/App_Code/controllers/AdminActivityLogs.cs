@@ -32,7 +32,7 @@ public class AdminActivityLogsController : FwController
 
         //set default return url just for the case
         if (Utils.isEmpty(return_url))
-            return_url = fw.config("LOGGED_DEFAULT_URL").toStr();
+            return_url = fw.model<Settings>().read("LOGGED_DEFAULT_URL", fw.config("LOGGED_DEFAULT_URL").toStr());
     }
 
     public virtual FwDict? IndexAction()

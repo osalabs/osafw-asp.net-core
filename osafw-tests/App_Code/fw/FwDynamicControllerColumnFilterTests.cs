@@ -334,7 +334,11 @@ public class FwDynamicControllerColumnFilterTests
     [TestMethod]
     public void JsonDateRange_UsesLocalDayBoundariesAndExclusiveDatetimeTo()
     {
-        var controller = BuildController(config: BuildConfig(fields: ExplicitFilterFields()));
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:timezone"] = "UTC",
+        });
+        var controller = BuildController(fw, BuildConfig(fields: ExplicitFilterFields()));
 
         controller.ApplySearch(new FwDict
         {

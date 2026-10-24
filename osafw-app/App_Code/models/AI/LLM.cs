@@ -155,7 +155,7 @@ public class LLM : FwModel
 
     private string apiKey()
     {
-        return fw.model<Settings>().read("OPENAI_API_KEY");
+        return fw.model<Settings>().readSecret("OPENAI_API_KEY");
     }
 
     private static JsonElement parseJsonSchema(string json_schema)

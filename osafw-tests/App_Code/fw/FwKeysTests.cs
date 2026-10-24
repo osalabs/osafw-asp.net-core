@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 
 namespace osafw.Tests;
@@ -28,7 +29,8 @@ public class FwKeysTests
             return Rows.Where(r => r["itype"].toInt() == where["itype"].toInt()).Select(r => r[field_name].toStr()).ToList();
         }
 
-        public override object? value(string table, FwDict where, string field_name = "", string order_by = "") => 0;
+        public override object? value(string table, FwDict where, string field_name = "", string order_by = "")
+            => Rows.Any(r => r["itype"].toInt() == where["itype"].toInt() && r["iname"].toStr() == where["iname"].toStr()) ? 1 : 0;
 
         public override int insert(string table, IDictionary fields)
         {
@@ -46,9 +48,16 @@ public class FwKeysTests
             return insert(table, (IDictionary)fields);
         }
 
-        public override int update(string table, IDictionary fields, IDictionary where) => 1;
+        public override int update(string table, IDictionary fields, IDictionary where)
+        {
+            var row = Rows.Single(r => r["itype"].toInt() == where["itype"].toInt() && r["iname"].toStr() == where["iname"].toStr());
+            foreach (DictionaryEntry kv in fields)
+                row[kv.Key.toStr()] = kv.Value;
+            return 1;
+        }
 
-        public override int update(string table, FwDict fields, FwDict where) => 1;
+        public override int update(string table, FwDict fields, FwDict where)
+            => update(table, (IDictionary)fields, (IDictionary)where);
 
         public override int exec(string sql, FwDict? @params = null, bool is_get_identity = false)
         {
@@ -58,13 +67,11 @@ public class FwKeysTests
     }
 
     [TestMethod]
-    public void GetAllElements_HandlesDbErrorsGracefully()
+    public void GetAllElements_ThrowsWhenDurableStoreCannotBeRead()
     {
         var repo = new FwKeysXmlRepository(new ThrowingDb());
 
-        var elements = repo.GetAllElements();
-
-        Assert.IsEmpty(elements);
+        Assert.ThrowsExactly<CryptographicException>(() => repo.GetAllElements());
     }
 
     [TestMethod]
@@ -84,6 +91,6 @@ public class FwKeysTests
 
         Assert.HasCount(1, db.Rows);
         StringAssert.Contains(db.Rows[0]["XmlValue"].toStr(), "child");
-        Assert.IsTrue(db.ExecCalled);
+        Assert.IsFalse(db.ExecCalled, "Old protection keys must not be deleted by age.");
     }
 }

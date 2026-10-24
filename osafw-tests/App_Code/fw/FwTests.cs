@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace osafw.Tests
@@ -128,7 +129,9 @@ namespace osafw.Tests
         public void FormatUserDateTime_FormatsIsoAndLocal()
         {
             var context = TestHelpers.CreateHttpContext();
-            var configuration = new ConfigurationBuilder().Build();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["appSettings:timezone"] = "UTC" })
+                .Build();
 
             var fw = new FW(context, configuration);
 
@@ -145,7 +148,9 @@ namespace osafw.Tests
         public void FormatUserDateTime_AcceptsDateTimeOffset()
         {
             var context = TestHelpers.CreateHttpContext();
-            var configuration = new ConfigurationBuilder().Build();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["appSettings:timezone"] = "UTC" })
+                .Build();
 
             var fw = new FW(context, configuration);
             var dto = new System.DateTimeOffset(2024, 1, 1, 15, 0, 0, System.TimeSpan.FromHours(3));
@@ -164,6 +169,7 @@ namespace osafw.Tests
             var fw = new FW(context, configuration);
             fw.G["date_format"] = DateUtils.DATE_FORMAT_DMY;
             fw.G["time_format"] = DateUtils.TIME_FORMAT_24;
+            fw.G["timezone"] = DateUtils.TZ_UTC;
 
             var formatted = fw.formatUserDateTime("2024-02-03 15:30:00");
 
@@ -185,11 +191,10 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void ResolveTestEmailRecipient_PrefersConfiguredTestEmail()
+        public void ResolveTestEmailRecipient_UsesSiteSetting()
         {
             var fw = CreateFwForHost("test-email-configured");
-            TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-            fw.config()["test_email"] = " configured@example.test ";
+            TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " configured@example.test " });
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("configured@example.test", fw.resolveTestEmailRecipient());
@@ -200,7 +205,6 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-session-fallback");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-            fw.config()["test_email"] = " ";
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -211,18 +215,16 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-site-setting");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " site@example.test " });
-            fw.config()["test_email"] = "configured@example.test";
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("site@example.test", fw.resolveTestEmailRecipient());
         }
 
         [TestMethod]
-        public void ResolveTestEmailRecipient_CurrentUserSiteSettingOverridesConfig()
+        public void ResolveTestEmailRecipient_CurrentUserSiteSettingUsesSession()
         {
             var fw = CreateFwForHost("test-email-current-user");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " current_user " });
-            fw.config()["test_email"] = "configured@example.test";
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -233,7 +235,6 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-settings-failure");
             TestHelpers.RegisterModel(fw, (Settings)new ThrowingSettings());
-            fw.config()["test_email"] = "configured@example.test";
 
             var error = Assert.ThrowsExactly<System.InvalidOperationException>(() => fw.resolveTestEmailRecipient());
 
@@ -249,6 +250,32 @@ namespace osafw.Tests
             _ = new FW(context, configuration);
 
             Assert.IsFalse(context.Session.Keys.Contains("_flash"));
+        }
+
+        [TestMethod]
+        public void Constructor_DoesNotProjectBootstrapOrCredentialConfigurationIntoGlobals()
+        {
+            var configuration = new System.Collections.Generic.Dictionary<string, string?>
+            {
+                ["appSettings:db:main:connection_string"] = "Server=secret.example;Password=db-secret;",
+                ["appSettings:db:main:type"] = "SQL",
+                ["appSettings:mail:password"] = "smtp-secret",
+                ["appSettings:AWSAccessKey"] = "access-secret",
+                ["appSettings:AWSSecretKey"] = "aws-secret",
+                ["appSettings:OPENAI_API_KEY"] = "openai-secret",
+                ["appSettings:API_KEY"] = "api-secret",
+                ["appSettings:override:Other:mail:password"] = "nested-secret",
+            };
+            using var scope = new FwTestScope(_ => new RejectingDb(), configuration);
+
+            Assert.IsFalse(scope.Fw.G.ContainsKey("db"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("override"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("mail"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("AWSAccessKey"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("AWSSecretKey"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("OPENAI_API_KEY"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("API_KEY"));
+            Assert.IsTrue(scope.Fw.config().ContainsKey("db"));
         }
 
         [TestMethod]

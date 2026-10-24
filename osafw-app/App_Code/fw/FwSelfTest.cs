@@ -108,9 +108,6 @@ public class FwSelfTest
             echo("template parser", ex.Message, Result.ERR);
         }
 
-        var accessLevels = fw.config("access_levels") as FwDict;
-        is_true("access_levels", accessLevels != null && accessLevels.Count > 0, "Not defined");
-
         var cacheKey = "selftest_" + Guid.NewGuid().ToString("N");
         var cacheValue = DateTime.UtcNow.Ticks.ToString();
         try
@@ -162,8 +159,9 @@ public class FwSelfTest
         }
 
         // emails set
-        var mailFrom = fw.config("mail_from") ?? string.Empty;
-        var supportEmail = fw.config("support_email") ?? string.Empty;
+        var settings = fw.model<Settings>();
+        var mailFrom = settings.read("mail_from");
+        var supportEmail = settings.read("support_email");
         is_notempty("mail_from", mailFrom);
         is_notempty("support_email", supportEmail);
 

@@ -21,6 +21,11 @@ public class AssistantRuntimeStatusTests
                 ? new DBRow(new FwDict { ["id"] = "1", ["icode"] = icode, ["ivalue"] = value })
                 : [];
         }
+
+        public override string readSecret(string code)
+        {
+            return values.TryGetValue(code, out var value) ? value : "";
+        }
     }
 
     [TestMethod]

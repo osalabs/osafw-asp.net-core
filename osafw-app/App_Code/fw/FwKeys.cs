@@ -1,90 +1,84 @@
-using Microsoft.AspNetCore.DataProtection.Repositories;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 
 namespace osafw;
 
+/// <summary>Durable Data Protection keys. Persistence failures are fatal; expired keys remain available for decryption.</summary>
 public class FwKeysXmlRepository : IXmlRepository
 {
-    const int ITYPE_GENERIC_KEY = 0;
-    const int ITYPE_DATA_PROTECTION_KEY = 10;
+    private const int ITYPE_DATA_PROTECTION_KEY = 10;
+    private readonly Func<DB> createDb;
+    private readonly bool is_owned;
+    private const string TABLE_NAME = "fwkeys";
 
-    private readonly DB db;
-    private readonly string table_name = "fwkeys";
-
+    /// <summary>Uses a caller-owned wrapper, retained for existing callers.</summary>
     public FwKeysXmlRepository(DB db)
     {
-        this.db = db;
+        createDb = () => db;
+    }
+
+    /// <summary>Creates and disposes a separate wrapper per operation, suitable for singleton key services.</summary>
+    public FwKeysXmlRepository(Func<DB> createDb)
+    {
+        this.createDb = createDb;
+        is_owned = true;
     }
 
     public IReadOnlyCollection<XElement> GetAllElements()
     {
-        var allXml = new List<XElement>();
-
+        var db = createDb();
         try
         {
-            var values = db.col(table_name, new FwDict { { "itype", ITYPE_DATA_PROTECTION_KEY } }, "XmlValue");
-            foreach (var xmlStr in values)
-            {
-                var elem = XElement.Parse(xmlStr);
-                allXml.Add(elem);
-            }
-            db.disconnect();
-
+            return db.col(TABLE_NAME, new FwDict { ["itype"] = ITYPE_DATA_PROTECTION_KEY }, "XmlValue")
+                .Select(value => XElement.Parse(value.toStr())).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // ignore errors, could happen when db is not configured yet
-            System.Diagnostics.Debug.WriteLine("Exception in FwKeysXmlRepository.GetAllElements:", ex.Message);
+            throw new CryptographicException("Unable to read the durable Data Protection key store. Initialize or restore the database first.");
         }
-
-        return allXml;
+        finally
+        {
+            if (is_owned)
+                db.Dispose();
+        }
     }
 
     public void StoreElement(XElement element, string friendlyName)
     {
-        // Because keys can be updated as well as added,
-        // we should check if there's an existing row for this key ID.
-        // The system includes a <key id="GUID"> in the XML.
-        // We can parse the <key id="..."> from the element:
-
-        var keyId = element.Attribute("id")?.Value;
-        var xmlStr = element.ToString(SaveOptions.DisableFormatting);
-
+        var db = createDb();
         try
         {
+            // Revocation elements need a stable name too; they do not have a key id.
+            var keyId = element.Attribute("id")?.Value ?? friendlyName;
+            if (string.IsNullOrWhiteSpace(keyId))
+                throw new CryptographicException("A key-store element requires a name.");
 
-            // Try to see if a row with the same key id already exists:
-            var where = new FwDict { { "itype", ITYPE_DATA_PROTECTION_KEY }, { "iname", keyId } };
-            var is_exists = db.value(table_name, where, "1").toBool();
-            if (is_exists)
+            var where = new FwDict { ["itype"] = ITYPE_DATA_PROTECTION_KEY, ["iname"] = keyId };
+            var fields = new FwDict { ["XmlValue"] = element.ToString(SaveOptions.DisableFormatting), ["upd_time"] = DB.NOW };
+            if (db.value(TABLE_NAME, where, "1").toBool())
             {
-                // Update existing row
-                db.update(table_name, where, new FwDict { { "XmlValue", xmlStr }, { "upd_time", DB.NOW } });
+                if (db.update(TABLE_NAME, fields, where) != 1)
+                    throw new CryptographicException("A protection key could not be updated.");
             }
             else
             {
-                // Insert new row
-                where["XmlValue"] = xmlStr;
-                db.insert(table_name, where);
+                fields["itype"] = ITYPE_DATA_PROTECTION_KEY;
+                fields["iname"] = keyId;
+                db.insert(TABLE_NAME, fields);
             }
-
-            //also launch cleanup of old keys whenever we store a new key
-            _cleanup();
-            db.disconnect();
-
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine("Exception in FwKeysXmlRepository.StoreElement:", ex.Message);
+            throw new CryptographicException("Unable to persist a durable Data Protection key.");
         }
-
-    }
-
-    private void _cleanup()
-    {
-        db.exec($@"DELETE FROM {table_name}
-                WHERE itype=@itype
-                  AND upd_time < @cutoff", new FwDict { { "itype", ITYPE_DATA_PROTECTION_KEY }, { "cutoff", DateTime.UtcNow.AddDays(-90) } });
+        finally
+        {
+            if (is_owned)
+                db.Dispose();
+        }
     }
 }

@@ -1,6 +1,9 @@
 -- MySQL style
 -- demo tables, use for reference/development, remove when not required
 
+INSERT INTO settings (is_user_edit, input, access_level, mask, basis, icat, icode, ivalue, iname, idesc, allowed_values) VALUES
+(1, 10, 90, 0, 1, '', 'test', 'novalue', 'test settings', 'description', '');
+
 /*Demo Dictionary table*/
 DROP TABLE IF EXISTS demo_dicts;
 CREATE TABLE demo_dicts (

@@ -45,6 +45,11 @@ public class AssistantFeatureTests
                 ? new DBRow(new FwDict { ["id"] = "1", ["icode"] = icode, ["ivalue"] = value })
                 : [];
         }
+
+        public override string readSecret(string code)
+        {
+            return values.TryGetValue(code, out var value) ? value : "";
+        }
     }
 
     private sealed class ContactSearchDb : DB
@@ -927,6 +932,9 @@ public class AssistantFeatureTests
         foreach (string file in files)
         {
             string sql = File.ReadAllText(file);
+            if (Path.GetFileName(file).Equals("fwdatabase.sql", StringComparison.OrdinalIgnoreCase))
+                sql += File.ReadAllText(Path.Combine(Path.GetDirectoryName(file)!, "settings.sql"));
+
             StringAssert.Contains(sql, "index_attempt_no");
             StringAssert.Contains(sql, "next_retry_at");
             StringAssert.Contains(sql, "ASSISTANT_RUN_TIMEOUT_SECONDS");

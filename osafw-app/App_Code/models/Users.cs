@@ -128,9 +128,9 @@ public class Users : FwModel<Users.Row>
 
         // set ui_theme/ui_mode form the config if not set
         if (!item.ContainsKey("ui_theme"))
-            item["ui_theme"] = fw.config("ui_theme").toInt();
+            item["ui_theme"] = fw.model<Settings>().readInt("ui_theme");
         if (!item.ContainsKey("ui_mode"))
-            item["ui_mode"] = fw.config("ui_mode").toInt();
+            item["ui_mode"] = fw.model<Settings>().readInt("ui_mode");
 
         // set default date/time format; empty timezone means browser auto-detect.
         if (!item.ContainsKey("date_format"))

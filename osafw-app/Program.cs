@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.CookiePolicy;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -23,17 +21,29 @@ namespace osafw;
 
 public static class Program
 {
-    internal const bool ALLOW_PLAINTEXT_DP_KEYS = false;
-
     public static void Main(string[] args)
     {
         var isCliCommand = DevCli.isCommand(args);
-        if (isCliCommand)
+        var isSettingsMigration = FwSettingsMigration.isCommand(args);
+        var isDatabaseInit = FwDatabaseInit.isCommand(args);
+        if (isCliCommand || isDatabaseInit)
             DevCli.useDefaultDevelopmentEnvironment();
 
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
-        var builder = WebApplication.CreateBuilder(isCliCommand ? [] : args);
+        var builder = WebApplication.CreateBuilder(isCliCommand || isSettingsMigration || isDatabaseInit ? [] : args);
         FwConfig.setDefaultOverrideName(builder.Environment.EnvironmentName);
+
+        if (isDatabaseInit)
+        {
+            Environment.ExitCode = FwDatabaseInit.run(args, builder.Configuration);
+            return;
+        }
+
+        if (isSettingsMigration)
+        {
+            Environment.ExitCode = FwSettingsMigration.run(args, builder.Configuration);
+            return;
+        }
 
         if (isCliCommand)
         {
@@ -42,7 +52,15 @@ public static class Program
         }
 
 #if isSentry
-        builder.WebHost.UseSentry();
+        builder.WebHost.UseSentry(options => options.SetBeforeSend((sentryEvent, hint) =>
+        {
+            if (sentryEvent.Tags.TryGetValue("osafw_sensitive_settings", out var marker) && marker == "1")
+            {
+                sentryEvent.Request.Data = null;
+                sentryEvent.Request.Cookies = null;
+            }
+            return sentryEvent;
+        }));
 #endif
 
         // read the environment settings
@@ -57,11 +75,6 @@ public static class Program
         var dbType = mainDB["type"].toStr();
         if (string.IsNullOrEmpty(connStr) || string.IsNullOrEmpty(dbType))
             throw new ApplicationException("Main DB configuration is missing");
-
-        // Site name used in data-protection app name
-        var appName = settings["SITE_NAME"].toStr();
-        if (string.IsNullOrEmpty(appName))
-            appName = "osafw";
 
         //-------------------------------
         // Service registration
@@ -85,18 +98,8 @@ public static class Program
                 ];
         });
 
-        // Data Protection
-        // repository used for keys storage in the DB
-        var repository = new FwKeysXmlRepository(new DB(connStr, dbType, "main"));
-        var dataProtectionBuilder = builder.Services.AddDataProtection().SetApplicationName(appName);
-        if (OperatingSystem.IsWindows())
-            dataProtectionBuilder.ProtectKeysWithDpapi(protectToLocalMachine: true);
-        else if (!ALLOW_PLAINTEXT_DP_KEYS)
-            throw new ApplicationException("Data Protection key encryption requires Windows DPAPI or an explicit local/dev plaintext fallback.");
-        builder.Services.Configure<KeyManagementOptions>(options =>
-            {
-                options.XmlRepository = repository; // i.e. "PersistKeysToCustomXmlRepository"
-            });
+        // Durable keys are shared by web sessions and protected Settings.
+        FwSettingsProtection.configure(builder.Services, settings);
 
         // Session rows use the provider-specific cache backing store for the main DB.
         builder.Services.AddFwSessionCache(connStr, dbType);
@@ -123,9 +126,7 @@ public static class Program
             if (idleTimeout > 0)
                 options.IdleTimeout = TimeSpan.FromSeconds(idleTimeout);
 
-            var cookieHttpOnlySetting = builder.Configuration.GetValue<bool?>("cookieHttpOnly");
-            if (cookieHttpOnlySetting != null)
-                options.Cookie.HttpOnly = cookieHttpOnlySetting.Value;
+            options.Cookie.HttpOnly = true;
         });
 
 #if isWindowsAuth

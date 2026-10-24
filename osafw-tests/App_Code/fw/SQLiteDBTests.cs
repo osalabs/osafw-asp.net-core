@@ -39,7 +39,7 @@ public class SQLiteDBTests
     public void SQLiteSchemaScripts_CreateFreshFrameworkDatabase()
     {
         var sqlRoot = Path.Combine(repoRoot(), "osafw-app", "App_Data", "sql", "sqlite");
-        foreach (var script in new[] { "fwdatabase.sql", "lookups.sql", "views.sql", "roles.sql", "demo.sql" })
+        foreach (var script in new[] { "fwdatabase.sql", "settings.sql", "lookups.sql", "views.sql", "roles.sql", "demo.sql" })
             db.execMultipleSQL(File.ReadAllText(Path.Combine(sqlRoot, script)));
 
         var tables = db.tables();
@@ -55,7 +55,19 @@ public class SQLiteDBTests
         Assert.AreEqual("", testEmail["ivalue"]);
         Assert.AreEqual(Settings.INPUT_TEXT, testEmail["input"].toInt());
         Assert.AreEqual(1, testEmail["is_user_edit"].toInt());
+        Assert.AreEqual(100, testEmail["access_level"].toInt());
+        Assert.AreEqual(0, testEmail["mask"].toInt());
+        Assert.AreEqual(1, testEmail["basis"].toInt());
         StringAssert.Contains(testEmail["idesc"], "current_user");
+
+        var inheritedSiteName = db.row("settings", DB.h("icode", "SITE_NAME"));
+        Assert.AreEqual(90, inheritedSiteName["access_level"].toInt());
+        Assert.AreEqual(0, inheritedSiteName["basis"].toInt());
+
+        var openAiKey = db.row("settings", DB.h("icode", "OPENAI_API_KEY"));
+        Assert.AreEqual(100, openAiKey["access_level"].toInt());
+        Assert.AreEqual(10, openAiKey["mask"].toInt());
+        Assert.AreEqual(1, openAiKey["basis"].toInt());
 
         var userSchema = db.tableSchemaFull("users");
         Assert.IsTrue(userSchema.ContainsKey("iname"));
@@ -93,6 +105,51 @@ public class SQLiteDBTests
         Assert.IsTrue(db.tableSchemaFull("user_views").ContainsKey("widths"));
         db.insert("user_views", DB.h("icode", "/Legacy"));
         Assert.AreEqual("{}", db.value("user_views", DB.h("icode", "/Legacy"), "widths").toStr());
+    }
+
+    [TestMethod]
+    public void SettingsFoundationUpdate_PreservesLegacyValuesAndAddsSecureMetadata()
+    {
+        db.exec(@"CREATE TABLE settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  icat TEXT NOT NULL DEFAULT '',
+  icode TEXT NOT NULL DEFAULT '',
+  ivalue TEXT NOT NULL DEFAULT '',
+  iname TEXT NOT NULL DEFAULT '',
+  idesc TEXT,
+  input INTEGER NOT NULL DEFAULT 0,
+  allowed_values TEXT,
+  is_user_edit INTEGER DEFAULT 0
+)");
+        db.exec("CREATE UNIQUE INDEX UX_settings_icode ON settings (icode)");
+        db.exec("INSERT INTO settings (icode, ivalue) VALUES ('custom_setting', 'preserve-me')");
+        db.exec("INSERT INTO settings (icode, ivalue, input) VALUES ('legacy_secret', 'plaintext-for-runtime-migration', 90)");
+        db.exec("INSERT INTO settings (icode, ivalue) VALUES ('test_email', 'existing@example.test')");
+        string update = File.ReadAllText(Path.Combine(
+            repoRoot(), "osafw-app", "App_Data", "sql", "sqlite", "updates", "upd2026-09-27-settings-foundation.sql"));
+
+        db.execMultipleSQL(update);
+
+        var custom = db.row("settings", DB.h("icode", "custom_setting"));
+        Assert.AreEqual("preserve-me", custom["ivalue"]);
+        Assert.AreEqual(100, custom["access_level"].toInt());
+        Assert.AreEqual(1, custom["basis"].toInt());
+
+        var credential = db.row("settings", DB.h("icode", "legacy_secret"));
+        Assert.AreEqual("plaintext-for-runtime-migration", credential["ivalue"]);
+        Assert.AreEqual(100, credential["access_level"].toInt());
+        Assert.AreEqual(10, credential["mask"].toInt());
+        Assert.AreEqual(1, credential["basis"].toInt());
+
+        var testEmail = db.row("settings", DB.h("icode", "test_email"));
+        Assert.AreEqual("existing@example.test", testEmail["ivalue"]);
+        Assert.AreEqual(100, testEmail["access_level"].toInt());
+        Assert.AreEqual(1, testEmail["basis"].toInt());
+
+        var inheritedSiteName = db.row("settings", DB.h("icode", "SITE_NAME"));
+        Assert.AreEqual("", inheritedSiteName["ivalue"]);
+        Assert.AreEqual(90, inheritedSiteName["access_level"].toInt());
+        Assert.AreEqual(0, inheritedSiteName["basis"].toInt());
     }
 
     [TestMethod]

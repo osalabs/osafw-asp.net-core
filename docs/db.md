@@ -103,7 +103,7 @@ To enable SQLite:
 }
 ```
 
-4. Initialize with the scripts from `osafw-app/App_Data/sql/sqlite/` in this order: `fwdatabase.sql`, `database.sql`, `lookups.sql`, `views.sql`, then optional `roles.sql` and `demo.sql`.
+4. Initialize with the scripts from `osafw-app/App_Data/sql/sqlite/` in this order: `fwdatabase.sql`, `database.sql`, `settings.sql`, `lookups.sql`, `views.sql`, then optional `roles.sql` and `demo.sql`.
 
 When the app is compiled with `isSQLite` and `type` is `SQLite`, `FwSessionCache` stores sessions in the SQLite `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server or another verified distributed provider/cache instead of SQLite.
 

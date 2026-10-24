@@ -14,7 +14,7 @@ namespace osafw;
 
 public abstract partial class FwController
 {
-    public static int access_level = Users.ACL_VISITOR; // access level for the controller. fw.config("access_levels") overrides this. 0 (public access), 1(min logged level), 100(max admin level)
+    public static int access_level = Users.ACL_VISITOR; // 0 (public access), 1(min logged level), 100(max admin level)
 
     public static string route_default_action = ""; // supported values - "" (use Default Parser for unknown actions), Index (use IndexAction for unknown actions), Show (assume action is id and use ShowAction)
     public string route_onerror = ""; //route redirect action name in case ApplicationException occurs in current route, if empty - 500 error page returned

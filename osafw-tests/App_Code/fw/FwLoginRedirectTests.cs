@@ -10,6 +10,11 @@ namespace osafw.Tests;
 [TestClass]
 public class FwLoginRedirectTests
 {
+    private sealed class StubSettings : Settings
+    {
+        public override string read(string icode, string defaultValue) => defaultValue;
+    }
+
     [TestMethod]
     [DataRow("", "/Admin/DemosDynamic", "")]
     [DataRow("", "/Admin/DemosDynamic/", "?dofilter=1&f[title]=A%26B&gourl=https%3A%2F%2Fgoogle.com")]
@@ -30,10 +35,9 @@ public class FwLoginRedirectTests
     }
 
     [TestMethod]
-    public void Dispatch_ConfigAccessRuleAlsoPreservesOriginalUrl()
+    public void Dispatch_ControllerAccessRuleAlsoPreservesOriginalUrl()
     {
         using var fw = createFw();
-        fw.config()["access_levels"] = new FwDict { ["/AdminDemosDynamic"] = Users.ACL_MANAGER };
 
         fw.dispatch();
 
@@ -92,6 +96,8 @@ public class FwLoginRedirectTests
             ["appSettings:UNLOGGED_DEFAULT_URL"] = "/",
             ["appSettings:route_prefixes:/Admin"] = "True",
         };
-        return new FW(context, new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+        var fw = new FW(context, new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
+        return fw;
     }
 }

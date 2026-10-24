@@ -7,7 +7,7 @@ using System;
 
 namespace osafw;
 
-public class Settings : FwModel<Settings.Row>
+public partial class Settings : FwModel<Settings.Row>
 {
     public const string ICAT_AI = "AI";
     public const string ICODE_TEST_EMAIL = "test_email";
@@ -34,6 +34,9 @@ public class Settings : FwModel<Settings.Row>
         public int input { get; set; }
         public string allowed_values { get; set; } = string.Empty;
         public int is_user_edit { get; set; }
+        public int access_level { get; set; } = Users.ACL_SITEADMIN;
+        public int mask { get; set; }
+        public int basis { get; set; }
         public DateTime add_time { get; set; }
         public int add_users_id { get; set; }
         public DateTime? upd_time { get; set; }
@@ -45,12 +48,13 @@ public class Settings : FwModel<Settings.Row>
         table_name = "settings";
 
         field_status = "";
+        is_log_fields_changed = false;
     }
 
     /// <summary>
     /// Reads a site setting value by icode.
     /// </summary>
-    public string read(string icode)
+    public virtual string read(string icode)
     {
         return this.getValue(icode);
     }
@@ -58,38 +62,38 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>
     /// Reads a site setting as an integer.
     /// </summary>
-    public int readi(string icode)
+    public virtual int readi(string icode)
     {
         return read(icode).toInt();
     }
 
-    public string read(string icode, string defaultValue)
+    public virtual string read(string icode, string defaultValue)
     {
         return getValue(icode, defaultValue);
     }
 
-    public bool readBool(string icode, bool defaultValue = false)
+    public virtual bool readBool(string icode, bool defaultValue = false)
     {
-        var value = read(icode);
-        return string.IsNullOrEmpty(value) ? defaultValue : value.toBool();
+        var value = read(icode, defaultValue ? "1" : "0");
+        return value.toBool();
     }
 
-    public int readInt(string icode, int defaultValue = 0)
+    public virtual int readInt(string icode, int defaultValue = 0)
     {
-        var value = read(icode);
+        var value = read(icode, defaultValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
         return string.IsNullOrEmpty(value) ? defaultValue : value.toInt(defaultValue);
     }
 
-    public long readLong(string icode, long defaultValue = 0)
+    public virtual long readLong(string icode, long defaultValue = 0)
     {
-        var value = read(icode);
+        var value = read(icode, defaultValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
         return string.IsNullOrEmpty(value) ? defaultValue : value.toLong(defaultValue);
     }
 
     /// <summary>
     /// Reads a site setting as a nullable date.
     /// </summary>
-    public object? readd(string icode)
+    public virtual object? readd(string icode)
     {
         return read(icode).toDateOrNull();
     }
@@ -106,23 +110,18 @@ public class Settings : FwModel<Settings.Row>
     // just return first row by icode field
     public override DBRow oneByIcode(string icode)
     {
-        FwDict where = [];
-        where["icode"] = icode;
-        return db.row(table_name, where);
+        return snapshot().TryGetValue(icode, out var row) ? new DBRow(row) : [];
     }
 
     public string getValue(string icode)
     {
-        var row = oneByIcode(icode);
-        return row.TryGetValue("ivalue", out string? value) ? value.toStr() : string.Empty;
+        return getValue(icode, DEFAULT_VALUES.TryGetValue(icode, out var value) ? value : "");
     }
 
     public string getValue(string icode, string defaultValue)
     {
-        var value = getValue(icode);
-        return string.IsNullOrEmpty(value) ? defaultValue : value;
+        return effective(oneByIcode(icode), defaultValue);
     }
-
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);

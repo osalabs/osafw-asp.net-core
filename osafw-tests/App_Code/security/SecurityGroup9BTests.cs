@@ -328,26 +328,25 @@ public class SecurityGroup9BTests
     }
 
     [TestMethod]
-    public void DataProtectionKeyProtection_DefaultConstDisallowsPlaintextFallback()
+    public void DataProtectionKeyProtection_ConfiguresDurableEncryptedKeysOrFailsClosed()
     {
-        Assert.IsFalse(allowPlaintextDpKeys());
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        var settings = new FwDict
+        {
+            ["DATA_PROTECTION_APPLICATION_NAME"] = "test-identity",
+            ["db"] = new FwDict { ["main"] = new FwDict { ["type"] = "SQL", ["connection_string"] = "Server=unused;Integrated Security=true" } }
+        };
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.ThrowsExactly<PlatformNotSupportedException>(() => FwSettingsProtection.configure(services, settings));
+            return;
+        }
+        FwSettingsProtection.configure(services, settings);
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        var options = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>>(provider).Value;
+        Assert.IsInstanceOfType<FwKeysXmlRepository>(options.XmlRepository);
+        Assert.IsInstanceOfType<Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlEncryptor>(options.XmlEncryptor);
     }
-
-    private static bool allowPlaintextDpKeys() => Program.ALLOW_PLAINTEXT_DP_KEYS;
-
-    [TestMethod]
-    public void DataProtectionKeyProtection_StartupUsesDpapiOrFailsClosedInline()
-    {
-        var programPath = findRepoFile("osafw-app", "Program.cs");
-        var source = File.ReadAllText(programPath);
-
-        StringAssert.Contains(source, "AddDataProtection().SetApplicationName(appName)");
-        StringAssert.Contains(source, "ProtectKeysWithDpapi(protectToLocalMachine: true)");
-        StringAssert.Contains(source, "else if (!ALLOW_PLAINTEXT_DP_KEYS)");
-        StringAssert.Contains(source, "throw new ApplicationException(\"Data Protection key encryption requires Windows DPAPI");
-        Assert.IsFalse(source.Contains("ConfigureDataProtectionKeyProtection", StringComparison.Ordinal));
-    }
-
     [TestMethod]
     public void ErrorHandling_DeveloperExceptionPageRequiresFrameworkDevMode()
     {

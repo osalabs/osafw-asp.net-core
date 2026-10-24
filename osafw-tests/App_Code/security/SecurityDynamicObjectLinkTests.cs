@@ -9,6 +9,29 @@ namespace osafw.Tests;
 [TestClass]
 public class SecurityDynamicObjectLinkTests
 {
+    private sealed class StubSettings : Settings
+    {
+        public override string read(string icode)
+        {
+            return icode switch
+            {
+                "LOGGED_DEFAULT_URL" => "/Main",
+                "mail_from" => "noreply@example.test",
+                _ => "",
+            };
+        }
+
+        public override string read(string icode, string defaultValue)
+        {
+            var value = read(icode);
+            return string.IsNullOrEmpty(value) ? defaultValue : value;
+        }
+
+        public override int readInt(string icode, int defaultValue = 0) => defaultValue;
+        public override bool readBool(string icode, bool defaultValue = false) => defaultValue;
+        public override string readSecret(string code) => "";
+    }
+
     private sealed class StubUsers : Users
     {
         public override bool isReadOnly(int id = -1) => false;
@@ -513,6 +536,7 @@ public class SecurityDynamicObjectLinkTests
         fw.config()["template"] = Path.Combine(repoRoot(), "osafw-app", "App_Data", "template");
         users.init(fw);
         TestHelpers.RegisterModel(fw, (Users)users);
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
         return fw;
     }
 

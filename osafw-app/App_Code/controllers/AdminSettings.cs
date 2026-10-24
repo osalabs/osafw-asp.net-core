@@ -4,6 +4,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
@@ -13,22 +14,42 @@ public class AdminSettingsController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
+    private static readonly HashSet<string> allowedActions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "", FW.ACTION_INDEX, FW.ACTION_SHOW, FW.ACTION_SHOW_FORM, FW.ACTION_SAVE,
+        "Reveal", "Migrate"
+    };
+
     protected Settings model = null!;
 
     public override void init(FW fw)
     {
+        FwSettingsProtection.markSensitiveRequest(fw);
         base.init(fw);
         model = fw.model<Settings>();
         model0 = model;
 
         base_url = "/Admin/Settings";
-        required_fields = "ivalue";
+        required_fields = "";
         save_fields = "ivalue";
         save_fields_checkboxes = "";
 
-        search_fields = "icode iname ivalue";
+        search_fields = "icode iname idesc";
         list_sortdef = "iname asc";
         list_sortmap = Utils.qh("id|id iname|iname upd_time|upd_time");
+    }
+
+    public override void checkAccess()
+    {
+        access_actions_to_permissions = new FwDict
+        {
+            ["Reveal"] = Permissions.PERMISSION_VIEW,
+            ["Migrate"] = Permissions.PERMISSION_EDIT,
+        };
+        base.checkAccess();
+
+        if (!allowedActions.Contains(fw.route.action.toStr()) || export_format.Length > 0)
+            throw new AuthException();
     }
 
     public override void getListRows()
@@ -43,6 +64,10 @@ public class AdminSettingsController : FwAdminController
     {
         base.setListSearch();
 
+        list_where += @" and access_level<=@settings_access_level
+ and (@settings_access_level>=100 or (input<>90 and icode not in ('mail.password','AWSAccessKey','AWSSecretKey','OPENAI_API_KEY','API_KEY')))";
+        list_where_params["settings_access_level"] = fw.userAccessLevel;
+
         if (hasIcatFilter())
         {
             list_where += " and icat=@icat";
@@ -55,14 +80,34 @@ public class AdminSettingsController : FwAdminController
         ps = base.setListPS(ps);
 
         ps["has_icat_filter"] = hasIcatFilter();
-        ps["settings_categories"] = model.listCategories();
+        ps["settings_categories"] = listVisibleCategories();
+        ps["is_site_admin"] = isSiteAdmin();
 
         return ps;
+    }
+
+    private FwList listVisibleCategories()
+    {
+        return db.arrayp($@"
+select icat
+  from {db.qid("settings")}
+ where access_level<=@settings_access_level
+   and (@settings_access_level>=100 or (input<>90 and icode not in ('mail.password','AWSAccessKey','AWSSecretKey','OPENAI_API_KEY','API_KEY')))
+ group by icat
+ order by case when icat='' then 0 else 1 end, icat", DB.h("settings_access_level", fw.userAccessLevel));
     }
 
     private bool hasIcatFilter()
     {
         return list_filter.ContainsKey("icat");
+    }
+
+    public override FwDict? ShowAction(int id)
+    {
+        var row = settingForAccess(id);
+        var ps = base.ShowAction(id) ?? [];
+        ps["i"] = safeProjection(row, false);
+        return ps;
     }
 
     public override FwDict ShowFormAction(int id = 0)
@@ -73,13 +118,18 @@ public class AdminSettingsController : FwAdminController
             return null!;
         }
 
-        // set new form defaults here if any
-        // Me.form_new_defaults = New FwRow
-        // item("field")="default value"
+        var stored = settingForAccess(id);
         var ps = base.ShowFormAction(id) ?? [];
-
-        var item = ps["i"] as FwDict ?? [];
-        prepareFormItem(item, ps);
+        var item = safeProjection(stored, true);
+        if (!isGet() && !isProtectedEditor(stored))
+        {
+            var submitted = reqh("item");
+            if (submitted.ContainsKey("ivalue"))
+                item["ivalue"] = submitted["ivalue"];
+        }
+        ps["i"] = item;
+        ps["is_readonly"] = is_readonly || !stored["is_user_edit"].toBool();
+        prepareFormItem(stored, item, ps);
 
         return ps;
     }
@@ -88,36 +138,55 @@ public class AdminSettingsController : FwAdminController
     {
         route_onerror = FW.ACTION_SHOW_FORM;
         route_return = FW.ACTION_INDEX;
-
-        if (this.save_fields == null)
-            throw new Exception("No fields to save defined, define in save_fields");
-
+        enforcePost();
         checkReadOnly();
 
         FwDict item = reqh("item");
-        var success = true;
-        var is_new = (id == 0);
-
-        var setting = model.one(id);
+        var setting = settingForAccess(id, true);
         Validate(id, item, setting);
 
         FwDict itemdb = prepareSaveFields(setting, item);
-
-        // only update, no add new settings
         if (itemdb.Count > 0)
             model.update(id, itemdb);
         fw.flash("record_updated", 1);
 
-        // custom code:
-        // reset cache
-        FwCache.remove("main_menu");
+        if (isProtectedEditor(setting))
+            item.Remove("ivalue");
 
-        return this.afterSave(success, id);
+        return this.afterSave(true, id);
     }
 
     public override void Validate(int id, FwDict item)
     {
         Validate(id, item, id > 0 ? model.one(id) : []);
+    }
+
+    public FwDict RevealAction(int id)
+    {
+        enforcePost();
+        var setting = settingForAccess(id);
+        if (Settings.maskPolicy(setting) != Settings.MASK_REVEAL)
+            throw new AuthException();
+
+        noStore();
+        string value = Settings.isCredential(setting)
+            ? model.readSecret(setting["icode"].toStr())
+            : model.getValue(setting["icode"].toStr());
+        return new FwDict
+        {
+            ["_json"] = new FwDict { ["value"] = value },
+        };
+    }
+
+    public FwDict? MigrateAction()
+    {
+        enforcePost();
+        checkReadOnly();
+        requireSiteAdmin();
+
+        int count = model.migratePlaintextCredentials();
+        fw.flash("success", $"Migrated {count} credential settings.");
+        return afterSave(true, new FwDict { ["updated"] = count });
     }
 
     private void Validate(int id, FwDict item, FwDict setting)
@@ -127,9 +196,20 @@ public class AdminSettingsController : FwAdminController
         if (id == 0)
             throw new UserException("Wrong Settings ID");
 
+        int basis = item.ContainsKey("basis") ? item["basis"].toInt(-1) : setting["basis"].toInt(Settings.BASIS_VALUE);
+        if (basis != Settings.BASIS_INHERIT && basis != Settings.BASIS_VALUE)
+        {
+            addFormError("basis", "INVALID");
+            result = false;
+        }
+        if (basis == Settings.BASIS_INHERIT)
+        {
+            validateCheckResult(result);
+            return;
+        }
+
         int input = setting["input"].toInt();
-        bool isClearableTestEmail = setting["icode"].toStr() == Settings.ICODE_TEST_EMAIL;
-        if (requiresSubmittedValue(input) && !isClearableTestEmail && !hasSubmittedValue(item))
+        if (!isProtectedEditor(setting) && requiresSubmittedValue(input) && !item.ContainsKey("ivalue"))
         {
             addFormError("ivalue", "REQUIRED");
             result = false;
@@ -146,18 +226,67 @@ public class AdminSettingsController : FwAdminController
         throw new UserException("Site Settings cannot be deleted");
     }
 
-    private void prepareListRow(FwDict row)
+    private FwDict settingForAccess(int id, bool isEdit = false)
     {
-        row["ivalue_display"] = displayValue(row);
+        var row = model.one(id);
+        model.authorize(row, isEdit);
+        return row;
     }
 
-    private void prepareFormItem(FwDict item, FwDict ps)
+    private FwDict safeProjection(FwDict row, bool isEditor)
     {
-        int input = item["input"].toInt();
-        item["ivalue_display"] = displayValue(item);
-        item["credential_display"] = maskCredential(item["ivalue"].toStr());
+        var result = new FwDict(row)
+        {
+            ["ivalue_display"] = model.display(row),
+        };
+        if (isProtectedEditor(row) || row["basis"].toInt() == Settings.BASIS_INHERIT)
+            result["ivalue"] = "";
+        else if (!isEditor && Settings.maskPolicy(row) != Settings.MASK_NONE)
+            result["ivalue"] = "";
+        return result;
+    }
 
-        var meta = inputMetadata(item);
+    private bool isSiteAdmin()
+    {
+        return fw.userAccessLevel >= Users.ACL_SITEADMIN;
+    }
+
+    private void requireSiteAdmin()
+    {
+        if (!isSiteAdmin())
+            throw new AuthException();
+    }
+
+    private void noStore()
+    {
+        fw.cache_control = "no-store";
+        fw.response.Headers.CacheControl = "no-store";
+        fw.response.Headers.Pragma = "no-cache";
+    }
+
+    private static bool isProtectedEditor(FwDict setting)
+    {
+        return Settings.isCredential(setting) || Settings.maskPolicy(setting) != Settings.MASK_NONE;
+    }
+
+    private void prepareListRow(FwDict row)
+    {
+        row["ivalue_display"] = model.display(row);
+        row["is_switch_on"] = row["input"].toInt() == Settings.INPUT_SWITCH
+            && model.getValue(row["icode"].toStr()).toBool();
+        row.Remove("ivalue");
+    }
+
+    private void prepareFormItem(FwDict stored, FwDict item, FwDict ps)
+    {
+        int input = stored["input"].toInt();
+        item["ivalue_display"] = model.display(stored);
+        ps["editor_input"] = isProtectedEditor(stored) ? Settings.INPUT_CREDENTIAL : input;
+        ps["is_basis_inherit"] = stored["basis"].toInt() == Settings.BASIS_INHERIT;
+        ps["is_basis_value"] = stored["basis"].toInt() == Settings.BASIS_VALUE;
+        ps["can_reveal"] = Settings.maskPolicy(stored) == Settings.MASK_REVEAL;
+
+        var meta = inputMetadata(stored);
         ps["input_min"] = meta["min"];
         ps["input_max"] = meta["max"];
         ps["input_step"] = meta["step"];
@@ -170,16 +299,37 @@ public class AdminSettingsController : FwAdminController
     private FwDict prepareSaveFields(FwDict setting, FwDict item)
     {
         int input = setting["input"].toInt();
+        int oldBasis = setting["basis"].toInt(Settings.BASIS_VALUE);
+        int basis = item.ContainsKey("basis") ? item["basis"].toInt(-1) : oldBasis;
         FwDict itemdb = [];
 
-        if (input == Settings.INPUT_CREDENTIAL)
+        if (basis == Settings.BASIS_INHERIT)
         {
-            string value = item["ivalue"].toStr();
-            if (!string.IsNullOrWhiteSpace(value))
-                itemdb["ivalue"] = value;
+            itemdb["basis"] = Settings.BASIS_INHERIT;
             return itemdb;
         }
 
+        if (isProtectedEditor(setting))
+        {
+            string value = item["ivalue"].toStr();
+            if (item["clear"].toBool())
+            {
+                itemdb["basis"] = Settings.BASIS_VALUE;
+                itemdb["ivalue"] = "";
+            }
+            else if (value.Length > 0)
+            {
+                itemdb["basis"] = Settings.BASIS_VALUE;
+                itemdb["ivalue"] = value;
+            }
+            else if (oldBasis != Settings.BASIS_VALUE)
+            {
+                throw new UserException("Enter a value, select Clear, or keep Use default.");
+            }
+            return itemdb;
+        }
+
+        itemdb["basis"] = Settings.BASIS_VALUE;
         itemdb["ivalue"] = input switch
         {
             Settings.INPUT_CHECKBOX => FormUtils.multi2ids(reqh("ivalue_multi")),
@@ -293,11 +443,6 @@ public class AdminSettingsController : FwAdminController
             && input != Settings.INPUT_CREDENTIAL;
     }
 
-    private static bool hasSubmittedValue(FwDict item)
-    {
-        return item.ContainsKey("ivalue") && !string.IsNullOrWhiteSpace(item["ivalue"].toStr());
-    }
-
     private static FwDict allowedOptionValues(FwDict setting)
     {
         return Utils.qh(setting["allowed_values"].toStr(), "");
@@ -336,19 +481,4 @@ public class AdminSettingsController : FwAdminController
         return result;
     }
 
-    private static string displayValue(FwDict setting)
-    {
-        return setting["input"].toInt() == Settings.INPUT_CREDENTIAL
-            ? maskCredential(setting["ivalue"].toStr())
-            : setting["ivalue"].toStr();
-    }
-
-    public static string maskCredential(string value)
-    {
-        value = value.toStr();
-        if (string.IsNullOrEmpty(value))
-            return string.Empty;
-
-        return value.Length <= 12 ? "******" : value[..6] + "..." + value[^6..];
-    }
 }

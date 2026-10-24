@@ -101,7 +101,7 @@ public sealed class AssistantRunProcessor
             var runtime = new AssistantToolRuntime(fw, thread.id, run.id, thread.users_id.GetValueOrDefault());
             IList<AITool> tools = new AssistantToolCatalog(runtime).Build().Select(static registration => registration.Tool).ToList();
 
-            string apiKey = fw.model<Settings>().read("OPENAI_API_KEY");
+            string apiKey = fw.model<Settings>().readSecret("OPENAI_API_KEY");
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new UserException("OpenAI API key is not configured.");
 

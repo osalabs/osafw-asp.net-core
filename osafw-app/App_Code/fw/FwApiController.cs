@@ -21,7 +21,7 @@ public class FwApiController : FwController
         var response = fw.response ?? throw new InvalidOperationException("Response is not available");
 
         string x_api_key = request.Headers["X-API-Key"].ToString();
-        var api_key = fw.config()["API_KEY"] as string;
+        var api_key = fw.model<Settings>().readSecret("API_KEY");
 
         //authorize if user logged OR API_KEY configured and matches
         if (fw.isLogged || !string.IsNullOrEmpty(api_key) && x_api_key == api_key)

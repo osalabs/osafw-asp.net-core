@@ -33,6 +33,17 @@ public class SecurityQuickFixTests
         public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
     }
 
+    private sealed class StubSettings : Settings
+    {
+        public override string read(string icode)
+        {
+            return DEFAULT_VALUES.TryGetValue(icode, out var value) ? value : "";
+        }
+
+        public override string read(string icode, string defaultValue) => defaultValue;
+        public override bool readBool(string icode, bool defaultValue = false) => defaultValue;
+    }
+
     private sealed class PasswordUsers : Users
     {
         private readonly DBRow user;
@@ -417,6 +428,7 @@ public class SecurityQuickFixTests
     private static FW createFw(IDictionary<string, string?>? settings = null)
     {
         var fw = TestHelpers.CreateFw(settings);
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
         fw.is_log_events = false;
         return fw;
     }
