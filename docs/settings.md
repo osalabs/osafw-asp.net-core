@@ -46,7 +46,7 @@ Ordinary Admins (90) can see only rows whose floor permits them. Site Admins (10
 
 Normal Save cannot edit metadata or a non-editable row. Secret inputs never contain the current value. Keep, Replace, Clear, and Inherit distinguish intended changes. A Reveal action is available only for rows configured with that mask policy. All sensitive actions use POST and the framework XSS token; plaintext responses disable browser caching. Sensitive request contents and changed values are excluded from framework/Sentry request diagnostics.
 
-Coupled values can be changed atomically through the trusted model writeBatch API or the explicit legacy migration command. Static AWS mode requires a complete pair; SDK mode uses the normal SDK identity chain.
+SMTP and AWS values are edited as groups. Static AWS mode requires a complete pair; SDK mode uses the normal SDK identity chain. SMTP testing uses the same runtime delivery policy, including test-mode recipient handling.
 
 ## Encryption and durable keys
 
@@ -55,6 +55,23 @@ Credential values are encrypted before database writes using ASP.NET Core Data P
 `DATA_PROTECTION_APPLICATION_NAME` is a stable deployment identity, independent of editable `SITE_NAME`. Preserve its value across normal upgrades. When upgrading an older application, set it to that application's previous effective SITE_NAME before using existing protected data. Keys are retained; age alone is not grounds to delete keys needed by stored values. Repository read/write failures fail closed.
 
 Encryption does not replace diagnostic hygiene. Do not log decrypted values or transfer payloads in application-specific code. The framework records value-free audit information.
+
+## Export, Import, and moving servers
+
+Site Admin's Export downloads one JSON file containing every stored setting value and basis, including decrypted credentials and non-editable values. There is no options dialog or preview. Import validates the file and known codes, then writes all supplied values in one transaction, encrypting credentials with the destination key ring. Definitions, permissions, mask policies, labels, and other metadata remain controlled by destination code/schema. Unspecified codes are unchanged; duplicate/unknown codes or invalid values reject the whole import. The transfer limit is 1 MiB.
+
+The export is intentionally plaintext: store it privately and remove it after use. It does not contain DB connection/bootstrap configuration or the key ring. A SQL script cannot substitute for Import because it cannot perform destination application encryption.
+
+For a planned move:
+
+1. Export on the old working host before losing access to its keys.
+2. Stop the old app pool and back up the database and deployment configuration.
+3. Prepare the destination schema and local authentication so a Site Admin can sign in without external OAuth/SMTP.
+4. If restoring the old database on a different Windows machine, its DPAPI-wrapped keys cannot be used there. With the old pool stopped and the backup/export secured, deliberately clear only Data Protection rows (`fwkeys.itype=10`) in the destination copy. This invalidates old protected sessions/tokens; do not clear keys during routine upgrades or while the old app is serving the same DB.
+5. Start the destination with its stable application identity. It generates a new local key ring. Sign in locally and Import the JSON; all credentials are re-encrypted on that host.
+6. Verify sign-in, SMTP, integrations, and runtime settings before serving traffic.
+
+A database backup alone cannot recover encrypted credentials after the old machine's protection keys are lost. An unreadable credential can be replaced through Settings; it is never silently treated as blank.
 
 ## Fresh installation and upgrade
 

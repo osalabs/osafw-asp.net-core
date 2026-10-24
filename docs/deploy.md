@@ -74,6 +74,8 @@ The optional override name imports that legacy `appSettings.override.<name>` aft
 
 Set `appSettings.DATA_PROTECTION_APPLICATION_NAME` explicitly and keep it stable across deployments and server moves. Existing applications must set it to their previous effective `SITE_NAME` before upgrading; the framework sample uses `Site Name`. Changing this value isolates the application from its existing Data Protection keys and makes protected Settings credentials unreadable. Branding changes should update the Site Settings `SITE_NAME` row, not this identifier.
 
+Before moving an installation to another Windows server, a Site Admin can export all Site Settings from `/Admin/Settings`. The JSON contains decrypted credentials, so store and transfer it as a secret. Import it on the new server after its schema and durable Data Protection keys are initialized; the import validates the target definitions and encrypts credentials with the new server's keys.
+
 ## Validate
 
 Run `-Check` before enabling a task or deploying manually:

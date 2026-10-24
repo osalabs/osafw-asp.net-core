@@ -1,0 +1,31 @@
+<div class="card mb-3">
+  <div class="card-header">AWS credentials</div>
+  <div class="card-body">
+    <form method="post" action="<~../url>/(SaveAWS)">
+      <input type="hidden" name="XSS" value="<~session[XSS]>">
+      <fieldset <~/common/attr/disabled if="is_readonly">>
+        <div class="mb-3">
+          <label class="form-label" for="aws_source">Credential source</label>
+          <select class="form-select" id="aws_source" name="aws[source]">
+            <option value="sdk" <~/common/attr/selected ifeq="aws[source]" value="sdk">>AWS SDK credential chain</option>
+            <option value="static" <~/common/attr/selected ifeq="aws[source]" value="static">>Static encrypted key pair</option>
+          </select>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="aws_access_key">Access key</label>
+            <div class="form-text mb-1">Current: <~aws[access_display]></div>
+            <input class="form-control" id="aws_access_key" name="aws[access_key]" type="password" autocomplete="new-password">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="aws_secret_key">Secret key</label>
+            <div class="form-text mb-1">Current: <~aws[secret_display]></div>
+            <input class="form-control" id="aws_secret_key" name="aws[secret_key]" type="password" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="form-text mt-2">Leave both key fields blank to keep the current static pair. Selecting the SDK source clears the saved pair.</div>
+        <button class="btn btn-primary mt-3" type="submit">Save AWS credentials</button>
+      </fieldset>
+    </form>
+  </div>
+</div>

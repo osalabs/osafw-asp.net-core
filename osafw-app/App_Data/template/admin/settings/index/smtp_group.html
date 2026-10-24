@@ -1,0 +1,44 @@
+<div class="card mb-3">
+  <div class="card-header">SMTP</div>
+  <div class="card-body">
+    <form method="post" action="<~../url>/(SaveEmail)">
+      <input type="hidden" name="XSS" value="<~session[XSS]>">
+      <fieldset <~/common/attr/disabled if="is_readonly">>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="smtp_host">Host</label>
+            <input class="form-control" id="smtp_host" name="smtp[host]" value="<~smtp[host]>">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label" for="smtp_port">Port</label>
+            <input class="form-control" id="smtp_port" name="smtp[port]" type="number" min="1" max="65535" value="<~smtp[port]>">
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" id="smtp_is_ssl" name="smtp[is_ssl]" type="checkbox" value="1" <~/common/attr/checked if="smtp[is_ssl]">>
+              <label class="form-check-label" for="smtp_is_ssl">Use TLS</label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="smtp_username">Username</label>
+            <input class="form-control" id="smtp_username" name="smtp[username]" value="<~smtp[username]>" autocomplete="off">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="smtp_password">Password</label>
+            <div class="form-text mb-1">Current: <~smtp[password_display]></div>
+            <input class="form-control" id="smtp_password" name="smtp[password]" type="password" autocomplete="new-password">
+            <div class="form-check mt-2">
+              <input class="form-check-input" id="smtp_password_clear" name="smtp[password_clear]" type="checkbox" value="1">
+              <label class="form-check-label" for="smtp_password_clear">Clear password</label>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary mt-3" type="submit">Save SMTP</button>
+      </fieldset>
+    </form>
+    <form method="post" action="<~../url>/(TestEmail)" class="mt-2">
+      <input type="hidden" name="XSS" value="<~session[XSS]>">
+      <button class="btn btn-outline-secondary" type="submit" <~/common/attr/disabled if="is_readonly">>Send test email</button>
+    </form>
+  </div>
+</div>

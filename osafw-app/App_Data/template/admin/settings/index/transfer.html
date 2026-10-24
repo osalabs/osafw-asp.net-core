@@ -1,0 +1,21 @@
+<div class="card mb-3">
+  <div class="card-header">Settings transfer</div>
+  <div class="card-body">
+    <p class="card-text">Export contains every saved setting, including decrypted credentials. Store and transfer the file as a password file.</p>
+    <form method="post" action="<~../url>/(Export)" class="d-inline-block me-2">
+      <input type="hidden" name="XSS" value="<~session[XSS]>">
+      <button class="btn btn-outline-primary" type="submit">Export</button>
+    </form>
+    <form method="post" enctype="multipart/form-data" action="<~../url>/(Import)" class="d-inline-flex align-items-center gap-2">
+      <input type="hidden" name="XSS" value="<~session[XSS]>">
+      <fieldset class="d-inline-flex align-items-center gap-2" <~/common/attr/disabled if="is_readonly">>
+        <input class="form-control" type="file" name="settings_file" accept="application/json,.json" required>
+        <button class="btn btn-outline-primary" type="submit">Import</button>
+      </fieldset>
+    </form>
+    <form method="post" action="<~../url>/(Migrate)" class="mt-3">
+      <input type="hidden" name="XSS" value="<~session[XSS]>">
+      <button class="btn btn-outline-secondary" type="submit" <~/common/attr/disabled if="is_readonly">>Encrypt legacy credential values</button>
+    </form>
+  </div>
+</div>
