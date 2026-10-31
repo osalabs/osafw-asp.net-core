@@ -1,7 +1,5 @@
 #if isSQLite
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
@@ -16,7 +14,7 @@ public class SettingsStoreTests
     [TestMethod]
     public void CredentialWriteStoresCiphertextAndOnlyTrustedReadDecrypts()
     {
-        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var fixture = new SettingsFixture();
         var secretId = fixture.Seed("CUSTOM_INTEGRATION_TOKEN", Settings.INPUT_CREDENTIAL);
         var ordinaryId = fixture.Seed("ordinary", Settings.INPUT_TEXT, "visible");
 
@@ -37,7 +35,7 @@ public class SettingsStoreTests
         string transfer;
         string sourceCiphertext;
 
-        using (var source = new SettingsFixture(new EphemeralDataProtectionProvider()))
+        using (var source = new SettingsFixture())
         {
             var id = source.Seed("OPENAI_API_KEY", Settings.INPUT_CREDENTIAL);
             source.Model.update(id, DB.h("ivalue", "portable-secret", "basis", Settings.BASIS_VALUE));
@@ -45,7 +43,7 @@ public class SettingsStoreTests
             transfer = source.Model.exportJson();
         }
 
-        using var target = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var target = new SettingsFixture();
         var targetId = target.Seed("OPENAI_API_KEY", Settings.INPUT_CREDENTIAL);
 
         Assert.AreEqual(1, target.Model.importJson(transfer));
@@ -59,7 +57,7 @@ public class SettingsStoreTests
     [TestMethod]
     public void InheritAndExplicitEmptyRemainDistinct()
     {
-        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var fixture = new SettingsFixture();
         var id = fixture.Seed("support_email", Settings.INPUT_TEXT, "stored@example.test");
 
         fixture.Model.writeBatch([
@@ -81,7 +79,7 @@ public class SettingsStoreTests
     [TestMethod]
     public void InvalidUnknownAndDuplicateImportsLeaveValuesUnchanged()
     {
-        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var fixture = new SettingsFixture();
         fixture.Seed("first", Settings.INPUT_TEXT, "first-before");
         fixture.Seed("second", Settings.INPUT_TEXT, "second-before");
 
@@ -110,7 +108,7 @@ public class SettingsStoreTests
     [TestMethod]
     public void SnapshotLoadsOnceUntilCommittedWriteInvalidatesIt()
     {
-        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var fixture = new SettingsFixture();
         var id = fixture.Seed("ordinary", Settings.INPUT_TEXT, "before");
 
         Assert.AreEqual("before", fixture.Model.getValue("ordinary"));
@@ -127,7 +125,7 @@ public class SettingsStoreTests
     [TestMethod]
     public void MidBatchDatabaseFailureRollsBackValuesAndInvalidatesSnapshot()
     {
-        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var fixture = new SettingsFixture();
         fixture.Seed("first", Settings.INPUT_TEXT, "first-before");
         var secondId = fixture.Seed("second", Settings.INPUT_TEXT, "second-before");
         Assert.AreEqual("first-before", fixture.Model.read("first"));
@@ -150,7 +148,7 @@ public class SettingsStoreTests
     [TestMethod]
     public void ReadsUseConfiguredDefaultsForMissingAndInheritedRowsButPreserveExplicitEmpty()
     {
-        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        using var fixture = new SettingsFixture();
         var id = fixture.Seed("LOGGED_DEFAULT_URL", Settings.INPUT_TEXT, "/Stored");
         var config = FwConfig.GetCurrentSettings();
         config["LOGGED_DEFAULT_URL"] = "/Workspace";
@@ -184,16 +182,42 @@ public class SettingsStoreTests
         Assert.IsFalse(Settings.isCredential(DB.h("icode", "mail.password", "input", Settings.INPUT_TEXT)));
     }
 
+    [TestMethod]
+    public void CredentialValuesCanBeChangedIndependently()
+    {
+        using var fixture = new SettingsFixture();
+        fixture.Seed("AWSAccessKey", Settings.INPUT_CREDENTIAL);
+        fixture.Seed("AWSSecretKey", Settings.INPUT_CREDENTIAL);
+
+        fixture.Model.write("AWSAccessKey", "first-value");
+
+        Assert.AreEqual("first-value", fixture.Model.readSecret("AWSAccessKey"));
+        Assert.AreEqual("", fixture.Model.readSecret("AWSSecretKey"));
+    }
+
+    [TestMethod]
+    public void LocalUrlValidationUsesMetadataForAnySettingCode()
+    {
+        using var fixture = new SettingsFixture();
+        var row = DB.h("icode", "custom_destination", "input", Settings.INPUT_TEXT,
+            "allowed_values", "local_url|1");
+
+        Assert.AreEqual("", fixture.Model.valueError(row, "/Workspace"));
+        Assert.AreEqual("INVALID", fixture.Model.valueError(row, "https://outside.example/"));
+
+        row["allowed_values"] = "";
+        Assert.AreEqual("", fixture.Model.valueError(row, "https://outside.example/"));
+    }
+
     private sealed class SettingsFixture : IDisposable
     {
         private readonly string path;
-        private readonly ServiceProvider services;
         private readonly FwTestScope scope;
 
         public CountingSqliteDb Db { get; }
         public Settings Model { get; }
 
-        public SettingsFixture(IDataProtectionProvider provider)
+        public SettingsFixture()
         {
             path = Path.Combine(Path.GetTempPath(), "osafw-settings-" + Guid.NewGuid().ToString("N") + ".sqlite");
             var connectionString = new SqliteConnectionStringBuilder
@@ -228,15 +252,15 @@ public class SettingsStoreTests
                 );
                 CREATE UNIQUE INDEX UX_settings_icode ON settings (icode);
                 """);
-            services = new ServiceCollection()
-                .AddSingleton<IDataProtectionProvider>(provider)
-                .BuildServiceProvider();
+            Db.exec("CREATE TABLE fwkeys (id INTEGER PRIMARY KEY AUTOINCREMENT, itype INTEGER NOT NULL, iname TEXT NOT NULL, XmlValue TEXT NOT NULL, upd_time DATETIME)");
             var context = TestHelpers.CreateHttpContext("settings-tests");
-            context.RequestServices = services;
             scope = new FwTestScope(
                 name => name == "main" ? Db : throw new InvalidOperationException("Unknown DB name."),
                 new Dictionary<string, string?>
                 {
+                    ["appSettings:db:main:type"] = DB.DBTYPE_SQLITE,
+                    ["appSettings:db:main:connection_string"] = connectionString,
+                    ["appSettings:db:main:timezone"] = "UTC",
                     ["appSettings:ROOT_DOMAIN"] = "https://example.test",
                     ["appSettings:DATA_PROTECTION_APPLICATION_NAME"] = "settings-tests"
                 },
@@ -261,7 +285,6 @@ public class SettingsStoreTests
         public void Dispose()
         {
             scope.Dispose();
-            services.Dispose();
 
             foreach (var suffix in new[] { "", "-wal", "-shm", "-journal" })
                 File.Delete(path + suffix);

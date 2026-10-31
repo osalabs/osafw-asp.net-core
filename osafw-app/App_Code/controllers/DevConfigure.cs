@@ -122,19 +122,19 @@ public class DevConfigureController : FwController
             return;
 
         db.exec($@"
-DECLARE @sql NVARCHAR(MAX) = N'';
+            DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT @sql += N'ALTER TABLE '
-    + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
-    + N'.'
-    + QUOTENAME(OBJECT_NAME(parent_object_id))
-    + N' DROP CONSTRAINT '
-    + QUOTENAME(name)
-    + N';'
-FROM sys.foreign_keys;
+            SELECT @sql += N'ALTER TABLE '
+                + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
+                + N'.'
+                + QUOTENAME(OBJECT_NAME(parent_object_id))
+                + N' DROP CONSTRAINT '
+                + QUOTENAME(name)
+                + N';'
+            FROM sys.foreign_keys;
 
-IF LEN(@sql) > 0
-    EXEC sp_executesql @sql");
+            IF LEN(@sql) > 0
+                EXEC sp_executesql @sql");
     }
 
     /// <summary>

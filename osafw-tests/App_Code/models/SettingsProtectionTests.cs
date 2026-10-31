@@ -11,6 +11,48 @@ namespace osafw.Tests;
 public class SettingsProtectionTests
 {
     [TestMethod]
+    public void BootstrapCookieProviderCannotBeUsedForPersistedSettings()
+    {
+        if (!OperatingSystem.IsWindows())
+            Assert.Inconclusive("The durable production key contract requires Windows DPAPI.");
+
+        var path = Path.Combine(Path.GetTempPath(), "osafw-bootstrap-keys-" + Guid.NewGuid().ToString("N") + ".sqlite");
+        var definition = DB.h("type", DB.DBTYPE_SQLITE, "connection_string", "Data Source=" + path + ";Pooling=False", "timezone", "UTC");
+        try
+        {
+            using var db = new DB(definition);
+            var settings = new FwDict
+            {
+                ["DATA_PROTECTION_APPLICATION_NAME"] = "bootstrap-test",
+                ["db"] = new FwDict { ["main"] = definition }
+            };
+            var services = new ServiceCollection();
+            Settings.configureProtection(services, settings, isRequired: false);
+            using var webServices = services.BuildServiceProvider();
+            var cookie = webServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("test-cookie").Protect("temporary");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(cookie));
+
+            var context = TestHelpers.CreateHttpContext("bootstrap-test");
+            context.RequestServices = webServices;
+            using var scope = new FwTestScope(_ => db, new System.Collections.Generic.Dictionary<string, string?>
+            {
+                ["appSettings:db:main:type"] = DB.DBTYPE_SQLITE,
+                ["appSettings:db:main:connection_string"] = definition["connection_string"].toStr(),
+                ["appSettings:db:main:timezone"] = "UTC",
+                ["appSettings:DATA_PROTECTION_APPLICATION_NAME"] = "bootstrap-test",
+            }, context);
+
+            Assert.ThrowsExactly<System.Security.Cryptography.CryptographicException>(
+                () => scope.Fw.model<Settings>().protect("credential", "test-value"));
+        }
+        finally
+        {
+            foreach (var suffix in new[] { "", "-wal", "-shm", "-journal" })
+                File.Delete(path + suffix);
+        }
+    }
+
+    [TestMethod]
     public void DurableDpapiKeyRingSurvivesProviderRecreation()
     {
         if (!OperatingSystem.IsWindows())

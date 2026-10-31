@@ -107,7 +107,7 @@ To enable SQLite:
 
 When the app is compiled with `isSQLite` and `type` is `SQLite`, `FwSessionCache` stores sessions in the SQLite `fwsessions` table and data-protection keys use `fwkeys` through the normal `FwKeysXmlRepository`. For multi-node deployments, use SQL Server or another verified distributed provider/cache instead of SQLite.
 
-Data Protection key XML stored in `fwkeys` is protected with Windows DPAPI before it is written to the database. Non-Windows deployments fail closed by default; for local/dev-only environments that intentionally accept plaintext key XML, change the `ALLOW_PLAINTEXT_DP_KEYS` constant in `Program.cs` to `true`.
+Data Protection key XML stored in `fwkeys` is protected with Windows DPAPI before it is written to the database. The current durable Settings protection contract requires Windows DPAPI. Session-cookie keys tolerate unavailable database storage during initial development setup; Settings credential protection requires persistence. No plaintext-key opt-in is shipped.
 
 ### Provider status, fresh schemas, and updates
 
@@ -271,6 +271,27 @@ string title = db.valuep("SELECT iname FROM users WHERE id=@id", DB.h("@id", 1))
 DBRow user = db.rowp("SELECT * FROM users WHERE id=@id", DB.h("@id", 1));
 DBList list = db.arrayp("SELECT * FROM users WHERE status=@s", DB.h("@s", 0));
 List<string> cols = db.colp("SELECT iname FROM users WHERE status=@s", DB.h("@s", 0));
+```
+
+### SQL readability
+
+Keep embedded SQL indented beneath the C# call, with each clause and each condition on its own line. Split parenthesized AND/OR alternatives across lines as well. Use SQL parameters for values, including existing model constants; do not repeat numeric access levels or input-type codes in runtime SQL. Use the owning model's `qTable()` for its table identifier rather than repeating the table name. Literal defaults in schema/seed files are separate from C# query parameters.
+
+```csharp
+var rows = db.arrayp($@"
+    select icat
+    from {model.qTable()}
+    where access_level <= @access_level
+        and (
+            @access_level >= @site_admin
+            or input <> @credential
+        )
+    group by icat
+    order by icat",
+    DB.h(
+        "access_level", fw.userAccessLevel,
+        "site_admin", Users.ACL_SITEADMIN,
+        "credential", Settings.INPUT_CREDENTIAL));
 ```
 
 ### Executing SQL scripts

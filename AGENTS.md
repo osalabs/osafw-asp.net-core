@@ -52,7 +52,7 @@
 - Redirects follow app-local URL policy unless explicitly allowed by a Site Admin-managed external allowlist.
 - Escape or sanitize stored/user/editor HTML and markdown. Raw markdown HTML, `noescape`, and Vue `v-html` require server-controlled or already-sanitized content.
 - Authorize attachments before linking, serving, or issuing S3 redirects. Block or force-download active content and retain safe image-decode limits.
-- Gate dev/admin tools, generated SQL/files, assistant calls, and schema writes by environment, allowlists, resource authorization, and sensitive-telemetry redaction. Parameterize SQL through `DB`.
+- Gate dev/admin tools, generated SQL/files, assistant calls, and schema writes by environment, allowlists, resource authorization, and sensitive-telemetry redaction. Parameterize SQL values and model constants through `DB`; use model `qTable()` identifiers and the indented clause/condition formatting in `docs/db.md#sql-readability`.
 
 ## Compatibility and closeout
 
