@@ -10,9 +10,10 @@ namespace osafw.Tests;
 public class DevCliTests
 {
     [TestMethod]
-    public void IsCommand_MatchesScaffoldCaseInsensitively()
+    public void IsCommand_MatchesDevelopmentCommandsCaseInsensitively()
     {
         Assert.IsTrue(DevCli.isCommand(["ScAfFoLd", "--help"]));
+        Assert.IsTrue(DevCli.isCommand(["DaTaBaSe-InIt"]));
         Assert.IsFalse(DevCli.isCommand(["run"]));
         Assert.IsFalse(DevCli.isCommand([]));
     }
@@ -200,4 +201,190 @@ public class DevCliTests
         Assert.AreEqual(string.Empty, output.ToString());
         StringAssert.Contains(error.ToString(), "IS_DEV=true");
     }
+
+    [TestMethod]
+    [DataRow("--force")]
+    [DataRow("--help")]
+    [DataRow("unexpected")]
+    public void Run_DatabaseInitRejectsAdditionalArgumentsBeforeConfiguration(string argument)
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        var exitCode = DevCli.run(
+            ["database-init", argument],
+            new ConfigurationBuilder().Build(),
+            output,
+            error);
+
+        Assert.AreEqual(DevCli.EXIT_USAGE, exitCode);
+        Assert.AreEqual(string.Empty, output.ToString());
+        StringAssert.Contains(error.ToString(), "without additional arguments");
+    }
+
+    [TestMethod]
+    public void Run_DatabaseInitRejectsNonDevelopmentBeforeOpeningDatabase()
+    {
+        using var configurationScope = FwConfig.beginScope();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["appSettings:IS_DEV"] = "false",
+                ["appSettings:db:main:type"] = "unusable-provider",
+                ["appSettings:db:main:connection_string"] = "must-not-be-opened",
+            })
+            .Build();
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        var exitCode = DevCli.run(["database-init"], configuration, output, error);
+
+        Assert.AreEqual(DevCli.EXIT_ENVIRONMENT, exitCode);
+        Assert.AreEqual(string.Empty, output.ToString());
+        StringAssert.Contains(error.ToString(), "IS_DEV=true");
+    }
+
+    [TestMethod]
+    public void Run_DatabaseInitFailureDoesNotExposeConfigurationOrExceptionDetails()
+    {
+        using var configurationScope = FwConfig.beginScope();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["appSettings:IS_DEV"] = "true",
+                ["appSettings:log_level"] = "0",
+                ["appSettings:log"] = "",
+                ["appSettings:db:main:type"] = "private-provider-sentinel",
+                ["appSettings:db:main:connection_string"] = "private-connection-sentinel",
+            })
+            .Build();
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        var exitCode = DevCli.run(["database-init"], configuration, output, error);
+
+        Assert.AreEqual(DevCli.EXIT_ERROR, exitCode);
+        Assert.AreEqual(string.Empty, output.ToString());
+        Assert.AreEqual(
+            "Error: database initialization failed. Verify that the configured database is empty and reachable." + Environment.NewLine,
+            error.ToString());
+    }
+
+#if isSQLite
+    [TestMethod]
+    public void Run_DatabaseInitBootstrapsEmptySqliteDatabaseAndRejectsSecondRun()
+    {
+        using var configurationScope = FwConfig.beginScope();
+        var dbPath = Path.Combine(Path.GetTempPath(), "osafw-database-init-" + Guid.NewGuid().ToString("N") + ".sqlite");
+        var configuration = sqliteConfiguration(dbPath);
+
+        try
+        {
+            var output = new StringWriter();
+            var error = new StringWriter();
+            var exitCode = DevCli.run(["database-init"], configuration, output, error);
+
+            Assert.AreEqual(DevCli.EXIT_SUCCESS, exitCode, error.ToString());
+            Assert.AreEqual(string.Empty, error.ToString());
+            var password = output.ToString().TrimEnd('\r', '\n');
+            Assert.IsFalse(string.IsNullOrWhiteSpace(password));
+            Assert.AreEqual(password + Environment.NewLine, output.ToString());
+
+            using var fw = new FW(null, configuration);
+            var db = fw.db;
+            var tables = db.tables();
+            CollectionAssert.Contains(tables, "users");
+            CollectionAssert.Contains(tables, "settings");
+            CollectionAssert.Contains(tables, "fwkeys");
+            CollectionAssert.Contains(tables, "fwsessions");
+
+            var passwordHash = db.value("users", DB.h("id", 1), "pwd").toStr();
+            Assert.AreNotEqual(password, passwordHash);
+            Assert.IsTrue(fw.model<Users>().checkPwd(password, passwordHash));
+            var settingsCount = db.valuep("SELECT COUNT(*) FROM settings").toInt();
+            Assert.IsGreaterThan(0, settingsCount);
+
+            output.GetStringBuilder().Clear();
+            error.GetStringBuilder().Clear();
+            exitCode = DevCli.run(["database-init"], configuration, output, error);
+
+            Assert.AreEqual(DevCli.EXIT_ERROR, exitCode);
+            Assert.AreEqual(string.Empty, output.ToString());
+            StringAssert.Contains(error.ToString(), "empty and reachable");
+            Assert.AreEqual(passwordHash, db.value("users", DB.h("id", 1), "pwd").toStr());
+            Assert.AreEqual(settingsCount, db.valuep("SELECT COUNT(*) FROM settings").toInt());
+        }
+        finally
+        {
+            deleteSqliteDatabase(dbPath);
+        }
+    }
+
+    [TestMethod]
+    public void Run_DatabaseInitPreservesUnrelatedTableInNonEmptySqliteDatabase()
+    {
+        using var configurationScope = FwConfig.beginScope();
+        var dbPath = Path.Combine(Path.GetTempPath(), "osafw-database-init-" + Guid.NewGuid().ToString("N") + ".sqlite");
+        var configuration = sqliteConfiguration(dbPath);
+
+        try
+        {
+            using var fw = new FW(null, configuration);
+            fw.db.exec("CREATE TABLE preserve_me (id INTEGER PRIMARY KEY)");
+            fw.db.exec("INSERT INTO preserve_me (id) VALUES (17)");
+            var output = new StringWriter();
+            var error = new StringWriter();
+
+            var exitCode = DevCli.run(["database-init"], configuration, output, error);
+
+            Assert.AreEqual(DevCli.EXIT_ERROR, exitCode);
+            Assert.AreEqual(string.Empty, output.ToString());
+            StringAssert.Contains(error.ToString(), "empty and reachable");
+            Assert.AreEqual(17, fw.db.valuep("SELECT id FROM preserve_me").toInt());
+            CollectionAssert.DoesNotContain(fw.db.tables(), "users");
+        }
+        finally
+        {
+            deleteSqliteDatabase(dbPath);
+        }
+    }
+
+    private static IConfiguration sqliteConfiguration(string dbPath)
+    {
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["appSettings:IS_DEV"] = "true",
+                ["appSettings:site_root"] = Path.Combine(repoRoot(), "osafw-app"),
+                ["appSettings:log_level"] = "0",
+                ["appSettings:log"] = "",
+                ["appSettings:db:main:type"] = DB.DBTYPE_SQLITE,
+                ["appSettings:db:main:timezone"] = "UTC",
+                ["appSettings:db:main:connection_string"] = "Data Source=" + dbPath + ";Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=False;",
+            })
+            .Build();
+    }
+
+    private static string repoRoot()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir.FullName, "osafw-app", "App_Data", "sql")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cannot locate repository root from " + Directory.GetCurrentDirectory());
+    }
+
+    private static void deleteSqliteDatabase(string dbPath)
+    {
+        foreach (var path in new[] { dbPath, dbPath + "-shm", dbPath + "-wal" })
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+#endif
 }

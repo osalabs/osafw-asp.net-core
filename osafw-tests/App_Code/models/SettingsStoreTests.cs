@@ -17,16 +17,16 @@ public class SettingsStoreTests
     public void CredentialWriteStoresCiphertextAndOnlyTrustedReadDecrypts()
     {
         using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
-        var secretId = fixture.Seed("OPENAI_API_KEY", Settings.INPUT_CREDENTIAL);
+        var secretId = fixture.Seed("CUSTOM_INTEGRATION_TOKEN", Settings.INPUT_CREDENTIAL);
         var ordinaryId = fixture.Seed("ordinary", Settings.INPUT_TEXT, "visible");
 
         fixture.Model.update(secretId, DB.h("ivalue", "secret-value", "basis", Settings.BASIS_VALUE));
 
         var stored = fixture.Db.value("settings", DB.h("id", secretId), "ivalue").toStr();
-        Assert.StartsWith(FwSettingsProtection.PREFIX, stored);
+        Assert.StartsWith(Settings.PROTECTED_PREFIX, stored);
         Assert.DoesNotContain("secret-value", stored);
         Assert.AreEqual(stored, fixture.Model.one(secretId)["ivalue"]);
-        Assert.AreEqual("secret-value", fixture.Model.readSecret("OPENAI_API_KEY"));
+        Assert.AreEqual("secret-value", fixture.Model.readSecret("CUSTOM_INTEGRATION_TOKEN"));
         Assert.AreEqual("visible", fixture.Model.getValue("ordinary"));
         Assert.AreEqual("visible", fixture.Model.one(ordinaryId)["ivalue"]);
     }
@@ -51,7 +51,7 @@ public class SettingsStoreTests
         Assert.AreEqual(1, target.Model.importJson(transfer));
 
         var targetCiphertext = target.Db.value("settings", DB.h("id", targetId), "ivalue").toStr();
-        Assert.StartsWith(FwSettingsProtection.PREFIX, targetCiphertext);
+        Assert.StartsWith(Settings.PROTECTED_PREFIX, targetCiphertext);
         Assert.AreNotEqual(sourceCiphertext, targetCiphertext);
         Assert.AreEqual("portable-secret", target.Model.readSecret("OPENAI_API_KEY"));
     }
@@ -145,6 +145,43 @@ public class SettingsStoreTests
     {
         Assert.AreEqual("first-before", fixture.Db.value("settings", DB.h("icode", "first"), "ivalue").toStr());
         Assert.AreEqual("second-before", fixture.Db.value("settings", DB.h("icode", "second"), "ivalue").toStr());
+    }
+
+    [TestMethod]
+    public void ReadsUseConfiguredDefaultsForMissingAndInheritedRowsButPreserveExplicitEmpty()
+    {
+        using var fixture = new SettingsFixture(new EphemeralDataProtectionProvider());
+        var id = fixture.Seed("LOGGED_DEFAULT_URL", Settings.INPUT_TEXT, "/Stored");
+        var config = FwConfig.GetCurrentSettings();
+        config["LOGGED_DEFAULT_URL"] = "/Workspace";
+        config["custom"] = new FwDict { ["count"] = 42, ["enabled"] = true, ["limit"] = 5000000000L };
+
+        Assert.AreEqual(42, fixture.Model.readInt("custom.count"));
+        Assert.IsTrue(fixture.Model.readBool("custom.enabled"));
+        Assert.AreEqual(5000000000L, fixture.Model.readLong("custom.limit"));
+        Assert.AreEqual(9, fixture.Model.readInt("custom.count", 9));
+        Assert.AreEqual("fallback", fixture.Model.read("missing", "fallback"));
+        Assert.AreEqual("/Stored", fixture.Model.read("LOGGED_DEFAULT_URL"));
+
+        fixture.Model.update(id, DB.h("basis", Settings.BASIS_INHERIT));
+        Assert.AreEqual("/Workspace", fixture.Model.read("LOGGED_DEFAULT_URL"));
+        Assert.AreEqual("/Caller", fixture.Model.read("LOGGED_DEFAULT_URL", "/Caller"));
+
+        // Explicit empty is distinct from inheritance (use an unconstrained custom value).
+        var ordinaryId = fixture.Seed("custom.title", Settings.INPUT_TEXT, "stored");
+        config["custom.title"] = "Configured";
+        fixture.Model.invalidate();
+        fixture.Model.update(ordinaryId, DB.h("ivalue", ""));
+        Assert.AreEqual("", fixture.Model.read("custom.title"));
+        fixture.Model.update(ordinaryId, DB.h("basis", Settings.BASIS_INHERIT));
+        Assert.AreEqual("Configured", fixture.Model.read("custom.title"));
+    }
+
+    [TestMethod]
+    public void CredentialClassificationUsesInputMetadataOnly()
+    {
+        Assert.IsTrue(Settings.isCredential(DB.h("icode", "arbitrary", "input", Settings.INPUT_CREDENTIAL)));
+        Assert.IsFalse(Settings.isCredential(DB.h("icode", "mail.password", "input", Settings.INPUT_TEXT)));
     }
 
     private sealed class SettingsFixture : IDisposable

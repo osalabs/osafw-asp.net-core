@@ -39,13 +39,13 @@ Set `$NotifyWebhook` to the app-specific deploy notification endpoint when notif
 
 Keep `appsettings.json` limited to values needed before the application database is available: deployment identity, host trust, named database definitions, storage location, worker switches, and logging/hosting configuration. Site-managed operational values such as the site name, redirects, email configuration, API credentials, MFA policy, and UI defaults belong in the `settings` table and `/Admin/Settings`.
 
-As a small upgrade shim, an existing `appSettings.is_mfa_enforced=true` remains a deployment-level minimum even after the Site Settings row is introduced. Migrate the value, verify the policy, then remove the legacy key; a false Site Settings value cannot weaken a true deployment minimum.
+Migrate existing operational values and plaintext credentials before starting the upgraded runtime. There is no special legacy MFA minimum: preserve an enforced MFA policy in the effective Settings value and verify it before reopening traffic. See the [application migration guide](agents/migrations/settings.md).
 
 Application policy that must also work without a database belongs in `FwHooks.configure(FwDict)`. The shipped hook defines route and XSS policy, signup availability, API CORS origin, and the application's default timezone. Keep this hook pure and DB-independent because startup, requests, and offline commands all use it. Framework-owned fallback values remain in `FwConfig`.
 
-ASP.NET Core selects `appsettings.Development.json`, `appsettings.Beta.json`, or another environment file through `DOTNET_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`. Hostname matching is only a compatibility shim for copied applications that still have an `appSettings.override` block; it does not select the deployment environment. Put development/test/production deployment differences in their environment files.
+ASP.NET Core selects `appsettings.Development.json`, `appsettings.Beta.json`, or another environment file through `DOTNET_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT`. Existing named and host-matched `appSettings.override` configuration remains supported; hostname matching does not select the ASP.NET Core deployment environment. Prefer environment files for development/test/production deployment differences.
 
-Apply the active provider's `upd2026-09-27-settings-foundation.sql` before deploying runtime code that reads Site Settings. Fresh installations receive the same rows from the provider's `settings.sql` during database initialization. `/Dev/Configure`, `/Admin/FwUpdates`, and `/Dev/Updates` remain available for upgrade/bootstrap without eagerly reading the upgraded Settings schema.
+Apply the active provider's `upd2026-09-27-settings-foundation.sql` before deploying runtime code that reads Site Settings. Fresh installations receive the same rows from the provider's `settings.sql` during database initialization. Do not rely on web routes to bridge an old Settings schema: finish the controlled database and value migration before starting the upgraded web host.
 
 For a first local clone with an empty development database, run the guarded initializer:
 
@@ -53,22 +53,11 @@ For a first local clone with an empty development database, run the guarded init
 dotnet run --project osafw-app -- database-init
 ```
 
-The command accepts no other arguments, requires the resolved configuration to have `IS_DEV=true`, refuses a database that already contains any tables, and has no force mode. It applies the existing provider-specific development initialization chain and prints the generated bootstrap administrator password to the console. Treat that output as a credential.
+The command is owned by `DevCli` and dispatched through the common CLI entry path in `Program.cs`. It accepts no other arguments, requires the resolved configuration to have `IS_DEV=true`, refuses a database that already contains any tables, and has no force mode. It applies the existing provider-specific development initialization chain and prints the generated bootstrap administrator password to the console. Treat that output as a credential.
 
 Initialize an empty production database through the application's normal controlled SQL deployment before starting the IIS application pool. Its provider-specific initialization must include the framework/session/key tables and `settings.sql`; `database-init` deliberately cannot initialize a production configuration. The web host now needs `fwsessions` and `fwkeys` at startup, before browser-based setup is available.
 
-After applying the schema update, migrate recognized operational values and plaintext credentials from a retained legacy configuration file once:
-
-```powershell
-Set-Location osafw-app
-$env:DOTNET_ENVIRONMENT = "Production"
-$env:ASPNETCORE_ENVIRONMENT = "Production"
-dotnet run --no-launch-profile -- settings-migrate C:\secure\legacy-appsettings.json --legacy-override Production
-```
-
-Run with the application pool stopped and select the target deployment environment explicitly; a development launch profile must not choose the target database. For a published application, run its executable from the deployment directory with the same environment selection.
-
-The optional override name imports that legacy `appSettings.override.<name>` after the base values. Existing explicit Settings values win. The command also encrypts recognized plaintext credential rows already in the database, requires an explicit stable `DATA_PROTECTION_APPLICATION_NAME`, prints only the number of changed rows, and does not install a runtime fallback. Delete the retained legacy file securely after checking the migrated values.
+For existing applications, use the [one-time Settings migration instructions](agents/migrations/settings.md) to prepare a reviewed app-specific migration. Select the target environment and connection explicitly, stop traffic during the final migration, and obtain authority before changing a configured database. Keep legacy configuration and rollback material outside tracked files. The runtime includes no legacy-JSON migration CLI or browser action.
 
 ### Data Protection Identity
 

@@ -338,10 +338,10 @@ public class SecurityGroup9BTests
         };
         if (!OperatingSystem.IsWindows())
         {
-            Assert.ThrowsExactly<PlatformNotSupportedException>(() => FwSettingsProtection.configure(services, settings));
+            Assert.ThrowsExactly<PlatformNotSupportedException>(() => Settings.configureProtection(services, settings));
             return;
         }
-        FwSettingsProtection.configure(services, settings);
+        Settings.configureProtection(services, settings);
         using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
         var options = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>>(provider).Value;
         Assert.IsInstanceOfType<FwKeysXmlRepository>(options.XmlRepository);

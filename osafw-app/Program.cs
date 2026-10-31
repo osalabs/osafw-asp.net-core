@@ -24,26 +24,12 @@ public static class Program
     public static void Main(string[] args)
     {
         var isCliCommand = DevCli.isCommand(args);
-        var isSettingsMigration = FwSettingsMigration.isCommand(args);
-        var isDatabaseInit = FwDatabaseInit.isCommand(args);
-        if (isCliCommand || isDatabaseInit)
+        if (isCliCommand)
             DevCli.useDefaultDevelopmentEnvironment();
 
         // In .NET 6+ the recommended pattern is the "WebApplication.CreateBuilder" approach
-        var builder = WebApplication.CreateBuilder(isCliCommand || isSettingsMigration || isDatabaseInit ? [] : args);
+        var builder = WebApplication.CreateBuilder(isCliCommand ? [] : args);
         FwConfig.setDefaultOverrideName(builder.Environment.EnvironmentName);
-
-        if (isDatabaseInit)
-        {
-            Environment.ExitCode = FwDatabaseInit.run(args, builder.Configuration);
-            return;
-        }
-
-        if (isSettingsMigration)
-        {
-            Environment.ExitCode = FwSettingsMigration.run(args, builder.Configuration);
-            return;
-        }
 
         if (isCliCommand)
         {
@@ -99,7 +85,7 @@ public static class Program
         });
 
         // Durable keys are shared by web sessions and protected Settings.
-        FwSettingsProtection.configure(builder.Services, settings);
+        Settings.configureProtection(builder.Services, settings);
 
         // Session rows use the provider-specific cache backing store for the main DB.
         builder.Services.AddFwSessionCache(connStr, dbType);

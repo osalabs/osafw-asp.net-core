@@ -20,7 +20,7 @@ public class AdminSettingsController : FwAdminController
     private static readonly HashSet<string> allowedActions = new(StringComparer.OrdinalIgnoreCase)
     {
         "", FW.ACTION_INDEX, FW.ACTION_SHOW, FW.ACTION_SHOW_FORM, FW.ACTION_SAVE,
-        "Reveal", "Export", "Import", "SaveEmail", "SaveAWS", "TestEmail", "Migrate"
+        "Reveal", "Export", "Import", "SaveEmail", "SaveAWS", "TestEmail"
     };
 
     private static readonly string[] SMTP_CODES =
@@ -37,7 +37,7 @@ public class AdminSettingsController : FwAdminController
 
     public override void init(FW fw)
     {
-        FwSettingsProtection.markSensitiveRequest(fw);
+        Settings.markSensitiveRequest(fw);
         base.init(fw);
         model = fw.model<Settings>();
         model0 = model;
@@ -62,7 +62,6 @@ public class AdminSettingsController : FwAdminController
             ["SaveEmail"] = Permissions.PERMISSION_EDIT,
             ["SaveAWS"] = Permissions.PERMISSION_EDIT,
             ["TestEmail"] = Permissions.PERMISSION_EDIT,
-            ["Migrate"] = Permissions.PERMISSION_EDIT,
         };
         base.checkAccess();
 
@@ -83,7 +82,7 @@ public class AdminSettingsController : FwAdminController
         base.setListSearch();
 
         list_where += @" and access_level<=@settings_access_level
- and (@settings_access_level>=100 or (input<>90 and icode not in ('mail.password','AWSAccessKey','AWSSecretKey','OPENAI_API_KEY','API_KEY')))";
+ and (@settings_access_level>=100 or input<>90)";
         list_where_params["settings_access_level"] = fw.userAccessLevel;
 
         if (hasIcatFilter())
@@ -113,7 +112,7 @@ public class AdminSettingsController : FwAdminController
 select icat
   from {db.qid("settings")}
  where access_level<=@settings_access_level
-   and (@settings_access_level>=100 or (input<>90 and icode not in ('mail.password','AWSAccessKey','AWSSecretKey','OPENAI_API_KEY','API_KEY')))
+   and (@settings_access_level>=100 or input<>90)
  group by icat
  order by case when icat='' then 0 else 1 end, icat", DB.h("settings_access_level", fw.userAccessLevel));
     }
@@ -237,17 +236,6 @@ select icat
 
         int count = model.importJson(json);
         fw.flash("success", $"Imported {count} settings.");
-        return afterSave(true, new FwDict { ["updated"] = count });
-    }
-
-    public FwDict? MigrateAction()
-    {
-        enforcePost();
-        checkReadOnly();
-        requireSiteAdmin();
-
-        int count = model.migratePlaintextCredentials();
-        fw.flash("success", $"Migrated {count} credential settings.");
         return afterSave(true, new FwDict { ["updated"] = count });
     }
 

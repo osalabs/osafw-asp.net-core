@@ -1,6 +1,6 @@
 # Site Settings
 
-Site Settings are operational values stored in the `settings` table and managed at `/Admin/Settings`. Deployment/bootstrap configuration stays in `appsettings*.json`; application policy and locale defaults belong in `FwHooks.configure`; model-specific constants belong with their model.
+Site Settings are operational values stored in the `settings` table and managed at `/Admin/Settings`. Deployment/bootstrap configuration stays in `appsettings*.json`; framework defaults belong in `FwConfig`, application defaults and policy in `FwHooks.configure`, and model-specific constants with their model.
 
 ## Runtime API and defaults
 
@@ -15,9 +15,9 @@ settings.write("CUSTOM_CODE", "new value");
 
 Reads use an application-level FwCache map keyed by the actual database connection identity. The map contains stored ciphertext, not decrypted credentials. The existing one-hour cache lifetime applies; supported model writes and imports invalidate it immediately, together with dependent menu data. One in-process lock coordinates loading and writes. Direct SQL changes require an application-pool restart or explicit invalidation. There is no distributed cache.
 
-`basis=0` means inherit the owning default; `basis=1` means use the stored value, including an intentional empty string. Missing rows also inherit. `read(code, fallback)` supplies the caller's default; `read(code)` uses the shipped operational default when one exists. Integer readers use their supplied fallback for invalid/empty numbers. This replaces the old empty-string-always-means-default behavior.
+`basis=0` means inherit the owning default; `basis=1` means use the stored value, including an intentional empty string. Missing rows also inherit. `read(code)` uses `fw.config(code)` as its default, including dotted keys such as `mail.port`; partial nested configuration preserves unspecified defaults; `read(code, fallback)` supplies an explicit caller default. Customize application defaults in the pure, DB-independent `FwHooks.configure` hook rather than adding a second defaults registry to Settings. Integer readers use their supplied fallback for invalid/empty numbers. This replaces the old empty-string-always-means-default behavior.
 
-Runtime reads and model writes are trusted system operations, not authorization entrypoints. Controllers must authorize user operations. `readSecret` is the explicit API for credential consumers. Generic model rows expose ciphertext; never place a secret runtime read in template globals or page state.
+Runtime reads and model writes are trusted system operations, not authorization entrypoints. Controllers must authorize user operations. `readSecret` is the explicit API for credential consumers; missing or inherited credentials use the same configuration-default path, while an explicit stored empty value remains empty. Generic model rows expose ciphertext; never place a secret runtime read in template globals or page state.
 
 `write` updates by stable code or creates a non-user-editable row, restricted to Site Admin by default. Seed full metadata for any setting intended for the editor. Use `writeBatch` for coupled values such as an AWS key pair.
 
@@ -38,7 +38,7 @@ Runtime reads and model writes are trusted system operations, not authorization 
 
 Input codes remain 0 text, 10 textarea, 20 select, 21 multiselect, 30 checkbox group, 40 radio, 50 date, 60 number, 70 switch, 80 range, and 90 credential. Option membership and numeric constraints are validated on the server, including import.
 
-Mask codes are 0 normal, 10 hidden, 20 first/last characters, 30 suffix, and 40 hidden with an authorized Reveal action. Short values do not expose fragments. Credentials cannot use normal display, and always require Site Admin. Custom sensitive settings must be declared as credentials; masking alone does not encrypt a value.
+Mask codes are 0 normal, 10 hidden, 20 first/last characters, 30 suffix, and 40 hidden with an authorized Reveal action. Short values do not expose fragments. Credentials cannot use normal display, and always require Site Admin. Only `input=90` classifies a credential: no setting name or suffix implies encryption. Declare custom sensitive settings as credentials before writing values; masking alone does not encrypt a value.
 
 ## Admin behavior
 
@@ -54,9 +54,11 @@ Credential values are encrypted before database writes using ASP.NET Core Data P
 
 `DATA_PROTECTION_APPLICATION_NAME` is a stable deployment identity, independent of editable `SITE_NAME`. Preserve its value across normal upgrades. When upgrading an older application, set it to that application's previous effective SITE_NAME before using existing protected data. Keys are retained; age alone is not grounds to delete keys needed by stored values. Repository read/write failures fail closed.
 
+Protection helpers live on the `Settings` model: startup uses `Settings.configureProtection(services, config)`, and trusted callers can use `fw.model<Settings>().protect(code, value)`, `fw.model<Settings>().unprotect(code, value)`, and `Settings.markSensitiveRequest(fw)`. Normal persistence should use model writes, which encrypt plaintext once and invalidate caches. Never pass already-protected values to a plaintext write API.
+
 Encryption does not replace diagnostic hygiene. Do not log decrypted values or transfer payloads in application-specific code. The framework records value-free audit information.
 
-## Export, Import, and moving servers
+## Transfer and server moves
 
 Site Admin's Export downloads one JSON file containing every stored setting value and basis, including decrypted credentials and non-editable values. There is no options dialog or preview. Import validates the file and known codes, then writes all supplied values in one transaction, encrypting credentials with the destination key ring. Definitions, permissions, mask policies, labels, and other metadata remain controlled by destination code/schema. Unspecified codes are unchanged; duplicate/unknown codes or invalid values reject the whole import. The transfer limit is 1 MiB.
 
@@ -79,6 +81,6 @@ Provider `settings.sql` files own framework setting definitions and shipped valu
 
 Existing databases use the provider's additive `updates/upd2026-09-27-settings-foundation.sql`, never the destructive fresh schema. The update preserves existing values, adds metadata and missing definitions, and does not attempt application encryption in SQL. SQL Server is primary; SQLite has disposable integration coverage; the optional MySQL script does not imply full framework schema parity.
 
-After the schema update, run the explicit maintenance migration on the existing host before enabling normal traffic. It moves eligible legacy operational JSON values and encrypts legacy plaintext credentials; see [deployment](deploy.md) for invocation and source precedence. Site Admin's migration action also converts existing plaintext credential rows. There is no automatic migration on read and no permanent fallback to legacy credential JSON.
+Complete the application-specific data migration before starting the upgraded runtime or enabling traffic. The [agent migration guide](agents/migrations/settings.md) maps old JSON values, metadata, plaintext credentials, and copied-app consumers to the current contracts. There is no built-in migration command, migration endpoint, automatic migration on read, or special legacy MFA minimum. Existing values that should remain effective must be migrated explicitly.
 
 When upgrading copied applications, move their policy customizations into FwHooks and change operational readers to Settings. Preserve custom setting definitions and intentional overrides. Follow the old-to-new map in [CHANGELOG](CHANGELOG.md); Codex-assisted migration still needs application acceptance checks.

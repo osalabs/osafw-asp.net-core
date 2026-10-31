@@ -456,7 +456,7 @@ public class AdminSettingsControllerTests
         Assert.ThrowsExactly<RedirectException>(() => fixture.Controller.ImportAction());
 
         string stored = fixture.Db.value("settings", DB.h("id", secretId), "ivalue").toStr();
-        Assert.StartsWith(FwSettingsProtection.PREFIX, stored);
+        Assert.StartsWith(Settings.PROTECTED_PREFIX, stored);
         Assert.DoesNotContain("imported-secret", stored);
         Assert.AreEqual("imported-secret", fixture.Model.readSecret("OPENAI_API_KEY"));
     }
