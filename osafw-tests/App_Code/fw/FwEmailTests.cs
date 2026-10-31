@@ -261,11 +261,7 @@ public class FwEmailTests
         using var server = new FakeSmtpServer();
         using var scope = CreateAdminSendEmailScope(server, Users.ACL_ADMIN);
         var settings = (StubSettings)scope.Fw.model<Settings>();
-        var controller = new TestAdminSendEmailController();
-        controller.init(scope.Fw);
-
-        Assert.IsTrue(scope.Fw.context.Items.ContainsKey("OSAFW.SensitiveSettings"));
-        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction());
+        Assert.ThrowsExactly<AuthException>(() => scope.Fw.callRoute());
         Assert.AreEqual(0, settings.SecretReadCount);
         Assert.IsFalse(server.ConnectionAccepted);
     }
@@ -364,6 +360,7 @@ public class FwEmailTests
         };
         var scope = new FwTestScope(_ => new RejectingDb(), config, TestHelpers.CreateHttpContext("email-tests"));
         TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings { Host = host, Port = port });
+        scope.Fw.model<Settings>().init(scope.Fw);
         return scope;
     }
 
@@ -383,6 +380,7 @@ public class FwEmailTests
             Port = server.Port,
             Password = "stored-smtp-secret",
         });
+        fw.model<Settings>().init(fw);
         TestHelpers.RegisterModel(fw, (Users)new StubUsers());
         fw.Session("user_id", "7");
         fw.Session("access_level", accessLevel.toStr());

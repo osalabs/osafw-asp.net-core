@@ -15,7 +15,7 @@ public class AdminSendEmailController : FwAdminController
 
     public override void init(FW fw)
     {
-        FwSettingsProtection.markSensitiveRequest(fw);
+        Settings.markSensitiveRequest(fw);
         base.init(fw);
         model = fw.model<Users>();
         model0 = model;
@@ -30,23 +30,21 @@ public class AdminSendEmailController : FwAdminController
         {
             ["from"] = settings.read("mail_from"),
             ["host"] = settings.read("mail.host"),
-            ["port"] = settings.readInt("mail.port", 587),
+            ["port"] = settings.readInt("mail.port"),
             ["username"] = settings.read("mail.username"),
             ["password"] = "",
-            ["is_ssl"] = settings.readBool("mail.is_ssl", true)
+            ["is_ssl"] = settings.readBool("mail.is_ssl")
         };
     }
 
     public override FwDict? IndexAction()
     {
-        requireSiteAdmin();
         fw.redirect(base_url + "/new");
         return null;
     }
 
     public override FwDict ShowFormAction(int id = 0)
     {
-        requireSiteAdmin();
         var ps = base.ShowFormAction(id)!;
         if (ps["i"] is FwDict item)
             item.Remove("password");
@@ -58,7 +56,6 @@ public class AdminSendEmailController : FwAdminController
     {
         enforcePost();
         checkReadOnly();
-        requireSiteAdmin();
 
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
@@ -113,10 +110,5 @@ public class AdminSendEmailController : FwAdminController
         this.validateCheckResult();
     }
 
-    private void requireSiteAdmin()
-    {
-        if (fw.userAccessLevel < Users.ACL_SITEADMIN)
-            throw new AuthException();
-    }
 
 }

@@ -98,6 +98,7 @@ public class FwLoginRedirectTests
         };
         var fw = new FW(context, new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
         TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
+        fw.model<Settings>().init(fw);
         return fw;
     }
 }

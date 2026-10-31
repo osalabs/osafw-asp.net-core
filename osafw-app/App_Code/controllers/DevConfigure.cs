@@ -153,8 +153,11 @@ IF LEN(@sql) > 0
         return initDatabase();
     }
 
+    /// <summary>Shares the existing initializer with the guarded development CLI.</summary>
+    internal FwDict initializeDatabase() => initDatabase();
+
     /// <summary>
-    /// Runs the development database initialization scripts after request-level bootstrap guards pass.
+    /// Runs the development database initialization scripts after bootstrap guards pass.
     /// </summary>
     /// <returns>Template data containing the generated admin password when one or more SQL statements executed.</returns>
     protected virtual FwDict initDatabase()

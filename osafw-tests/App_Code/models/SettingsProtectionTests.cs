@@ -8,7 +8,7 @@ using System.IO;
 namespace osafw.Tests;
 
 [TestClass]
-public class FwSettingsProtectionTests
+public class SettingsProtectionTests
 {
     [TestMethod]
     public void DurableDpapiKeyRingSurvivesProviderRecreation()
@@ -30,7 +30,7 @@ public class FwSettingsProtectionTests
 
             string encrypted;
             var firstServices = new ServiceCollection();
-            FwSettingsProtection.configure(firstServices, settings);
+            Settings.configureProtection(firstServices, settings);
             using (var first = firstServices.BuildServiceProvider())
                 encrypted = first.GetRequiredService<IDataProtectionProvider>().CreateProtector("test-purpose").Protect("test-value");
 
@@ -39,7 +39,7 @@ public class FwSettingsProtectionTests
             StringAssert.Contains(persisted[0], "encryptedSecret");
 
             var secondServices = new ServiceCollection();
-            FwSettingsProtection.configure(secondServices, settings);
+            Settings.configureProtection(secondServices, settings);
             using var second = secondServices.BuildServiceProvider();
             Assert.AreEqual("test-value", second.GetRequiredService<IDataProtectionProvider>().CreateProtector("test-purpose").Unprotect(encrypted));
         }
