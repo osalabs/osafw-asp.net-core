@@ -117,8 +117,8 @@ public class S3 : FwModel
     public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
         var settings = fw.model<Settings>();
-        var hasExplicitCredentials = !string.IsNullOrEmpty(access_key) || !string.IsNullOrEmpty(secret_key);
-        var credentialSource = hasExplicitCredentials ? "static" : settings.read("AWS_CREDENTIAL_SOURCE", "sdk");
+        var isExplicitCredentials = !string.IsNullOrEmpty(access_key) || !string.IsNullOrEmpty(secret_key);
+        var credentialSource = isExplicitCredentials ? "static" : settings.read("AWS_CREDENTIAL_SOURCE");
         string akey = "";
         string skey = "";
         if (credentialSource.Equals("static", StringComparison.OrdinalIgnoreCase))
@@ -126,7 +126,7 @@ public class S3 : FwModel
             akey = !string.IsNullOrEmpty(access_key) ? access_key : settings.readSecret("AWSAccessKey");
             skey = !string.IsNullOrEmpty(secret_key) ? secret_key : settings.readSecret("AWSSecretKey");
         }
-    // deployment configuration owns the S3 region and storage location
+        // Deployment configuration owns the S3 region and storage location
 
         this.region = (!string.IsNullOrEmpty(region) ? region : fw.config("AWSRegion")).toStr();
         this.bucket = (!string.IsNullOrEmpty(bucket) ? bucket : fw.config("S3Bucket")).toStr();

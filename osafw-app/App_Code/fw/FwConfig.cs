@@ -422,9 +422,7 @@ public static class FwConfig
             var children = st[section.Key] as FwDict ?? [];
             st[section.Key] = children;
             foreach (IConfigurationSection sub_section in section.GetChildren())
-            {
                 applySettingsSection(sub_section, children);
-            }
         }
     }
 

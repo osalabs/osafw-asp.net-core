@@ -64,6 +64,13 @@ public class SQLiteDBTests
         Assert.AreEqual(90, inheritedSiteName["access_level"].toInt());
         Assert.AreEqual(0, inheritedSiteName["basis"].toInt());
 
+        foreach (string code in new[] { "UNLOGGED_DEFAULT_URL", "LOGGED_DEFAULT_URL" })
+        {
+            var destination = db.row("settings", DB.h("icode", code));
+            Assert.AreEqual("local_url|1", destination["allowed_values"]);
+            Assert.AreEqual(Settings.BASIS_INHERIT, destination["basis"].toInt());
+        }
+
         var openAiKey = db.row("settings", DB.h("icode", "OPENAI_API_KEY"));
         Assert.AreEqual(100, openAiKey["access_level"].toInt());
         Assert.AreEqual(10, openAiKey["mask"].toInt());
@@ -150,6 +157,13 @@ public class SQLiteDBTests
         Assert.AreEqual("", inheritedSiteName["ivalue"]);
         Assert.AreEqual(90, inheritedSiteName["access_level"].toInt());
         Assert.AreEqual(0, inheritedSiteName["basis"].toInt());
+
+        foreach (string code in new[] { "UNLOGGED_DEFAULT_URL", "LOGGED_DEFAULT_URL" })
+        {
+            var destination = db.row("settings", DB.h("icode", code));
+            Assert.AreEqual("local_url|1", destination["allowed_values"]);
+            Assert.AreEqual(Settings.BASIS_INHERIT, destination["basis"].toInt());
+        }
     }
 
     [TestMethod]

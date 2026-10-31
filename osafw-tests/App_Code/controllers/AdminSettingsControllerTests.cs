@@ -68,6 +68,14 @@ public class AdminSettingsControllerTests
 
     private sealed class TestAdminSettingsController : AdminSettingsController
     {
+        public bool IsValidateCalled { get; private set; }
+
+        public override void Validate(int id, FwDict item)
+        {
+            IsValidateCalled = true;
+            base.Validate(id, item);
+        }
+
         public void MakeReadOnly()
         {
             is_readonly = true;
@@ -501,12 +509,24 @@ public class AdminSettingsControllerTests
     [DataRow("RestoreDeleted")]
     [DataRow("Next")]
     [DataRow("Go")]
-    public void CheckAccess_BlocksInheritedActions(string action)
+    public void InheritedActions_AreDeniedBeforeGenericHandling(string action)
     {
-        var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
-        fw.route.action = action;
+        var (_, model, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
+        FwAdminController admin = controller;
+        Action invoke = action switch
+        {
+            "QuickSearch" => () => admin.QuickSearchAction(),
+            "SaveMulti" => () => admin.SaveMultiAction(),
+            "ShowDelete" => () => admin.ShowDeleteAction(1),
+            "Delete" => () => admin.DeleteAction(1),
+            "RestoreDeleted" => () => admin.RestoreDeletedAction(1),
+            "Next" => () => admin.NextAction("1"),
+            "Go" => () => admin.GoAction(),
+            _ => throw new InvalidOperationException("Unknown test action"),
+        };
 
-        Assert.ThrowsExactly<AuthException>(() => controller.checkAccess());
+        Assert.ThrowsExactly<AuthException>(invoke);
+        Assert.AreEqual(0, model.UpdateCalls);
     }
 
     [TestMethod]
@@ -527,13 +547,27 @@ public class AdminSettingsControllerTests
     [TestMethod]
     [DataRow("csv")]
     [DataRow("xls")]
-    public void CheckAccess_BlocksGenericExport(string format)
+    public void ExportList_BlocksGenericExport(string format)
     {
         var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
         fw.route.action = FW.ACTION_INDEX;
         controller.export_format = format;
 
-        Assert.ThrowsExactly<AuthException>(() => controller.checkAccess());
+        Assert.ThrowsExactly<AuthException>(() => ((FwController)controller).exportList());
+    }
+
+    [TestMethod]
+    public void SaveAction_UsesTheOverridableValidationHook()
+    {
+        var (_, model, controller) = BuildController(
+            Setting(Settings.INPUT_TEXT, "old"),
+            new FwDict { ["ivalue"] = "new" });
+
+        controller.SaveAction(1);
+
+        Assert.IsTrue(controller.IsValidateCalled);
+        Assert.AreEqual(1, model.UpdateCalls);
+        Assert.AreEqual("new", model.LastUpdate["ivalue"]);
     }
 
 #if isSQLite

@@ -15,7 +15,7 @@ public class AdminSendEmailController : FwAdminController
 
     public override void init(FW fw)
     {
-        Settings.markSensitiveRequest(fw);
+        Settings.markSensitiveRequest();
         base.init(fw);
         model = fw.model<Users>();
         model0 = model;
@@ -109,6 +109,4 @@ public class AdminSendEmailController : FwAdminController
 
         this.validateCheckResult();
     }
-
-
 }

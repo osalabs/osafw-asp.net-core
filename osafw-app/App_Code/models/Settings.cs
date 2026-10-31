@@ -213,9 +213,7 @@ public class Settings : FwModel<Settings.Row>
             var rows = db.array(table_name, []);
             var result = new Dictionary<string, FwDict>(StringComparer.Ordinal);
             foreach (FwDict row in rows)
-            {
                 result.Add(row["icode"].toStr(), new FwDict(row));
-            }
 
             FwCache.setValue(mapKey, result);
             return result;
@@ -245,7 +243,7 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>Reads a credential for a trusted runtime consumer, never for generic page-state projection.</summary>
     public virtual string readSecret(string code)
     {
-        markSensitiveRequest(fw);
+        markSensitiveRequest();
         var row = oneByIcode(code);
         if (row.Count == 0)
             return fw.config(code).toStr();
@@ -341,9 +339,7 @@ public class Settings : FwModel<Settings.Row>
 
         if (input == INPUT_TEXT && metadata["local_url"].toBool()
             && !Utils.isAppUrl(value, fw.config("ROOT_DOMAIN").toStr()))
-        {
             return "INVALID";
-        }
 
         if (input == INPUT_SWITCH && value != "0" && value != "1")
             return "INVALID";
@@ -420,9 +416,7 @@ public class Settings : FwModel<Settings.Row>
             var fields = new FwDict(item);
             var merged = new FwDict(row);
             foreach (var entry in fields)
-            {
                 merged[entry.Key] = entry.Value;
-            }
 
             if (row["icode"].toStr() != merged["icode"].toStr() || isCredential(row) != isCredential(merged))
                 throw new UserException("Setting identity and credential classification cannot be changed through value updates.");
@@ -442,9 +436,7 @@ public class Settings : FwModel<Settings.Row>
 
                 var prepared = prepareValue(merged, fields["ivalue"].toStr(), basis);
                 foreach (var entry in prepared)
-                {
                     fields[entry.Key] = entry.Value;
-                }
             }
 
             try
@@ -479,7 +471,7 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>Full plaintext transfer for a separately authorized Site Admin endpoint. Never log the result.</summary>
     public string exportJson()
     {
-        markSensitiveRequest(fw);
+        markSensitiveRequest();
         lock (storeLock)
         {
             var result = new Transfer();
@@ -501,7 +493,7 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>Applies a same-app restore by code; target definitions and their security metadata are never imported.</summary>
     public int importJson(string json)
     {
-        markSensitiveRequest(fw);
+        markSensitiveRequest();
         if (System.Text.Encoding.UTF8.GetByteCount(json) > MAX_TRANSFER_BYTES)
             throw new UserException("Settings import is too large.");
 
@@ -524,7 +516,7 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>Trusted system operation. Controllers must authorize every row or restrict full restore to Site Admin.</summary>
     public int writeBatch(IReadOnlyCollection<ValueChange> changes)
     {
-        markSensitiveRequest(fw);
+        markSensitiveRequest();
         if (changes.Count == 0)
             return 0;
 
@@ -579,7 +571,7 @@ public class Settings : FwModel<Settings.Row>
     public static void configureProtection(IServiceCollection services, FwDict settings, bool isRequired = true)
     {
         var definition = (settings["db"] as FwDict)?["main"] as FwDict ?? [];
-        var resolved = FwDbConnections.Shared.Resolve(definition, "main");
+        definition = FwDbConnections.Shared.Resolve(definition, "main");
         var name = settings["DATA_PROTECTION_APPLICATION_NAME"].toStr();
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException("DATA_PROTECTION_APPLICATION_NAME must be configured before using protected data.");
@@ -589,13 +581,12 @@ public class Settings : FwModel<Settings.Row>
             throw new PlatformNotSupportedException("Durable Settings protection requires Windows DPAPI.");
         builder.ProtectKeysWithDpapi(protectToLocalMachine: true);
         services.Configure<KeyManagementOptions>(options =>
-            options.XmlRepository = new FwKeysXmlRepository(() => new DB(new FwDict(resolved), "main"), isRequired));
+            options.XmlRepository = new FwKeysXmlRepository(() => new DB(new FwDict(definition), "main"), isRequired));
     }
 
-    /// <summary>Marks the entire request sensitive before parsing or handling protected values.</summary>
-    public static void markSensitiveRequest(FW fw)
+    /// <summary>Excludes request bodies and cookies from Sentry events for credential consumers.</summary>
+    public static void markSensitiveRequest()
     {
-        fw.context.Items["OSAFW.SensitiveSettings"] = true;
 #if isSentry
         Sentry.SentrySdk.ConfigureScope(scope => scope.SetTag("osafw_sensitive_settings", "1"));
 #endif
@@ -619,7 +610,7 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>Accepts plaintext only. Empty means an intentional clear and needs no encryption key.</summary>
     public string protect(string code, string value)
     {
-        markSensitiveRequest(fw);
+        markSensitiveRequest();
         if (value.Length == 0)
             return "";
         try
@@ -636,7 +627,7 @@ public class Settings : FwModel<Settings.Row>
     /// <summary>Rejects plaintext and unreadable ciphertext; never treats it as missing/default.</summary>
     public string unprotect(string code, string value)
     {
-        markSensitiveRequest(fw);
+        markSensitiveRequest();
         if (value.Length == 0)
             return "";
         if (!value.StartsWith(PROTECTED_PREFIX, StringComparison.Ordinal))

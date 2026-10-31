@@ -31,7 +31,7 @@ Read nested JSON as nested objects and map mail fields to dotted setting codes; 
 A temporary app-specific offline tool can construct the reviewed changes and call the existing model boundary. The following fragment assumes `fw` already targets the authorized database with durable protection configured; the variables come from a secure, app-specific source:
 
 ```csharp
-Settings.markSensitiveRequest(fw);
+Settings.markSensitiveRequest();
 var settings = fw.model<Settings>();
 settings.writeBatch([
     new Settings.ValueChange {
