@@ -2,7 +2,7 @@
 
 ## Outcome and decisions
 
-Follow-up fixes for PR #300, to be propagated into #301/#302. Database-backed sessions and DPAPI-wrapped keys stay in the database. Home and `/Dev/Configure` render before the configured database is reachable or initialized. No file key store, distributed cache, session fallback subsystem, runtime migration machinery, or additional InitDB token system was added.
+Follow-up fixes for PR #300, propagated into #301/#302. Database-backed sessions and DPAPI-wrapped keys stay in the database. Home and `/Dev/Configure` render before the configured database is reachable or initialized. No file key store, distributed cache, session fallback subsystem, runtime migration machinery, or additional InitDB token system was added.
 
 - Optional session-cookie key persistence preserves bootstrap behavior. Persisted Settings credentials use their own strict cached provider against the same database key store, never the optional HTTP provider. Missing durable storage fails before a credential can be saved.
 - Presentation globals contain an explicit non-secret list; unavailable overrides leave FwConfig/FwHooks defaults. Date/time, language and timezone require no Settings lookup. Operational Settings reads continue reporting storage errors. Database definitions still need valid provider/connection configuration at host startup.
@@ -33,4 +33,17 @@ python artifacts/assistant_settings_sync/bootstrap-http.py
 
 ## Review and remaining integration
 
-Bounded implementation delegation owned AdminSettings/controller tests; the primary integrated model validation, storage/bootstrap behavior, docs and verification. Fresh reviewer_astra_high was selected for the consequential optional-cookie/strict-credential security and state distinction. Initial independent review found only stale documentation claims; these were corrected. Final independent review and summary audit found no blocking findings. Instruction validation passed. PR #301 integration also passed independent review. Its grouped editor permits either AWS credential to be replaced while a blank counterpart remains unchanged; the shared noStore helper now has two callers. Focused AdminSettings/RBAC/storage/protection tests passed 71/71 (same SQLite/Roles test command narrowed to those four classes, OutDir `artifacts/assistant_settings_bootstrap/tests/transfer/`, result `transfer-final.trx`). The initial merged list fixture lacked the grouped editor definitions; adding those fixture rows restored the intended authorization/count coverage. Final stack propagation/push remain pending.
+Bounded implementation delegation owned AdminSettings/controller tests; the primary integrated model validation, storage/bootstrap behavior, docs and verification. Fresh reviewer_astra_high was selected for the consequential optional-cookie/strict-credential security and state distinction. Initial independent review found only stale documentation claims; these were corrected. Final independent review and summary audit found no blocking findings. Instruction validation passed. PR #301 integration also passed independent review. Its grouped editor permits either AWS credential to be replaced while a blank counterpart remains unchanged; the shared noStore helper now has two callers. Focused AdminSettings/RBAC/storage/protection tests passed 71/71 (same SQLite/Roles test command narrowed to those four classes, OutDir `artifacts/assistant_settings_bootstrap/tests/transfer/`, result `transfer-final.trx`). The initial merged list fixture lacked the grouped editor definitions; adding those fixture rows restored the intended authorization/count coverage. The final stack preserves the existing database-secret resolver and immediate-parent PR relationships. Final integration checks and independent review are recorded below.
+
+## Final stack verification
+
+```powershell
+dotnet test "$taskRoot/osafw-tests/osafw-tests.csproj" --filter 'FullyQualifiedName~AdminSettingsControllerTests|FullyQualifiedName~AdminSettingsRbacTests|FullyQualifiedName~SettingsStoreTests|FullyQualifiedName~SettingsProtectionTests|FullyQualifiedName~FwKeys|FullyQualifiedName~SecurityGroup1DevConfigureTests|FullyQualifiedName~SecurityGroup9ATests|FullyQualifiedName~DevCliTests|FullyQualifiedName~FwDbConnectionsTests' --verbosity minimal '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite%3BisRoles%3BisSentry%3BisS3' "-p:OutDir=$taskRoot/artifacts/assistant_settings_bootstrap/tests/stack/" --logger 'trx;LogFileName=stack-final.trx' --results-directory "$taskRoot/artifacts/assistant_settings_bootstrap/test-results"
+dotnet build "$taskRoot/osafw-app/osafw-app.csproj" --verbosity minimal "-p:OutDir=$taskRoot/artifacts/assistant_settings_bootstrap/build/stack-default/"
+python artifacts/assistant_settings_sync/bootstrap-http.py
+pwsh -NoProfile -File docs/agents/tools/Test-AgentInstructions.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File docs/agents/tools/Test-AgentInstructions.ps1
+git diff --check
+```
+
+The final stack passed 141 focused optional-symbol tests and the default build with zero warnings/errors. The optional S3 build emitted CS0162 at unchanged Att.cs:771; no unrelated attachment change was made. Repeated HTTP acceptance passed both unreachable-SQL-Server rendering checks and empty-SQLite initialization on another task-owned database. Instruction validation and final diff checks passed. Independent integration review and the active-summary audit found no blocking issues; provider/IIS/AWS limits above still apply.
