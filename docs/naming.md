@@ -95,6 +95,7 @@ For local variables, clarity in the immediate scope matters more than global uni
 ## Source Readability
 
 - Separate logical blocks with blank lines: setup, validation, work, and cleanup should be easy to distinguish.
+- Omit braces around a single simple statement in a conditional or loop; keep the statement on its own indented line. Use braces for multiple statements or when needed to preserve scope or avoid an ambiguous `else`.
 - Expand multi-statement control flow and `try`/`catch`/`finally` blocks onto separate lines. Do not compress code just to reduce its line count.
 - Format long expressions and embedded scripts over multiple lines when this makes the flow easier to read.
 - Lean means fewer architectural concepts and less duplication, not compressed source. Keep blank lines between logical blocks, expanded control flow, and comments that explain intent.

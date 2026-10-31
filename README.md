@@ -37,11 +37,12 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 1. clone this git repository
   - for an application fork, use the [new-application guide](docs/agents/new-application.md) to plan configuration and optional app-scoped cleanup
 2. in Visual Studio open `osafw-asp.net-core.sln` (you may "save as" solution with your project name)
-3. configure the development database before starting the web host:
+3. press Ctrl+F5 to run (or F5 for debugging). Home and https://localhost:PORT/Dev/Configure load before the configured database is available; use the configuration page to see what still needs setup.
+4. configure and initialize the development database:
   - create an empty `demo` database (or the name configured by `appsettings.Development.json`)
   - or enable `isSQLite` in `osafw-app/osafw-app.csproj`, set the development `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
-  - from the repository root run `dotnet run --project osafw-app -- database-init` and retain the generated administrator password; the command requires development mode and refuses a non-empty database
-4. press Ctrl+F5 to run (or F5 for debugging), then open https://localhost:PORT/Dev/Configure to check configuration. Durable key/session tables must exist before browser startup; see [configuration and upgrade instructions](docs/deploy.md#runtime-configuration-ownership).
+  - use Initialize DB on `/Dev/Configure`, or run `dotnet run --project osafw-app -- database-init` from the repository root; the CLI requires development mode and refuses a non-empty database
+  - retain the generated administrator password; see [configuration and upgrade instructions](docs/deploy.md#runtime-configuration-ownership)
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
 7. modify templates in `/osafw-app/App_Data/template`
