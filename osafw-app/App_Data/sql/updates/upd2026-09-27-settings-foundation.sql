@@ -70,9 +70,3 @@ FROM (VALUES
 ) AS seed(is_user_edit, input, access_level, mask, basis, icat, icode, ivalue, iname, idesc, allowed_values)
 WHERE NOT EXISTS (SELECT 1 FROM settings existing WHERE existing.icode=seed.icode);
 GO
-
--- Keep existing default destinations subject to the same metadata rule.
-UPDATE settings
-SET allowed_values='local_url|1'
-WHERE icode IN ('UNLOGGED_DEFAULT_URL', 'LOGGED_DEFAULT_URL')
-    AND (allowed_values IS NULL OR allowed_values='');

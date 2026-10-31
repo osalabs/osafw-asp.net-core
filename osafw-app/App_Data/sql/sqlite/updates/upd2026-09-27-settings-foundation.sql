@@ -40,9 +40,3 @@ INSERT OR IGNORE INTO settings (is_user_edit, input, access_level, mask, basis, 
 (1, 60, 100, 0, 1, 'AI', 'ASSISTANT_MAX_INDEXED_FILE_BYTES', '5242880', 'Assistant Max Indexed File Bytes', 'Maximum supported attachment size for queued indexing. Larger files remain attached but are not indexed.', 'min|1 step|1'),
 (1, 60, 100, 0, 1, 'AI', 'ASSISTANT_MAX_INDEX_CHARS', '200000', 'Assistant Max Index Characters', 'Maximum parsed characters indexed per document.', 'min|1 step|1'),
 (1, 60, 100, 0, 1, 'AI', 'ASSISTANT_MAX_INDEX_CHUNKS', '80', 'Assistant Max Index Chunks', 'Maximum embedding chunks indexed per document.', 'min|1 step|1');
-
--- Keep existing default destinations subject to the same metadata rule.
-UPDATE settings
-SET allowed_values='local_url|1'
-WHERE icode IN ('UNLOGGED_DEFAULT_URL', 'LOGGED_DEFAULT_URL')
-    AND (allowed_values IS NULL OR allowed_values='');

@@ -81,7 +81,7 @@ public class FwEmailTests
             listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
             Port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            serverTask = Task.Run(ServeAsync);
+            serverTask = ServeAsync();
         }
 
         private async Task ServeAsync()
@@ -144,9 +144,15 @@ public class FwEmailTests
         public void Dispose()
         {
             listener.Stop();
-            try { serverTask.Wait(TimeSpan.FromSeconds(5)); }
+            try
+            {
+                serverTask.Wait(TimeSpan.FromSeconds(5));
+            }
             catch (AggregateException) when (serverTask.IsFaulted
-                && serverTask.Exception?.InnerException is SocketException or ObjectDisposedException) { }
+                && serverTask.Exception?.InnerException is SocketException or ObjectDisposedException)
+            {
+                // Stopping a listener with no connection cancels its pending accept.
+            }
         }
     }
 
