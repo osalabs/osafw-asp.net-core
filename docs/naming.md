@@ -97,7 +97,8 @@ For local variables, clarity in the immediate scope matters more than global uni
 - Separate logical blocks with blank lines: setup, validation, work, and cleanup should be easy to distinguish.
 - Expand multi-statement control flow and `try`/`catch`/`finally` blocks onto separate lines. Do not compress code just to reduce its line count.
 - Format long expressions and embedded scripts over multiple lines when this makes the flow easier to read.
-- Keep implementations small by avoiding unnecessary abstractions and duplication, while retaining useful spacing and comments that explain intent.
+- Lean means fewer architectural concepts and less duplication, not compressed source. Keep blank lines between logical blocks, expanded control flow, and comments that explain intent.
+- Format embedded SQL according to [SQL readability](db.md#sql-readability): indented clauses/predicates, parameterized domain constants, and model-owned table identifiers.
 
 ## Framework Names That Stay As-Is
 

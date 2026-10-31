@@ -270,81 +270,25 @@ public class SecurityGroup9ATests
     }
 
     [TestMethod]
-    public void SettingsRequestsNeverLogSubmittedValuesWhenPiiLoggingIsEnabled()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void DetailedFormDumpIsAvailableOnlyInDevelopment(bool isDev)
     {
         var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
         {
+            ["appSettings:IS_DEV"] = isDev.ToString(),
             ["appSettings:log_pii"] = "true",
         });
-        fw.route.controller = "AdminSettings";
-        fw.FORM["item"] = new FwDict
-        {
-            ["icode"] = "mail.password",
-            ["ivalue"] = "plaintext-secret",
-        };
-
-        var logged = fw.requestFormForLog();
-
-        Assert.IsInstanceOfType<StrList>(logged);
-        var text = FwLogger.dumper(logged);
-        Assert.IsFalse(text.Contains("plaintext-secret", StringComparison.Ordinal));
-        Assert.IsFalse(text.Contains("mail.password", StringComparison.Ordinal));
-    }
-
-    [TestMethod]
-    public void SensitiveSettingsMarkerRedactsCustomConsumerRequests()
-    {
-        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
-        {
-            ["appSettings:log_pii"] = "true",
-        });
-        fw.route.controller = "CustomSettings";
-        fw.context.Items["OSAFW.SensitiveSettings"] = true;
-        fw.FORM["ivalue"] = "plaintext-secret";
-
-        var logged = fw.requestFormForLog();
-
-        Assert.IsInstanceOfType<StrList>(logged);
-        Assert.IsFalse(FwLogger.dumper(logged).Contains("plaintext-secret", StringComparison.Ordinal));
-    }
-
-    [TestMethod]
-    public void SensitiveSettingsMarkerRedactsDetailedErrorResponse()
-    {
-        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
-        {
-            ["appSettings:IS_DEV"] = "true",
-            ["appSettings:log_pii"] = "true",
-        });
-        fw.context.Items["OSAFW.SensitiveSettings"] = true;
         fw.request.Headers.Accept = "application/json";
         fw.response.Body = new MemoryStream();
-        fw.FORM["ivalue"] = "plaintext-secret";
+        fw.FORM["ivalue"] = "test-submitted-value";
 
         fw.errMsg("Settings failure", new ApplicationException("Settings failure"));
 
         fw.response.Body.Position = 0;
         var body = new StreamReader(fw.response.Body).ReadToEnd();
-        Assert.IsFalse(body.Contains("plaintext-secret", StringComparison.Ordinal));
-        Assert.IsTrue(body.Contains("DUMP_FORM", StringComparison.Ordinal));
-    }
-
-    [TestMethod]
-    public void PiiLoggingPreservesOrdinaryFormValuesButRedactsCredentialFields()
-    {
-        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
-        {
-            ["appSettings:log_pii"] = "true",
-        });
-        fw.route.controller = "Contact";
-        fw.FORM["email"] = "person@example.test";
-        fw.FORM["password"] = "plaintext-secret";
-
-        var logged = fw.requestFormForLog() as FwDict;
-
-        Assert.IsNotNull(logged);
-        Assert.AreEqual("person@example.test", logged["email"]);
-        Assert.AreEqual("[REDACTED]", logged["password"]);
+        Assert.AreEqual(isDev, body.Contains("test-submitted-value", StringComparison.Ordinal));
+        Assert.AreEqual(isDev, body.Contains("DUMP_FORM", StringComparison.Ordinal));
     }
 
     [TestMethod]

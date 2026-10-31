@@ -7,24 +7,27 @@ using System.Xml.Linq;
 
 namespace osafw;
 
-/// <summary>Durable Data Protection keys. Persistence failures are fatal; expired keys remain available for decryption.</summary>
+/// <summary>Database Data Protection keys. Optional session keys tolerate an uninitialized database; Settings keys require durable storage.</summary>
 public class FwKeysXmlRepository : IXmlRepository
 {
     private const int ITYPE_DATA_PROTECTION_KEY = 10;
     private readonly Func<DB> createDb;
     private readonly bool is_owned;
+    private readonly bool isRequired;
     private const string TABLE_NAME = "fwkeys";
 
     /// <summary>Uses a caller-owned wrapper, retained for existing callers.</summary>
-    public FwKeysXmlRepository(DB db)
+    public FwKeysXmlRepository(DB db, bool isRequired = true)
     {
         createDb = () => db;
+        this.isRequired = isRequired;
     }
 
     /// <summary>Creates and disposes a separate wrapper per operation, suitable for singleton key services.</summary>
-    public FwKeysXmlRepository(Func<DB> createDb)
+    public FwKeysXmlRepository(Func<DB> createDb, bool isRequired = true)
     {
         this.createDb = createDb;
+        this.isRequired = isRequired;
         is_owned = true;
     }
 
@@ -38,7 +41,10 @@ public class FwKeysXmlRepository : IXmlRepository
         }
         catch (Exception)
         {
-            throw new CryptographicException("Unable to read the durable Data Protection key store. Initialize or restore the database first.");
+            if (isRequired)
+                throw new CryptographicException("Unable to read the durable Data Protection key store. Initialize or restore the database first.");
+
+            return [];
         }
         finally
         {
@@ -73,7 +79,8 @@ public class FwKeysXmlRepository : IXmlRepository
         }
         catch (Exception)
         {
-            throw new CryptographicException("Unable to persist a durable Data Protection key.");
+            if (isRequired)
+                throw new CryptographicException("Unable to persist a durable Data Protection key.");
         }
         finally
         {

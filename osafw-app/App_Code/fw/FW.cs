@@ -55,7 +55,6 @@ public class FW : IDisposable
     private readonly FwDict models = []; // model's singletons cache
     private readonly FwDict controllers = new(StringComparer.OrdinalIgnoreCase); // controller's singletons cache
     private const string ControllerActionsCacheKeyPrefix = "fw:controller-actions:";
-    private const string SensitiveSettingsContextKey = "OSAFW.SensitiveSettings";
     private static readonly ConcurrentDictionary<string, Type?> ControllerTypeCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, string> CanonicalActions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -782,7 +781,7 @@ public class FW : IDisposable
             {
                 // it's ApplicationException, so just warning
                 var logPii = config("log_pii").toBool();
-                logger(LogLevel.NOTICE, "REQUEST FORM:", requestFormForLog());
+                logger(LogLevel.NOTICE, "REQUEST FORM:", logPii ? (object)FORM : new StrList(FORM.Keys));
                 logger(LogLevel.NOTICE, "SESSION:", logPii ? (object)context.Session : new StrList(context.Session.Keys));
                 logger(LogLevel.WARN, Ex.Message, Ex.ToString());
 
@@ -798,7 +797,7 @@ public class FW : IDisposable
         {
             // it's general Exception, so something more severe occur, log as error and notify admin
             var logPii = config("log_pii").toBool();
-            logger(LogLevel.NOTICE, "REQUEST FORM:", requestFormForLog());
+            logger(LogLevel.NOTICE, "REQUEST FORM:", logPii ? (object)FORM : new StrList(FORM.Keys));
             logger(LogLevel.NOTICE, "SESSION:", logPii ? (object)context.Session : new StrList(context.Session.Keys));
             logger(LogLevel.ERROR, Ex.Message, Ex.ToString());
 
@@ -936,83 +935,37 @@ public class FW : IDisposable
         FORM = f;
     }
 
-    internal object requestFormForLog()
-    {
-        var isSettingsRequest = route.controller.Equals("AdminSettings", StringComparison.OrdinalIgnoreCase)
-            || context.Items.ContainsKey(SensitiveSettingsContextKey);
-        if (isSettingsRequest || !config("log_pii").toBool())
-            return new StrList(FORM.Keys);
-
-        return redactSensitiveFormValues(FORM);
-    }
-
-    private static FwDict redactSensitiveFormValues(FwDict source)
-    {
-        var result = new FwDict();
-        foreach (var entry in source)
-        {
-            if (isSensitiveFormKey(entry.Key))
-            {
-                result[entry.Key] = "[REDACTED]";
-                continue;
-            }
-
-            result[entry.Key] = entry.Value is FwDict nested
-                ? redactSensitiveFormValues(nested)
-                : entry.Value;
-        }
-
-        return result;
-    }
-
-    private static bool isSensitiveFormKey(string key)
-    {
-        return key.Contains("password", StringComparison.OrdinalIgnoreCase)
-            || key.Contains("secret", StringComparison.OrdinalIgnoreCase)
-            || key.Contains("token", StringComparison.OrdinalIgnoreCase)
-            || key.Contains("api_key", StringComparison.OrdinalIgnoreCase)
-            || key.Contains("apikey", StringComparison.OrdinalIgnoreCase)
-            || key.Contains("api-key", StringComparison.OrdinalIgnoreCase)
-            || key.Equals("ivalue", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private object formErrorsForLog(FwDict formErrors)
-    {
-        if (!route.controller.Equals("AdminSettings", StringComparison.OrdinalIgnoreCase)
-            && !context.Items.ContainsKey(SensitiveSettingsContextKey))
-            return formErrors;
-
-        return new FwDict
-        {
-            ["count"] = formErrors.Count,
-            ["fields"] = new StrList(formErrors.Keys),
-        };
-    }
-
     /// <summary>
     /// Loads non-secret site settings only when a rendered response needs them. The request
-    /// constructor remains free of Settings reads; schema initialization runs through DevCli before web startup.
+    /// constructor stays DB-independent; unavailable display overrides retain configured defaults during bootstrap.
     /// </summary>
     private void ensureSettingsGlobals()
     {
         if (isSettingsGlobalsLoaded || isRenderingError)
             return;
 
-        var settings = model<Settings>();
-        G["SITE_NAME"] = settings.read("SITE_NAME");
-        G["feedback_email"] = settings.read("feedback_email");
-        G["support_email"] = settings.read("support_email");
-        G["mail_from"] = settings.read("mail_from");
-        G["is_list_btn_left"] = settings.readBool("is_list_btn_left");
-        G["UNLOGGED_DEFAULT_URL"] = settings.read("UNLOGGED_DEFAULT_URL");
-        G["LOGGED_DEFAULT_URL"] = settings.read("LOGGED_DEFAULT_URL");
-
-        if (string.IsNullOrEmpty(Session("ui_theme")))
-            G["ui_theme"] = settings.readInt("ui_theme");
-        if (string.IsNullOrEmpty(Session("ui_mode")))
-            G["ui_mode"] = settings.readInt("ui_mode");
-
         isSettingsGlobalsLoaded = true;
+        try
+        {
+            var settings = model<Settings>();
+            G["SITE_NAME"] = settings.read("SITE_NAME");
+            G["feedback_email"] = settings.read("feedback_email");
+            G["support_email"] = settings.read("support_email");
+            G["mail_from"] = settings.read("mail_from");
+            G["is_list_btn_left"] = settings.readBool("is_list_btn_left");
+            G["UNLOGGED_DEFAULT_URL"] = settings.read("UNLOGGED_DEFAULT_URL");
+            G["LOGGED_DEFAULT_URL"] = settings.read("LOGGED_DEFAULT_URL");
+
+            if (string.IsNullOrEmpty(Session("ui_theme")))
+                G["ui_theme"] = settings.readInt("ui_theme");
+            if (string.IsNullOrEmpty(Session("ui_mode")))
+                G["ui_mode"] = settings.readInt("ui_mode");
+        }
+        catch (Exception)
+        {
+            // These presentation overrides are optional; operational Settings reads still report database failures.
+            logger(LogLevel.WARN, "Site display settings are unavailable; using configured defaults.");
+        }
     }
 
     public void logger(params object?[] args)
@@ -1085,7 +1038,7 @@ public class FW : IDisposable
                 errorTable["details"] = formErrors;
                 ps["error"] = errorTable;
             }
-            logger(LogLevel.DEBUG, "Form errors:", formErrorsForLog(formErrors));
+            logger(LogLevel.DEBUG, "Form errors:", formErrors);
         }
 
         if (FormIssues.Count > 0 && !ps.ContainsKey("form_issues"))
@@ -1902,7 +1855,7 @@ public class FW : IDisposable
                 ps["DUMP_STACK"] = Ex.ToString();
 
             ps["DUMP_SQL"] = DB.last_sql;
-            ps["DUMP_FORM"] = FwLogger.dumper(requestFormForLog());
+            ps["DUMP_FORM"] = FwLogger.dumper(FORM ?? []);
             ps["DUMP_SESSION"] = session != null ? FwLogger.dumper(session) : "null";
         }
 
