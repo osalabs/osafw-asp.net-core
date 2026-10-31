@@ -37,8 +37,8 @@ SELECT seed.is_user_edit, seed.input, seed.access_level, seed.mask, seed.basis,
        seed.icat, seed.icode, seed.ivalue, seed.iname, seed.idesc, seed.allowed_values
 FROM (VALUES
     (1, 0, 90, 0, 0, 'Site', 'SITE_NAME', '', 'Site Name', 'Name shown in page titles, email and authentication labels.', ''),
-    (1, 0, 90, 0, 0, 'Site', 'UNLOGGED_DEFAULT_URL', '', 'Public Default URL', 'App-local URL used when an unauthenticated user needs a default destination.', ''),
-    (1, 0, 90, 0, 0, 'Site', 'LOGGED_DEFAULT_URL', '', 'Signed-in Default URL', 'App-local URL used as the default destination after sign-in.', ''),
+    (1, 0, 90, 0, 0, 'Site', 'UNLOGGED_DEFAULT_URL', '', 'Public Default URL', 'App-local URL used when an unauthenticated user needs a default destination.', 'local_url|1'),
+    (1, 0, 90, 0, 0, 'Site', 'LOGGED_DEFAULT_URL', '', 'Signed-in Default URL', 'App-local URL used as the default destination after sign-in.', 'local_url|1'),
     (1, 70, 100, 0, 0, 'Security', 'is_mfa_enforced', '', 'Require MFA', 'Require configured users to complete multi-factor authentication.', ''),
     (1, 70, 90, 0, 0, 'Display', 'is_list_btn_left', '', 'List Actions on Left', 'Show standard list action buttons on the left side.', ''),
     (1, 20, 90, 0, 0, 'Display', 'ui_theme', '', 'Default Interface Theme', 'Default interface theme for users without a saved preference.', '0|Default 10|Pink 20|Shadows 30|Blue'),
@@ -70,3 +70,9 @@ FROM (VALUES
 ) AS seed(is_user_edit, input, access_level, mask, basis, icat, icode, ivalue, iname, idesc, allowed_values)
 WHERE NOT EXISTS (SELECT 1 FROM settings existing WHERE existing.icode=seed.icode);
 GO
+
+-- Keep existing default destinations subject to the same metadata rule.
+UPDATE settings
+SET allowed_values='local_url|1'
+WHERE icode IN ('UNLOGGED_DEFAULT_URL', 'LOGGED_DEFAULT_URL')
+    AND (allowed_values IS NULL OR allowed_values='');

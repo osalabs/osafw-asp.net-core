@@ -8,7 +8,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
@@ -32,6 +31,19 @@ public class Settings : FwModel<Settings.Row>
     public const int INPUT_SWITCH = 70;
     public const int INPUT_RANGE = 80;
     public const int INPUT_CREDENTIAL = 90;
+
+    public const int MASK_NONE = 0;
+    public const int MASK_HIDDEN = 10;
+    public const int MASK_EDGES = 20;
+    public const int MASK_SUFFIX = 30;
+    public const int MASK_REVEAL = 40;
+    public const int BASIS_INHERIT = 0;
+    public const int BASIS_VALUE = 1;
+    public const int MAX_TRANSFER_BYTES = 1048576;
+    private static readonly object storeLock = new();
+
+    public const string PROTECTED_PREFIX = "enc:v1:";
+    private static readonly ConcurrentDictionary<string, Lazy<ServiceProvider>> providers = new();
 
     public class Row
     {
@@ -131,7 +143,6 @@ public class Settings : FwModel<Settings.Row>
         this.setValue(icode, value);
     }
 
-
     // just return first row by icode field
     public override DBRow oneByIcode(string icode)
     {
@@ -147,6 +158,7 @@ public class Settings : FwModel<Settings.Row>
     {
         return effective(oneByIcode(icode), defaultValue);
     }
+
     public void setValue(string icode, string ivalue)
     {
         var item = this.oneByIcode(icode);
@@ -173,10 +185,12 @@ public class Settings : FwModel<Settings.Row>
     public FwList listCategories()
     {
         FwList rows = db.arrayp($@"
-select icat
-  from {db.qid(table_name)}
- group by icat
- order by case when icat='' then 0 else 1 end, icat", DB.h());
+            select icat
+            from {qTable()}
+            group by icat
+            order by
+                case when icat='' then 0 else 1 end,
+                icat", DB.h());
 
         return rows;
     }
@@ -187,16 +201,6 @@ select icat
         return isExistsByField(uniq_key, not_id, "icode");
     }
 
-    public const int MASK_NONE = 0;
-    public const int MASK_HIDDEN = 10;
-    public const int MASK_EDGES = 20;
-    public const int MASK_SUFFIX = 30;
-    public const int MASK_REVEAL = 40;
-    public const int BASIS_INHERIT = 0;
-    public const int BASIS_VALUE = 1;
-    public const int MAX_TRANSFER_BYTES = 1048576;
-    private static readonly object storeLock = new();
-
     private string mapKey => "settings:" + db.cacheIdentity;
 
     private Dictionary<string, FwDict> snapshot()
@@ -205,12 +209,14 @@ select icat
         {
             if (FwCache.getValue(mapKey) is Dictionary<string, FwDict> cached)
                 return cached;
+
             var rows = db.array(table_name, []);
             var result = new Dictionary<string, FwDict>(StringComparer.Ordinal);
             foreach (FwDict row in rows)
             {
                 result.Add(row["icode"].toStr(), new FwDict(row));
             }
+
             FwCache.setValue(mapKey, result);
             return result;
         }
@@ -231,6 +237,7 @@ select icat
     {
         if (row.Count == 0 || row["basis"].toInt(BASIS_VALUE) == BASIS_INHERIT)
             return defaultValue;
+
         var value = row["ivalue"].toStr();
         return isCredential(row) ? unprotect(row["icode"].toStr(), value) : value;
     }
@@ -242,8 +249,10 @@ select icat
         var row = oneByIcode(code);
         if (row.Count == 0)
             return fw.config(code).toStr();
+
         if (!isCredential(row))
             throw new InvalidOperationException("The setting is not defined as a credential.");
+
         return effective(row, fw.config(code).toStr());
     }
 
@@ -263,6 +272,7 @@ select icat
     {
         if (row["basis"].toInt(BASIS_VALUE) == BASIS_INHERIT)
             return "Use default";
+
         var mask = maskPolicy(row);
         try
         {
@@ -271,6 +281,7 @@ select icat
                 return value;
             if (value.Length == 0)
                 return "Not configured";
+
             return mask switch
             {
                 MASK_EDGES when value.Length > 12 => value[..4] + "..." + value[^4..],
@@ -289,6 +300,7 @@ select icat
     {
         if (row.Count == 0)
             throw new UserException("Setting not found.");
+
         var minimum = row["access_level"].toInt(Users.ACL_SITEADMIN);
         if (isCredential(row))
             minimum = Math.Max(minimum, Users.ACL_SITEADMIN);
@@ -301,8 +313,10 @@ select icat
     {
         if (basis != BASIS_INHERIT && basis != BASIS_VALUE)
             throw new UserException("Invalid setting basis.");
+
         if (basis == BASIS_VALUE)
             validateValue(row, value);
+
         return new FwDict
         {
             ["basis"] = basis,
@@ -311,54 +325,56 @@ select icat
         };
     }
 
-    /// <summary>Shared validation for forms, programmatic writes and full import. Errors never contain values.</summary>
+    /// <summary>Validates a value for trusted writes and imports without including it in an error.</summary>
     public void validateValue(FwDict row, string value)
     {
-        var code = row["icode"].toStr();
+        var error = valueError(row, value);
+        if (error.Length > 0)
+            throw new UserException("Invalid setting value (" + error + ").");
+    }
+
+    /// <summary>Returns a form validation code, or empty when the value matches its control metadata.</summary>
+    public string valueError(FwDict row, string value)
+    {
         var input = row["input"].toInt();
-        if (code is "UNLOGGED_DEFAULT_URL" or "LOGGED_DEFAULT_URL")
+        var metadata = Utils.qh(row["allowed_values"].toStr(), "");
+
+        if (input == INPUT_TEXT && metadata["local_url"].toBool()
+            && !Utils.isAppUrl(value, fw.config("ROOT_DOMAIN").toStr()))
         {
-            if (!Utils.isAppUrl(value, fw.config("ROOT_DOMAIN").toStr()))
-                throw new UserException("The default URL must be local to this application.");
+            return "INVALID";
         }
-        if (code is "feedback_email" or "support_email" or "mail_from" or "admin_email" or "test_email")
-        {
-            if (value.Length > 0 && !(code == "test_email" && value.Equals("current_user", StringComparison.OrdinalIgnoreCase)))
-            {
-                try { _ = new MailAddress(value); }
-                catch { throw new UserException("Invalid setting email address."); }
-                if (value.Contains('\r') || value.Contains('\n'))
-                    throw new UserException("Invalid setting email address.");
-            }
-        }
-        if (code == "mail.host" && (value.Contains('/') || value.Any(char.IsWhiteSpace)))
-            throw new UserException("Enter an SMTP host name without a URL or whitespace.");
+
         if (input == INPUT_SWITCH && value != "0" && value != "1")
-            throw new UserException("A switch setting requires 0 or 1.");
+            return "INVALID";
+
         if (input is INPUT_NUMBER or INPUT_RANGE)
         {
             if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
-                throw new UserException("A numeric setting requires a number.");
-            var metadata = Utils.qh(row["allowed_values"].toStr(), "");
-            if (metadata.TryGetValue("min", out object? min) && decimal.TryParse(min.toStr(), CultureInfo.InvariantCulture, out var low) && number < low
-                || metadata.TryGetValue("max", out object? max) && decimal.TryParse(max.toStr(), CultureInfo.InvariantCulture, out var high) && number > high)
-                throw new UserException("Setting is outside its allowed range.");
-            if (metadata.TryGetValue("step", out object? step) && decimal.TryParse(step.toStr(), CultureInfo.InvariantCulture, out var increment) && increment > 0)
+                return "NUMBER";
+
+            if (decimal.TryParse(metadata["min"].toStr(), CultureInfo.InvariantCulture, out var low) && number < low)
+                return "MIN";
+
+            if (decimal.TryParse(metadata["max"].toStr(), CultureInfo.InvariantCulture, out var high) && number > high)
+                return "MAX";
+
+            if (decimal.TryParse(metadata["step"].toStr(), CultureInfo.InvariantCulture, out var increment) && increment > 0)
             {
                 decimal.TryParse(metadata["min"].toStr(), CultureInfo.InvariantCulture, out var origin);
                 if ((number - origin) % increment != 0)
-                    throw new UserException("Setting does not match its allowed step.");
+                    return "STEP";
             }
         }
+
         if (input is INPUT_SELECT or INPUT_RADIO or INPUT_CHECKBOX or INPUT_SELECT_MULTI)
         {
-            var options = Utils.qh(row["allowed_values"].toStr(), "");
             var values = input is INPUT_CHECKBOX or INPUT_SELECT_MULTI ? value.Split(',') : [value];
-            if (values.Any(option => option.Length > 0 && !options.ContainsKey(option)))
-                throw new UserException("Invalid setting option.");
+            if (values.Any(option => option.Length > 0 && !metadata.ContainsKey(option)))
+                return "INVALID";
         }
-        if (code == "mail.port" && (!int.TryParse(value, out var port) || port < 1 || port > 65535))
-            throw new UserException("SMTP port must be between 1 and 65535.");
+
+        return "";
     }
 
     public override int add(FwDict item)
@@ -369,14 +385,27 @@ select icat
             var code = fields["icode"].toStr();
             if (code.Length == 0)
                 throw new UserException("A setting requires a code.");
-            if (!fields.ContainsKey("basis")) fields["basis"] = BASIS_VALUE;
-            if (!fields.ContainsKey("access_level")) fields["access_level"] = Users.ACL_SITEADMIN;
-            if (!fields.ContainsKey("mask")) fields["mask"] = isCredential(fields) ? MASK_HIDDEN : MASK_NONE;
-            if (isCredential(fields)) fields["access_level"] = Users.ACL_SITEADMIN;
+
+            if (!fields.ContainsKey("basis"))
+                fields["basis"] = BASIS_VALUE;
+            if (!fields.ContainsKey("access_level"))
+                fields["access_level"] = Users.ACL_SITEADMIN;
+            if (!fields.ContainsKey("mask"))
+                fields["mask"] = isCredential(fields) ? MASK_HIDDEN : MASK_NONE;
+            if (isCredential(fields))
+                fields["access_level"] = Users.ACL_SITEADMIN;
+
             var prepared = prepareValue(fields, fields["ivalue"].toStr(), fields["basis"].toInt());
             fields["ivalue"] = prepared["ivalue"];
-            try { return base.add(fields); }
-            finally { invalidate(); }
+
+            try
+            {
+                return base.add(fields);
+            }
+            finally
+            {
+                invalidate();
+            }
         }
     }
 
@@ -387,32 +416,45 @@ select icat
             var row = db.row(table_name, DB.h("id", id));
             if (row.Count == 0)
                 throw new UserException("Setting not found.");
+
             var fields = new FwDict(item);
             var merged = new FwDict(row);
-            foreach (var entry in fields) merged[entry.Key] = entry.Value;
+            foreach (var entry in fields)
+            {
+                merged[entry.Key] = entry.Value;
+            }
+
             if (row["icode"].toStr() != merged["icode"].toStr() || isCredential(row) != isCredential(merged))
                 throw new UserException("Setting identity and credential classification cannot be changed through value updates.");
+
             if (isCredential(merged))
             {
                 fields["access_level"] = Users.ACL_SITEADMIN;
-                if (maskPolicy(merged) == MASK_HIDDEN) fields["mask"] = MASK_HIDDEN;
+                if (maskPolicy(merged) == MASK_HIDDEN)
+                    fields["mask"] = MASK_HIDDEN;
             }
+
             if (fields.ContainsKey("ivalue") || fields.ContainsKey("basis"))
             {
                 var basis = fields.ContainsKey("basis") ? fields["basis"].toInt() : BASIS_VALUE;
                 if (!fields.ContainsKey("ivalue") && basis == BASIS_VALUE)
                     throw new UserException("An explicit value is required.");
-                var code = row["icode"].toStr();
-                if (code is "AWS_CREDENTIAL_SOURCE" or "AWSAccessKey" or "AWSSecretKey")
-                {
-                    var rows = db.array(table_name, []).ToDictionary(value => value["icode"].toStr(), value => (FwDict)value, StringComparer.Ordinal);
-                    validateCredentialGroup([new ValueChange { icode = code, basis = basis, ivalue = fields["ivalue"].toStr() }], rows);
-                }
+
                 var prepared = prepareValue(merged, fields["ivalue"].toStr(), basis);
-                foreach (var entry in prepared) fields[entry.Key] = entry.Value;
+                foreach (var entry in prepared)
+                {
+                    fields[entry.Key] = entry.Value;
+                }
             }
-            try { return base.update(id, fields); }
-            finally { invalidate(); }
+
+            try
+            {
+                return base.update(id, fields);
+            }
+            finally
+            {
+                invalidate();
+            }
         }
     }
 
@@ -446,10 +488,12 @@ select icat
                 var basis = row["basis"].toInt();
                 result.settings.Add(new ValueChange
                 {
-                    icode = row["icode"].toStr(), basis = basis,
+                    icode = row["icode"].toStr(),
+                    basis = basis,
                     ivalue = basis == BASIS_INHERIT ? null : effective(row, "")
                 });
             }
+
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
     }
@@ -460,11 +504,20 @@ select icat
         markSensitiveRequest(fw);
         if (System.Text.Encoding.UTF8.GetByteCount(json) > MAX_TRANSFER_BYTES)
             throw new UserException("Settings import is too large.");
+
         Transfer transfer;
-        try { transfer = JsonSerializer.Deserialize<Transfer>(json) ?? throw new JsonException(); }
-        catch (JsonException) { throw new UserException("Invalid Settings JSON."); }
+        try
+        {
+            transfer = JsonSerializer.Deserialize<Transfer>(json) ?? throw new JsonException();
+        }
+        catch (JsonException)
+        {
+            throw new UserException("Invalid Settings JSON.");
+        }
+
         if (transfer.version != 1 || transfer.settings == null)
             throw new UserException("Unsupported Settings transfer format.");
+
         return writeBatch(transfer.settings);
     }
 
@@ -474,6 +527,7 @@ select icat
         markSensitiveRequest(fw);
         if (changes.Count == 0)
             return 0;
+
         lock (storeLock)
         {
             var rows = db.array(table_name, []).ToDictionary(row => row["icode"].toStr(), row => (FwDict)row, StringComparer.Ordinal);
@@ -483,23 +537,28 @@ select icat
             {
                 if (change == null || string.IsNullOrWhiteSpace(change.icode) || !codes.Add(change.icode) || !rows.TryGetValue(change.icode, out var row))
                     throw new UserException("Settings import contains an unknown or duplicate code.");
+
                 if (change.basis == BASIS_VALUE && change.ivalue == null)
                     throw new UserException("An explicit setting value is required.");
+
                 prepared.Add((row["id"].toInt(), prepareValue(row, change.ivalue ?? "", change.basis)));
             }
-            validateCredentialGroup(changes, rows);
+
             db.begin();
             try
             {
                 foreach (var entry in prepared)
                 {
                     entry.fields["upd_time"] = DB.NOW;
-                    if (fw.isLogged) entry.fields["upd_users_id"] = fw.userId;
-                    if (db.update(table_name, entry.fields, DB.h("id", entry.id)) != 1)
-                        throw new UserException("A setting changed during import.");
+                    if (fw.isLogged)
+                        entry.fields["upd_users_id"] = fw.userId;
+
+                    db.update(table_name, entry.fields, DB.h("id", entry.id));
                 }
+
                 if (is_log_changes)
                     fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, 0, "Settings batch: " + prepared.Count);
+
                 db.commit();
             }
             catch
@@ -507,36 +566,17 @@ select icat
                 db.rollback();
                 throw;
             }
-            finally { invalidate(); }
+            finally
+            {
+                invalidate();
+            }
+
             return prepared.Count;
         }
     }
 
-    private void validateCredentialGroup(IReadOnlyCollection<ValueChange> changes, Dictionary<string, FwDict> rows)
-    {
-        if (!changes.Any(change => change.icode is "AWS_CREDENTIAL_SOURCE" or "AWSAccessKey" or "AWSSecretKey"))
-            return;
-        string value(string code)
-        {
-            var change = changes.FirstOrDefault(item => item.icode == code);
-            var fallback = fw.config(code).toStr();
-            return change == null ? (rows.TryGetValue(code, out var row) ? effective(row, fallback) : fallback)
-                : change.basis == BASIS_INHERIT ? fallback : change.ivalue ?? "";
-        }
-        var mode = value("AWS_CREDENTIAL_SOURCE");
-        var key = value("AWSAccessKey");
-        var secret = value("AWSSecretKey");
-        if (mode != "sdk" && mode != "static" || (key.Length == 0) != (secret.Length == 0)
-            || mode == "static" && key.Length == 0)
-            throw new UserException("Static AWS credentials require a complete key pair.");
-    }
-
-
-    public const string PROTECTED_PREFIX = "enc:v1:";
-    private static readonly ConcurrentDictionary<string, Lazy<ServiceProvider>> providers = new();
-
-    /// <summary>Registers the same durable key store for HTTP and offline consumers. Keys are never expired by deleting rows.</summary>
-    public static void configureProtection(IServiceCollection services, FwDict settings)
+    /// <summary>Registers the database key store; only session-cookie protection may tolerate missing storage during bootstrap.</summary>
+    public static void configureProtection(IServiceCollection services, FwDict settings, bool isRequired = true)
     {
         var definition = (settings["db"] as FwDict)?["main"] as FwDict ?? [];
         var resolved = definition;
@@ -549,7 +589,7 @@ select icat
             throw new PlatformNotSupportedException("Durable Settings protection requires Windows DPAPI.");
         builder.ProtectKeysWithDpapi(protectToLocalMachine: true);
         services.Configure<KeyManagementOptions>(options =>
-            options.XmlRepository = new FwKeysXmlRepository(() => new DB(new FwDict(resolved), "main")));
+            options.XmlRepository = new FwKeysXmlRepository(() => new DB(new FwDict(resolved), "main"), isRequired));
     }
 
     /// <summary>Marks the entire request sensitive before parsing or handling protected values.</summary>
@@ -563,18 +603,16 @@ select icat
 
     private IDataProtector protector(string code)
     {
-        var provider = fw.context.RequestServices?.GetService<IDataProtectionProvider>();
-        if (provider == null)
+        // The web provider may hold a temporary bootstrap key. Persisted credentials always use a strict provider.
+        var identity = fw.db.cacheIdentity + ":" + fw.config("DATA_PROTECTION_APPLICATION_NAME").toStr();
+        var settings = new FwDict(fw.config());
+        var provider = providers.GetOrAdd(identity, _ => new Lazy<ServiceProvider>(() =>
         {
-            var identity = fw.db.cacheIdentity + ":" + fw.config("DATA_PROTECTION_APPLICATION_NAME").toStr();
-            var settings = new FwDict(fw.config());
-            provider = providers.GetOrAdd(identity, _ => new Lazy<ServiceProvider>(() =>
-            {
-                var services = new ServiceCollection();
-                configureProtection(services, settings);
-                return services.BuildServiceProvider();
-            })).Value.GetRequiredService<IDataProtectionProvider>();
-        }
+            var services = new ServiceCollection();
+            configureProtection(services, settings);
+            return services.BuildServiceProvider();
+        })).Value.GetRequiredService<IDataProtectionProvider>();
+
         return provider.CreateProtector("OSAFW.Settings.v1", code);
     }
 

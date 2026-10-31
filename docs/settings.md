@@ -29,7 +29,7 @@ Runtime reads and model writes are trusted system operations, not authorization 
 | `icat`, `iname`, `idesc` | Category, label, and help text. |
 | `ivalue` | Text, or versioned application-encrypted ciphertext for credentials. |
 | `input` | Control type; 90 classifies a recoverable credential. |
-| `allowed_values` | Space-separated `value\|Label` options, or numeric `min\|1 max\|100 step\|1` metadata. Use `&nbsp;` inside labels. |
+| `allowed_values` | Space-separated `value\|Label` options, or numeric `min\|1 max\|100 step\|1` metadata. Use `&nbsp;` inside labels. Text controls may declare `local_url\|1` to require an app-local URL. |
 | `is_user_edit` | Ordinary editor changes require this flag. |
 | `access_level` | Minimum numeric user level; route permission and RBAC still apply. |
 | `mask` | Display policy, independent of the input control. |
@@ -44,17 +44,19 @@ Mask codes are 0 normal, 10 hidden, 20 first/last characters, 30 suffix, and 40 
 
 Ordinary Admins (90) can see only rows whose floor permits them. Site Admins (100) manage credentials, SMTP, AWS, and other restricted settings. Existing role-based route/action checks apply in addition to the numeric floor; RBAC cannot grant access below that floor. List filtering applies before counts and category discovery. Generic CSV export, quick-search and inherited mutations are not available for this module.
 
-Normal Save cannot edit metadata or a non-editable row. Secret inputs never contain the current value. Keep, Replace, Clear, and Inherit distinguish intended changes. A Reveal action is available only for rows configured with that mask policy. All sensitive actions use POST and the framework XSS token; plaintext responses disable browser caching. Sensitive request contents and changed values are excluded from framework/Sentry request diagnostics.
+Normal Save cannot edit metadata or a non-editable row. Secret inputs never contain the current value. Keep, Replace, Clear, and Inherit distinguish intended changes. A Reveal action is available only for rows configured with that mask policy. All sensitive actions use POST and the framework XSS token; plaintext responses disable browser caching. The default production logging policy omits submitted values, and Settings changes use value-free audit records. Explicit local `log_pii`/DEBUG logging and development error pages retain full diagnostic values. Sentry excludes Settings request bodies and cookies.
 
-SMTP and AWS values are edited as groups. Static AWS mode requires a complete pair; SDK mode uses the normal SDK identity chain. SMTP testing uses the same runtime delivery policy, including test-mode recipient handling.
+Coupled values can be changed atomically through the trusted model `writeBatch` API. Settings stores credential rows independently; integration-specific requirements belong to the consuming model. SDK mode uses the normal SDK identity chain.
+
+SMTP and AWS have grouped editors. Each credential can be changed independently; a blank field keeps its current value. SMTP testing uses the runtime delivery policy, including test-mode recipient handling.
 
 ## Encryption and durable keys
 
 Credential values are encrypted before database writes using ASP.NET Core Data Protection, a purpose containing the setting code, and the durable `fwkeys` repository. On Windows, DPAPI wraps key material for the local machine. Database SELECTs and backups contain ciphertext rather than the credential value. This does not protect against a compromised application process or an administrator who controls both host and database.
 
-`DATA_PROTECTION_APPLICATION_NAME` is a stable deployment identity, independent of editable `SITE_NAME`. Preserve its value across normal upgrades. When upgrading an older application, set it to that application's previous effective SITE_NAME before using existing protected data. Keys are retained; age alone is not grounds to delete keys needed by stored values. Repository read/write failures fail closed.
+`DATA_PROTECTION_APPLICATION_NAME` is a stable deployment identity, independent of editable `SITE_NAME`. Preserve its value across normal upgrades. When upgrading an older application, set it to that application's previous effective SITE_NAME before using existing protected data. Keys are retained; age alone is not grounds to delete keys needed by stored values. Credential protection fails closed on repository read/write failure. Session-cookie protection tolerates an unavailable database during initial setup; its temporary keys are never used by the Settings credential provider.
 
-Protection helpers live on the `Settings` model: startup uses `Settings.configureProtection(services, config)`, and trusted callers can use `fw.model<Settings>().protect(code, value)`, `fw.model<Settings>().unprotect(code, value)`, and `Settings.markSensitiveRequest(fw)`. Normal persistence should use model writes, which encrypt plaintext once and invalidate caches. Never pass already-protected values to a plaintext write API.
+Protection helpers live on the `Settings` model: startup uses `Settings.configureProtection(services, config, isRequired: false)` for session cookies; Settings uses its own cached strict provider with the same database repository, and trusted callers can use `fw.model<Settings>().protect(code, value)`, `fw.model<Settings>().unprotect(code, value)`, and `Settings.markSensitiveRequest(fw)`. Normal persistence should use model writes, which encrypt plaintext once and invalidate caches. Never pass already-protected values to a plaintext write API.
 
 Encryption does not replace diagnostic hygiene. Do not log decrypted values or transfer payloads in application-specific code. The framework records value-free audit information.
 
@@ -74,6 +76,12 @@ For a planned move:
 6. Verify sign-in, SMTP, integrations, and runtime settings before serving traffic.
 
 A database backup alone cannot recover encrypted credentials after the old machine's protection keys are lost. An unreadable credential can be replaced through Settings; it is never silently treated as blank.
+
+## Database-free pages
+
+Home and `/Dev/Configure` render with the defaults in `FwConfig`/`FwHooks` when the configured database is unavailable or uninitialized. Date/time formatting, language and timezone remain configuration defaults. Optional non-secret template overrides (site name, contact addresses, redirect links and UI appearance) use Settings when available; failure to load them leaves the configured defaults. Credentials are read only by their consumers and are never bulk-copied into template globals.
+
+The existing SQL Server session provider tolerates unavailable storage; sessions are not usable until the database is ready. Session keys remain database-backed. There are no key files or new session fallback infrastructure. Development InitDB keeps its existing dev-mode/POST guard and session-token check when a token exists; no separate bootstrap token system is introduced.
 
 ## Fresh installation and upgrade
 

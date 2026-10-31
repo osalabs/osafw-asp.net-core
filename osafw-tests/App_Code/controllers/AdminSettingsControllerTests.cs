@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 #if isSQLite
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using System.Text.Json;
 #endif
@@ -496,34 +494,73 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
-    public void CheckAccess_BlocksInheritedQuickSearch()
+    [DataRow("QuickSearch")]
+    [DataRow("SaveMulti")]
+    [DataRow("ShowDelete")]
+    [DataRow("Delete")]
+    [DataRow("RestoreDeleted")]
+    [DataRow("Next")]
+    [DataRow("Go")]
+    public void CheckAccess_BlocksInheritedActions(string action)
     {
         var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
-        fw.route.action = "QuickSearch";
+        fw.route.action = action;
 
         Assert.ThrowsExactly<AuthException>(() => controller.checkAccess());
     }
 
     [TestMethod]
-    public void SaveAWS_RejectsHalfEnteredStaticPairBeforeWriting()
+    [DataRow("")]
+    [DataRow(FW.ACTION_INDEX)]
+    [DataRow(FW.ACTION_SHOW)]
+    [DataRow(FW.ACTION_SHOW_FORM)]
+    [DataRow(FW.ACTION_SAVE)]
+    [DataRow("Reveal")]
+    public void CheckAccess_AllowsSupportedActions(string action)
     {
-        var (fw, model, controller) = BuildController(
-            Setting(Settings.INPUT_SELECT, "sdk", accessLevel: Users.ACL_SITEADMIN, code: "AWS_CREDENTIAL_SOURCE"),
-            []);
-        model.Rows[2] = Setting(Settings.INPUT_CREDENTIAL, "", accessLevel: Users.ACL_SITEADMIN, code: "AWSAccessKey");
-        model.Rows[2]["id"] = 2;
-        model.Rows[3] = Setting(Settings.INPUT_CREDENTIAL, "", accessLevel: Users.ACL_SITEADMIN, code: "AWSSecretKey");
-        model.Rows[3]["id"] = 3;
-        fw.FORM["aws"] = new FwDict
+        var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
+        fw.route.action = action;
+
+        controller.checkAccess();
+    }
+
+    [TestMethod]
+    [DataRow("csv")]
+    [DataRow("xls")]
+    public void CheckAccess_BlocksGenericExport(string format)
+    {
+        var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
+        fw.route.action = FW.ACTION_INDEX;
+        controller.export_format = format;
+
+        Assert.ThrowsExactly<AuthException>(() => controller.checkAccess());
+    }
+
+#if isSQLite
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void SaveAWS_ChangesOneCredentialAndKeepsTheOther(bool isAccessKey)
+    {
+        using var fixture = new TransferFixture();
+        fixture.Seed("AWS_CREDENTIAL_SOURCE", Settings.INPUT_TEXT, "static");
+        int accessId = fixture.Seed("AWSAccessKey", Settings.INPUT_CREDENTIAL);
+        int secretId = fixture.Seed("AWSSecretKey", Settings.INPUT_CREDENTIAL);
+        fixture.Model.update(accessId, DB.h("ivalue", "old-access"));
+        fixture.Model.update(secretId, DB.h("ivalue", "old-secret"));
+        fixture.Fw.FORM["aws"] = new FwDict
         {
             ["source"] = "static",
-            ["access_key"] = "only-one-value",
-            ["secret_key"] = "",
+            ["access_key"] = isAccessKey ? "new-access" : "",
+            ["secret_key"] = isAccessKey ? "" : "new-secret",
         };
 
-        Assert.ThrowsExactly<UserException>(() => controller.SaveAWSAction());
-        Assert.AreEqual(0, model.UpdateCalls);
+        Assert.ThrowsExactly<RedirectException>(() => fixture.Controller.SaveAWSAction());
+
+        Assert.AreEqual(isAccessKey ? "new-access" : "old-access", fixture.Model.readSecret("AWSAccessKey"));
+        Assert.AreEqual(isAccessKey ? "old-secret" : "new-secret", fixture.Model.readSecret("AWSSecretKey"));
     }
+#endif
 
     [TestMethod]
     public void TextSetting_BlankSubmissionClearsExistingValue()
@@ -572,6 +609,31 @@ public class AdminSettingsControllerTests
         AssertValidationFailure(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
         Assert.AreEqual("NUMBER", fw.getFormErrors()["ivalue"]);
+    }
+
+    [TestMethod]
+    public void Number_BlankExplicitValueFailsValidation()
+    {
+        var (fw, model, controller) = BuildController(
+            Setting(Settings.INPUT_NUMBER, "5"),
+            new FwDict { ["ivalue"] = "" });
+
+        AssertValidationFailure(() => controller.SaveAction(1));
+        Assert.AreEqual(0, model.UpdateCalls);
+        Assert.AreEqual("NUMBER", fw.getFormErrors()["ivalue"]);
+    }
+
+    [TestMethod]
+    public void Number_ProtectedBlankSubmissionKeepsExistingValue()
+    {
+        var (_, model, controller) = BuildController(
+            Setting(Settings.INPUT_NUMBER, "5", mask: Settings.MASK_HIDDEN),
+            new FwDict { ["ivalue"] = "" });
+
+        controller.SaveAction(1);
+
+        Assert.AreEqual(0, model.UpdateCalls);
+        Assert.AreEqual("5", model.Rows[1]["ivalue"]);
     }
 
     [TestMethod]
@@ -667,10 +729,41 @@ public class AdminSettingsControllerTests
     }
 
 #if isSQLite
+    [TestMethod]
+    [DataRow(Users.ACL_ADMIN, 1, false)]
+    [DataRow(Users.ACL_SITEADMIN, 11, true)]
+    public void IndexAction_FiltersRowsCountsAndCategoriesBeforeProjection(int accessLevel, int expectedCount, bool isSiteAdmin)
+    {
+        using var fixture = new TransferFixture();
+        string[] groupedCodes = ["mail.host", "mail.port", "mail.is_ssl", "mail.username", "mail.password", "AWS_CREDENTIAL_SOURCE", "AWSAccessKey", "AWSSecretKey"];
+        foreach (string code in groupedCodes)
+            fixture.Seed(code, Settings.INPUT_TEXT, category: "setup");
+
+        fixture.Seed("ordinary", Settings.INPUT_TEXT, "visible", accessLevel: Users.ACL_ADMIN, category: "public");
+        fixture.Seed("restricted", Settings.INPUT_TEXT, "restricted", category: "restricted");
+        fixture.Seed("credential", Settings.INPUT_CREDENTIAL, accessLevel: Users.ACL_ADMIN, category: "credentials");
+        fixture.Fw.Session("access_level", accessLevel.ToString());
+        fixture.Fw.route.controller = "AdminSettings";
+        fixture.Fw.route.action = FW.ACTION_INDEX;
+        fixture.Fw.route.method = "GET";
+
+        var pageState = fixture.Controller.IndexAction()!;
+
+        Assert.AreEqual(expectedCount, pageState["count"].toInt());
+        Assert.AreEqual(isSiteAdmin, pageState["is_site_admin"].toBool());
+        var rows = (FwList)pageState["list_rows"]!;
+        Assert.AreEqual(expectedCount, rows.Count);
+        Assert.IsTrue(rows.All(row => !row.ContainsKey("ivalue")));
+        string[] expectedCodes = isSiteAdmin ? ["ordinary", "restricted", "credential", .. groupedCodes] : ["ordinary"];
+        CollectionAssert.AreEquivalent(expectedCodes, rows.Select(row => row["icode"].toStr()).ToArray());
+        var categories = (FwList)pageState["settings_categories"]!;
+        string[] expectedCategories = isSiteAdmin ? ["public", "restricted", "credentials", "setup"] : ["public"];
+        CollectionAssert.AreEquivalent(expectedCategories, categories.Select(row => row["icat"].toStr()).ToArray());
+    }
+
     private sealed class TransferFixture : IDisposable
     {
         private readonly string path;
-        private readonly ServiceProvider services;
         private readonly FwTestScope scope;
 
         public DB Db { get; }
@@ -713,16 +806,16 @@ public class AdminSettingsControllerTests
                 );
                 CREATE UNIQUE INDEX UX_settings_icode ON settings (icode);
                 """);
-            services = new ServiceCollection()
-                .AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider())
-                .BuildServiceProvider();
+            Db.exec("CREATE TABLE fwkeys (id INTEGER PRIMARY KEY AUTOINCREMENT, itype INTEGER NOT NULL, iname TEXT NOT NULL, XmlValue TEXT NOT NULL, upd_time DATETIME)");
             var context = TestHelpers.CreateHttpContext("settings-controller-tests");
-            context.RequestServices = services;
             context.Response.Body = new MemoryStream();
             scope = new FwTestScope(
                 name => name == "main" ? Db : throw new InvalidOperationException("Unknown DB name."),
                 new Dictionary<string, string?>
                 {
+                    ["appSettings:db:main:type"] = DB.DBTYPE_SQLITE,
+                    ["appSettings:db:main:connection_string"] = connectionString,
+                    ["appSettings:db:main:timezone"] = "UTC",
                     ["appSettings:ROOT_DOMAIN"] = "https://example.test",
                     ["appSettings:DATA_PROTECTION_APPLICATION_NAME"] = "settings-controller-tests"
                 },
@@ -742,15 +835,16 @@ public class AdminSettingsControllerTests
             Controller.init(Fw);
         }
 
-        public int Seed(string code, int input, string value = "", int? mask = null)
+        public int Seed(string code, int input, string value = "", int? mask = null, int accessLevel = Users.ACL_SITEADMIN, string category = "")
         {
             return Db.insert("settings", DB.h(
                 "icode", code,
                 "ivalue", value,
                 "iname", code,
+                "icat", category,
                 "input", input,
                 "is_user_edit", 1,
-                "access_level", Users.ACL_SITEADMIN,
+                "access_level", accessLevel,
                 "mask", mask ?? (input == Settings.INPUT_CREDENTIAL ? Settings.MASK_HIDDEN : Settings.MASK_NONE),
                 "basis", Settings.BASIS_VALUE));
         }
@@ -772,7 +866,6 @@ public class AdminSettingsControllerTests
         public void Dispose()
         {
             scope.Dispose();
-            services.Dispose();
             Db.disconnect();
             foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
                 File.Delete(path + suffix);

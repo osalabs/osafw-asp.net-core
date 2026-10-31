@@ -5,9 +5,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 
@@ -17,6 +15,7 @@ public class AdminSettingsController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
 
+    // Inherited search, export and bulk actions bypass Settings row authorization and safe projections.
     private static readonly HashSet<string> allowedActions = new(StringComparer.OrdinalIgnoreCase)
     {
         "", FW.ACTION_INDEX, FW.ACTION_SHOW, FW.ACTION_SHOW_FORM, FW.ACTION_SAVE,
@@ -63,10 +62,13 @@ public class AdminSettingsController : FwAdminController
             ["SaveAWS"] = Permissions.PERMISSION_EDIT,
             ["TestEmail"] = Permissions.PERMISSION_EDIT,
         };
+
         base.checkAccess();
 
         if (!allowedActions.Contains(fw.route.action.toStr()) || export_format.Length > 0)
+        {
             throw new AuthException();
+        }
     }
 
     public override void getListRows()
@@ -74,20 +76,29 @@ public class AdminSettingsController : FwAdminController
         base.getListRows();
 
         foreach (FwDict row in list_rows)
+        {
             prepareListRow(row);
+        }
     }
 
     public override void setListSearch()
     {
         base.setListSearch();
 
-        list_where += @" and access_level<=@settings_access_level
- and (@settings_access_level>=100 or input<>90)";
+        list_where += @"
+            and access_level <= @settings_access_level
+            and (
+                @settings_access_level >= @settings_site_admin_level
+                or input <> @settings_credential_input
+            )";
         list_where_params["settings_access_level"] = fw.userAccessLevel;
+        list_where_params["settings_site_admin_level"] = Users.ACL_SITEADMIN;
+        list_where_params["settings_credential_input"] = Settings.INPUT_CREDENTIAL;
 
         if (hasIcatFilter())
         {
-            list_where += " and icat=@icat";
+            list_where += @"
+                and icat = @icat";
             list_where_params["icat"] = list_filter["icat"].toStr();
         }
     }
@@ -98,9 +109,9 @@ public class AdminSettingsController : FwAdminController
 
         ps["has_icat_filter"] = hasIcatFilter();
         ps["settings_categories"] = listVisibleCategories();
-        ps["is_site_admin"] = isSiteAdmin();
+        ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
 
-        if (isSiteAdmin())
+        if (fw.model<Users>().isSiteAdmin())
             addGroupState(ps);
 
         return ps;
@@ -109,12 +120,21 @@ public class AdminSettingsController : FwAdminController
     private FwList listVisibleCategories()
     {
         return db.arrayp($@"
-select icat
-  from {db.qid("settings")}
- where access_level<=@settings_access_level
-   and (@settings_access_level>=100 or input<>90)
- group by icat
- order by case when icat='' then 0 else 1 end, icat", DB.h("settings_access_level", fw.userAccessLevel));
+            select icat
+            from {model.qTable()}
+            where access_level <= @settings_access_level
+                and (
+                    @settings_access_level >= @settings_site_admin_level
+                    or input <> @settings_credential_input
+                )
+            group by icat
+            order by
+                case when icat = '' then 0 else 1 end,
+                icat",
+            DB.h(
+                "settings_access_level", fw.userAccessLevel,
+                "settings_site_admin_level", Users.ACL_SITEADMIN,
+                "settings_credential_input", Settings.INPUT_CREDENTIAL));
     }
 
     private bool hasIcatFilter()
@@ -126,7 +146,9 @@ select icat
     {
         var row = settingForAccess(id);
         var ps = base.ShowAction(id) ?? [];
+
         ps["i"] = safeProjection(row, false);
+
         return ps;
     }
 
@@ -141,12 +163,16 @@ select icat
         var stored = settingForAccess(id);
         var ps = base.ShowFormAction(id) ?? [];
         var item = safeProjection(stored, true);
+
         if (!isGet() && !isProtectedEditor(stored))
         {
             var submitted = reqh("item");
             if (submitted.ContainsKey("ivalue"))
+            {
                 item["ivalue"] = submitted["ivalue"];
+            }
         }
+
         ps["i"] = item;
         ps["is_readonly"] = is_readonly || !stored["is_user_edit"].toBool();
         prepareFormItem(stored, item, ps);
@@ -167,13 +193,18 @@ select icat
 
         FwDict itemdb = prepareSaveFields(setting, item);
         if (itemdb.Count > 0)
+        {
             model.update(id, itemdb);
+        }
+
         fw.flash("record_updated", 1);
 
         if (isProtectedEditor(setting))
+        {
             item.Remove("ivalue");
+        }
 
-        return this.afterSave(true, id);
+        return afterSave(true, id);
     }
 
     public override void Validate(int id, FwDict item)
@@ -186,9 +217,12 @@ select icat
         enforcePost();
         var setting = settingForAccess(id);
         if (Settings.maskPolicy(setting) != Settings.MASK_REVEAL)
+        {
             throw new AuthException();
+        }
 
         noStore();
+
         string value = Settings.isCredential(setting)
             ? model.readSecret(setting["icode"].toStr())
             : model.getValue(setting["icode"].toStr());
@@ -246,7 +280,7 @@ select icat
         requireSiteAdmin();
 
         var form = reqh("smtp");
-        var rows = editableRows(SMTP_CODES);
+        var rows = visibleRows(SMTP_CODES, true);
         List<Settings.ValueChange> changes =
         [
             change("mail.host", form["host"].toStr()),
@@ -275,7 +309,7 @@ select icat
         requireSiteAdmin();
 
         var form = reqh("aws");
-        var rows = editableRows(AWS_CODES);
+        var rows = visibleRows(AWS_CODES, true);
         string source = form["source"].toStr();
         string accessKey = form["access_key"].toStr();
         string secretKey = form["secret_key"].toStr();
@@ -286,12 +320,13 @@ select icat
             changes.Add(change("AWSAccessKey", ""));
             changes.Add(change("AWSSecretKey", ""));
         }
-        else if (accessKey.Length > 0 || secretKey.Length > 0)
+        else
         {
-            if (accessKey.Length == 0 || secretKey.Length == 0)
-                throw new UserException("Enter both AWS static credential values.");
-            changes.Add(change("AWSAccessKey", accessKey));
-            changes.Add(change("AWSSecretKey", secretKey));
+            if (accessKey.Length > 0)
+                changes.Add(change("AWSAccessKey", accessKey));
+
+            if (secretKey.Length > 0)
+                changes.Add(change("AWSSecretKey", secretKey));
         }
 
         authorizeChanges(rows, changes);
@@ -317,20 +352,23 @@ select icat
 
     private void Validate(int id, FwDict item, FwDict setting)
     {
-        bool result = true;
+        bool isValid = true;
 
         if (id == 0)
+        {
             throw new UserException("Wrong Settings ID");
+        }
 
         int basis = item.ContainsKey("basis") ? item["basis"].toInt(-1) : setting["basis"].toInt(Settings.BASIS_VALUE);
         if (basis != Settings.BASIS_INHERIT && basis != Settings.BASIS_VALUE)
         {
             addFormError("basis", "INVALID");
-            result = false;
+            isValid = false;
         }
+
         if (basis == Settings.BASIS_INHERIT)
         {
-            validateCheckResult(result);
+            validateCheckResult(isValid);
             return;
         }
 
@@ -338,13 +376,15 @@ select icat
         if (!isProtectedEditor(setting) && requiresSubmittedValue(input) && !item.ContainsKey("ivalue"))
         {
             addFormError("ivalue", "REQUIRED");
-            result = false;
+            isValid = false;
         }
 
         if (!validateByInputType(setting, item))
-            result = false;
+        {
+            isValid = false;
+        }
 
-        this.validateCheckResult(result);
+        validateCheckResult(isValid);
     }
 
     public override FwDict DeleteAction(int id)
@@ -356,6 +396,7 @@ select icat
     {
         var row = model.one(id);
         model.authorize(row, isEdit);
+
         return row;
     }
 
@@ -365,10 +406,16 @@ select icat
         {
             ["ivalue_display"] = model.display(row),
         };
+
         if (isProtectedEditor(row) || row["basis"].toInt() == Settings.BASIS_INHERIT)
+        {
             result["ivalue"] = "";
+        }
         else if (!isEditor && Settings.maskPolicy(row) != Settings.MASK_NONE)
+        {
             result["ivalue"] = "";
+        }
+
         return result;
     }
 
@@ -405,11 +452,6 @@ select icat
         return result;
     }
 
-    private Dictionary<string, FwDict> editableRows(IEnumerable<string> codes)
-    {
-        return visibleRows(codes, true);
-    }
-
     private static Settings.ValueChange change(string code, string value)
     {
         return new Settings.ValueChange
@@ -427,14 +469,9 @@ select icat
                 throw new AuthException();
     }
 
-    private bool isSiteAdmin()
-    {
-        return fw.userAccessLevel >= Users.ACL_SITEADMIN;
-    }
-
     private void requireSiteAdmin()
     {
-        if (!isSiteAdmin())
+        if (!fw.model<Users>().isSiteAdmin())
             throw new AuthException();
     }
 
@@ -507,6 +544,7 @@ select icat
             {
                 throw new UserException("Enter a value, select Clear, or keep Use default.");
             }
+
             return itemdb;
         }
 
@@ -524,96 +562,39 @@ select icat
 
     private bool validateByInputType(FwDict setting, FwDict item)
     {
+        bool isProtected = isProtectedEditor(setting);
+        if (isProtected && item["ivalue"].toStr().Length == 0 && !item["clear"].toBool())
+        {
+            return true;
+        }
+
         int input = setting["input"].toInt();
-        var options = allowedOptionValues(setting);
+        string value = item["ivalue"].toStr();
+        if (isProtected)
+        {
+            if (item["clear"].toBool())
+            {
+                value = "";
+            }
+        }
+        else
+        {
+            value = input switch
+            {
+                Settings.INPUT_CHECKBOX => FormUtils.multi2ids(reqh("ivalue_multi")),
+                Settings.INPUT_SWITCH => item.ContainsKey("ivalue") ? "1" : "0",
+                _ => value,
+            };
+        }
 
-        if (input == Settings.INPUT_SELECT || input == Settings.INPUT_RADIO)
-            return validateOptionValue(item["ivalue"].toStr(), options);
-
-        if (input == Settings.INPUT_CHECKBOX)
-            return validateOptionValues(reqh("ivalue_multi").Keys.Select(x => x.toStr()), options);
-
-        if (input == Settings.INPUT_SELECT_MULTI)
-            return validateOptionValues(FormUtils.comma_str2col(item["ivalue"].toStr()), options);
-
-        if (input == Settings.INPUT_NUMBER || input == Settings.INPUT_RANGE)
-            return validateNumberValue(setting, item["ivalue"].toStr(), true);
-
-        return true;
-    }
-
-    private bool validateOptionValue(string value, FwDict options)
-    {
-        if (string.IsNullOrEmpty(value))
+        string error = model.valueError(setting, value);
+        if (error.Length == 0)
+        {
             return true;
+        }
 
-        if (options.ContainsKey(value))
-            return true;
-
-        addFormError("ivalue", "INVALID");
+        addFormError("ivalue", error);
         return false;
-    }
-
-    private bool validateOptionValues(IEnumerable<string> values, FwDict options)
-    {
-        foreach (string value in values)
-        {
-            if (string.IsNullOrEmpty(value))
-                continue;
-
-            if (!options.ContainsKey(value))
-            {
-                addFormError("ivalue", "INVALID");
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private bool validateNumberValue(FwDict setting, string rawValue, bool enforceRange)
-    {
-        if (string.IsNullOrWhiteSpace(rawValue))
-            return true;
-
-        if (!tryParseDecimal(rawValue, out decimal value))
-        {
-            addFormError("ivalue", "NUMBER");
-            return false;
-        }
-
-        if (!enforceRange)
-            return true;
-
-        var meta = inputMetadata(setting);
-        if (meta.TryGetValue("min", out object? minRaw) && tryParseDecimal(minRaw.toStr(), out decimal min) && value < min)
-        {
-            addFormError("ivalue", "MIN");
-            return false;
-        }
-
-        if (meta.TryGetValue("max", out object? maxRaw) && tryParseDecimal(maxRaw.toStr(), out decimal max) && value > max)
-        {
-            addFormError("ivalue", "MAX");
-            return false;
-        }
-
-        if (meta.TryGetValue("step", out object? stepRaw) && tryParseDecimal(stepRaw.toStr(), out decimal step) && step > 0)
-        {
-            decimal baseValue = meta.TryGetValue("min", out object? rangeMinRaw) && tryParseDecimal(rangeMinRaw.toStr(), out decimal rangeMin) ? rangeMin : 0;
-            if ((value - baseValue) % step != 0)
-            {
-                addFormError("ivalue", "STEP");
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool tryParseDecimal(string value, out decimal result)
-    {
-        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
     }
 
     private static bool requiresSubmittedValue(int input)
@@ -622,11 +603,6 @@ select icat
             && input != Settings.INPUT_SELECT_MULTI
             && input != Settings.INPUT_SWITCH
             && input != Settings.INPUT_CREDENTIAL;
-    }
-
-    private static FwDict allowedOptionValues(FwDict setting)
-    {
-        return Utils.qh(setting["allowed_values"].toStr(), "");
     }
 
     private static FwDict inputMetadata(FwDict setting)
@@ -643,16 +619,22 @@ select icat
         foreach (string token in Utils.qw(setting["allowed_values"].toStr()))
         {
             if (string.IsNullOrEmpty(token))
+            {
                 continue;
+            }
 
             string[] parts = token.Split("|", 2);
             string id = parts[0];
             if (string.IsNullOrEmpty(id))
+            {
                 continue;
+            }
 
             string name = parts.Length > 1 ? parts[1] : id;
             bool isSelected = isMulti ? selected.ContainsKey(id) : string.Equals(id, current, StringComparison.Ordinal);
-            result.Add(new FwDict {
+
+            result.Add(new FwDict
+            {
                 ["id"] = id,
                 ["iname"] = name,
                 ["is_selected"] = isSelected,
@@ -661,5 +643,4 @@ select icat
 
         return result;
     }
-
 }

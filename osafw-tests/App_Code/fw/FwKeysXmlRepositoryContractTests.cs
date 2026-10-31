@@ -92,6 +92,21 @@ public class FwKeysXmlRepositoryContractTests
         Assert.IsFalse(error.ToString().Contains("database detail", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public void OptionalSessionRepositoryToleratesUnavailableDatabase()
+    {
+        var db = new RecordingKeysDb
+        {
+            ReadError = new InvalidOperationException("unavailable"),
+            WriteError = new InvalidOperationException("unavailable"),
+        };
+        var repository = new FwKeysXmlRepository(db, isRequired: false);
+
+        Assert.HasCount(0, repository.GetAllElements());
+        repository.StoreElement(new XElement("key", new XAttribute("id", "bootstrap")), "bootstrap");
+        Assert.IsNull(db.InsertedFields);
+    }
+
     private sealed class RecordingKeysDb : DB
     {
         public bool Exists;
