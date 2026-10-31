@@ -280,9 +280,7 @@ public class FW : IDisposable
             db = getDB();
             DB.SQL_QUERY_CTR = 0; // reset query counter
 
-            G = Utils.cloneHashDeep(config())!; // by default G contains non-secret configuration
-            removeBootstrapSecretsFromGlobals(G);
-            G["SITE_NAME"] = Settings.DEFAULT_VALUES["SITE_NAME"];
+            G = FwConfig.templateSettings();
 
             // per request settings
             G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -742,9 +740,7 @@ public class FW : IDisposable
             logger(LogLevel.DEBUG, Ex.Message);
             if (!isLogged)
             {
-                var url = isSettingsUpgradeRoute()
-                    ? config("UNLOGGED_DEFAULT_URL").toStr()
-                    : model<Settings>().read("UNLOGGED_DEFAULT_URL", config("UNLOGGED_DEFAULT_URL").toStr());
+                var url = model<Settings>().read("UNLOGGED_DEFAULT_URL");
                 // Preserve page navigation through login, without replaying form/API requests.
                 if (HttpMethods.IsGet(request.Method) && route.method == "GET" && getResponseExpectedFormat() == "")
                 {
@@ -937,17 +933,6 @@ public class FW : IDisposable
         FORM = f;
     }
 
-    private static void removeBootstrapSecretsFromGlobals(FwDict globals)
-    {
-        globals.Remove("db");
-        globals.Remove("override");
-        globals.Remove("mail");
-        globals.Remove("AWSAccessKey");
-        globals.Remove("AWSSecretKey");
-        globals.Remove("OPENAI_API_KEY");
-        globals.Remove("API_KEY");
-    }
-
     internal object requestFormForLog()
     {
         var isSettingsRequest = route.controller.Equals("AdminSettings", StringComparison.OrdinalIgnoreCase)
@@ -1003,12 +988,11 @@ public class FW : IDisposable
 
     /// <summary>
     /// Loads non-secret site settings only when a rendered response needs them. The request
-    /// constructor remains free of Settings reads, and DevConfigure can render while the
-    /// Settings table is being bootstrapped.
+    /// constructor remains free of Settings reads; schema initialization runs through DevCli before web startup.
     /// </summary>
     private void ensureSettingsGlobals()
     {
-        if (isSettingsGlobalsLoaded || isRenderingError || isSettingsUpgradeRoute())
+        if (isSettingsGlobalsLoaded || isRenderingError)
             return;
 
         var settings = model<Settings>();
@@ -1017,8 +1001,8 @@ public class FW : IDisposable
         G["support_email"] = settings.read("support_email");
         G["mail_from"] = settings.read("mail_from");
         G["is_list_btn_left"] = settings.readBool("is_list_btn_left");
-        G["UNLOGGED_DEFAULT_URL"] = settings.read("UNLOGGED_DEFAULT_URL", config("UNLOGGED_DEFAULT_URL").toStr());
-        G["LOGGED_DEFAULT_URL"] = settings.read("LOGGED_DEFAULT_URL", config("LOGGED_DEFAULT_URL").toStr());
+        G["UNLOGGED_DEFAULT_URL"] = settings.read("UNLOGGED_DEFAULT_URL");
+        G["LOGGED_DEFAULT_URL"] = settings.read("LOGGED_DEFAULT_URL");
 
         if (string.IsNullOrEmpty(Session("ui_theme")))
             G["ui_theme"] = settings.readInt("ui_theme");
@@ -1026,13 +1010,6 @@ public class FW : IDisposable
             G["ui_mode"] = settings.readInt("ui_mode");
 
         isSettingsGlobalsLoaded = true;
-    }
-
-    private bool isSettingsUpgradeRoute()
-    {
-        return route.controller.Equals("DevConfigure", StringComparison.OrdinalIgnoreCase)
-            || route.controller.Equals("AdminFwUpdates", StringComparison.OrdinalIgnoreCase)
-            || route.controller.Equals("DevUpdates", StringComparison.OrdinalIgnoreCase);
     }
 
     public void logger(params object?[] args)
@@ -1768,8 +1745,8 @@ public class FW : IDisposable
             FwDict mailSettings = new()
             {
                 ["host"] = settings.read("mail.host"),
-                ["port"] = settings.readInt("mail.port", 587),
-                ["is_ssl"] = settings.readBool("mail.is_ssl", true),
+                ["port"] = settings.readInt("mail.port"),
+                ["is_ssl"] = settings.readBool("mail.is_ssl"),
                 ["username"] = settings.read("mail.username"),
                 ["password"] = settings.readSecret("mail.password"),
             };

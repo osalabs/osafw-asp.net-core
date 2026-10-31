@@ -6,6 +6,11 @@ namespace osafw.Tests;
 [TestClass]
 public class UsersTimezoneTests
 {
+    private sealed class StubSettings : Settings
+    {
+        public override DBRow oneByIcode(string icode) => [];
+    }
+
     private class StubUsers : Users
     {
         private readonly FwDict row;
@@ -117,6 +122,9 @@ public class UsersTimezoneTests
     {
         var fw = TestHelpers.CreateFw();
         fw.is_log_events = false;
+        var settings = new StubSettings();
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
         return fw;
     }
 

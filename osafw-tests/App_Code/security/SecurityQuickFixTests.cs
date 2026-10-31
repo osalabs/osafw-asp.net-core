@@ -37,7 +37,7 @@ public class SecurityQuickFixTests
     {
         public override string read(string icode)
         {
-            return DEFAULT_VALUES.TryGetValue(icode, out var value) ? value : "";
+            return fw.config(icode).toStr();
         }
 
         public override string read(string icode, string defaultValue) => defaultValue;
@@ -429,6 +429,7 @@ public class SecurityQuickFixTests
     {
         var fw = TestHelpers.CreateFw(settings);
         TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
+        fw.model<Settings>().init(fw);
         fw.is_log_events = false;
         return fw;
     }

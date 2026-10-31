@@ -195,6 +195,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-configured");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " configured@example.test " });
+            fw.model<Settings>().init(fw);
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("configured@example.test", fw.resolveTestEmailRecipient());
@@ -205,6 +206,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-session-fallback");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
+            fw.model<Settings>().init(fw);
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -215,6 +217,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-site-setting");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " site@example.test " });
+            fw.model<Settings>().init(fw);
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("site@example.test", fw.resolveTestEmailRecipient());
@@ -225,6 +228,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-current-user");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " current_user " });
+            fw.model<Settings>().init(fw);
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -235,6 +239,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-settings-failure");
             TestHelpers.RegisterModel(fw, (Settings)new ThrowingSettings());
+            fw.model<Settings>().init(fw);
 
             var error = Assert.ThrowsExactly<System.InvalidOperationException>(() => fw.resolveTestEmailRecipient());
 

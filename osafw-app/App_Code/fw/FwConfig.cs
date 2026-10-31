@@ -23,8 +23,30 @@ public static class FwConfig
     /// <summary>Get per-request, host-specific settings bucket.</summary>
     public static FwDict GetCurrentSettings() => GetSettingsForHost();
 
-    /// <summary>Get specific setting from the current bucket.</summary>
-    public static object? GetCurrentSetting(string name) => GetSettingsForHost()[name];
+    /// <summary>Reads a configuration value; exact keys win, otherwise dots traverse nested dictionaries.</summary>
+    public static object? GetCurrentSetting(string name)
+    {
+        var settings = GetSettingsForHost();
+        if (settings.TryGetValue(name, out var exact))
+            return exact;
+
+        object? value = settings;
+        foreach (var part in name.Split('.'))
+        {
+            if (value is not FwDict section || !section.TryGetValue(part, out value))
+                return null;
+        }
+        return value;
+    }
+
+    /// <summary>Copies presentation configuration without bootstrap connections or integration credentials.</summary>
+    internal static FwDict templateSettings()
+    {
+        var globals = Utils.cloneHashDeep(GetCurrentSettings()) ?? [];
+        foreach (var key in new[] { "db", "override", "mail", "AWSAccessKey", "AWSSecretKey", "OPENAI_API_KEY", "API_KEY" })
+            globals.Remove(key);
+        return globals;
+    }
 
     // The ordinary application shares state; explicit scopes get independent settings and caches.
     private sealed class ConfigurationState
@@ -283,6 +305,31 @@ public static class FwConfig
         st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         st["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
 
+        // Operational defaults; Settings rows can inherit or override these values.
+        st["SITE_NAME"] = "Site Name";
+        st["feedback_email"] = "";
+        st["support_email"] = "support@website.com";
+        st["mail_from"] = "admin@website.com";
+        st["admin_email"] = "";
+        st["test_email"] = "";
+        st["mail"] = new FwDict
+        {
+            ["host"] = "",
+            ["port"] = 587,
+            ["is_ssl"] = true,
+            ["username"] = "",
+            ["password"] = "",
+        };
+        st["AWS_CREDENTIAL_SOURCE"] = "sdk";
+        st["AWSAccessKey"] = "";
+        st["AWSSecretKey"] = "";
+        st["OPENAI_API_KEY"] = "";
+        st["API_KEY"] = "";
+        st["is_mfa_enforced"] = false;
+        st["is_list_btn_left"] = false;
+        st["ui_theme"] = 0;
+        st["ui_mode"] = 0;
+
         st["DATA_PROTECTION_APPLICATION_NAME"] = "osafw";
         st["UPLOAD_DIR"] = "/upload";
         st["UNLOGGED_DEFAULT_URL"] = "/";
@@ -371,11 +418,12 @@ public static class FwConfig
         }
         else if (section.Key != null)
         {
-            st[section.Key] = new FwDict();
+            // Override supplied leaves while retaining defaults for unspecified children.
+            var children = st[section.Key] as FwDict ?? [];
+            st[section.Key] = children;
             foreach (IConfigurationSection sub_section in section.GetChildren())
             {
-                FwDict s = (FwDict)st[section.Key]!;
-                applySettingsSection(sub_section, s);
+                applySettingsSection(sub_section, children);
             }
         }
     }
@@ -466,8 +514,7 @@ public static class FwConfig
         var environment = getConfiguredEnvironmentName();
         var st = Utils.cloneHashDeep(getBaseSettings()) ?? [];
 
-        // Small compatibility shim for copied applications that have not yet
-        // moved their legacy override block into environment configuration.
+        // Apply an explicitly configured named override after the environment providers.
         overrideSettingsByName(environment, st);
 
         return st;

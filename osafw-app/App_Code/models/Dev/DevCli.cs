@@ -16,6 +16,7 @@ internal static class DevCli
     internal const int EXIT_ENVIRONMENT = 3;
 
     private const string COMMAND = "scaffold";
+    private const string DATABASE_INIT_COMMAND = "database-init";
     private static readonly Regex TableNameRegex = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
     private static readonly Regex ModelNameRegex = new("^[A-Z][A-Za-z0-9]*$", RegexOptions.CultureInvariant);
     private static readonly Regex ControllerUrlRegex = new("^/[A-Za-z][A-Za-z0-9_]*/[A-Za-z][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
@@ -44,7 +45,9 @@ internal static class DevCli
 
     internal static bool isCommand(string[] args)
     {
-        return args.Length > 0 && string.Equals(args[0], COMMAND, StringComparison.OrdinalIgnoreCase);
+        return args.Length > 0
+            && (string.Equals(args[0], COMMAND, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(args[0], DATABASE_INIT_COMMAND, StringComparison.OrdinalIgnoreCase));
     }
 
     internal static void useDefaultDevelopmentEnvironment()
@@ -66,6 +69,9 @@ internal static class DevCli
     {
         output ??= Console.Out;
         error ??= Console.Error;
+
+        if (args.Length > 0 && string.Equals(args[0], DATABASE_INIT_COMMAND, StringComparison.OrdinalIgnoreCase))
+            return initializeDatabase(args, configuration, output, error);
 
         if (!tryParse(args, out var options, out var parseError))
         {
@@ -132,12 +138,64 @@ internal static class DevCli
         }
     }
 
+    /// <summary>
+    /// Bootstraps only an empty development database without requiring session tables or durable keys.
+    /// The generated administrator password is the command's sole successful output.
+    /// </summary>
+    private static int initializeDatabase(string[] args, IConfiguration configuration, TextWriter output, TextWriter error)
+    {
+        if (args.Length != 1)
+        {
+            error.WriteLine("Error: use database-init without additional arguments.");
+            return EXIT_USAGE;
+        }
+
+        FW? fw = null;
+        try
+        {
+            var settings = FwConfig.settingsForEnvironment(configuration);
+            if (!settings["IS_DEV"].toBool())
+            {
+                error.WriteLine("Error: database-init requires the resolved configuration to have IS_DEV=true.");
+                return EXIT_ENVIRONMENT;
+            }
+
+            fw = new FW(null, configuration);
+            if (fw.db.tables().Count != 0)
+                throw new UserException("Database initialization requires an empty database.");
+
+            var controller = new DevConfigureController();
+            controller.init(fw);
+            var password = controller.initializeDatabase()["pwd"].toStr();
+            if (password.Length == 0)
+                throw new UserException("Database initialization did not create a bootstrap password.");
+
+            output.WriteLine(password);
+            return EXIT_SUCCESS;
+        }
+        catch (Exception)
+        {
+            error.WriteLine("Error: database initialization failed. Verify that the configured database is empty and reachable.");
+            return EXIT_ERROR;
+        }
+        finally
+        {
+            if (fw != null)
+            {
+                try { fw.endRequest(); }
+                catch { }
+                try { fw.Dispose(); }
+                catch { }
+            }
+        }
+    }
+
     internal static bool tryParse(string[] args, out Options options, out string error)
     {
         options = new Options();
         error = string.Empty;
 
-        if (!isCommand(args))
+        if (args.Length == 0 || !string.Equals(args[0], COMMAND, StringComparison.OrdinalIgnoreCase))
         {
             error = "Expected the scaffold command.";
             return false;
@@ -287,12 +345,14 @@ internal static class DevCli
     internal static void writeUsage(TextWriter writer)
     {
         writer.WriteLine("Usage:");
+        writer.WriteLine("  dotnet run --project osafw-app -- database-init");
         writer.WriteLine("  dotnet run --project osafw-app -- scaffold crud <table> [--model <name>] [--url </Prefix/Controller>] [--title <title>] [--type dynamic|vue|lookup|api] [--force]");
         writer.WriteLine("  dotnet run --project osafw-app -- scaffold model <table> [--name <model>] [--force]");
         writer.WriteLine("  dotnet run --project osafw-app -- scaffold controller <model> [--url </Prefix/Controller>] [--title <title>] [--type dynamic|vue|lookup|api] [--force]");
         writer.WriteLine("  dotnet run --project osafw-app -- scaffold report <code>");
         writer.WriteLine();
-        writer.WriteLine("Scaffolding uses the resolved Development configuration by default and refuses to run unless IS_DEV=true.");
+        writer.WriteLine("Development commands use the resolved Development configuration by default and refuse to run unless IS_DEV=true.");
+        writer.WriteLine("Database initialization requires an empty database and prints the generated administrator password.");
         writer.WriteLine("Existing generated model/controller targets are preserved unless --force is explicit.");
         writer.WriteLine("The api controller type is reserved for future support and currently exits without generating output.");
     }
