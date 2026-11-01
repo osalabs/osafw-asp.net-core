@@ -100,6 +100,12 @@ public class SignupController : FwController
             addFormError("pwd2", "WRONG");
         }
 
+        if (result && !model.isAcceptablePwd(item["pwd"].toStr()))
+        {
+            result = false;
+            addFormError("pwd", "BAD");
+        }
+
         if (!result)
             throw new UserException(msg);
         return true;

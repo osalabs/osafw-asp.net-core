@@ -100,6 +100,12 @@ public class PasswordResetController : FwController
             addFormError("pwd2", "NOTEQUAL");
         }
 
+        if (result && !model.isAcceptablePwd(item["pwd"].toStr()))
+        {
+            result = false;
+            addFormError("pwd", "BAD");
+        }
+
         this.validateCheckResult();
     }
 }

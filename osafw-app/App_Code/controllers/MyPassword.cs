@@ -68,7 +68,6 @@ public class MyPasswordController : FwController
         // var itemdb = Users.one(id);
 
         var itemdb = FormUtils.filter(reqh("item"), Utils.qw("email pwd"));
-        itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
 
         if (id > 0)
         {
@@ -104,11 +103,11 @@ public class MyPasswordController : FwController
             addFormError("pwd2", "NOTEQUAL");
         }
 
-        // uncomment if project requires good password strength
-        // If result AndAlso item.ContainsKey("pwd") AndAlso model.scorePwd(item["pwd"]) <= 60 Then
-        // result = False
-        // fw.FERR["pwd") ] "BAD"
-        // End If
+        if (result && !model.isAcceptablePwd(item["pwd"].toStr()))
+        {
+            result = false;
+            addFormError("pwd", "BAD");
+        }
 
         if (result)
         {

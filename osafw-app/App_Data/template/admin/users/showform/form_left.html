@@ -10,10 +10,10 @@
   <label class="col-form-label col-md-3" for="pwd">`Password`</label>
   <div class="col-6 col-md-5">
     <input id="pwd" type="password" name="item[pwd]" maxlength="32" value="<~i[pwd] unless="id">" class="form-control d-none" autocomplete="new-password">
+    <~/common/form/password_strength>
     <~chpwd_block if="i[id]" inline>
         <button type="button" class="btn btn-default on-change-pwd"><~/common/icons/key-fill>`Change password`</button>
     </~chpwd_block>
-    <p class="err-BAD">`Password too weak`</p>
   </div>
   <~pwd_block if="i[id]" inline>
     <div class="col-6 col-md">

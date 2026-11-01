@@ -242,11 +242,23 @@ public class Users : FwModel<Users.Row>
     }
 
     /// <summary>
-    /// Scores password strength using the legacy heuristic; values over 60 are good and over 80 are strong.
+    /// Accepts passwords meeting the project threshold, scoring only the password
+    /// retained by legacy hashing (first 32 characters, then trimmed). Empty values fail.
+    /// This applies to newly chosen passwords, not verification of existing credentials.
+    /// </summary>
+    public bool isAcceptablePwd(string pwd)
+    {
+        // Minimum score (exclusive): 60 = good (default), 100 = strong.
+        // Projects requiring stronger passwords can raise this threshold to 100.
+        return scorePwd(cleanPwd(pwd)) > 60;
+    }
+
+    /// <summary>
+    /// Scores password strength using the legacy heuristic; values over 60 are good and over 100 are strong.
     /// </summary>
     public double scorePwd(string pwd)
     {
-        var result = 0;
+        double result = 0;
         if (string.IsNullOrEmpty(pwd))
             return result;
 
@@ -258,16 +270,16 @@ public class Users : FwModel<Users.Row>
             var count = chars.TryGetValue(c, out object? value) ? value.toInt() : 0;
             count++;
             chars[c] = count;
-            result += (int)(5.0 / (double)count);
+            result += 5.0 / count;
         }
 
         // bonus points for mixing it up
         FwDict vars = new()
         {
-            {"digits",Regex.IsMatch(pwd, @"\d")},
+            {"digits",Regex.IsMatch(pwd, "[0-9]")},
             {"lower",Regex.IsMatch(pwd, "[a-z]")},
             {"upper",Regex.IsMatch(pwd, "[A-Z]")},
-            {"other",Regex.IsMatch(pwd, @"\W")}
+            {"other",Regex.IsMatch(pwd, "[^a-zA-Z0-9_]")}
         };
         var ctr = 0;
         foreach (var value in vars.Values)
@@ -277,7 +289,7 @@ public class Users : FwModel<Users.Row>
         result += (ctr - 1) * 10;
 
         // adjust for length
-        result = (int)(Math.Log(pwd.Length) / Math.Log(8)) * result;
+        result = (Math.Log(pwd.Length) / Math.Log(8)) * result;
 
         return result;
     }

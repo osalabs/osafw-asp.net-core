@@ -16,10 +16,11 @@
     <div class="row form-row">
       <label class="col-form-label col-md-3 required" for="pwd">`Password`</label>
       <div class="col-md-4">
-        <input id="pwd" name="item[pwd]" maxlength="64" value="" type="password" class="form-control" required>
+        <input id="pwd" name="item[pwd]" maxlength="32" value="" type="password" class="form-control" required>
+        <~/common/form/password_strength>
       </div>
       <div class="col-md-4">
-        <input id="pwd2" name="item[pwd2]" maxlength="64" value="" type="password" class="form-control" required placeholder="confirm password">
+        <input id="pwd2" name="item[pwd2]" maxlength="32" value="" type="password" class="form-control" required placeholder="confirm password">
         <p class="err-WRONG">`Passwords are not equal`</p>
       </div>
     </div>

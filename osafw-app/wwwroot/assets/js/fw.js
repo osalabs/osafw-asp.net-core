@@ -1506,7 +1506,7 @@ window.fw={
   renderPwdBar: function(e) {
       var $this = $(this);
       var pwd = $this.val();
-      var score = fw.scorePwd(pwd);
+      var score = fw.scorePwd(fw.cleanPwd(pwd));
       var wbar = parseInt(score*100/120); //over 120 is max
       if (pwd.length>0 && wbar<10) wbar=10; //to show "bad"
       if (wbar>100) wbar=100;
@@ -1520,6 +1520,11 @@ window.fw={
       $bar.removeClass('bg-danger bg-warning bg-success bg-dark').addClass(fw.scorePwdClass(score))
       $bar.text(fw.scorePwdText(score))
       //console.log(pwd, score,'  ', wbar+'%');
+  },
+
+  // Match Users.cleanPwd: truncate before trimming .NET whitespace.
+  cleanPwd: function(pwd) {
+      return pwd.substring(0, 32).replace(/^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g, '');
   },
 
   scorePwd: function(pwd) {

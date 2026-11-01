@@ -205,8 +205,7 @@ public class AdminUsersController : FwDynamicController
         FwDict itemdb = FormUtils.filter(item, this.save_fields);
         FormUtils.filterCheckboxes(itemdb, item, save_fields_checkboxes, isPatch());
 
-        itemdb["pwd"] = itemdb["pwd"].toStr().Trim();
-        if (Utils.isEmpty(itemdb["pwd"]))
+        if (string.IsNullOrWhiteSpace(itemdb["pwd"].toStr()))
             itemdb.Remove("pwd");
 
         id = this.modelAddOrUpdate(id, itemdb);
@@ -237,11 +236,11 @@ public class AdminUsersController : FwDynamicController
             addFormError("ehack", "EMAIL");
         }
 
-        // uncomment if project requires good password strength
-        // If result AndAlso item.ContainsKey("pwd") AndAlso model.scorePwd(item["pwd"]) <= 60 Then
-        // result = False
-        // fw.FERR["pwd"] = "BAD"
-        // End If
+        if (result && !string.IsNullOrWhiteSpace(item["pwd"].toStr()) && !model.isAcceptablePwd(item["pwd"].toStr()))
+        {
+            result = false;
+            addFormError("pwd", "BAD");
+        }
 
         // If result AndAlso Not SomeOtherValidation() Then
         // result = False
