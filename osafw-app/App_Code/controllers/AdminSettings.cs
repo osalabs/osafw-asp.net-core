@@ -258,6 +258,7 @@ public class AdminSettingsController : FwAdminController
     {
         int input = stored["input"].toInt();
         ps["editor_input"] = isProtectedEditor(stored) ? Settings.INPUT_CREDENTIAL : input;
+        ps["is_credential"] = Settings.isCredential(stored);
         ps["is_basis_inherit"] = stored["basis"].toInt() == Settings.BASIS_INHERIT;
         ps["is_basis_value"] = stored["basis"].toInt() == Settings.BASIS_VALUE;
         ps["can_reveal"] = Settings.maskPolicy(stored) == Settings.MASK_REVEAL;
@@ -276,7 +277,9 @@ public class AdminSettingsController : FwAdminController
     {
         int input = setting["input"].toInt();
         int oldBasis = setting["basis"].toInt(Settings.BASIS_VALUE);
-        int basis = item.ContainsKey("basis") ? item["basis"].toInt(-1) : oldBasis;
+        bool isCredential = Settings.isCredential(setting);
+        int basis = isCredential ? Settings.BASIS_VALUE
+            : item.ContainsKey("basis") ? item["basis"].toInt(-1) : oldBasis;
         FwDict itemdb = [];
 
         if (basis == Settings.BASIS_INHERIT)
@@ -298,7 +301,7 @@ public class AdminSettingsController : FwAdminController
                 itemdb["basis"] = Settings.BASIS_VALUE;
                 itemdb["ivalue"] = value;
             }
-            else if (oldBasis != Settings.BASIS_VALUE)
+            else if (!isCredential && oldBasis != Settings.BASIS_VALUE)
                 throw new UserException("Enter a value, select Clear, or keep Use default.");
 
             return itemdb;

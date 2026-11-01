@@ -29,11 +29,11 @@ public class AdminSendEmailController : FwAdminController
         form_new_defaults = new FwDict
         {
             ["from"] = settings.read("mail_from"),
-            ["host"] = settings.read("mail.host"),
-            ["port"] = settings.readInt("mail.port"),
-            ["username"] = settings.read("mail.username"),
+            ["host"] = settings.read("mail.host", ""),
+            ["port"] = settings.readInt("mail.port", 587),
+            ["username"] = settings.read("mail.username", ""),
             ["password"] = "",
-            ["is_ssl"] = settings.readBool("mail.is_ssl")
+            ["is_ssl"] = settings.readBool("mail.is_ssl", true)
         };
     }
 

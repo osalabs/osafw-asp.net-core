@@ -16,6 +16,7 @@
           </div>
         </div>
 
+        <~value_source unless="is_credential" inline>
         <div class="row form-row">
           <label class="col-form-label col-md-3">`Value source`</label>
           <div class="col">
@@ -29,6 +30,8 @@
             </div>
           </div>
         </div>
+
+        </~value_source>
 
         <~input_input ifeq="editor_input" value="0">
         <~input_textarea ifeq="editor_input" value="10">

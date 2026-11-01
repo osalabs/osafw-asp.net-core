@@ -89,29 +89,16 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        [DataRow(null, null, 587, true)]
-        [DataRow("2525", "false", 2525, false)]
-        public void PartialMailConfigurationPreservesUnspecifiedDefaults(string? port, string? ssl, int expectedPort, bool expectedSsl)
+        public void Defaults_DoNotDeclareIntegrationSettings()
         {
             using var scope = FwConfig.beginScope();
-            var values = new Dictionary<string, string?>
-            {
-                ["appSettings:mail:host"] = "smtp.example.test",
-            };
-            if (port != null)
-                values["appSettings:mail:port"] = port;
-            if (ssl != null)
-                values["appSettings:mail:is_ssl"] = ssl;
+            var settings = FwConfig.settingsForEnvironment(new ConfigurationBuilder().Build());
 
-            var config = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
-            var startup = FwConfig.settingsForEnvironment(config);
-            Assert.AreEqual(expectedPort, ((FwDict)startup["mail"]!)["port"].toInt());
-            Assert.AreEqual(expectedSsl, ((FwDict)startup["mail"]!)["is_ssl"].toBool());
+            foreach (var code in new[] { "mail", "AWS_CREDENTIAL_SOURCE", "AWSAccessKey", "AWSSecretKey", "OPENAI_API_KEY", "API_KEY" })
+                Assert.IsFalse(settings.ContainsKey(code), code);
 
-            FwConfig.init(null, config);
-            Assert.AreEqual("smtp.example.test", FwConfig.GetCurrentSetting("mail.host"));
-            Assert.AreEqual(expectedPort, FwConfig.GetCurrentSetting("mail.port").toInt());
-            Assert.AreEqual(expectedSsl, FwConfig.GetCurrentSetting("mail.is_ssl").toBool());
+            Assert.AreEqual("/Main", settings["LOGGED_DEFAULT_URL"]);
+            Assert.AreEqual(DateUtils.DATE_FORMAT_MDY, settings["date_format"]);
         }
 
         [TestMethod]

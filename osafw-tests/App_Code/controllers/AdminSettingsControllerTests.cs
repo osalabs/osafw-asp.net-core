@@ -188,6 +188,28 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
+    [DataRow(Settings.INPUT_CREDENTIAL, false)]
+    [DataRow(Settings.INPUT_TEXT, true)]
+    public void ShowForm_RendersDefaultSelectionOnlyForOrdinarySettings(int input, bool hasDefaultSelection)
+    {
+        var (fw, _, controller) = BuildController(
+            Setting(input, "", basis: Settings.BASIS_INHERIT), []);
+        fw.route.method = "GET";
+        fw.config()["template"] = TestHelpers.TemplateRoot();
+
+        var ps = controller.ShowFormAction(1);
+        string html = fw.parsePage("/admin/settings/showform", "form.html", ps);
+
+        Assert.AreEqual(hasDefaultSelection, html.Contains("id=\"basis_inherit\"", StringComparison.Ordinal));
+        if (!hasDefaultSelection)
+        {
+            StringAssert.Contains(html, "Not configured");
+            StringAssert.Contains(html, "Leave blank to keep the current value.");
+            StringAssert.Contains(html, "Clear the saved value");
+        }
+    }
+
+    [TestMethod]
     public void Credential_BlankSubmissionKeepsExistingValue()
     {
         var (_, model, controller) = BuildController(
@@ -301,27 +323,27 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
-    public void Credential_UseDefaultStoresInheritanceWithoutSubmittedSecret()
+    public void Credential_SubmittedInheritanceCannotRestoreConfigurationFallback()
     {
         var (_, model, controller) = BuildController(
             Setting(Settings.INPUT_CREDENTIAL, "old-secret"),
-            new FwDict { ["ivalue"] = "must-not-save", ["basis"] = Settings.BASIS_INHERIT });
+            new FwDict { ["ivalue"] = "new-secret", ["basis"] = Settings.BASIS_INHERIT });
 
         controller.SaveAction(1);
 
         Assert.AreEqual(1, model.UpdateCalls);
-        Assert.AreEqual(Settings.BASIS_INHERIT, model.LastUpdate["basis"].toInt());
-        Assert.IsFalse(model.LastUpdate.ContainsKey("ivalue"));
+        Assert.AreEqual(Settings.BASIS_VALUE, model.LastUpdate["basis"].toInt());
+        Assert.AreEqual("new-secret", model.LastUpdate["ivalue"]);
     }
 
     [TestMethod]
-    public void Credential_InheritedValueCannotBecomeExplicitWithoutValueOrClear()
+    public void Credential_UnconfiguredBlankSubmissionKeepsItUnconfigured()
     {
         var (_, model, controller) = BuildController(
             Setting(Settings.INPUT_CREDENTIAL, "", basis: Settings.BASIS_INHERIT),
-            new FwDict { ["ivalue"] = "", ["basis"] = Settings.BASIS_VALUE });
+            new FwDict { ["ivalue"] = "" });
 
-        Assert.ThrowsExactly<UserException>(() => controller.SaveAction(1));
+        controller.SaveAction(1);
         Assert.AreEqual(0, model.UpdateCalls);
     }
 
