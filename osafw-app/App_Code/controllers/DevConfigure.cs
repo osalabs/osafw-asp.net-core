@@ -126,15 +126,6 @@ public class DevConfigureController : FwController
 
         enforcePost();
 
-        return initDatabase();
-    }
-
-    /// <summary>
-    /// Runs the development database initialization scripts after bootstrap guards pass.
-    /// </summary>
-    /// <returns>Template data containing the generated admin password when one or more SQL statements executed.</returns>
-    protected virtual FwDict initDatabase()
-    {
         return DevCli.initializeDatabase(fw);
     }
 

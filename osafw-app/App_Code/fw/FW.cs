@@ -284,7 +284,7 @@ public class FW : IDisposable
             db = getDB();
             DB.SQL_QUERY_CTR = 0; // reset query counter
 
-            // Database definitions can contain credentials, including inside host overrides.
+            // remove db and override credentials from globals
             G = Utils.cloneHashDeep(config()) ?? [];
             G.Remove("db");
             G.Remove("override");
