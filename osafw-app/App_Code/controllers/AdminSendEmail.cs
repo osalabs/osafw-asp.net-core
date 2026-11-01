@@ -15,7 +15,7 @@ public class AdminSendEmailController : FwAdminController
 
     public override void init(FW fw)
     {
-        Settings.markSensitiveRequest();
+        FwSettings.markSensitiveRequest();
         base.init(fw);
         model = fw.model<Users>();
         model0 = model;
@@ -25,7 +25,7 @@ public class AdminSendEmailController : FwAdminController
         save_fields = "from to subject body host port username";
         save_fields_checkboxes = "is_ssl|0";
 
-        var settings = fw.model<Settings>();
+        var settings = fw.settings;
         form_new_defaults = new FwDict
         {
             ["from"] = settings.read("mail_from"),

@@ -141,6 +141,28 @@ public class SettingsStoreTests
         assertValuesUnchanged(fixture);
     }
 
+    [TestMethod]
+    public void InheritedRowAndTransferTypesPreserveTypedReadsAndInvalidation()
+    {
+        using var fixture = new SettingsFixture();
+        var id = fixture.Seed("ordinary", Settings.INPUT_TEXT, "Before");
+        FwModel<Settings.Row> typedModel = fixture.Fw.settings;
+        Settings.Row? before = typedModel.oneT(id);
+        Assert.IsNotNull(before);
+        Assert.AreEqual("Before", before.ivalue);
+
+        var transfer = new Settings.Transfer
+        {
+            settings = [new Settings.ValueChange { icode = "ordinary", basis = Settings.BASIS_VALUE, ivalue = "After" }]
+        };
+        fixture.Fw.settings.importJson(System.Text.Json.JsonSerializer.Serialize(transfer));
+
+        Settings.Row? after = typedModel.oneT(id);
+        Assert.IsNotNull(after);
+        Assert.AreEqual("After", after.ivalue);
+        Assert.AreEqual("After", fixture.Fw.settings.read("ordinary"));
+    }
+
     private sealed class CacheClock : ISystemClock
     {
         public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
@@ -176,7 +198,7 @@ public class SettingsStoreTests
             var nextDb = new CountingSqliteDb(dbConfig);
             using (var request = new FwTestScope(_ => nextDb))
             {
-                var settings = request.Fw.model<Settings>();
+                var settings = request.Fw.settings;
                 settings.applyGlobals();
                 Assert.AreEqual("Before", request.Fw.G["SITE_NAME"]);
                 Assert.AreEqual(2, request.Fw.G["ui_mode"]);
@@ -206,7 +228,7 @@ public class SettingsStoreTests
             Assert.AreEqual("After", fixture.Fw.G["SITE_NAME"]);
             var refreshedDb = new CountingSqliteDb(dbConfig);
             using var refreshed = new FwTestScope(_ => refreshedDb);
-            refreshed.Fw.model<Settings>().applyGlobals();
+            refreshed.Fw.settings.applyGlobals();
             Assert.AreEqual("After", refreshed.Fw.G["SITE_NAME"]);
             Assert.AreEqual(0, refreshedDb.SettingsArrayCalls);
             Assert.AreEqual(readsAfterWrite + 1, fixture.Db.SettingsArrayCalls);
@@ -363,7 +385,7 @@ public class SettingsStoreTests
                     ["appSettings:DATA_PROTECTION_APPLICATION_NAME"] = "settings-tests"
                 },
                 context);
-            Model = scope.Fw.model<Settings>();
+            Model = scope.Fw.settings;
             Model.is_log_changes = false;
         }
 

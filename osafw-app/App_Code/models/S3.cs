@@ -116,7 +116,7 @@ public class S3 : FwModel
     // root should end with "/" if non-empty
     public AmazonS3Client initClient(string access_key = "", string secret_key = "", string region = "", string bucket = "", string root = "")
     {
-        var settings = fw.model<Settings>();
+        var settings = fw.settings;
         var isExplicitCredentials = !string.IsNullOrEmpty(access_key) || !string.IsNullOrEmpty(secret_key);
         var credentialSource = isExplicitCredentials ? "static" : settings.read("AWS_CREDENTIAL_SOURCE", "sdk");
         string akey = "";

@@ -33,7 +33,7 @@ public class ContactController : FwController
 
     public void SaveAction()
     {
-        var settings = fw.model<Settings>();
+        var settings = fw.settings;
         string mail_from = settings.read("mail_from");
         string mail_to = settings.read("support_email");
         string mail_subject = "Contact Form Submission";

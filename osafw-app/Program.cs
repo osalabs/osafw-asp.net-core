@@ -85,7 +85,7 @@ public static class Program
         });
 
         // Session cookies may use a temporary key before database initialization. Settings protection remains strict.
-        Settings.configureProtection(builder.Services, settings, isRequired: false);
+        FwSettings.configureProtection(builder.Services, settings, isRequired: false);
 
         // Session rows use the provider-specific cache backing store for the main DB.
         builder.Services.AddFwSessionCache(connStr, dbType);

@@ -58,7 +58,7 @@ public sealed class FwHooks
         // if (mainMenu == null || mainMenu.Count == 0)
         // {
         //     // create main menu if not yet
-        //     mainMenu = fw.model<Settings>().get_main_menu();
+        //     mainMenu = fw.settings.get_main_menu();
         //     FwCache.set_value("main_menu", mainMenu);
         // }
         //

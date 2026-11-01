@@ -71,7 +71,7 @@ public class FwParserIsolationTests
 
         var fw = new FW(context, configuration, name => new RejectingDb(name));
         TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-        fw.model<Settings>().init(fw);
+        fw.settings.init(fw);
         fw.route = new FwRoute
         {
             controller = "Home", controller_path = "/Home", action = "Index", method = "GET", format = format,
