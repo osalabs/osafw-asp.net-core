@@ -321,6 +321,36 @@ public class DevCliTests
     }
 
     [TestMethod]
+    public void SharedDatabaseInitializerInvalidatesPreviouslyCachedSettings()
+    {
+        using var configurationScope = FwConfig.beginScope();
+        var dbPath = Path.Combine(Path.GetTempPath(), "osafw-database-reset-" + Guid.NewGuid().ToString("N") + ".sqlite");
+        var configuration = sqliteConfiguration(dbPath);
+
+        try
+        {
+            using var fw = new FW(null, configuration);
+            // A partially initialized database can already have a cached Settings table.
+            fw.db.exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, icode TEXT, ivalue TEXT, input INTEGER, basis INTEGER)");
+            fw.db.insert("settings", DB.h("id", 1, "icode", "SITE_NAME", "ivalue", "Before database reset",
+                "input", Settings.INPUT_TEXT, "basis", Settings.BASIS_VALUE));
+            var settings = fw.model<Settings>();
+            settings.applyGlobals();
+            Assert.AreEqual("Before database reset", fw.G["SITE_NAME"]);
+
+            DevCli.initializeDatabase(fw);
+
+            settings.applyGlobals();
+            Assert.AreEqual(fw.config("SITE_NAME"), fw.G["SITE_NAME"]);
+            Assert.AreEqual(fw.config("SITE_NAME"), settings.read("SITE_NAME"));
+        }
+        finally
+        {
+            deleteSqliteDatabase(dbPath);
+        }
+    }
+
+    [TestMethod]
     public void Run_DatabaseInitPreservesUnrelatedTableInNonEmptySqliteDatabase()
     {
         using var configurationScope = FwConfig.beginScope();

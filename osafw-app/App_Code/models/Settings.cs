@@ -41,6 +41,7 @@ public class Settings : FwModel<Settings.Row>
     public const int BASIS_VALUE = 1;
     public const int MAX_TRANSFER_BYTES = 1048576;
     private static readonly object storeLock = new();
+    private bool isGlobalsLoaded;
 
     public const string PROTECTED_PREFIX = "enc:v1:";
     private static readonly ConcurrentDictionary<string, Lazy<ServiceProvider>> providers = new();
@@ -201,6 +202,35 @@ public class Settings : FwModel<Settings.Row>
         return isExistsByField(uniq_key, not_id, "icode");
     }
 
+    /// <summary>
+    /// Applies shared display overrides once per request from the application-cached snapshot.
+    /// Unavailable storage leaves bootstrap defaults; user theme/mode preferences take precedence.
+    /// </summary>
+    public virtual void applyGlobals()
+    {
+        if (isGlobalsLoaded)
+            return;
+
+        isGlobalsLoaded = true;
+        try
+        {
+            fw.G["SITE_NAME"] = read("SITE_NAME");
+            fw.G["feedback_email"] = read("feedback_email");
+            fw.G["support_email"] = read("support_email");
+            fw.G["is_list_btn_left"] = readBool("is_list_btn_left");
+
+            if (string.IsNullOrEmpty(fw.Session("ui_theme")))
+                fw.G["ui_theme"] = readInt("ui_theme");
+            if (string.IsNullOrEmpty(fw.Session("ui_mode")))
+                fw.G["ui_mode"] = readInt("ui_mode");
+        }
+        catch (Exception)
+        {
+            // These presentation overrides are optional; operational Settings reads still report database failures.
+            logger(LogLevel.WARN, "Site display settings are unavailable; using configured defaults.");
+        }
+    }
+
     private string mapKey => "settings:" + db.cacheIdentity;
 
     private Dictionary<string, FwDict> snapshot()
@@ -215,7 +245,7 @@ public class Settings : FwModel<Settings.Row>
             foreach (FwDict row in rows)
                 result.Add(row["icode"].toStr(), new FwDict(row));
 
-            FwCache.setValue(mapKey, result);
+            FwCache.setValue(mapKey, result, expire_seconds: 0);
             return result;
         }
     }
@@ -225,6 +255,7 @@ public class Settings : FwModel<Settings.Row>
     {
         lock (storeLock)
         {
+            isGlobalsLoaded = false;
             FwCache.remove(mapKey);
             FwCache.remove("main_menu");
             fw.cache.requestRemoveWithPrefix(cache_prefix);

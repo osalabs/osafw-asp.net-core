@@ -164,9 +164,7 @@ internal static class DevCli
             if (fw.db.tables().Count != 0)
                 throw new UserException("Database initialization requires an empty database.");
 
-            var controller = new DevConfigureController();
-            controller.init(fw);
-            var password = controller.initializeDatabase()["pwd"].toStr();
+            var password = initializeDatabase(fw)["pwd"].toStr();
             if (password.Length == 0)
                 throw new UserException("Database initialization did not create a bootstrap password.");
 
@@ -188,6 +186,75 @@ internal static class DevCli
                 catch { }
             }
         }
+    }
+
+    /// <summary>
+    /// Replays the provider's fresh-install scripts and returns the generated admin password in page data.
+    /// Callers must apply development/access guards first; these scripts replace existing schema/data.
+    /// </summary>
+    internal static FwDict initializeDatabase(FW fw)
+    {
+        var db = fw.db;
+        FwDict ps = [];
+        int sql_ctr = 0;
+
+        try
+        {
+            var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
+            dropExistingForeignKeys(db);
+
+            string[] files = ["fwdatabase.sql", "database.sql", "settings.sql", "demo.sql", "lookups.sql", "views.sql"];
+            foreach (string file in files)
+            {
+                var sql_file = Path.Combine(sql_root, file);
+                fw.logger("Checking sql file:", sql_file);
+                if (File.Exists(sql_file))
+                {
+                    fw.logger("Executing sql file:", sql_file);
+                    sql_ctr += db.execMultipleSQL(Utils.getFileContent(sql_file));
+                }
+            }
+        }
+        finally
+        {
+            // Scripts can change schema and Settings even when a later statement fails.
+            db.clearSchemaCache();
+            fw.model<Settings>().invalidate();
+        }
+
+        fw.logger("Executed SQL count:", sql_ctr);
+        if (sql_ctr > 0)
+        {
+            var pwd = Utils.getRandStr(8);
+            fw.model<Users>().update(1, DB.h("pwd", pwd));
+            ps["pwd"] = pwd;
+        }
+
+        return ps;
+    }
+
+    /// <summary>
+    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
+    /// </summary>
+    private static void dropExistingForeignKeys(DB db)
+    {
+        if (db.dbtype != DB.DBTYPE_SQLSRV)
+            return;
+
+        db.exec($@"
+            DECLARE @sql NVARCHAR(MAX) = N'';
+
+            SELECT @sql += N'ALTER TABLE '
+                + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
+                + N'.'
+                + QUOTENAME(OBJECT_NAME(parent_object_id))
+                + N' DROP CONSTRAINT '
+                + QUOTENAME(name)
+                + N';'
+            FROM sys.foreign_keys;
+
+            IF LEN(@sql) > 0
+                EXEC sp_executesql @sql");
     }
 
     internal static bool tryParse(string[] args, out Options options, out string error)
