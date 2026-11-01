@@ -282,7 +282,16 @@ public class FW : IDisposable
             db = getDB();
             DB.SQL_QUERY_CTR = 0; // reset query counter
 
-            G = FwConfig.templateSettings();
+            // Only shared presentation values enter globals; server configuration stays in config().
+            G = [];
+            foreach (var key in Utils.qw(
+                "hostname ROOT_URL ROOT_DOMAIN ASSETS_URL SITE_NAME SITE_VERSION PROJECT_CODE app_version_stamp " +
+                "IS_DEV is_test IS_SIGNUP lang date_format time_format timezone " +
+                "feedback_email support_email is_list_btn_left ui_theme ui_mode " +
+                "PAGE_LAYOUT PAGE_LAYOUT_PUBLIC PAGE_LAYOUT_PJAX PAGE_LAYOUT_PJAX_NOJS " +
+                "PAGE_LAYOUT_MODAL PAGE_LAYOUT_MIN PAGE_LAYOUT_PRINT PAGE_LAYOUT_EMAIL PAGE_LAYOUT_VUE " +
+                "AWSRegion S3Bucket"))
+                G[key] = config(key);
 
             // per request settings
             G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -951,10 +960,7 @@ public class FW : IDisposable
             G["SITE_NAME"] = settings.read("SITE_NAME");
             G["feedback_email"] = settings.read("feedback_email");
             G["support_email"] = settings.read("support_email");
-            G["mail_from"] = settings.read("mail_from");
             G["is_list_btn_left"] = settings.readBool("is_list_btn_left");
-            G["UNLOGGED_DEFAULT_URL"] = settings.read("UNLOGGED_DEFAULT_URL");
-            G["LOGGED_DEFAULT_URL"] = settings.read("LOGGED_DEFAULT_URL");
 
             if (string.IsNullOrEmpty(Session("ui_theme")))
                 G["ui_theme"] = settings.readInt("ui_theme");
@@ -1247,6 +1253,7 @@ public class FW : IDisposable
 
     public string parsePage(string basedir, string layout, FwDict ps)
     {
+        ensureSettingsGlobals();
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
         return parser_obj.parse_page(basedir, layout, ps);
@@ -1700,10 +1707,10 @@ public class FW : IDisposable
 
             FwDict mailSettings = new()
             {
-                ["host"] = settings.read("mail.host"),
-                ["port"] = settings.readInt("mail.port"),
-                ["is_ssl"] = settings.readBool("mail.is_ssl"),
-                ["username"] = settings.read("mail.username"),
+                ["host"] = settings.read("mail.host", ""),
+                ["port"] = settings.readInt("mail.port", 587),
+                ["is_ssl"] = settings.readBool("mail.is_ssl", true),
+                ["username"] = settings.read("mail.username", ""),
                 ["password"] = settings.readSecret("mail.password"),
             };
             if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)

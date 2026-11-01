@@ -31,6 +31,19 @@ internal static class TestHelpers
         return context;
     }
 
+    public static string TemplateRoot()
+    {
+        var directory = new System.IO.DirectoryInfo(System.AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            string path = System.IO.Path.Combine(directory.FullName, "osafw-app", "App_Data", "template");
+            if (System.IO.Directory.Exists(path))
+                return path;
+            directory = directory.Parent;
+        }
+        throw new System.IO.DirectoryNotFoundException("Repository templates not found.");
+    }
+
     public static void RegisterModel<T>(FW fw, T model) where T : class => fw.registerModelForTesting(model);
 
     public class FakeSession : ISession

@@ -27,7 +27,7 @@ This documentation describes the structure and deployment of the application bui
   </~access_levels>
   </ul>
 
-- **Multi-Factor Authentication (MFA) enforced:** <~/common/sel/yn_bool.sel selvalue="GLOBAL[is_mfa_enforced]"> 
+- **Multi-Factor Authentication (MFA) enforced:** <~/common/sel/yn_bool.sel selvalue="is_mfa_enforced">
 - **Authentication Method:** %%Windows Auth, Active Directory, OAuth%%
 
 ### Uploads
@@ -52,5 +52,5 @@ This documentation describes the structure and deployment of the application bui
 
 ### Email Configuration
 - **Support Email:** <~GLOBAL[support_email]>
-- **No-reply Email:** <~GLOBAL[mail_from]>
+- **No-reply Email:** <~mail_from>
 - **SMTP Server Options:** use local SMTP, Outlook or AWS SES credentials as required.

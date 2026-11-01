@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-10-31-settings-globals.md` - Separated DB-only credentials from shared configuration, traced template globals and feature consumers, and reviewed PR 300 against the original goals.
 - `summary-2026-10-31-settings-pr300-cleanup.md` - Replaced Settings action allowlisting with overrides, simplified validation/display paths and formatting, and focused unapplied SQL updates.
 - `summary-2026-10-31-settings-bootstrap-review.md` - In progress: database-free bootstrap decision, generic Settings validation, shared Admin checks, SQL style and readable methods.
 - `summary-2026-10-31-settings-simplification.md` - Simplified the Settings PR stack around the existing model, centralized defaults, removed runtime migration code, and documented explicit app preparation and offline upgrades.

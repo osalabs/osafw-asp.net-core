@@ -188,6 +188,28 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
+    [DataRow(Settings.INPUT_CREDENTIAL, false)]
+    [DataRow(Settings.INPUT_TEXT, true)]
+    public void ShowForm_RendersDefaultSelectionOnlyForOrdinarySettings(int input, bool hasDefaultSelection)
+    {
+        var (fw, _, controller) = BuildController(
+            Setting(input, "", basis: Settings.BASIS_INHERIT), []);
+        fw.route.method = "GET";
+        fw.config()["template"] = TestHelpers.TemplateRoot();
+
+        var ps = controller.ShowFormAction(1);
+        string html = fw.parsePage("/admin/settings/showform", "form.html", ps);
+
+        Assert.AreEqual(hasDefaultSelection, html.Contains("id=\"basis_inherit\"", StringComparison.Ordinal));
+        if (!hasDefaultSelection)
+        {
+            StringAssert.Contains(html, "Not configured");
+            StringAssert.Contains(html, "Leave blank to keep the current value.");
+            StringAssert.Contains(html, "Clear the saved value");
+        }
+    }
+
+    [TestMethod]
     public void Credential_BlankSubmissionKeepsExistingValue()
     {
         var (_, model, controller) = BuildController(
@@ -301,27 +323,27 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
-    public void Credential_UseDefaultStoresInheritanceWithoutSubmittedSecret()
+    public void Credential_SubmittedInheritanceCannotRestoreConfigurationFallback()
     {
         var (_, model, controller) = BuildController(
             Setting(Settings.INPUT_CREDENTIAL, "old-secret"),
-            new FwDict { ["ivalue"] = "must-not-save", ["basis"] = Settings.BASIS_INHERIT });
+            new FwDict { ["ivalue"] = "new-secret", ["basis"] = Settings.BASIS_INHERIT });
 
         controller.SaveAction(1);
 
         Assert.AreEqual(1, model.UpdateCalls);
-        Assert.AreEqual(Settings.BASIS_INHERIT, model.LastUpdate["basis"].toInt());
-        Assert.IsFalse(model.LastUpdate.ContainsKey("ivalue"));
+        Assert.AreEqual(Settings.BASIS_VALUE, model.LastUpdate["basis"].toInt());
+        Assert.AreEqual("new-secret", model.LastUpdate["ivalue"]);
     }
 
     [TestMethod]
-    public void Credential_InheritedValueCannotBecomeExplicitWithoutValueOrClear()
+    public void Credential_UnconfiguredBlankSubmissionKeepsItUnconfigured()
     {
         var (_, model, controller) = BuildController(
             Setting(Settings.INPUT_CREDENTIAL, "", basis: Settings.BASIS_INHERIT),
-            new FwDict { ["ivalue"] = "", ["basis"] = Settings.BASIS_VALUE });
+            new FwDict { ["ivalue"] = "" });
 
-        Assert.ThrowsExactly<UserException>(() => controller.SaveAction(1));
+        controller.SaveAction(1);
         Assert.AreEqual(0, model.UpdateCalls);
     }
 
@@ -763,6 +785,43 @@ public class AdminSettingsControllerTests
     }
 
 #if isSQLite
+    [TestMethod]
+    [DataRow(true, 587, "sdk")]
+    [DataRow(false, 2525, "static")]
+    public void IndexAction_RendersGroupedDefaultsAndExplicitValues(bool isInherited, int expectedPort, string expectedSource)
+    {
+        using var fixture = new TransferFixture();
+        foreach (string code in new[] { "mail.host", "mail.port", "mail.is_ssl", "mail.username", "AWS_CREDENTIAL_SOURCE" })
+        {
+            int id = fixture.Seed(code, Settings.INPUT_TEXT);
+            fixture.Model.update(id, DB.h("basis", Settings.BASIS_INHERIT));
+        }
+        foreach (string code in new[] { "mail.password", "AWSAccessKey", "AWSSecretKey" })
+            fixture.Seed(code, Settings.INPUT_CREDENTIAL);
+        if (!isInherited)
+        {
+            fixture.Model.write("mail.port", "2525");
+            fixture.Model.write("mail.is_ssl", "0");
+            fixture.Model.write("AWS_CREDENTIAL_SOURCE", "static");
+        }
+        fixture.Fw.config()["template"] = TestHelpers.TemplateRoot();
+        fixture.Fw.route.controller = "AdminSettings";
+        fixture.Fw.route.action = FW.ACTION_INDEX;
+        fixture.Fw.route.method = "GET";
+
+        var ps = fixture.Controller.IndexAction()!;
+        var smtp = (FwDict)ps["smtp"]!;
+        var aws = (FwDict)ps["aws"]!;
+        string smtpHtml = fixture.Fw.parsePage("/admin/settings/index", "smtp_group.html", ps);
+        string awsHtml = fixture.Fw.parsePage("/admin/settings/index", "aws_group.html", ps);
+
+        Assert.AreEqual(expectedPort, smtp["port"].toInt());
+        Assert.AreEqual(isInherited, smtp["is_ssl"].toBool());
+        Assert.AreEqual(expectedSource, aws["source"]);
+        StringAssert.Contains(smtpHtml, $"value=\"{expectedPort}\"");
+        StringAssert.Matches(awsHtml, new System.Text.RegularExpressions.Regex("value=\"" + expectedSource + "\"\\s+selected"));
+    }
+
     [TestMethod]
     [DataRow(Users.ACL_ADMIN, 1, false)]
     [DataRow(Users.ACL_SITEADMIN, 11, true)]
