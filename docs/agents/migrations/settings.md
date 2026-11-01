@@ -20,6 +20,8 @@ Inventory effective values for each environment and supported named/host overrid
 
 When adopting the model split, include `fw/FwSettings.cs`, make the application Settings model inherit FwSettings, and retain application helpers and `applyGlobals()` in Settings. Remove duplicate old framework storage/protection implementations while preserving intentional application behavior. `fw.settings` is the preferred lookup; `fw.model<Settings>()` and inherited Settings DTO/constants/static APIs remain source-compatible. Preserve the existing protection purpose, prefix and application identity; this class move requires no credential rewrite or SQL update.
 
+If a copied app overrides DevConfigureController.initDatabase(), move that initialization customization into DevCli.initializeDatabase(FW). The forwarding hook is removed; the web action keeps its development/POST/token guards before calling the shared initializer directly.
+
 Read nested JSON as nested objects and map mail fields to dotted setting codes; do not rename the JSON fields blindly. For non-credential settings, `Settings.read(code)` inherits `fw.config(code)`, including dotted lookup, for a missing row or `basis=0`. Credential reads never fall back to configuration, and inherited credentials are unconfigured. SMTP and AWS-mode consumers own their non-secret defaults (587/TLS enabled and `sdk`). An explicit caller fallback overrides that default. Use `readSecret(code)` for trusted credential consumers; never project decrypted credentials into generic page state.
 
 ## Prepare schema and values

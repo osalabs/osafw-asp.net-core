@@ -321,6 +321,41 @@ public class DevCliTests
     }
 
     [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void WebDatabaseInitBootstrapsEmptySqliteDatabase(bool isTokenAvailable)
+    {
+        using var configurationScope = FwConfig.beginScope();
+        var dbPath = Path.Combine(Path.GetTempPath(), "osafw-web-init-" + Guid.NewGuid().ToString("N") + ".sqlite");
+
+        try
+        {
+            using var fw = new FW(TestHelpers.CreateHttpContext(), sqliteConfiguration(dbPath));
+            fw.route.method = "POST";
+            if (isTokenAvailable)
+            {
+                fw.Session("XSS", "bootstrap-token");
+                fw.FORM["XSS"] = "bootstrap-token";
+            }
+            var controller = new DevConfigureController();
+            controller.init(fw);
+
+            var result = controller.InitDBAction();
+
+            Assert.IsFalse(fw.isLogged);
+            var password = result["pwd"].toStr();
+            Assert.IsFalse(string.IsNullOrEmpty(password));
+            var passwordHash = fw.db.value("users", DB.h("id", 1), "pwd").toStr();
+            Assert.IsTrue(fw.model<Users>().checkPwd(password, passwordHash));
+            Assert.IsGreaterThan(0, fw.db.valuep("SELECT COUNT(*) FROM settings").toInt());
+        }
+        finally
+        {
+            deleteSqliteDatabase(dbPath);
+        }
+    }
+
+    [TestMethod]
     public void SharedDatabaseInitializerInvalidatesPreviouslyCachedSettings()
     {
         using var configurationScope = FwConfig.beginScope();

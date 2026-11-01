@@ -21,7 +21,7 @@ Settings.applyGlobals() owns the small display override list and its once-per-re
 
 The cache stores one ciphertext snapshot per database identity with no timed expiration. First read loads the rows once, then other readers and requests reuse them. Supported writes/imports invalidate the snapshot and dependent menu data; the next read refreshes it. Explicit cache clear, eviction or application restart can also reload it. Direct SQL edits require invalidation or restart. FwCache.setValue(..., expire_seconds: 0) now means no timed expiry; its ordinary one-hour default remains unchanged.
 
-Database initialization lives in the existing models/Dev/DevCli.cs. Both CLI and web entry points use it; CLI no longer constructs a controller. DevConfigure retains its IS_DEV/POST/session-token guards and protected virtual initDatabase delegation hook. The CLI retains its empty-database guard. Script order includes settings.sql after schema creation; the initializer clears schema and Settings caches even if a later script fails. No new initialization class or session/CSRF fallback system was added.
+Database initialization lives in the existing models/Dev/DevCli.cs. Both CLI and web entry points use it; CLI no longer constructs a controller. DevConfigure retains its IS_DEV/POST/session-token guards and now calls the shared initializer directly. The CLI retains its empty-database guard. Script order includes settings.sql after schema creation; the initializer clears schema and Settings caches even if a later script fails. No new initialization class or session/CSRF fallback system was added.
 
 ## Consumer coverage
 
@@ -51,6 +51,34 @@ dotnet test "$taskRoot/osafw-tests/osafw-tests.csproj" --verbosity minimal '-p:D
 ```
 
 Fresh independent reviewer_high review used consumer-contract and state-integrity overlays and returned no blocking findings. The reviewer checked the new tests and final TRX results; live provider/copied-app acceptance remains unverified. The consolidated-summary audit found no blocking issues; its minor output-location wording correction is applied. The foundation merge into PR #301 preserved grouped controls and transfer actions; its extended optional run passed 236/236. Only the shared-summary heading required conflict resolution, retaining earlier child evidence. The #301 independent integration review and summary audit passed with no blocking findings; #302 propagation is next. Strict UTF-8/CRLF, staged diff checks and the repository instruction validator passed. The optional S3 warning remains unchanged. Live SQL Server/IIS credential persistence and server transfer are still unverified; no schema or SQL behavior changed in this split.
+
+## Release cleanup and naming discussion (2026-11-01)
+
+Removed the protected DevConfigureController.initDatabase forwarding method; InitDBAction calls DevCli.initializeDatabase(fw) after its existing IS_DEV/POST/token guards. The sole repository override was the test probe. Guard tests now reach the real action with a rejecting database, and a disposable SQLite test proves actual fresh initialization both with a session token and before one exists. Copied-app overrides require the documented move into the shared initializer; no replacement runtime shim was introduced.
+
+Updated the requested FW globals comment and every MASK_/BASIS_ constant with display examples, short-value thresholds, credential inheritance behavior and explicit-empty semantics. The related-method scan found no other newly introduced pure forwarding layer worth removing. Existing read/write aliases are public API; conversion/default helpers, metadata predicates and repeated authorization/no-store helpers have concrete callers or behavior.
+
+Naming recommendation only: keep the settings table. Applied FPF F.8:4 (reuse an existing sufficient designation) and F.18:4.1–4.2 (compact NameCard), using the primary checkout's accepted edition a5ac87ac15e78517d12bc66155b9da3ca254b643 after reading USING-FPF. The FPF source is advisory; the current schema, Settings contract and developer decisions define the subject.
+
+- Reference scheme and subject: OSAFW SQL schema and docs/settings.md; persisted application-wide values and credentials used by framework and feature consumers.
+- Proposed Tech label: settings; Plain label: Site Settings. This retains the existing name and meaning.
+- Alternatives: fwsettings suggests framework-only internal state; site_settings adds scope already established by this table; configuration blurs the distinction from pre-database deployment configuration.
+- Rationale and lineage: moving implementation into FwSettings changes code ownership, not stored-data meaning. The existing table name remains appropriate; renaming would affect schema/seed/update scripts and copied-app SQL without new behavior.
+- Reopen if a real framework-only store is separated from application settings, or repeated ambiguity justifies a consistent schema-wide naming change. No table rename was performed.
+
+PR consolidation is also a recommendation, not an executed topology change. The #301 branch already contains #299/#300 and excludes #302. It can be tested locally immediately. The lean combined release would retarget #301 to master and close #299/#300 as superseded after agreement; #302 stays separate. After a squash merge of the combined work, rebase/sync #302 before retargeting it to master so old foundation commits do not reappear in its comparison.
+
+SDK 10.0.300 checks passed: 143/143 affected optional-feature tests and 65/65 default-build tests. These are fresh focused results; the earlier full-suite evidence above is not claimed as a new run. No configured development database was changed. Build/TRX output is ignored under artifacts/assistant_settings_release; SQLite fixture files are task-owned temporary resources. Commands run from the existing SDK-10 selector directory:
+
+```powershell
+$releaseFilter = 'FullyQualifiedName~SecurityGroup1DevConfigureTests|FullyQualifiedName~DevCliTests|FullyQualifiedName~SettingsStoreTests|FullyQualifiedName~SettingsProtectionTests|FullyQualifiedName~FwTests|FullyQualifiedName~AdminSettings'
+dotnet test "$taskRoot/osafw-tests/osafw-tests.csproj" --verbosity minimal '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite%3BisRoles%3BisSentry%3BisS3%3BisRowRegeneration%3BisWindowsAuth' "-p:OutDir=$taskRoot/artifacts/assistant_settings_release/tests/foundation/" --filter $releaseFilter --logger 'trx;LogFileName=foundation.trx' --results-directory "$taskRoot/artifacts/assistant_settings_release/test-results"
+dotnet test "$taskRoot/osafw-tests/osafw-tests.csproj" --verbosity minimal "-p:OutDir=$taskRoot/artifacts/assistant_settings_release/tests/default/" --filter 'FullyQualifiedName~SecurityGroup1DevConfigureTests|FullyQualifiedName~DevCliTests|FullyQualifiedName~FwTests' --logger 'trx;LogFileName=default.trx' --results-directory "$taskRoot/artifacts/assistant_settings_release/test-results"
+dotnet test "$taskRoot/osafw-tests/osafw-tests.csproj" --verbosity minimal '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite%3BisRoles%3BisSentry%3BisS3%3BisRowRegeneration%3BisWindowsAuth' "-p:OutDir=$taskRoot/artifacts/assistant_settings_release/tests/transfer/" --filter $releaseFilter --logger 'trx;LogFileName=transfer.trx' --results-directory "$taskRoot/artifacts/assistant_settings_release/test-results"
+dotnet build "$taskRoot/osafw-app/osafw-app.csproj" --verbosity minimal "-p:OutDir=$taskRoot/artifacts/assistant_settings_release/build/transfer/"
+```
+
+Fresh independent reviewer_high review used consumer-contract and security-boundary overlays and found no blocking issues. The reviewer read exact diffs and TRX evidence but could not run Git status in its read-only linked-worktree sandbox; the integrator supplied an exact ignored diff artifact and status. The consolidated-summary audit passed without findings. PR #301 merged the cleanup without conflicts and passed 154/154 focused optional tests plus a normal build with zero warnings/errors. Its temporary HTTP host returned 200 for Home and Dev Configure with an unreachable task-only SQL target, then stopped. #302 propagation and bounded child review are next. Live SQL Server/IIS initialization and copied-app deployment remain unverified.
 
 ## Earlier cache/bootstrap verification
 

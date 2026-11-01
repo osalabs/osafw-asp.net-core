@@ -14,17 +14,6 @@ public class SecurityGroup1DevConfigureTests
     private const string CanonicalOrigin = "https://app.example.test";
     private const string SpoofedHost = "evil.example.test";
 
-    private sealed class InitDbProbeController : DevConfigureController
-    {
-        public bool InitDatabaseCalled { get; private set; }
-
-        protected override FwDict initDatabase()
-        {
-            InitDatabaseCalled = true;
-            return new FwDict { ["ok"] = true };
-        }
-    }
-
     private sealed class DevManageUsers : Users
     {
         public override bool isReadOnly(int id = -1) => false;
@@ -227,63 +216,64 @@ public class SecurityGroup1DevConfigureTests
     [TestMethod]
     public void InitDB_RejectsGetEvenWithToken()
     {
-        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        using var scope = createInitDbScope();
+        var fw = scope.Fw;
         fw.route.method = "GET";
         setXssTokens(fw);
         var controller = createInitDbController(fw);
 
         Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-        Assert.IsFalse(controller.InitDatabaseCalled);
     }
 
     [TestMethod]
     public void InitDB_RejectsPostWithMissingToken()
     {
-        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        using var scope = createInitDbScope();
+        var fw = scope.Fw;
         fw.route.method = "POST";
         fw.Session("XSS", "token");
         var controller = createInitDbController(fw);
 
         Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-        Assert.IsFalse(controller.InitDatabaseCalled);
     }
 
     [TestMethod]
     public void InitDB_RejectsPostWithWrongToken()
     {
-        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        using var scope = createInitDbScope();
+        var fw = scope.Fw;
         fw.route.method = "POST";
         setXssTokens(fw, formToken: "wrong-token");
         var controller = createInitDbController(fw);
 
         Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-        Assert.IsFalse(controller.InitDatabaseCalled);
     }
 
     [TestMethod]
     public void InitDB_RejectsPostWhenNotDev()
     {
-        var fw = createFw(configWithRootAndDevelopmentOverride(), CanonicalOrigin.Replace("https://", ""));
+        using var scope = createInitDbScope("app.example.test");
+        var fw = scope.Fw;
         fw.route.method = "POST";
         setXssTokens(fw);
         var controller = createInitDbController(fw);
 
         Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-        Assert.IsFalse(controller.InitDatabaseCalled);
     }
 
     [TestMethod]
     public void InitDB_AllowsAnonymousDevPostWithToken()
     {
-        var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
+        using var scope = createInitDbScope();
+        var fw = scope.Fw;
         fw.route.method = "POST";
         setXssTokens(fw);
         var controller = createInitDbController(fw);
 
-        var ps = controller.InitDBAction();
+        // The allowed request reaches the actual initializer; this DB rejects every SQL operation.
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => controller.InitDBAction());
 
-        Assert.IsTrue(controller.InitDatabaseCalled);
-        Assert.IsTrue(ps["ok"].toBool());
+        Assert.AreEqual("Unexpected DB operation: exec", error.Message);
     }
 
     [TestMethod]
@@ -353,9 +343,16 @@ public class SecurityGroup1DevConfigureTests
         Assert.AreEqual("/Admin/FwUpdates", fw.response.Headers["Location"].ToString());
     }
 
-    private static InitDbProbeController createInitDbController(FW fw)
+    private static FwTestScope createInitDbScope(string host = "localhost")
     {
-        var controller = new InitDbProbeController();
+        var settings = configWithRootAndDevelopmentOverride().AsEnumerable()
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        return new FwTestScope(_ => new RejectingDb(), settings, createHttpContext(host));
+    }
+
+    private static DevConfigureController createInitDbController(FW fw)
+    {
+        var controller = new DevConfigureController();
         controller.init(fw);
         return controller;
     }
