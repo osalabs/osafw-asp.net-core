@@ -831,7 +831,7 @@ class DevEntityBuilder
         var baseType = typeof(FwModel);
         var assembly = baseType.Assembly;
         return (from t in assembly.GetTypes()
-                where t.IsSubclassOf(baseType)
+                where t.IsSubclassOf(baseType) && !t.IsAbstract && !t.ContainsGenericParameters
                 orderby t.Name
                 select t.Name).ToList();
     }

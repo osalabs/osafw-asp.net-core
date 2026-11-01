@@ -23,7 +23,7 @@ public class FwApiController : FwController
             return true;
 
         string x_api_key = request.Headers["X-API-Key"].ToString();
-        var api_key = fw.model<Settings>().readSecret("API_KEY");
+        var api_key = fw.settings.readSecret("API_KEY");
         if (!string.IsNullOrEmpty(api_key) && x_api_key == api_key)
             return true;
 

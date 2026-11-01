@@ -2,10 +2,18 @@
 
 Site Settings are operational values stored in the `settings` table and managed at `/Admin/Settings`. Deployment/bootstrap configuration stays in `appsettings*.json`; framework defaults belong in `FwConfig`, application defaults and policy in `FwHooks.configure`, and model-specific constants with their model.
 
+## Model ownership
+
+`fw/FwSettings.cs` is the abstract framework model for storage, validation, encryption, transfer and application caching. `models/Settings.cs` inherits it and owns application-specific helpers, constants and `applyGlobals()`. Keep copied-app customizations in Settings; framework updates replace the shared core implementation. New setting codes normally need metadata/seed rows and consumers, not model overrides.
+
+`fw.settings` lazily returns the same concrete Settings instance as `fw.model<Settings>()`, scoped to the current FW lifetime. It adds no second cache or eager database reads. All runtime consumers use the application model, so its overrides remain effective. Startup protection configuration uses `FwSettings.configureProtection`. Existing `Settings.Row`, `Settings.ValueChange`, `Settings.Transfer`, constants and inherited static methods remain available to source consumers.
+
+The core `invalidate()` method clears shared/request caches; Settings overrides it to reset its display-globals flag. Further overrides must call base. The Row definition now lives in FwSettings; the optional application Row regenerator skips Settings because it has no directly declared Row to rewrite.
+
 ## Runtime API and defaults
 
 ```csharp
-var settings = fw.model<Settings>();
+var settings = fw.settings;
 var name = settings.read("SITE_NAME");
 var enabled = settings.readBool("ASSISTANT_ENABLED");
 var limit = settings.readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", 5);
@@ -56,7 +64,7 @@ Credential values are encrypted before database writes using ASP.NET Core Data P
 
 `DATA_PROTECTION_APPLICATION_NAME` is a stable deployment identity, independent of editable `SITE_NAME`. Preserve its value across normal upgrades. When upgrading an older application, set it to that application's previous effective SITE_NAME before using existing protected data. Keys are retained; age alone is not grounds to delete keys needed by stored values. Credential protection fails closed on repository read/write failure. Session-cookie protection tolerates an unavailable database during initial setup; its temporary keys are never used by the Settings credential provider.
 
-Protection helpers live on the `Settings` model: startup uses `Settings.configureProtection(services, config, isRequired: false)` for session cookies; Settings uses its own cached strict provider with the same database repository, and trusted callers can use `fw.model<Settings>().protect(code, value)`, `fw.model<Settings>().unprotect(code, value)`, and `Settings.markSensitiveRequest()`. Normal persistence should use model writes, which encrypt plaintext once and invalidate caches. Never pass already-protected values to a plaintext write API.
+Protection helpers live on the `FwSettings` base model: startup uses `FwSettings.configureProtection(services, config, isRequired: false)` for session cookies; Settings uses its own cached strict provider with the same database repository, and trusted callers can use `fw.settings.protect(code, value)`, `fw.settings.unprotect(code, value)`, and `FwSettings.markSensitiveRequest()`. Normal persistence should use model writes, which encrypt plaintext once and invalidate caches. Never pass already-protected values to a plaintext write API.
 
 Encryption does not replace diagnostic hygiene. Do not log decrypted values or transfer payloads in application-specific code. The framework records value-free audit information.
 

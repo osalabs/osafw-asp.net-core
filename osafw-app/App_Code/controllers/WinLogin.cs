@@ -90,7 +90,7 @@ public class WinLoginController : FwController
                 }
             }
             model.doLogin(usersId);
-            fw.redirect(fw.model<Settings>().read("LOGGED_DEFAULT_URL"));
+            fw.redirect(fw.settings.read("LOGGED_DEFAULT_URL"));
         }
     }
 

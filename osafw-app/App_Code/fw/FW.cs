@@ -96,6 +96,9 @@ public class FW : IDisposable
     public DB db;
     public FwLogger flogger = new();
 
+    /// <summary>Lazily returns the same request-owned application model as model&lt;Settings&gt;(); accessing it does not load setting values.</summary>
+    public Settings settings => model<Settings>();
+
     public HttpContext context = null!;
     public HttpRequest request = null!;
     public HttpResponse response = null!;
@@ -744,7 +747,7 @@ public class FW : IDisposable
             logger(LogLevel.DEBUG, Ex.Message);
             if (!isLogged)
             {
-                var url = model<Settings>().read("UNLOGGED_DEFAULT_URL");
+                var url = settings.read("UNLOGGED_DEFAULT_URL");
                 // Preserve page navigation through login, without replaying form/API requests.
                 if (HttpMethods.IsGet(request.Method) && route.method == "GET" && getResponseExpectedFormat() == "")
                 {
@@ -986,7 +989,7 @@ public class FW : IDisposable
     private void renderPage(string basedir, FwDict ps, string? layoutOverride)
     {
         if (!isRenderingError)
-            model<Settings>().applyGlobals();
+            settings.applyGlobals();
 
         ps = new FwDict(ps, ps.Comparer);
         if (layoutOverride != null)
@@ -1218,7 +1221,7 @@ public class FW : IDisposable
     public string parsePage(string basedir, string layout, FwDict ps)
     {
         if (!isRenderingError)
-            model<Settings>().applyGlobals();
+            settings.applyGlobals();
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
         return parser_obj.parse_page(basedir, layout, ps);
@@ -1562,7 +1565,6 @@ public class FW : IDisposable
 
         try
         {
-            var settings = model<Settings>();
             if (mail_from.Length == 0)
                 mail_from = settings.read("mail_from");
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
@@ -1722,7 +1724,7 @@ public class FW : IDisposable
     /// <returns>The selected address, or the current session login for an empty value or the <c>current_user</c> sentinel.</returns>
     public string resolveTestEmailRecipient()
     {
-        string test_email = model<Settings>().read(Settings.ICODE_TEST_EMAIL).Trim();
+        string test_email = settings.read(Settings.ICODE_TEST_EMAIL).Trim();
 
         if (test_email.Length == 0 || test_email.Equals("current_user", StringComparison.OrdinalIgnoreCase))
             return Session("login").Trim();
@@ -1744,7 +1746,7 @@ public class FW : IDisposable
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", model<Settings>().read("admin_email"), msg[..512], msg);
+        this.sendEmail("", settings.read("admin_email"), msg[..512], msg);
     }
 
     private bool isDetailedErrorVisible()

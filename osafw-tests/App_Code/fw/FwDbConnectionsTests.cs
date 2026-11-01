@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -81,6 +82,27 @@ public class FwDbConnectionsTests
         Assert.IsFalse(error.Message.Contains("must-not-appear", StringComparison.Ordinal));
         Assert.IsFalse(error.Message.Contains("conflict", StringComparison.Ordinal));
         Assert.AreEqual(0, factory.CreateCount);
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void SettingsProtectionResolvesDatabaseDefinitionBeforeRegisteringKeys(bool isRequired)
+    {
+        var definition = secretDefinition("private-name");
+        definition["connection_string"] = "Password=must-not-appear";
+        var settings = new FwDict
+        {
+            ["DATA_PROTECTION_APPLICATION_NAME"] = "settings-resolver-test",
+            ["db"] = new FwDict { ["main"] = definition }
+        };
+
+        var error = Assert.ThrowsExactly<FwDbConnectionException>(
+            () => FwSettings.configureProtection(new ServiceCollection(), settings, isRequired));
+
+        StringAssert.Contains(error.Message, "main");
+        Assert.IsFalse(error.ToString().Contains("must-not-appear", StringComparison.Ordinal));
+        Assert.IsFalse(error.ToString().Contains("private-name", StringComparison.Ordinal));
     }
 
     [TestMethod]

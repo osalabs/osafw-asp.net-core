@@ -642,7 +642,7 @@ select rs.*, e.icode as entity_icode
 
     private bool isSourceQueueReady()
     {
-        return fw.model<Settings>().readBool("ASSISTANT_ENABLED")
+        return fw.settings.readBool("ASSISTANT_ENABLED")
             && fw.model<LLM>().isConfigured()
             && isTablesReady();
     }

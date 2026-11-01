@@ -219,7 +219,7 @@ internal static class DevCli
         {
             // Scripts can change schema and Settings even when a later statement fails.
             db.clearSchemaCache();
-            fw.model<Settings>().invalidate();
+            fw.settings.invalidate();
         }
 
         fw.logger("Executed SQL count:", sql_ctr);

@@ -214,7 +214,7 @@ public class FwEmailTests
 
         Assert.IsFalse(scope.Fw.sendEmail("", "recipient@example.test", "subject", "body", options: options));
 
-        var configuredMail = (StubSettings)scope.Fw.model<Settings>();
+        var configuredMail = (StubSettings)scope.Fw.settings;
         Assert.AreEqual("configured.example.test", configuredMail.Host);
         Assert.AreEqual(2525, configuredMail.Port);
         Assert.AreEqual("SMTP port must be between 1 and 65535.", scope.Fw.last_error_send_email);
@@ -247,7 +247,7 @@ public class FwEmailTests
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateScope("127.0.0.1", server.Port, isTest: true);
-        ((StubSettings)scope.Fw.model<Settings>()).TestEmail = "safe@example.test";
+        ((StubSettings)scope.Fw.settings).TestEmail = "safe@example.test";
         var options = new FwDict { ["bcc"] = new StrList { "bcc@example.test" } };
 
         Assert.IsTrue(scope.Fw.sendEmail(
@@ -272,7 +272,7 @@ public class FwEmailTests
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateAdminSendEmailScope(server, Users.ACL_ADMIN);
-        var settings = (StubSettings)scope.Fw.model<Settings>();
+        var settings = (StubSettings)scope.Fw.settings;
         Assert.ThrowsExactly<AuthException>(() => scope.Fw.callRoute());
         Assert.AreEqual(0, settings.SecretReadCount);
         Assert.IsFalse(server.ConnectionAccepted);
@@ -285,7 +285,7 @@ public class FwEmailTests
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN, method, formToken);
-        var settings = (StubSettings)scope.Fw.model<Settings>();
+        var settings = (StubSettings)scope.Fw.settings;
         var controller = new TestAdminSendEmailController();
         controller.init(scope.Fw);
 
@@ -299,7 +299,7 @@ public class FwEmailTests
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN);
-        var settings = (StubSettings)scope.Fw.model<Settings>();
+        var settings = (StubSettings)scope.Fw.settings;
         var controller = new TestAdminSendEmailController();
         controller.init(scope.Fw);
         controller.MakeReadOnly();
@@ -317,7 +317,7 @@ public class FwEmailTests
         var item = (FwDict)scope.Fw.FORM["item"]!;
         item["password"] = "submitted-secret";
         item.Remove("subject");
-        var settings = (StubSettings)scope.Fw.model<Settings>();
+        var settings = (StubSettings)scope.Fw.settings;
         var controller = new TestAdminSendEmailController();
         controller.init(scope.Fw);
 
@@ -336,7 +336,7 @@ public class FwEmailTests
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN);
-        var settings = (StubSettings)scope.Fw.model<Settings>();
+        var settings = (StubSettings)scope.Fw.settings;
         var controller = new TestAdminSendEmailController();
         controller.init(scope.Fw);
 
@@ -402,7 +402,7 @@ public class FwEmailTests
         };
         var scope = new FwTestScope(_ => new RejectingDb(), config, TestHelpers.CreateHttpContext("email-tests"));
         TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings { Host = host, Port = port });
-        scope.Fw.model<Settings>().init(scope.Fw);
+        scope.Fw.settings.init(scope.Fw);
         return scope;
     }
 
@@ -422,7 +422,7 @@ public class FwEmailTests
             Port = server.Port,
             Password = "stored-smtp-secret",
         });
-        fw.model<Settings>().init(fw);
+        fw.settings.init(fw);
         TestHelpers.RegisterModel(fw, (Users)new StubUsers());
         fw.Session("user_id", "7");
         fw.Session("access_level", accessLevel.toStr());

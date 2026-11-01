@@ -18,6 +18,11 @@ public class DevRowRegeneratorTests
         Assert.IsFalse(typeof(FW).Assembly.GetReferencedAssemblies().Any(reference => reference.Name!.StartsWith("Microsoft.CodeAnalysis", StringComparison.Ordinal)));
     }
 #else
+    private sealed class StubUsers : Users
+    {
+        public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
+    }
+
     private sealed class SchemaDb : DB
     {
         internal int Reads;
@@ -117,6 +122,24 @@ public class DevRowRegeneratorTests
     }
 
     [TestMethod]
+    public void InheritedSettingsRowIsSkippedWithoutChangingApplicationSource()
+    {
+        using var fixture = new Fixture();
+        const string appSettings = "namespace osafw; public class Settings : FwSettings { public string AppHelper() => \"keep\"; }";
+        var settingsPath = fixture.addSource("Settings.cs", appSettings);
+
+        var result = fixture.run();
+
+        var skipped = (FwList)result["skipped"]!;
+        Assert.HasCount(1, skipped);
+        Assert.AreEqual(nameof(Settings), skipped[0]["model"]);
+        StringAssert.Contains(skipped[0]["reason"].toStr(), "direct nested Row");
+        Assert.AreEqual(appSettings, File.ReadAllText(settingsPath));
+        CollectionAssert.AreEqual(new[] { "DemoDicts" }, ((StrList)result["updated"]!).ToArray());
+        Assert.AreEqual(1, fixture.Db.Reads);
+    }
+
+    [TestMethod]
     public void LockedFileIsReportedAndOtherModelsStillRegenerate()
     {
         using var fixture = new Fixture();
@@ -168,6 +191,9 @@ public class DevRowRegeneratorTests
                 ["appSettings:IS_DEV"] = isDev ? "true" : "false",
                 ["appSettings:route_prefixes:/Dev"] = "true",
             }, TestHelpers.CreateHttpContext());
+            var users = new StubUsers();
+            users.init(Fw);
+            TestHelpers.RegisterModel(Fw, (Users)users);
             Fw.Session("user_id", "1");
             Fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
             Fw.route.method = "POST";
