@@ -34,7 +34,7 @@ public class LoginController : FwController
         var gourl = reqs("gourl");
         var is_app_url = Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr());
         if (fw.isLogged)
-            fw.redirect(is_app_url ? gourl : fw.config("LOGGED_DEFAULT_URL").toStr());
+            fw.redirect(is_app_url ? gourl : fw.settings.read("LOGGED_DEFAULT_URL"));
 
         FwDict item = reqh("item");
         if (isGet())
@@ -114,7 +114,7 @@ public class LoginController : FwController
                 }
 
                 // no MFA secret for the user here - check if MFA enforced and redirect to setup MFA
-                if (fw.config("is_mfa_enforced").toBool())
+                if (fw.settings.readBool("is_mfa_enforced"))
                 {
                     fw.Session("mfa_login_users_id", user["id"]);
                     fw.Session("mfa_login_timezone", item["timezone"].toStr());
@@ -138,7 +138,7 @@ public class LoginController : FwController
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGOFF, FwEntities.ICODE_USERS, fw.userId);
         fw.model<Users>().removePermCookie(fw.userId);
         fw.context?.Session?.Clear();
-        fw.redirect(fw.config("UNLOGGED_DEFAULT_URL").toStr());
+        fw.redirect(fw.settings.read("UNLOGGED_DEFAULT_URL"));
     }
 
     public FwDict MFAAction()
@@ -214,7 +214,7 @@ public class LoginController : FwController
         if (Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr()))
             url = gourl;
         else
-            url = fw.config("LOGGED_DEFAULT_URL").toStr();
+            url = fw.settings.read("LOGGED_DEFAULT_URL");
 
         fw.redirect(url);
     }
@@ -227,7 +227,15 @@ public class LoginController : FwController
         if (!fw.config("IS_DEV").toBool())
             return false;
 
-        if (!fw.config("config_override").toStr().StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+        var environment = FwConfig.getEnvironmentName();
+        var profile = fw.config("config_override").toStr();
+        if (string.IsNullOrEmpty(profile))
+            profile = environment;
+
+        if (!profile.StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.IsNullOrEmpty(environment) && !environment.StartsWith("Development", StringComparison.OrdinalIgnoreCase))
             return false;
 
         var context = fw.context;

@@ -79,6 +79,7 @@ public class FW : IDisposable
         [ACTION_MORE_DELETE] = ACTION_MORE_DELETE,
     };
     private ParsePage? pp_instance; // for parsePage()
+    private bool isRenderingError;
 
     public FwDict FORM = [];
     public FwDict postedJson = []; // parsed JSON from request body
@@ -94,6 +95,9 @@ public class FW : IDisposable
     public FwCache cache = new(); // cache instance
     public DB db;
     public FwLogger flogger = new();
+
+    /// <summary>Lazily returns the same request-owned application model as model&lt;Settings&gt;(); accessing it does not load setting values.</summary>
+    public Settings settings => model<Settings>();
 
     public HttpContext context = null!;
     public HttpRequest request = null!;
@@ -213,11 +217,7 @@ public class FW : IDisposable
         if (dbFactory != null)
             db = dbFactory(config_name) ?? throw new InvalidOperationException("The DB factory returned null.");
         else
-        {
-            var dbconfig = config("db") as FwDict ?? [];
-            FwDict conf = dbconfig[config_name] as FwDict ?? [];
-            db = new DB(conf, config_name);
-        }
+            db = new DB(FwConfig.getDatabaseSettings(config(), config_name), config_name);
 
         dbInstances.Add(db);
         db.is_log_pii = config("log_pii").toBool();
@@ -277,7 +277,10 @@ public class FW : IDisposable
             db = getDB();
             DB.SQL_QUERY_CTR = 0; // reset query counter
 
-            G = Utils.cloneHashDeep(config())!; // by default G contains conf
+            // remove db and override credentials from globals
+            G = Utils.cloneHashDeep(config()) ?? [];
+            G.Remove("db");
+            G.Remove("override");
 
             // per request settings
             G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -737,7 +740,7 @@ public class FW : IDisposable
             logger(LogLevel.DEBUG, Ex.Message);
             if (!isLogged)
             {
-                var url = config("UNLOGGED_DEFAULT_URL").toStr();
+                var url = settings.read("UNLOGGED_DEFAULT_URL");
                 // Preserve page navigation through login, without replaying form/API requests.
                 if (HttpMethods.IsGet(request.Method) && route.method == "GET" && getResponseExpectedFormat() == "")
                 {
@@ -853,27 +856,7 @@ public class FW : IDisposable
             }
         }
 
-        string path = "/" + route.controller + "/" + route.action;
-        string path2 = "/" + route.controller;
-
-        // pre-check controller's access level by url
-        int current_level = userAccessLevel;
-
-        FwDict rules = (FwDict?)config("access_levels") ?? [];
-        if (Utils.tryGetValueIgnoreCase(rules, path, out var pathRule))
-        {
-            if (current_level >= pathRule.toInt())
-                result = 2;
-        }
-        else if (Utils.tryGetValueIgnoreCase(rules, path2, out var controllerRule))
-        {
-            if (current_level >= controllerRule.toInt())
-                result = 2;
-        }
-        else
-        {
-            result = 1; // need to check Controller.access_level after _auth
-        }
+        result = 1; // check Controller.access_level and optional RBAC after the CSRF gate
 
         if (result == 0 && is_die)
             throw new AuthException("Bad access - Not authorized");
@@ -998,6 +981,9 @@ public class FW : IDisposable
     /// <param name="layoutOverride">Explicit layout from the parser overload, or null to use controller/request defaults.</param>
     private void renderPage(string basedir, FwDict ps, string? layoutOverride)
     {
+        if (!isRenderingError)
+            settings.applyGlobals();
+
         ps = new FwDict(ps, ps.Comparer);
         if (layoutOverride != null)
         {
@@ -1227,6 +1213,8 @@ public class FW : IDisposable
 
     public string parsePage(string basedir, string layout, FwDict ps)
     {
+        if (!isRenderingError)
+            settings.applyGlobals();
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
         return parser_obj.parse_page(basedir, layout, ps);
@@ -1548,7 +1536,7 @@ public class FW : IDisposable
     /// <summary>
     /// Send Email
     /// </summary>
-    /// <param name="mail_from">if empty - config mail_from used</param>
+    /// <param name="mail_from">If empty, the Site Settings mail_from value is used.</param>
     /// <param name="mail_to">may contain several emails delimited by ,; or space</param>
     /// <param name="mail_subject">subject</param>
     /// <param name="mail_body">body, if starts with !DOCTYPE or html tag - html email will be sent</param>
@@ -1571,7 +1559,7 @@ public class FW : IDisposable
         try
         {
             if (mail_from.Length == 0)
-                mail_from = this.config("mail_from").toStr(); // default mail from
+                mail_from = settings.read("mail_from");
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
 
             bool is_test = this.config("is_test").toBool();
@@ -1677,7 +1665,14 @@ public class FW : IDisposable
                 }
             }
 
-            FwDict mailSettings = Utils.cloneHashDeep(this.config("mail") as FwDict) ?? [];
+            FwDict mailSettings = new()
+            {
+                ["host"] = settings.read("mail.host"),
+                ["port"] = settings.readInt("mail.port"),
+                ["is_ssl"] = settings.readBool("mail.is_ssl"),
+                ["username"] = settings.read("mail.username"),
+                ["password"] = settings.readSecret("mail.password"),
+            };
             if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)
             {
                 // Per-send overrides must not mutate the shared configuration dictionary.
@@ -1716,15 +1711,13 @@ public class FW : IDisposable
     }
 
     /// <summary>
-    /// Resolves the test-mode recipient from Site Settings, application configuration, or the logged-in user.
+    /// Resolves the test-mode recipient from Site Settings or the logged-in user.
     /// </summary>
     /// <remarks>A database read failure is allowed to propagate so callers do not mistake an outage for a missing setting.</remarks>
     /// <returns>The selected address, or the current session login for an empty value or the <c>current_user</c> sentinel.</returns>
     public string resolveTestEmailRecipient()
     {
-        string test_email = model<Settings>().read(Settings.ICODE_TEST_EMAIL).Trim();
-        if (test_email.Length == 0)
-            test_email = config("test_email").toStr().Trim();
+        string test_email = settings.read(Settings.ICODE_TEST_EMAIL).Trim();
 
         if (test_email.Length == 0 || test_email.Equals("current_user", StringComparison.OrdinalIgnoreCase))
             return Session("login").Trim();
@@ -1746,7 +1739,7 @@ public class FW : IDisposable
     // send email message to site admin (usually used in case of errors)
     public void sendEmailAdmin(string msg)
     {
-        this.sendEmail("", this.config("admin_email").toStr(), msg[..512], msg);
+        this.sendEmail("", settings.read("admin_email"), msg[..512], msg);
     }
 
     private bool isDetailedErrorVisible()
@@ -1833,7 +1826,15 @@ public class FW : IDisposable
             ps["DUMP_SESSION"] = session != null ? FwLogger.dumper(session) : "null";
         }
 
-        parser(tpl_dir, ps);
+        isRenderingError = true;
+        try
+        {
+            parser(tpl_dir, ps);
+        }
+        finally
+        {
+            isRenderingError = false;
+        }
     }
 
     // return model object by type

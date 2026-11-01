@@ -75,13 +75,9 @@ public class SecurityGroup9ATests
     }
 
     [TestMethod]
-    public void Auth_MixedCaseActionDoesNotBypassAccessLevelRule()
+    public void Auth_MixedCaseActionUsesControllerAuthorizationAfterCsrfGate()
     {
         var fw = TestHelpers.CreateFw();
-        fw.config()["access_levels"] = new FwDict
-        {
-            ["/AdminUsers/Save"] = Users.ACL_SITEADMIN
-        };
         fw.Session("access_level", Users.ACL_MEMBER.toStr());
         var route = new FwRoute
         {
@@ -92,7 +88,7 @@ public class SecurityGroup9ATests
 
         var result = fw._auth(route, is_die: false);
 
-        Assert.AreEqual(0, result);
+        Assert.AreEqual(1, result);
         Assert.AreEqual(FW.ACTION_SAVE, route.action);
     }
 
@@ -274,22 +270,44 @@ public class SecurityGroup9ATests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void DetailedFormDumpIsAvailableOnlyInDevelopment(bool isDev)
+    {
+        var fw = TestHelpers.CreateFw(new Dictionary<string, string?>
+        {
+            ["appSettings:IS_DEV"] = isDev.ToString(),
+            ["appSettings:log_pii"] = "true",
+        });
+        fw.request.Headers.Accept = "application/json";
+        fw.response.Body = new MemoryStream();
+        fw.FORM["ivalue"] = "test-submitted-value";
+
+        fw.errMsg("Settings failure", new ApplicationException("Settings failure"));
+
+        fw.response.Body.Position = 0;
+        var body = new StreamReader(fw.response.Body).ReadToEnd();
+        Assert.AreEqual(isDev, body.Contains("test-submitted-value", StringComparison.Ordinal));
+        Assert.AreEqual(isDev, body.Contains("DUMP_FORM", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public void Appsettings_SentryDefaultsDoNotSendPiiOrRequestBodies()
     {
         var appsettingsPath = findRepoFile("osafw-app", "appsettings.json");
         using var doc = JsonDocument.Parse(File.ReadAllText(appsettingsPath));
         var sentry = doc.RootElement.GetProperty("Sentry");
         var appSettings = doc.RootElement.GetProperty("appSettings");
-        var developmentOverride = appSettings.GetProperty("override").GetProperty("Development");
+        var developmentPath = findRepoFile("osafw-app", "appsettings.Development.json");
+        using var developmentDoc = JsonDocument.Parse(File.ReadAllText(developmentPath));
+        var developmentSettings = developmentDoc.RootElement.GetProperty("appSettings");
 
         Assert.IsFalse(sentry.GetProperty("SendDefaultPii").GetBoolean());
         Assert.AreEqual("None", sentry.GetProperty("MaxRequestBodySize").GetString());
-        Assert.IsFalse(appSettings.GetProperty("log_pii").GetBoolean());
-        Assert.IsTrue(developmentOverride.GetProperty("log_pii").GetBoolean());
-        Assert.IsTrue(appSettings.TryGetProperty("access_levels", out var accessLevels));
+        Assert.IsFalse(appSettings.TryGetProperty("log_pii", out _));
+        Assert.IsTrue(developmentSettings.GetProperty("log_pii").GetBoolean());
+        Assert.IsFalse(appSettings.TryGetProperty("access_levels", out _));
         Assert.IsFalse(appSettings.TryGetProperty("accesss_levels", out _));
-        Assert.IsTrue(accessLevels.TryGetProperty("/Main", out var mainAccessLevel));
-        Assert.AreEqual(Users.ACL_MEMBER, mainAccessLevel.GetInt32());
     }
 
     private static bool hasUsersIdScope(FwDict parameters)

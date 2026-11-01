@@ -15,14 +15,59 @@ public class FwEmailTests
 {
     private sealed class StubSettings : Settings
     {
-        public string TestEmail { get; init; } = "";
+        public string TestEmail { get; set; } = "";
+        public string Host { get; init; } = "";
+        public int Port { get; init; } = 587;
+        public string Password { get; init; } = "";
+        public int SecretReadCount { get; private set; }
 
-        public override DBRow oneByIcode(string icode)
+        public override string read(string icode)
         {
-            return icode == Settings.ICODE_TEST_EMAIL
-                ? new DBRow(new FwDict { ["ivalue"] = TestEmail })
-                : [];
+            return icode switch
+            {
+                ICODE_TEST_EMAIL => TestEmail,
+                "mail_from" => "sender@example.test",
+                "mail.host" => Host,
+                "mail.port" => Port.toStr(),
+                "mail.is_ssl" => "0",
+                "mail.username" => "",
+                _ => "",
+            };
         }
+
+        public override string read(string icode, string defaultValue)
+        {
+            var value = read(icode);
+            return string.IsNullOrEmpty(value) ? defaultValue : value;
+        }
+
+        public override int readInt(string icode, int defaultValue = 0) => read(icode, defaultValue.toStr()).toInt(defaultValue);
+        public override bool readBool(string icode, bool defaultValue = false) => read(icode, defaultValue ? "1" : "0").toBool();
+        public override string readSecret(string code)
+        {
+            if (code != "mail.password")
+                return "";
+
+            SecretReadCount++;
+            return Password;
+        }
+    }
+
+    private sealed class DefaultSettings(bool isInherited) : Settings
+    {
+        public override DBRow oneByIcode(string code) => isInherited
+            ? new DBRow(DB.h("basis", BASIS_INHERIT)) : [];
+    }
+
+    private sealed class TestAdminSendEmailController : AdminSendEmailController
+    {
+        public void MakeReadOnly() => is_readonly = true;
+    }
+
+    private sealed class StubUsers : Users
+    {
+        public override bool isReadOnly(int id = -1) => false;
+        public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
     }
 
     private sealed class FakeSmtpServer : IDisposable
@@ -34,6 +79,7 @@ public class FwEmailTests
         public int Port { get; }
         public List<string> Recipients { get; } = [];
         public string MessageData { get; private set; } = "";
+        public bool ConnectionAccepted { get; private set; }
 
         public FakeSmtpServer(bool rejectConnection = false)
         {
@@ -41,12 +87,13 @@ public class FwEmailTests
             listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
             Port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            serverTask = Task.Run(ServeAsync);
+            serverTask = ServeAsync();
         }
 
         private async Task ServeAsync()
         {
             using TcpClient connection = await listener.AcceptTcpClientAsync();
+            ConnectionAccepted = true;
             if (rejectConnection)
                 return;
 
@@ -103,8 +150,15 @@ public class FwEmailTests
         public void Dispose()
         {
             listener.Stop();
-            try { serverTask.Wait(TimeSpan.FromSeconds(5)); }
-            catch (AggregateException) when (serverTask.IsFaulted && serverTask.Exception?.InnerException is SocketException) { }
+            try
+            {
+                serverTask.Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (AggregateException) when (serverTask.IsFaulted
+                && serverTask.Exception?.InnerException is SocketException or ObjectDisposedException)
+            {
+                // Stopping a listener with no connection cancels its pending accept.
+            }
         }
     }
 
@@ -139,8 +193,6 @@ public class FwEmailTests
     public void SendEmail_TestModeWithoutResolvedRecipientFailsWithoutTransport()
     {
         using var scope = CreateScope("smtp.invalid", 2525, isTest: true);
-        TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings());
-        scope.Fw.config()["test_email"] = "";
         scope.Fw.Session("login", "");
 
         Assert.IsFalse(scope.Fw.sendEmail("", "original@example.test", "subject", "body"));
@@ -162,10 +214,9 @@ public class FwEmailTests
 
         Assert.IsFalse(scope.Fw.sendEmail("", "recipient@example.test", "subject", "body", options: options));
 
-        var configuredMail = scope.Fw.config("mail") as FwDict;
-        Assert.IsNotNull(configuredMail);
-        Assert.AreEqual("configured.example.test", configuredMail["host"]);
-        Assert.AreEqual(2525, configuredMail["port"].toInt());
+        var configuredMail = (StubSettings)scope.Fw.settings;
+        Assert.AreEqual("configured.example.test", configuredMail.Host);
+        Assert.AreEqual(2525, configuredMail.Port);
         Assert.AreEqual("SMTP port must be between 1 and 65535.", scope.Fw.last_error_send_email);
     }
 
@@ -196,7 +247,7 @@ public class FwEmailTests
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateScope("127.0.0.1", server.Port, isTest: true);
-        TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings { TestEmail = "safe@example.test" });
+        ((StubSettings)scope.Fw.settings).TestEmail = "safe@example.test";
         var options = new FwDict { ["bcc"] = new StrList { "bcc@example.test" } };
 
         Assert.IsTrue(scope.Fw.sendEmail(
@@ -216,18 +267,194 @@ public class FwEmailTests
         StringAssert.Contains(server.MessageData, "original@example.test");
     }
 
+    [TestMethod]
+    public void AdminSendEmail_AdminCannotReuseConfiguredPasswordAgainstSubmittedHost()
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateAdminSendEmailScope(server, Users.ACL_ADMIN);
+        var settings = (StubSettings)scope.Fw.settings;
+        Assert.ThrowsExactly<AuthException>(() => scope.Fw.callRoute());
+        Assert.AreEqual(0, settings.SecretReadCount);
+        Assert.IsFalse(server.ConnectionAccepted);
+    }
+
+    [TestMethod]
+    [DataRow("GET", "token")]
+    [DataRow("POST", "wrong-token")]
+    public void AdminSendEmail_RejectsUnsafeRequestBeforeSmtp(string method, string formToken)
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN, method, formToken);
+        var settings = (StubSettings)scope.Fw.settings;
+        var controller = new TestAdminSendEmailController();
+        controller.init(scope.Fw);
+
+        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction());
+        Assert.AreEqual(0, settings.SecretReadCount);
+        Assert.IsFalse(server.ConnectionAccepted);
+    }
+
+    [TestMethod]
+    public void AdminSendEmail_ReadOnlySiteAdminCannotSend()
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN);
+        var settings = (StubSettings)scope.Fw.settings;
+        var controller = new TestAdminSendEmailController();
+        controller.init(scope.Fw);
+        controller.MakeReadOnly();
+
+        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction());
+        Assert.AreEqual(0, settings.SecretReadCount);
+        Assert.IsFalse(server.ConnectionAccepted);
+    }
+
+    [TestMethod]
+    public void AdminSendEmail_ValidationFailureClearsSubmittedPasswordBeforeRendering()
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN);
+        var item = (FwDict)scope.Fw.FORM["item"]!;
+        item["password"] = "submitted-secret";
+        item.Remove("subject");
+        var settings = (StubSettings)scope.Fw.settings;
+        var controller = new TestAdminSendEmailController();
+        controller.init(scope.Fw);
+
+        Assert.ThrowsExactly<ValidationException>(() => controller.SaveAction());
+        Assert.IsFalse(item.ContainsKey("password"));
+
+        scope.Fw.route.method = "GET";
+        var retryPage = controller.ShowFormAction();
+        Assert.IsFalse(retryPage["i"] is FwDict retryItem && retryItem.ContainsKey("password"));
+        Assert.AreEqual(0, settings.SecretReadCount);
+        Assert.IsFalse(server.ConnectionAccepted);
+    }
+
+    [TestMethod]
+    public void AdminSendEmail_SiteAdminCanUseConfiguredSmtpWithBlankPasswordField()
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateAdminSendEmailScope(server, Users.ACL_SITEADMIN);
+        var settings = (StubSettings)scope.Fw.settings;
+        var controller = new TestAdminSendEmailController();
+        controller.init(scope.Fw);
+
+        var result = controller.SaveAction();
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result["is_sent"].toBool());
+        Assert.AreEqual(1, settings.SecretReadCount);
+        Assert.IsTrue(server.ConnectionAccepted);
+        CollectionAssert.AreEqual(new[] { "<recipient@example.test>" }, server.Recipients);
+        Assert.IsFalse(scope.Fw.FORM["item"] is FwDict item && item.ContainsKey("password"));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AdminSendEmail_RendersConsumerDefaultsForMissingOrInheritedSettings(bool isInherited)
+    {
+        using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+        {
+            ["appSettings:template"] = TestHelpers.TemplateRoot(),
+        }, TestHelpers.CreateHttpContext());
+        var fw = scope.Fw;
+        var settings = new DefaultSettings(isInherited);
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
+        TestHelpers.RegisterModel(fw, (Users)new StubUsers());
+        fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
+        fw.route.method = "GET";
+        var controller = new AdminSendEmailController();
+        controller.init(fw);
+
+        var ps = controller.ShowFormAction();
+        var item = (FwDict)ps["i"]!;
+        string html = fw.parsePage("/admin/sendemail/showform", "form_right.html", ps);
+
+        Assert.AreEqual(587, item["port"].toInt());
+        Assert.IsTrue(item["is_ssl"].toBool());
+        StringAssert.Contains(html, "value=\"587\"");
+        StringAssert.Contains(html, "checked");
+        Assert.IsFalse(item.ContainsKey("password"));
+    }
+
+    [TestMethod]
+    public void AdminSendEmail_TemplatesHideToolFromOrdinaryAdminsAndNeverReflectPassword()
+    {
+        var repoRoot = FindRepoRoot();
+        var showButton = File.ReadAllText(Path.Combine(repoRoot, "osafw-app", "App_Data", "template", "admin", "users", "showform", "btn_std_more.html"));
+        var listButton = File.ReadAllText(Path.Combine(repoRoot, "osafw-app", "App_Data", "template", "admin", "users", "index", "btn_std_more.html"));
+        var smtpForm = File.ReadAllText(Path.Combine(repoRoot, "osafw-app", "App_Data", "template", "admin", "sendemail", "showform", "form_right.html"));
+
+        StringAssert.Contains(showButton, "ifeq=\"SESSION[access_level]\" value=\"100\"");
+        StringAssert.Contains(listButton, "ifeq=\"SESSION[access_level]\" value=\"100\"");
+        StringAssert.Contains(smtpForm, "type=\"password\"");
+        Assert.IsFalse(smtpForm.Contains("i[password]", StringComparison.Ordinal));
+    }
+
     private static FwTestScope CreateScope(string host, int port, bool isTest = false)
     {
-        var settings = new Dictionary<string, string?>
+        var config = new Dictionary<string, string?>
         {
-            ["appSettings:mail_from"] = "sender@example.test",
             ["appSettings:is_test"] = isTest.ToString(),
-            ["appSettings:mail:host"] = host,
-            ["appSettings:mail:port"] = port.ToString(),
-            ["appSettings:mail:is_ssl"] = "false",
-            ["appSettings:mail:username"] = "",
-            ["appSettings:mail:password"] = "",
         };
-        return new FwTestScope(_ => new RejectingDb(), settings, TestHelpers.CreateHttpContext("email-tests"));
+        var scope = new FwTestScope(_ => new RejectingDb(), config, TestHelpers.CreateHttpContext("email-tests"));
+        TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings { Host = host, Port = port });
+        scope.Fw.settings.init(scope.Fw);
+        return scope;
+    }
+
+    private static FwTestScope CreateAdminSendEmailScope(
+        FakeSmtpServer server,
+        int accessLevel,
+        string method = "POST",
+        string formToken = "token")
+    {
+        var scope = new FwTestScope(
+            _ => new RejectingDb(),
+            context: TestHelpers.CreateHttpContext("email-tests"));
+        var fw = scope.Fw;
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings
+        {
+            Host = "127.0.0.1",
+            Port = server.Port,
+            Password = "stored-smtp-secret",
+        });
+        fw.settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)new StubUsers());
+        fw.Session("user_id", "7");
+        fw.Session("access_level", accessLevel.toStr());
+        fw.Session("XSS", "token");
+        fw.route.controller = "AdminSendEmail";
+        fw.route.action = FW.ACTION_SAVE;
+        fw.route.method = method;
+        fw.FORM["XSS"] = formToken;
+        fw.FORM["item"] = new FwDict
+        {
+            ["from"] = "sender@example.test",
+            ["to"] = "recipient@example.test",
+            ["subject"] = "SMTP diagnostic",
+            ["body"] = "test",
+            ["host"] = "127.0.0.1",
+            ["port"] = server.Port,
+            ["username"] = "",
+            ["password"] = "",
+        };
+        return scope;
+    }
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "osafw-asp.net-core.sln")))
+                return directory.FullName;
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cannot locate repository root.");
     }
 }

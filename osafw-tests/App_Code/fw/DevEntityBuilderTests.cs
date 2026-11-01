@@ -10,6 +10,17 @@ namespace osafw.Tests;
 public class DevEntityBuilderTests
 {
     [TestMethod]
+    public void ListModelsIncludesConcreteSettingsButExcludesFrameworkBases()
+    {
+        var models = DevEntityBuilder.listModels();
+
+        CollectionAssert.Contains(models, nameof(Settings));
+        CollectionAssert.Contains(models, nameof(Users));
+        CollectionAssert.DoesNotContain(models, nameof(FwSettings));
+        CollectionAssert.DoesNotContain(models, typeof(FwModel<>).Name);
+    }
+
+    [TestMethod]
     public void ConfigJsonConverter_DoesNotDuplicateModelKeys()
     {
         var config = new FwDict

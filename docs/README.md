@@ -22,6 +22,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 ## Agent Docs
 
+- [agents/new-application.md](agents/new-application.md): explicitly requested new-application preparation, compact intake, local bootstrap, and scoped cleanup.
+- [agents/migrations/settings.md](agents/migrations/settings.md): one-time copied-app configuration and credential migration before the Settings runtime upgrade.
 - [agents/workflow.md](agents/workflow.md): request validation, direct execution, delegation eligibility, permissions, summaries, and safe self-improvement.
 - [agents/delegation.md](agents/delegation.md): role/profile selection, packets, file ownership, and fallback; load only for selected delegation or reviewer profile selection.
 - [agents/instruction-upgrade-scenarios.md](agents/instruction-upgrade-scenarios.md): optional import/routing probes and bounded agent execution trials for varied runtimes, layouts, and local customizations.
@@ -57,7 +59,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 - Templates, shared UI fragments, parser behavior: `templates.md`; add `layout.md` and `design_system.html` for layout/theme work, and `dynamic.md` for Dynamic/Vue screens.
 - Models, queries, schemas, or provider behavior: `crud.md`, then `db.md`; add `datetime.md` for date/time fields and `settings.md` for Site Settings.
 - Assistant, LLM, knowledge base, embedding, or retrieval: `assistant.md`, then only the relevant DB/CRUD/template docs.
-- Deployment or IIS scripts: `deploy.md`.
+- Deployment or IIS scripts: `deploy.md`; existing-app Settings upgrades: `agents/migrations/settings.md`.
+- Explicit "prepare new application", "init app", or "bootstrap" request: `agents/new-application.md`. An unrelated first prompt does not trigger app conversion or cleanup.
 - Naming or public method/result conventions: `naming.md`.
 - Agent request validation, permissions, summaries, or staging: `agents/workflow.md`.
 - A useful FPF Library question at any point in development: `agents/fpf.md`, then `agents/fpf-profile.md`; use an adequate existing answer directly and read the pinned `USING-FPF.md` before relying on methods.

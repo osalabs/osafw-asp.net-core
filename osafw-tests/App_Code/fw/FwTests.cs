@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace osafw.Tests
@@ -10,6 +11,8 @@ namespace osafw.Tests
     {
         private class StubUsers : Users
         {
+            public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
+
             public override DBRow one(int id) => new DBRow(new FwDict
             {
                 ["id"] = id.toStr(),
@@ -39,9 +42,72 @@ namespace osafw.Tests
             }
         }
 
+        private sealed class DisplaySettings : Settings
+        {
+            public override DBRow oneByIcode(string code) => code switch
+            {
+                "SITE_NAME" => new DBRow(DB.h("ivalue", "Stored site")),
+                "support_email" => new DBRow(DB.h("ivalue", "support@stored.test")),
+                "mail_from" => new DBRow(DB.h("ivalue", "sender@stored.test")),
+                "is_mfa_enforced" => new DBRow(DB.h("ivalue", "1")),
+                _ => [],
+            };
+        }
+
         private sealed class ThrowingSettings : Settings
         {
             public override DBRow oneByIcode(string icode) => throw new System.InvalidOperationException("settings unavailable");
+        }
+
+        private sealed class ApplicationSettings : Settings
+        {
+            public int GlobalsCalls { get; private set; }
+
+            public override string read(string code) => code == "custom.title" ? "Application value" : "";
+
+            public override void applyGlobals()
+            {
+                GlobalsCalls++;
+                fw.G["SITE_NAME"] = "Application site";
+            }
+        }
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void SettingsShortcutSharesInitializedModelWithoutDatabaseReads(bool shortcutFirst)
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb());
+            var fw = scope.Fw;
+
+            var first = shortcutFirst ? fw.settings : fw.model<Settings>();
+
+            Assert.AreSame(first, fw.settings);
+            Assert.AreSame(first, fw.model<Settings>());
+            Assert.AreSame(first, fw.model(typeof(Settings)));
+            Assert.AreSame(first, fw.model(nameof(Settings)));
+            Assert.AreSame(fw.db, first.getDB());
+        }
+
+        [TestMethod]
+        public void SettingsShortcutUsesApplicationOverridesAndExistingModelRegistration()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            {
+                ["appSettings:template"] = TestHelpers.TemplateRoot(),
+            });
+            var fw = scope.Fw;
+            _ = fw.settings;
+            var applicationSettings = new ApplicationSettings();
+            applicationSettings.init(fw);
+            TestHelpers.RegisterModel(fw, (Settings)applicationSettings);
+
+            Assert.AreSame(applicationSettings, fw.settings);
+            Assert.AreEqual("Application value", fw.settings.read("custom.title"));
+            string email = fw.parsePage("/emails", "signup.txt", []);
+
+            StringAssert.Contains(email, "Application site");
+            Assert.AreEqual(1, applicationSettings.GlobalsCalls);
         }
 
         public sealed class RuntimeTypeModel : FwModel
@@ -128,7 +194,9 @@ namespace osafw.Tests
         public void FormatUserDateTime_FormatsIsoAndLocal()
         {
             var context = TestHelpers.CreateHttpContext();
-            var configuration = new ConfigurationBuilder().Build();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["appSettings:timezone"] = "UTC" })
+                .Build();
 
             var fw = new FW(context, configuration);
 
@@ -145,7 +213,9 @@ namespace osafw.Tests
         public void FormatUserDateTime_AcceptsDateTimeOffset()
         {
             var context = TestHelpers.CreateHttpContext();
-            var configuration = new ConfigurationBuilder().Build();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["appSettings:timezone"] = "UTC" })
+                .Build();
 
             var fw = new FW(context, configuration);
             var dto = new System.DateTimeOffset(2024, 1, 1, 15, 0, 0, System.TimeSpan.FromHours(3));
@@ -164,6 +234,7 @@ namespace osafw.Tests
             var fw = new FW(context, configuration);
             fw.G["date_format"] = DateUtils.DATE_FORMAT_DMY;
             fw.G["time_format"] = DateUtils.TIME_FORMAT_24;
+            fw.G["timezone"] = DateUtils.TZ_UTC;
 
             var formatted = fw.formatUserDateTime("2024-02-03 15:30:00");
 
@@ -185,11 +256,11 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void ResolveTestEmailRecipient_PrefersConfiguredTestEmail()
+        public void ResolveTestEmailRecipient_UsesSiteSetting()
         {
             var fw = CreateFwForHost("test-email-configured");
-            TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-            fw.config()["test_email"] = " configured@example.test ";
+            TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " configured@example.test " });
+            fw.settings.init(fw);
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("configured@example.test", fw.resolveTestEmailRecipient());
@@ -200,7 +271,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-session-fallback");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-            fw.config()["test_email"] = " ";
+            fw.settings.init(fw);
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -211,18 +282,18 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-site-setting");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " site@example.test " });
-            fw.config()["test_email"] = "configured@example.test";
+            fw.settings.init(fw);
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("site@example.test", fw.resolveTestEmailRecipient());
         }
 
         [TestMethod]
-        public void ResolveTestEmailRecipient_CurrentUserSiteSettingOverridesConfig()
+        public void ResolveTestEmailRecipient_CurrentUserSiteSettingUsesSession()
         {
             var fw = CreateFwForHost("test-email-current-user");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " current_user " });
-            fw.config()["test_email"] = "configured@example.test";
+            fw.settings.init(fw);
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -233,7 +304,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-settings-failure");
             TestHelpers.RegisterModel(fw, (Settings)new ThrowingSettings());
-            fw.config()["test_email"] = "configured@example.test";
+            fw.settings.init(fw);
 
             var error = Assert.ThrowsExactly<System.InvalidOperationException>(() => fw.resolveTestEmailRecipient());
 
@@ -249,6 +320,95 @@ namespace osafw.Tests
             _ = new FW(context, configuration);
 
             Assert.IsFalse(context.Session.Keys.Contains("_flash"));
+        }
+
+        [TestMethod]
+        public void Constructor_ClonesCustomConfigurationWithoutDatabaseDefinitions()
+        {
+            var configuration = new Dictionary<string, string?>
+            {
+                ["appSettings:db:main:connection_string"] = "Server=secret.example;Password=db-secret;",
+                ["appSettings:db:main:type"] = "SQL",
+                ["appSettings:override:Other:db:main:connection_string"] = "Server=other.example;Password=other-secret;",
+                ["appSettings:custom:title"] = "Application title",
+            };
+            using var scope = new FwTestScope(_ => new RejectingDb(), configuration);
+            var fw = scope.Fw;
+
+            Assert.IsFalse(fw.G.ContainsKey("db"));
+            Assert.IsFalse(fw.G.ContainsKey("override"));
+            Assert.IsTrue(fw.config().ContainsKey("db"));
+            Assert.IsTrue(fw.config().ContainsKey("override"));
+
+            var globals = (FwDict)fw.G["custom"]!;
+            Assert.AreEqual("Application title", globals["title"]);
+            globals["title"] = "Request title";
+            Assert.AreEqual("Application title", fw.config("custom.title"));
+        }
+
+        [TestMethod]
+        public void PresentationGlobalsPreserveRealLayoutEmailAndCspConsumers()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            {
+                ["appSettings:template"] = TestHelpers.TemplateRoot(),
+                ["appSettings:SITE_NAME"] = "Configured site",
+                ["appSettings:SITE_VERSION"] = "42",
+                ["appSettings:ASSETS_URL"] = "/static",
+                ["appSettings:ROOT_DOMAIN"] = "https://example.test",
+                ["appSettings:AWSRegion"] = "us-east-1",
+                ["appSettings:S3Bucket"] = "public-images",
+            }, TestHelpers.CreateHttpContext("example.test"));
+            var fw = scope.Fw;
+            var settings = new DisplaySettings();
+            settings.init(fw);
+            TestHelpers.RegisterModel(fw, (Settings)settings);
+
+            // Email parsing also loads current site display values, without a preceding web render.
+            string email = fw.parsePage("/emails", "signup.txt", []);
+            StringAssert.Contains(email, "Stored site");
+            StringAssert.Contains(email, "https://example.test");
+            Assert.IsFalse(email.Contains("Configured site", System.StringComparison.Ordinal));
+
+            string layout = fw.parsePage("/home/index", fw.G["PAGE_LAYOUT_PUBLIC"].toStr(), []);
+            StringAssert.Contains(layout, "Stored site");
+            StringAssert.Contains(layout, "/static/img/logo.png");
+            StringAssert.Contains(layout, "?v42");
+            string csp = fw.parsePage("/layout", "content_security_policy.html", []);
+            StringAssert.Contains(csp, "public-images.s3.us-east-1.amazonaws.com");
+            string loginHelp = fw.parsePage("/login/index", "login_problem.html", []);
+            StringAssert.Contains(loginHelp, "mailto:support@stored.test");
+
+            Assert.AreEqual(fw.config("mail_from"), fw.G["mail_from"]);
+            Assert.AreEqual(fw.config("is_mfa_enforced"), fw.G["is_mfa_enforced"]);
+            Assert.AreEqual(fw.config("timezone"), fw.G["timezone"]);
+        }
+
+        [TestMethod]
+        public void DeveloperDocumentationReadsFeatureSettingsIntoPageState()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            {
+                ["appSettings:template"] = TestHelpers.TemplateRoot(),
+                ["appSettings:is_mfa_enforced"] = "false",
+            }, TestHelpers.CreateHttpContext());
+            var fw = scope.Fw;
+            fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
+            var settings = new DisplaySettings();
+            settings.init(fw);
+            TestHelpers.RegisterModel(fw, (Settings)settings);
+            var users = new StubUsers();
+            users.init(fw);
+            TestHelpers.RegisterModel(fw, (Users)users);
+            var controller = new DevManageController();
+            controller.init(fw);
+
+            var ps = controller.DocsAction()!;
+            string overview = fw.parsePage("/dev/manage/docs", "tab_overview.md", ps);
+
+            Assert.IsTrue(ps["is_mfa_enforced"].toBool());
+            StringAssert.Contains(overview, "sender@stored.test");
+            StringAssert.Contains(overview, "Authentication (MFA) enforced:** Yes");
         }
 
         [TestMethod]

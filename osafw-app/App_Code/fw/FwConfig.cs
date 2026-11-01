@@ -23,8 +23,47 @@ public static class FwConfig
     /// <summary>Get per-request, host-specific settings bucket.</summary>
     public static FwDict GetCurrentSettings() => GetSettingsForHost();
 
-    /// <summary>Get specific setting from the current bucket.</summary>
-    public static object? GetCurrentSetting(string name) => GetSettingsForHost()[name];
+    /// <summary>Reads a configuration value; exact keys win, otherwise dots traverse nested dictionaries.</summary>
+    public static object? GetCurrentSetting(string name)
+    {
+        var settings = GetSettingsForHost();
+        if (settings.TryGetValue(name, out var exact))
+            return exact;
+
+        object? value = settings;
+        foreach (var part in name.Split('.'))
+        {
+            if (value is not FwDict section || !section.TryGetValue(part, out value))
+                return null;
+        }
+        return value;
+    }
+
+    /// <summary>
+    /// Returns a copy of one named database definition, resolving connection_string_secret when configured.
+    /// The source configuration is unchanged. The returned connection string is confidential and must not
+    /// be logged or placed in template globals. Inline definitions do not access an external provider.
+    /// </summary>
+    public static FwDict getDatabaseSettings(FwDict settings, string name = "main")
+    {
+        var definition = (settings["db"] as FwDict)?[name] as FwDict ?? [];
+        var result = new FwDict(definition);
+        if (!definition.ContainsKey("connection_string_secret"))
+            return result;
+
+        if (!string.IsNullOrWhiteSpace(definition["connection_string"].toStr()))
+            throw new InvalidOperationException($"Database '{name}' defines both connection_string and connection_string_secret.");
+        if (definition["connection_string_secret"] is not FwDict reference)
+            throw new InvalidOperationException($"Database '{name}' requires a connection_string_secret reference object.");
+
+        string value = FwSecretsManager.read(reference);
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidOperationException($"Database '{name}' resolved an empty connection string.");
+
+        result["connection_string"] = value;
+        result.Remove("connection_string_secret");
+        return result;
+    }
 
     // The ordinary application shares state; explicit scopes get independent settings and caches.
     private sealed class ConfigurationState
@@ -89,7 +128,8 @@ public static class FwConfig
         }
     }
 
-    private static string getConfiguredEnvironmentName()
+    /// <summary>Returns the host-selected environment, falling back to environment variables for standalone callers.</summary>
+    public static string getEnvironmentName()
     {
         if (currentState.environmentName is string selected)
             return selected;
@@ -204,6 +244,7 @@ public static class FwConfig
 
             var tmp = new FwDict();
             initDefaults(null, "", ref tmp);
+            FwHooks.configure(tmp);
             if (currentState.configuration != null)
                 applyAppSettings(currentState.configuration, tmp);
             tmp["app_version_stamp"] = resolveGitFetchHeadVersion(tmp["site_root"].toStr());
@@ -282,13 +323,42 @@ public static class FwConfig
         st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         st["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
 
-        st["lang"] ??= "en"; // default language
-        st["is_lang_update"] ??= false; // default language update flag
-        st["is_fwupdates_auto_apply"] ??= true; // keep the existing dev Home update redirect unless explicitly disabled
+        // Operational defaults; Settings rows can inherit or override these values.
+        st["SITE_NAME"] = "Site Name";
+        st["feedback_email"] = "";
+        st["support_email"] = "support@website.com";
+        st["mail_from"] = "admin@website.com";
+        st["is_mfa_enforced"] = false;
+        st["is_list_btn_left"] = false;
+        st["ui_theme"] = 0;
+        st["ui_mode"] = 0;
 
-        st["date_format"] ??= DateUtils.DATE_FORMAT_MDY;
-        st["time_format"] ??= DateUtils.TIME_FORMAT_12;
-        st["timezone"] ??= DateUtils.TZ_UTC;
+        st["DATA_PROTECTION_APPLICATION_NAME"] = "osafw";
+        st["UPLOAD_DIR"] = "/upload";
+        st["UNLOGGED_DEFAULT_URL"] = "/";
+        st["LOGGED_DEFAULT_URL"] = "/Main";
+
+        st["PAGE_LAYOUT"] = "/layout.html";
+        st["PAGE_LAYOUT_PUBLIC"] = "/layout_public.html";
+        st["PAGE_LAYOUT_PJAX"] = "/layout_pjax.html";
+        st["PAGE_LAYOUT_PJAX_NOJS"] = "/layout_pjax_nojs.html";
+        st["PAGE_LAYOUT_MODAL"] = "/layout_modal.html";
+        st["PAGE_LAYOUT_MIN"] = "/layout_min.html";
+        st["PAGE_LAYOUT_PRINT"] = "/layout_print.html";
+        st["PAGE_LAYOUT_EMAIL"] = "/layout_email.html";
+        st["PAGE_LAYOUT_VUE"] = "/layout_vue.html";
+
+        st["log_level"] = LogLevel.INFO;
+        st["log_pii"] = false;
+        st["is_test"] = false;
+        st["IS_DEV"] = false;
+        st["is_lang_update"] = false;
+        st["is_fwupdates_auto_apply"] = true;
+
+        st["lang"] = "en";
+        st["date_format"] = DateUtils.DATE_FORMAT_MDY;
+        st["time_format"] = DateUtils.TIME_FORMAT_12;
+        st["timezone"] = DateUtils.TZ_UTC;
     }
 
     /// <summary>
@@ -351,12 +421,11 @@ public static class FwConfig
         }
         else if (section.Key != null)
         {
-            st[section.Key] = new FwDict();
+            // Override supplied leaves while retaining defaults for unspecified children.
+            var children = st[section.Key] as FwDict ?? [];
+            st[section.Key] = children;
             foreach (IConfigurationSection sub_section in section.GetChildren())
-            {
-                FwDict s = (FwDict)st[section.Key]!;
-                applySettingsSection(sub_section, s);
-            }
+                applySettingsSection(sub_section, children);
         }
     }
 
@@ -443,11 +512,10 @@ public static class FwConfig
     {
         setConfiguration(cfg);
 
-        var environment = getConfiguredEnvironmentName();
-        FwDict st = [];
-        applyAppSettings(cfg, st);
+        var environment = getEnvironmentName();
+        var st = Utils.cloneHashDeep(getBaseSettings()) ?? [];
 
-        // Override by name if environment-based overrides are used
+        // Apply an explicitly configured named override after the environment providers.
         overrideSettingsByName(environment, st);
 
         return st;
@@ -458,7 +526,7 @@ public static class FwConfig
         var trimmed = host?.Trim() ?? string.Empty;
         if (!string.IsNullOrEmpty(trimmed)) return trimmed;
 
-        var environment = getConfiguredEnvironmentName();
+        var environment = getEnvironmentName();
         return string.IsNullOrEmpty(environment) ? DEFAULT_HOST_KEY : environment;
     }
 

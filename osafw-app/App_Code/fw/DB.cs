@@ -265,6 +265,11 @@ public class DB : IDisposable
     public int sql_command_timeout = 30; // default command timeout, override in model for long queries (in reports or export, for example)
     protected readonly FwDict conf = [];  // config contains: connection_string, type
     protected readonly string connstr = "";
+    private readonly string anonymousCacheIdentity = Guid.NewGuid().ToString("N");
+
+    /// <summary>Opaque process-cache identity; never contains a connection string or password.</summary>
+    public string cacheIdentity => connstr.Length == 0 ? anonymousCacheIdentity
+        : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(dbtype + "\0" + connstr)));
     private TimeZoneInfo? timezoneInfo;
     private bool isTimezoneInited;
     private bool isTimezoneResolving;

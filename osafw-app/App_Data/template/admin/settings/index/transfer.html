@@ -1,0 +1,11 @@
+<form method="post" action="<~../url>/(Export)">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <button class="btn btn-default" type="submit" title="`Export all settings, including credentials`"><~/common/icons/cloud-download> `Export`</button>
+</form>
+<form method="post" enctype="multipart/form-data" action="<~../url>/(Import)">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <fieldset class="d-flex flex-wrap align-items-center gap-2" <~/common/attr/disabled if="is_readonly">>
+    <input class="form-control w-auto" type="file" name="settings_file" aria-label="`Settings file to import`" accept="application/json,.json" required>
+    <button class="btn btn-warning" type="submit"><~/common/icons/cloud-upload> `Import`</button>
+  </fieldset>
+</form>

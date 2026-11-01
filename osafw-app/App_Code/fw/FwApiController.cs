@@ -16,24 +16,19 @@ public class FwApiController : FwController
 
     protected virtual bool auth()
     {
-        var result = false;
         var request = fw.request ?? throw new InvalidOperationException("Request is not available");
         var response = fw.response ?? throw new InvalidOperationException("Response is not available");
 
+        if (fw.isLogged)
+            return true;
+
         string x_api_key = request.Headers["X-API-Key"].ToString();
-        var api_key = fw.config()["API_KEY"] as string;
+        var api_key = fw.settings.readSecret("API_KEY");
+        if (!string.IsNullOrEmpty(api_key) && x_api_key == api_key)
+            return true;
 
-        //authorize if user logged OR API_KEY configured and matches
-        if (fw.isLogged || !string.IsNullOrEmpty(api_key) && x_api_key == api_key)
-            result = true;
-
-        if (!result)
-        {
-            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-            throw new AuthException("API auth error");
-        }
-
-        return result;
+        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+        throw new AuthException("API auth error");
     }
 
     // send output seaders

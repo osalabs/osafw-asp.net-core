@@ -198,10 +198,10 @@ public class AdminRagChunksController : FwDynamicController
 
     private void setRagIndexMetadata(FwDict ps, bool isDatabaseStateIncluded)
     {
-        ps["vector_mode"] = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", RagChunks.VECTOR_MODE_AUTO);
+        ps["vector_mode"] = fw.settings.read("ASSISTANT_VECTOR_MODE");
         ps["embedding_model"] = LLM.MODEL_TEXT_EMBEDDING_3_SMALL;
         int runTimeoutSeconds = Math.Clamp(
-            fw.model<Settings>().readInt("ASSISTANT_RUN_TIMEOUT_SECONDS", AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS),
+            fw.settings.readInt("ASSISTANT_RUN_TIMEOUT_SECONDS"),
             30,
             1800
         );

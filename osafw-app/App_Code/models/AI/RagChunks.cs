@@ -338,7 +338,7 @@ public class RagChunks : FwModel<RagChunks.Row>
 
     private string resolveVectorBackend(int dimension)
     {
-        string configured = fw.model<Settings>().read("ASSISTANT_VECTOR_MODE", VECTOR_MODE_AUTO).Trim().ToLowerInvariant();
+        string configured = fw.settings.read("ASSISTANT_VECTOR_MODE").Trim().ToLowerInvariant();
         if (configured == VECTOR_MODE_JSON)
             return VECTOR_MODE_JSON;
         if (configured == VECTOR_MODE_NATIVE)

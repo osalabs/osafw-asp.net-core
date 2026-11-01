@@ -1,0 +1,21 @@
+<form method="post" action="<~../url>/<~id>" class="d-flex align-items-center gap-2" data-check-changes data-autosave>
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <input type="hidden" name="item[basis]" value="1">
+  <~text_control ifeq="input" value="0" inline>
+  <input class="form-control form-control-sm" name="item[ivalue]" value="<~inline_value>" aria-label="<~iname>">
+  </~text_control>
+  <~number_control ifeq="input" value="60" inline>
+  <input class="form-control form-control-sm" type="number" name="item[ivalue]" value="<~inline_value>" min="<~input_min>" max="<~input_max>" step="<~input_step>" aria-label="<~iname>">
+  </~number_control>
+  <~select_control ifeq="input" value="20" inline>
+  <select class="form-select form-select-sm" name="item[ivalue]" aria-label="<~iname>">
+    <option value=""></option>
+    <~settings_options repeat inline><option value="<~id>" <~/common/attr/selected if="is_selected">><~iname></option></~settings_options>
+  </select>
+  </~select_control>
+  <~switch_control ifeq="input" value="70" inline>
+  <div class="form-check form-switch mb-0">
+    <input class="form-check-input" type="checkbox" role="switch" name="item[ivalue]" value="1" aria-label="<~iname>" <~/common/attr/checked if="is_switch_on">>
+  </div>
+  </~switch_control>
+</form>

@@ -1,1 +1,31 @@
 <~/common/calendar>
+<~reveal_script if="can_reveal" inline>
+<script>
+document.getElementById('setting_reveal')?.addEventListener('click', async function () {
+  const response = await fetch('<~../url>/(Reveal)/<~id>', {
+    method: 'POST',
+    headers: {'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({XSS: '<~session[XSS]>'})
+  });
+  if (!response.ok) return;
+  const data = await response.json();
+  document.getElementById('setting_value_display').textContent = data.value || '';
+});
+</script>
+</~reveal_script>
+<~source_script unless="is_credential" inline>
+<script>
+(() => {
+  const inherit = document.getElementById('basis_inherit');
+  const saved = document.getElementById('setting_saved_value');
+  const preview = document.getElementById('setting_default');
+  const updateSource = () => {
+    saved.disabled = inherit.checked;
+    saved.hidden = inherit.checked;
+    preview.hidden = !inherit.checked;
+  };
+  document.querySelectorAll('input[name="item[basis]"]').forEach(input => input.addEventListener('change', updateSource));
+  updateSource();
+})();
+</script>
+</~source_script>

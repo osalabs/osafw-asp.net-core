@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.13.2",
+  "packVersion": "1.13.4",
   "sourceRole": "framework-template",
   "upgradePolicy": "three-way-review",
   "description": "Versioned project-scoped Codex workflow files that may be deliberately adapted into copied application repositories.",
@@ -10,6 +10,8 @@
     { "path": "CLAUDE.md", "upgradeMode": "replace-import", "benchmarkMode": "preserve-existing" },
     { "path": "docs/README.md", "upgradeMode": "merge", "benchmarkMode": "preserve-existing" },
     { "path": "docs/agents/workflow.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/new-application.md", "upgradeMode": "merge" },
+    { "path": "docs/agents/migrations/settings.md", "upgradeMode": "merge" },
     { "path": "docs/agents/delegation.md", "upgradeMode": "merge" },
     { "path": "docs/agents/instruction-upgrade-scenarios.md", "upgradeMode": "merge" },
     { "path": "docs/agents/learning-scenarios.md", "upgradeMode": "merge" },

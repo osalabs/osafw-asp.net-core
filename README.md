@@ -35,13 +35,14 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ### Development
 1. clone this git repository
-  - delete files in `/osafw-app/App_Data/sql/updates` - these are framework updates, not need for your fresh app
+  - for an application fork, use the [new-application guide](docs/agents/new-application.md) to plan configuration and optional app-scoped cleanup
 2. in Visual Studio open `osafw-asp.net-core.sln` (you may "save as" solution with your project name)
-3. press Ctrl+F5 to run (or F5 if you really need debugger)
-4. open in browser https://localhost:PORT/Dev/Configure and check configuration. If database not configured:
-  - create `demo` database (or other name you have in appsettings.json)
-  - or enable `isSQLite` in `osafw-app/osafw-app.csproj`, set `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
-  - click "Initialize DB"
+3. press Ctrl+F5 to run (or F5 for debugging). Home and https://localhost:PORT/Dev/Configure load before the configured database is available; use the configuration page to see what still needs setup.
+4. configure and initialize the development database:
+  - create an empty `demo` database (or the name configured by `appsettings.Development.json`)
+  - or enable `isSQLite` in `osafw-app/osafw-app.csproj`, set the development `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
+  - use Initialize DB on `/Dev/Configure`, or run `dotnet run --project osafw-app -- database-init` from the repository root; the CLI requires development mode and refuses a non-empty database
+  - retain the generated administrator password; see [configuration and upgrade instructions](docs/deploy.md#runtime-configuration-ownership)
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`
 7. modify templates in `/osafw-app/App_Data/template`
@@ -56,15 +57,16 @@ Short summary how to deploy without VS publish (from clone git repo):
   - make `dotnet publish --configuration Release` in the directory
 5. create website in IIS with root directory to `/osafw-app/bin/Release/net10.0/publish`
 6. set website's app pool to "No managed code" (so pool works like a proxy to app core)
-7. open your website address in browser
-8. create database and apply sql files in order:
+7. before starting the application pool, create the empty database and apply provider-specific SQL files in order:
   - fwdatabase.sql - core fw tables
   - database.sql - your app specific tables
   - lookups.sql - fill lookup tables
   - views.sql - (re-)create views
   - roles.sql (optional, only if RBAC used)
+  - settings.sql - framework Site Settings definitions
   - demo.sql (optional, demo tables)
   - for SQLite, use the same file names from `osafw-app/App_Data/sql/sqlite/`
+8. start the application pool and open the website; existing databases require the [upgrade procedure](docs/agents/migrations/settings.md) instead of fresh-schema scripts
 
 ### Directory structure
 ```
@@ -89,7 +91,7 @@ Short summary how to deploy without VS publish (from clone git repo):
     /upload          - upload dir for public files
     /favicon.ico     - change to your favicon!
     /robots.txt      - default robots.txt (empty)
-  /appsettings.json  - settings for db connection, mail, logging and for IIS/.NET stuff too
+  /appsettings.json  - deployment/bootstrap configuration: DB, identity, storage and hosting/logging
 ```
 
 ### REST mappings

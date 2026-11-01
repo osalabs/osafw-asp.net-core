@@ -28,7 +28,7 @@ public sealed class AssistantRunProcessor
     public async Task<bool> ProcessNextQueuedRunAsync(string workerId, CancellationToken cancellationToken, bool isStaleRunRecoveryDue = false)
     {
         using var fw = FW.initOffline(configuration);
-        if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED"))
+        if (!fw.settings.readBool("ASSISTANT_ENABLED"))
             return false;
 
         int timeoutSeconds = runTimeoutSeconds(fw);
@@ -64,7 +64,7 @@ public sealed class AssistantRunProcessor
     public async Task<bool> ProcessNextQueuedSourceAsync(string workerId, CancellationToken cancellationToken, bool isStaleSourceRecoveryDue = false)
     {
         using var fw = FW.initOffline(configuration);
-        if (!fw.model<Settings>().readBool("ASSISTANT_ENABLED") || !fw.model<LLM>().isConfigured())
+        if (!fw.settings.readBool("ASSISTANT_ENABLED") || !fw.model<LLM>().isConfigured())
             return false;
 
         try
@@ -101,11 +101,11 @@ public sealed class AssistantRunProcessor
             var runtime = new AssistantToolRuntime(fw, thread.id, run.id, thread.users_id.GetValueOrDefault());
             IList<AITool> tools = new AssistantToolCatalog(runtime).Build().Select(static registration => registration.Tool).ToList();
 
-            string apiKey = fw.model<Settings>().read("OPENAI_API_KEY");
+            string apiKey = fw.settings.readSecret("OPENAI_API_KEY");
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new UserException("OpenAI API key is not configured.");
 
-            string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+            string model = fw.settings.read("ASSISTANT_MODEL");
             if (string.IsNullOrWhiteSpace(model))
                 model = LLM.MODEL_GPT5_MINI;
 
@@ -224,7 +224,7 @@ public sealed class AssistantRunProcessor
     public static string BuildChatInstructions(FW fw, int usersId)
     {
         AssistantMemories.Row? memory = null;
-        if (fw.model<Settings>().readBool("ASSISTANT_MEMORY_ENABLED") && usersId > 0)
+        if (fw.settings.readBool("ASSISTANT_MEMORY_ENABLED") && usersId > 0)
             memory = fw.model<AssistantMemories>().oneByUser(usersId);
 
         var ps = new FwDict
@@ -286,7 +286,7 @@ public sealed class AssistantRunProcessor
     private static int runTimeoutSeconds(FW fw)
     {
         return Math.Clamp(
-            fw.model<Settings>().readInt("ASSISTANT_RUN_TIMEOUT_SECONDS", AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS),
+            fw.settings.readInt("ASSISTANT_RUN_TIMEOUT_SECONDS"),
             30,
             1800
         );
@@ -389,7 +389,7 @@ public sealed class AssistantRunProcessor
 
     private static void updateUserMemoryIfEnabled(FW fw, int threadId, int usersId)
     {
-        if (!fw.model<Settings>().readBool("ASSISTANT_MEMORY_ENABLED") || usersId <= 0)
+        if (!fw.settings.readBool("ASSISTANT_MEMORY_ENABLED") || usersId <= 0)
             return;
 
         var messages = fw.model<AssistantMessages>().listByThread(threadId)
@@ -407,7 +407,7 @@ public sealed class AssistantRunProcessor
             { "existing_memory", existing?.summary ?? string.Empty },
             { "conversation_excerpts", string.Join("\n", messages) },
         }).Trim();
-        string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+        string model = fw.settings.read("ASSISTANT_MODEL");
 
         try
         {

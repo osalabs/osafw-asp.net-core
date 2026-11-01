@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Net;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,6 +20,16 @@ public class SecurityQuickFixTests
     {
         public DBRow User { get; } = new(userRow(STATUS_ACTIVE));
 
+        public bool DevLookupCalled { get; private set; }
+
+        public override DBList listByWhere(FwDict? where = null, int offset = 0, int limit = -1, string orderby = "")
+        {
+            DevLookupCalled = true;
+            Assert.AreEqual(Users.STATUS_ACTIVE, where!["status"].toInt());
+            Assert.AreEqual(Users.ACL_SITEADMIN, where["access_level"].toInt());
+            return [User];
+        }
+
         public override DBRow oneByEmail(string email) => User;
 
         public override bool checkPwd(string plain_pwd, string pwd_hash, int trim_at = 32) => true;
@@ -31,6 +43,17 @@ public class SecurityQuickFixTests
         public override bool isReadOnly(int id = -1) => false;
 
         public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
+    }
+
+    private sealed class StubSettings : Settings
+    {
+        public override string read(string icode)
+        {
+            return fw.config(icode).toStr();
+        }
+
+        public override string read(string icode, string defaultValue) => defaultValue;
+        public override bool readBool(string icode, bool defaultValue = false) => defaultValue;
     }
 
     private sealed class PasswordUsers : Users
@@ -151,6 +174,63 @@ public class SecurityQuickFixTests
 
         Assert.AreEqual(302, fw.response.StatusCode);
         Assert.AreEqual(expected, fw.response.Headers["Location"].ToString());
+    }
+
+    [TestMethod]
+    [DataRow("Development", "", "localhost", "127.0.0.1", true, "Development", true)]
+    [DataRow("Development", "DevelopmentOleg", "localhost", "::1", true, "Development", true)]
+    [DataRow("Development", "Beta", "localhost", "127.0.0.1", true, "Development", false)]
+    [DataRow("Production", "Development", "localhost", "127.0.0.1", true, "Development", false)]
+    [DataRow("Beta", "", "localhost", "127.0.0.1", true, "Development", false)]
+    [DataRow("Development", "", "example.test", "127.0.0.1", true, "Development", false)]
+    [DataRow("Development", "", "localhost", "192.0.2.1", true, "Development", false)]
+    [DataRow("Development", "", "localhost", "127.0.0.1", false, "Development", false)]
+    [DataRow("Development", "", "localhost", "127.0.0.1", true, "Production", false)]
+    public void Login_DevelopmentShortcutRequiresLocalDevelopment(string environment, string profile, string host,
+        string remoteIp, bool isDev, string ambientEnvironment, bool expected)
+    {
+        var oldAspnet = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var oldDotnet = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+        using var scope = FwConfig.beginScope();
+        try
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", ambientEnvironment);
+            Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", ambientEnvironment);
+            FwConfig.setDefaultOverrideName(environment);
+            using var fw = createFw();
+            fw.config()["IS_DEV"] = isDev;
+            fw.config()["config_override"] = profile;
+            fw.config()["ROOT_URL"] = "";
+            fw.config()["LOGGED_DEFAULT_URL"] = "/Main";
+            fw.config()["template"] = TestHelpers.TemplateRoot();
+            fw.config()["is_lang_update"] = false;
+            fw.G["PAGE_LAYOUT_PUBLIC"] = "/login/index/form.html";
+            fw.context!.Request.Host = new HostString(host);
+            fw.context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
+            fw.response.Body = new MemoryStream();
+            fw.setController("Login", FW.ACTION_SAVE);
+            fw.route.method = "POST";
+            fw.FORM["item"] = new FwDict { ["login"] = "", ["pwdh"] = "~" };
+            var users = new LoginUsers();
+            users.init(fw);
+            TestHelpers.RegisterModel(fw, (Users)users);
+            var controller = new TestLoginController();
+            controller.init(fw);
+            controller.UseModel(users);
+
+            if (expected)
+                Assert.ThrowsExactly<RedirectException>(() => controller.SaveAction());
+            else
+                controller.SaveAction();
+
+            Assert.AreEqual(expected, users.DevLookupCalled);
+            Assert.AreEqual(expected ? 9 : 0, fw.userId);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", oldAspnet);
+            Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", oldDotnet);
+        }
     }
 
     [TestMethod]
@@ -417,6 +497,8 @@ public class SecurityQuickFixTests
     private static FW createFw(IDictionary<string, string?>? settings = null)
     {
         var fw = TestHelpers.CreateFw(settings);
+        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
+        fw.settings.init(fw);
         fw.is_log_events = false;
         return fw;
     }

@@ -1,169 +1,112 @@
 # Site Settings
 
-Site Settings are database-backed application settings stored in the `settings` table and managed from `/Admin/Settings`. Use them for values that an administrator may need to change after deployment, such as feature flags, limits, provider choices, and integration configuration.
+Site Settings are operational values stored in the `settings` table and managed at `/Admin/Settings`. Deployment/bootstrap configuration stays in `appsettings*.json`; framework defaults belong in `FwConfig`, application defaults and policy in `FwHooks.configure`, and model-specific constants with their model.
 
-Use `appsettings*.json` or environment-specific hosting configuration for values that must be available before the database is online or should remain machine-local. Site Settings are loaded through the normal model/database path and are visible to admins with access to the settings screen.
+## Model ownership
 
-## Runtime API
+`fw/FwSettings.cs` is the abstract framework model for storage, validation, encryption, transfer and application caching. `models/Settings.cs` inherits it and owns application-specific helpers, constants and `applyGlobals()`. Keep copied-app customizations in Settings; framework updates replace the shared core implementation. New setting codes normally need metadata/seed rows and consumers, not model overrides.
 
-Read and write values through the `Settings` model:
+`fw.settings` lazily returns the same concrete Settings instance as `fw.model<Settings>()`, scoped to the current FW lifetime. It adds no second cache or eager database reads. All runtime consumers use the application model, so its overrides remain effective. Startup protection configuration uses `FwSettings.configureProtection`. Existing `Settings.Row`, `Settings.ValueChange`, `Settings.Transfer`, constants and inherited static methods remain available to source consumers.
+
+The core `invalidate()` method clears shared/request caches; Settings overrides it to reset its display-globals flag. Further overrides must call base. The Row definition now lives in FwSettings; the optional application Row regenerator skips Settings because it has no directly declared Row to rewrite.
+
+## Runtime API and defaults
 
 ```csharp
-var settings = fw.model<Settings>();
-
-string value = settings.read("SETTING_CODE");
-string valueOrDefault = settings.read("SETTING_CODE", "default");
-int legacyInt = settings.readi("SETTING_CODE");
-bool enabled = settings.readBool("FEATURE_ENABLED");
-int limit = settings.readInt("MAX_ITEMS", 25);
-long bytes = settings.readLong("MAX_BYTES", 5_242_880);
-object? startDate = settings.readd("START_DATE");
-
-settings.write("SETTING_CODE", "new value");
+var settings = fw.settings;
+var name = settings.read("SITE_NAME");
+var enabled = settings.readBool("ASSISTANT_ENABLED");
+var limit = settings.readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", 5);
+var password = settings.readSecret("mail.password");
+settings.write("CUSTOM_CODE", "new value");
 ```
 
-Important behaviors:
+Reads use an application-level FwCache map keyed by the actual database connection identity. The map contains stored ciphertext, not decrypted credentials. The snapshot has no timed expiry; supported model writes and imports invalidate it immediately, together with dependent menu data. The next read reloads it once; later requests reuse it until another change, explicit cache clear, eviction, or application restart. One in-process lock coordinates loading and writes. Direct SQL changes require an application-pool restart or explicit invalidation. There is no distributed cache.
 
-- `read(icode)` returns an empty string when the row is missing or the value is empty.
-- `read(icode, defaultValue)` uses the default when the stored value is empty.
-- `readBool`, `readInt`, and `readLong` convert from the stored string value and return the supplied default for an empty value.
-- `write(icode, value)` updates an existing row by `icode`; if the row does not exist, it inserts a minimal row with `icode`, `ivalue`, and `is_user_edit=0`.
-- For settings that should appear cleanly in `/Admin/Settings`, seed a full row instead of relying on `write()` auto-creation.
+`basis=0` means inherit the owning default; `basis=1` means use the stored value, including an intentional empty string. Missing rows also inherit. `read(code)` uses `getDefault(code)` (normally `fw.config(code)`) as its default, including dotted keys for nested shared configuration; partial nested configuration preserves unspecified defaults; `read(code, fallback)` supplies an explicit caller default. Customize shared application defaults in the pure, DB-independent `FwHooks.configure` hook. Feature-only defaults are resolved by the application Settings.getDefault override, shared by consumers and the editor. It references existing feature constants where available; SMTP uses port 587 and TLS enabled, and S3 uses `sdk` credential mode. These defaults remain outside FW globals. Integer readers use their supplied fallback for invalid/empty numbers. This replaces the old empty-string-always-means-default behavior.
 
-## Schema
+Runtime reads and model writes are trusted system operations, not authorization entrypoints. Controllers must authorize user operations. `readSecret` is the explicit DB-only API for credential consumers. Missing or inherited credentials mean "not configured"; no configuration or caller fallback is used for credential rows. Explicit stored empty values remain empty, and database/decryption failures still propagate. Generic model rows expose ciphertext; never place a secret runtime read in template globals or page state.
 
-The canonical schema is in `osafw-app/App_Data/sql/fwdatabase.sql`, with provider variants under `osafw-app/App_Data/sql/mysql/` and `osafw-app/App_Data/sql/sqlite/`.
+`write` updates by stable code or creates a non-user-editable row, restricted to Site Admin by default. Seed full metadata for any setting intended for the editor. Use `writeBatch` for coupled values such as an AWS key pair.
+
+## Schema and controls
 
 | Column | Contract |
 | --- | --- |
-| `id` | Identity primary key used by the admin edit route. |
-| `icat` | Category shown as tabs on the admin list. Empty string is rendered as `Site`. |
-| `icode` | Unique stable setting code. Runtime code should read settings by this value. |
-| `ivalue` | Stored value. The framework treats it as text and callers convert to the type they need. |
-| `iname` | Human-facing name shown in the admin list and edit form. |
-| `idesc` | Help text shown under the setting name on the edit form. |
-| `input` | Admin form input type selector. See "Admin inputs" below. |
-| `allowed_values` | Control metadata. Option controls use space-separated `value|Label` tokens; number/range controls use key/value tokens such as `min|1 max|100 step|1`. Use `&nbsp;` inside labels that need spaces. |
-| `is_user_edit` | Metadata flag for whether administrators are expected to edit the setting. Current `AdminSettingsController` does not enforce it. |
-| `add_time`, `add_users_id`, `upd_time`, `upd_users_id` | Standard audit columns populated through model insert/update paths. |
+| `icode` | Unique stable runtime code. Renaming requires consumer migration. |
+| `icat`, `iname`, `idesc` | Category, label, and help text. |
+| `ivalue` | Text, or versioned application-encrypted ciphertext for credentials. |
+| `input` | Control type; 90 classifies a recoverable credential. |
+| `allowed_values` | Space-separated `value\|Label` options, or numeric `min\|1 max\|100 step\|1` metadata. Use `&nbsp;` inside labels. Text controls may declare `local_url\|1` to require an app-local URL. |
+| `is_user_edit` | Ordinary editor changes require this flag. |
+| `access_level` | Minimum numeric user level; route permission and RBAC still apply. |
+| `mask` | Display policy, independent of the input control. |
+| `basis` | 0: inherit; 1: explicit value. |
+| audit columns | Standard add/update time and actor metadata. |
 
-`icode` is unique and `icat` is indexed. Choose `icode` names as stable public configuration keys; changing them breaks any code that reads the old key.
+Input codes remain 0 text, 10 textarea, 20 select, 21 multiselect, 30 checkbox group, 40 radio, 50 date, 60 number, 70 switch, 80 range, and 90 credential. Option membership and numeric constraints are validated on the server, including import.
 
-## Admin Module
+Mask codes are 0 normal, 10 hidden, 20 first/last characters, 30 suffix, and 40 hidden with an authorized Reveal action. Short values do not expose fragments. Credentials cannot use normal display, and always require Site Admin. Only `input=90` classifies a credential: no setting name or suffix implies encryption. Declare custom sensitive settings as credentials before writing values; masking alone does not encrypt a value.
 
-`AdminSettingsController` inherits the normal admin list and form flow, with these settings-specific rules:
+## Admin behavior
 
-- Route: `/Admin/Settings`.
-- Access: `Users.ACL_ADMIN`.
-- Model: `Settings`.
-- Search fields: `icode`, `iname`, and `ivalue`.
-- Default sort: `iname asc`.
-- Category tabs come from `Settings.listCategories()` and filter on `settings.icat`.
-- The add route redirects back to the list. Settings are intended to be seeded by schema/update scripts or by runtime code.
-- Save updates only `ivalue`; it does not allow changing `icode`, category, input type, labels, or descriptions from the admin form.
-- Most controls require a submitted `ivalue`. Switches save `0` when omitted; checkbox and multi-select controls may save an empty string; blank credential submissions keep the stored value unchanged.
-- Delete is blocked with `Site Settings cannot be deleted`.
-- Saving clears the `main_menu` cache key.
+Ordinary Admins (90) can see only rows whose floor permits them. Site Admins (100) manage credentials, SMTP, AWS, and other restricted settings. Existing role-based route/action checks apply in addition to the numeric floor; RBAC cannot grant access below that floor. List filtering applies before counts and category discovery. Generic CSV export, quick-search and inherited mutations are not available for this module.
 
-Credential settings are redacted in the admin list. Other settings display a truncated `ivalue`, so do not put secrets in non-credential settings unless the operational model accepts that admins with this screen can inspect and edit them.
+Normal Save cannot edit metadata or a non-editable row. Secret inputs never contain the current value. Credential controls offer Keep, Replace, and Clear. Non-credential settings also offer application-default inheritance; an existing inherited credential is shown as "Not configured". A Reveal action is available only for rows configured with that mask policy. All sensitive actions use POST and the framework XSS token; plaintext responses disable browser caching. The default production logging policy omits submitted values, and Settings changes use value-free audit records. Explicit local `log_pii`/DEBUG logging and development error pages retain full diagnostic values. Sentry excludes Settings request bodies and cookies.
 
-## Admin Inputs
+Coupled values can be changed atomically through the trusted model `writeBatch` API. Settings stores credential rows independently; integration-specific requirements belong to the consuming model. SDK mode uses the normal SDK identity chain.
 
-The `input` column chooses which form partial renders `ivalue`:
+SMTP and AWS are edited through their category tabs, using the same row editors as other settings. The former grouped SaveEmail/SaveAWS endpoints and templates were removed before release. Selecting Server authentication uses the AWS SDK chain (EC2 role, environment or server profile) and ignores saved keys without deleting them; Saved uses the encrypted key rows. SMTP testing is available below the Email list to Site Admins, uses the runtime delivery policy, and returns errors through the standard index message area.
 
-| `input` | Partial | Current behavior |
-| --- | --- | --- |
-| `0` | `input_input.html` | Single-line text input. |
-| `10` | `input_textarea.html` | Multi-line textarea. |
-| `20` | `input_select.html` | Single select from `allowed_values`; submitted values must match an allowed option. |
-| `21` | `input_selectmulti.html` | Multi-select from `allowed_values`; selected values are stored as a comma-separated string. |
-| `30` | `input_checkbox.html` | Checkbox group from `allowed_values`; checked option values are stored as a stable comma-separated string. |
-| `40` | `input_radio.html` | Radio group from `allowed_values`; submitted values must match an allowed option. |
-| `50` | `input_date.html` | Date input with the shared calendar helper; value is formatted through the template date formatter. |
-| `60` | `input_number.html` | HTML number input. The controller validates that `ivalue` is numeric and matches configured min, max, and step metadata before saving. |
-| `70` | `input_switch.html` | Bootstrap 5 switch. Checked saves `1`; unchecked saves `0`. |
-| `80` | `input_range.html` | Range slider plus direct number input. The controller validates number, min, max, and step metadata. |
-| `90` | `input_credential.html` | Textarea for credentials. The current value is never shown in the textarea; blank save keeps the existing value. |
+Export and file import use the standard page-header action slot and remain Site Admin-only. Custom-value plain text, select, number and switch rows have compact inline forms using the existing framework autosave: text/number edits save on blur and select/switch changes save automatically; complex/masked/credential rows use Edit. Default values appear as read-only text in the list. To customize one, open Edit, choose Set a custom value, enter the value and Save; supported controls then become editable in the list. Use default restores the standard value shown in the editor. Existing Save authorization, validation and XSS checks apply; The shared page-header saved status and standard autosave errors apply; failed edits remain available for correction. Complex/masked values retain the full editor.
 
-Option controls read `allowed_values` as space-separated tokens:
+The full editor shows application defaults read-only, with the row mask applied, and disables the saved-value controls until Set a custom value is selected. A failed save preserves the submitted source. `FwSettings.getDefault(code)` is a database-free extension point; the application Settings override owns the SMTP port/TLS and AWS-mode fallbacks and references the Assistant models' existing constants, and runtime consumers use the same resolution. Configured overrides win; explicitly supplied fallback parameters retain their existing semantics. Credential defaults never expose configuration secrets. These defaults are not copied to template globals.
 
-```txt
-auto|Auto json|JSON native|Native
-```
+## Encryption and durable keys
 
-For labels containing spaces, encode spaces as `&nbsp;`:
+Credential values are encrypted before database writes using ASP.NET Core Data Protection, a purpose containing the setting code, and the durable `fwkeys` repository. On Windows, DPAPI wraps key material for the local machine. Database SELECTs and backups contain ciphertext rather than the credential value. This does not protect against a compromised application process or an administrator who controls both host and database.
 
-```txt
-safe|Safe&nbsp;Mode fast|Fast
-```
+`DATA_PROTECTION_APPLICATION_NAME` is a stable deployment identity, independent of editable `SITE_NAME`. Preserve its value across normal upgrades. When upgrading an older application, set it to that application's previous effective SITE_NAME before using existing protected data. Keys are retained; age alone is not grounds to delete keys needed by stored values. Credential protection fails closed on repository read/write failure. Session-cookie protection tolerates an unavailable database during initial setup; its temporary keys are never used by the Settings credential provider.
 
-Number and range controls read `allowed_values` as metadata:
+Protection helpers live on the `FwSettings` base model: startup uses `FwSettings.configureProtection(services, config, isRequired: false)` for session cookies; Settings uses its own cached strict provider with the same database repository, and trusted callers can use `fw.settings.protect(code, value)`, `fw.settings.unprotect(code, value)`, and `FwSettings.markSensitiveRequest()`. Normal persistence should use model writes, which encrypt plaintext once and invalidate caches. Never pass already-protected values to a plaintext write API.
 
-```txt
-min|1 max|100 step|1
-```
+Encryption does not replace diagnostic hygiene. Do not log decrypted values or transfer payloads in application-specific code. The framework records value-free audit information.
 
-Credential controls are masking/editing controls only. They do not encrypt the stored value; administrators with database access can still read `settings.ivalue`.
+## Transfer and server moves
 
-## Test Email Recipient
+Site Admin's Export downloads one JSON file containing every stored setting value and basis, including decrypted credentials and non-editable values. There is no options dialog or preview. Import validates the file and known codes, then writes all supplied values in one transaction, encrypting credentials with the destination key ring. Definitions, permissions, mask policies, labels, and other metadata remain controlled by destination code/schema. Unspecified codes are unchanged; duplicate/unknown codes or invalid values reject the whole import. The transfer limit is 1 MiB.
 
-The framework seeds the editable text setting `test_email` in the `Email` category. When `appSettings.is_test=true`, `FW.sendEmail()` selects its delivery recipient in this order:
+The export is intentionally plaintext: store it privately and remove it after use. It does not contain DB connection/bootstrap configuration or the key ring. A SQL script cannot substitute for Import because it cannot perform destination application encryption.
 
-1. Trim and use the database-backed `test_email` Site Setting when it is non-empty.
-2. Otherwise, trim and use `appSettings.test_email`.
-3. If the selected value is empty or `current_user`, use the logged-in user's session email.
+For a planned move:
 
-An explicit Site Setting value of `current_user` therefore overrides a configured application-level address. Administrators can clear the text setting to restore the application-config fallback. The settings lookup uses the normal database path; a database failure fails the send rather than being treated as a missing setting.
+1. Export on the old working host before losing access to its keys.
+2. Stop the old app pool and back up the database and deployment configuration.
+3. Prepare the destination schema and local authentication so a Site Admin can sign in without external OAuth/SMTP.
+4. If restoring the old database on a different Windows machine, its DPAPI-wrapped keys cannot be used there. With the old pool stopped and the backup/export secured, deliberately clear only Data Protection rows (`fwkeys.itype=10`) in the destination copy. This invalidates old protected sessions/tokens; do not clear keys during routine upgrades or while the old app is serving the same DB.
+5. Start the destination with its stable application identity. It generates a new local key ring. Sign in locally and Import the JSON; all credentials are re-encrypted on that host.
+6. Verify sign-in, SMTP, integrations, and runtime settings before serving traffic.
 
-Test mode continues to replace the original To address and suppress original CC/BCC delivery. The original To value is appended to the test message body for diagnostics under the existing email logging and PII controls.
+A database backup alone cannot recover encrypted credentials after the old machine's protection keys are lost. An unreadable credential can be replaced through Settings; it is never silently treated as blank.
 
-## Adding A Setting
+## Optional external secrets
 
-For a new framework setting, update every provider's from-scratch schema and add an idempotent update script for existing databases when needed.
+Site Settings remains the store for existing OAuth/API/SMTP credentials. Optional `FwSecretsManager.read(reference)` is a separate, process-cached integration for applications that explicitly need AWS Secrets Manager. It does not depend on this table or its credentials. `FwConfig.getDatabaseSettings` resolves external database references before creating DB objects; DB remains independent of the secret source. See [deployment configuration and external-secret usage](deploy.md#named-database-connections).
 
-From-scratch schemas:
+## Database-free pages
 
-- SQL Server: `osafw-app/App_Data/sql/fwdatabase.sql`
-- MySQL: `osafw-app/App_Data/sql/mysql/fwdatabase.sql`
-- SQLite: `osafw-app/App_Data/sql/sqlite/fwdatabase.sql`
+Home and `/Dev/Configure` render with the defaults in `FwConfig`/`FwHooks` when the configured database is unavailable or uninitialized. Date/time formatting, language and timezone remain configuration defaults. `FW.G` starts as a deep copy of configuration except the `db` and `override` sections, which may contain database credentials. Custom non-secret configuration remains available to templates; integration credentials belong only in Settings and are read at their consumers.
 
-Existing database updates:
+`Settings.applyGlobals()` applies site name, contact addresses and UI appearance once per request from the shared application cache. It preserves session theme/mode preferences. Web and email rendering call it; unavailable storage leaves the bootstrap defaults. The small display-setting list belongs to the Settings model, with no such list or load flag in FW. Redirects, MFA and sender settings are read at their own consumers; developer documentation passes MFA/sender values in page state. Use `FwHooks.initRequest` for additional safe app-wide values, or controller page state for feature-specific values. Never put credentials in either.
 
-- SQL Server: `osafw-app/App_Data/sql/updates/`
-- MySQL: `osafw-app/App_Data/sql/mysql/updates/`
-- SQLite: `osafw-app/App_Data/sql/sqlite/updates/`
+The existing SQL Server session provider tolerates unavailable storage; sessions are not usable until the database is ready. Session keys remain database-backed. There are no key files or new session fallback infrastructure. Development InitDB keeps its existing dev-mode/POST guard and session-token check when a token exists; no separate bootstrap token system is introduced.
 
-SQL Server idempotent insert pattern:
+## Fresh installation and upgrade
 
-```sql
-INSERT INTO settings (is_user_edit, input, icat, icode, ivalue, iname, idesc)
-SELECT 1, 0, 'Features', 'FEATURE_ENABLED', '0', 'Feature Enabled', 'Set to 1 to enable the feature.'
-WHERE NOT EXISTS (SELECT 1 FROM settings WHERE icode='FEATURE_ENABLED');
-```
+Provider `settings.sql` files own framework setting definitions and shipped values, with no credentials. Run after framework/application schema and before optional demo data. The shared initializer in `models/Dev/DevCli.cs` includes this step for both the CLI and `/Dev/Configure`; the controller applies its web guards and calls DevCli.initializeDatabase(fw) directly. Demo-only settings remain in `demo.sql`.
 
-Use provider-appropriate idempotent syntax in MySQL and SQLite update scripts, such as `INSERT IGNORE` or `INSERT OR IGNORE`.
+Existing databases use the provider's additive `updates/upd2026-09-27-settings-foundation.sql`, never the destructive fresh schema. The update preserves existing values, adds metadata and missing definitions, and does not attempt application encryption in SQL. SQL Server is primary; SQLite has disposable integration coverage; the optional MySQL script does not imply full framework schema parity.
 
-When choosing metadata:
+Complete the application-specific data migration before starting the upgraded runtime or enabling traffic. The [agent migration guide](agents/migrations/settings.md) maps old JSON values, metadata, plaintext credentials, and copied-app consumers to the current contracts. There is no built-in migration command, migration endpoint, automatic migration on read, or special legacy MFA minimum. Existing values that should remain effective must be migrated explicitly.
 
-- Set `is_user_edit=1` for settings intended for admin editing.
-- Pick a short `icat` that groups related settings. Leave it empty for the default Site tab.
-- Keep `iname` and `idesc` precise enough for admins to edit without code context.
-- Store canonical values in `ivalue`, such as `0`/`1` for booleans and integer strings for limits.
-- Use `input=90` for API keys, tokens, and similar credentials that should not be echoed on list/edit screens.
-- Keep defaults in sync between seeded rows and any runtime fallback passed to `read(..., defaultValue)`.
-
-## Common Pitfalls
-
-- Missing rows silently read as empty strings. Use typed reads with explicit defaults when a missing setting should not disable a feature accidentally.
-- `write()` can create settings that have no label, category, or admin input metadata. Seed administrator-facing settings explicitly.
-- `is_user_edit` is not an authorization check. Restrict sensitive settings by route access, controller changes, or a dedicated configuration path.
-- A blank credential save preserves the old value. Add a dedicated clear control if a setting needs administrator-driven clearing.
-- If changing settings affects cached UI or derived state, clear the relevant cache keys after writes. The built-in admin save path only clears `main_menu`.
-
-## Environment selection
-
-Startup passes `builder.Environment.EnvironmentName` to `FwConfig.setDefaultOverrideName` before reading framework settings or running the developer CLI. This uses the host's actual resolved environment, including its hosting and command-line rules.
-
-Outside the built-in startup, set the default override before initializing FW when the host has already resolved its environment. Otherwise the framework checks trimmed `ASPNETCORE_ENVIRONMENT`, then trimmed `DOTNET_ENVIRONMENT`, then uses no named environment override. Passing null or whitespace to the setter restores that fallback. Call the setter during initialization, before concurrent requests begin.
-
-The selection belongs to the active `FwConfig.beginScope()` lifetime; nested scopes start independently and restore their parent's selection on disposal. Changing the selection clears that scope's host settings cache. Do not change the selection while dependent FW instances are in use: their configuration reads use the active scope, while their globals were cloned at construction. Explicit trusted hostname overrides and host validation continue to work as before.
+When upgrading copied applications, move their policy customizations into FwHooks and change operational readers to Settings. Preserve custom setting definitions and intentional overrides. Follow the old-to-new map in [CHANGELOG](CHANGELOG.md); Codex-assisted migration still needs application acceptance checks.

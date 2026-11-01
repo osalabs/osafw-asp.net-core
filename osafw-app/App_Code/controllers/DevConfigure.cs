@@ -33,14 +33,15 @@ public class DevConfigureController : FwController
         FwDict ps = [];
 
         ps["hide_sidebar"] = true;
-        var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        ps["ASPNETCORE_ENVIRONMENT"] = aspnet_env;
+        ps["ASPNETCORE_ENVIRONMENT"] = FwConfig.getEnvironmentName();
         ps["config_file_name"] = fw.config("config_override");
-        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
+        // Named overrides are optional and can have a different name from the runtime environment.
+        ps["is_config_env"] = true;
 
         ps["is_db_config"] = false;
         var configdb = (FwDict?)fw.config("db");
-        if (configdb?["main"] is FwDict mainDb && !Utils.isEmpty(mainDb?["connection_string"]))
+        if (configdb?["main"] is FwDict mainDb
+            && (!Utils.isEmpty(mainDb["connection_string"]) || mainDb.ContainsKey("connection_string_secret")))
             ps["is_db_config"] = true;
 
         DB db;
@@ -113,30 +114,6 @@ public class DevConfigureController : FwController
     }
 
     /// <summary>
-    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
-    /// </summary>
-    private void dropExistingForeignKeys()
-    {
-        if (db.dbtype != DB.DBTYPE_SQLSRV)
-            return;
-
-        db.exec($@"
-DECLARE @sql NVARCHAR(MAX) = N'';
-
-SELECT @sql += N'ALTER TABLE '
-    + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
-    + N'.'
-    + QUOTENAME(OBJECT_NAME(parent_object_id))
-    + N' DROP CONSTRAINT '
-    + QUOTENAME(name)
-    + N';'
-FROM sys.foreign_keys;
-
-IF LEN(@sql) > 0
-    EXEC sp_executesql @sql");
-    }
-
-    /// <summary>
     /// Initializes a development database from the bundled SQL scripts so a fresh clone can run the demo app.
     /// </summary>
     /// <returns>
@@ -149,44 +126,7 @@ IF LEN(@sql) > 0
 
         enforcePost();
 
-        return initDatabase();
-    }
-
-    /// <summary>
-    /// Runs the development database initialization scripts after request-level bootstrap guards pass.
-    /// </summary>
-    /// <returns>Template data containing the generated admin password when one or more SQL statements executed.</returns>
-    protected virtual FwDict initDatabase()
-    {
-        FwDict ps = [];
-        int sql_ctr = 0;
-        var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
-        dropExistingForeignKeys();
-        string[] files = ["fwdatabase.sql", "database.sql", "demo.sql", "lookups.sql", "views.sql"];
-        foreach (string file in files)
-        {
-            var sql_file = Path.Combine(sql_root, file);
-            logger("Checking sql file:", sql_file);
-            if (File.Exists(sql_file))
-            {
-                logger("Executing sql file:", sql_file);
-                sql_ctr += db.execMultipleSQL(Utils.getFileContent(sql_file));
-            }
-        }
-
-        // This bootstrap request may have cached tables as missing before the DDL scripts created them.
-        db.clearSchemaCache();
-
-        logger("Executed SQL count:", sql_ctr);
-        if (sql_ctr > 0)
-        {
-            //if some scripts executed generate admin password
-            var pwd = Utils.getRandStr(8);
-            fw.model<Users>().update(1, DB.h("pwd", pwd));
-            ps["pwd"] = pwd;
-        }
-
-        return ps;
+        return DevCli.initializeDatabase(fw);
     }
 
     public FwDict? PendingUpdatesAction()
