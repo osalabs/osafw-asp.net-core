@@ -79,7 +79,6 @@ public class FW : IDisposable
         [ACTION_MORE_DELETE] = ACTION_MORE_DELETE,
     };
     private ParsePage? pp_instance; // for parsePage()
-    private bool isSettingsGlobalsLoaded;
     private bool isRenderingError;
 
     public FwDict FORM = [];
@@ -279,16 +278,10 @@ public class FW : IDisposable
             db = getDB();
             DB.SQL_QUERY_CTR = 0; // reset query counter
 
-            // Only shared presentation values enter globals; server configuration stays in config().
-            G = [];
-            foreach (var key in Utils.qw(
-                "hostname ROOT_URL ROOT_DOMAIN ASSETS_URL SITE_NAME SITE_VERSION PROJECT_CODE app_version_stamp " +
-                "IS_DEV is_test IS_SIGNUP lang date_format time_format timezone " +
-                "feedback_email support_email is_list_btn_left ui_theme ui_mode " +
-                "PAGE_LAYOUT PAGE_LAYOUT_PUBLIC PAGE_LAYOUT_PJAX PAGE_LAYOUT_PJAX_NOJS " +
-                "PAGE_LAYOUT_MODAL PAGE_LAYOUT_MIN PAGE_LAYOUT_PRINT PAGE_LAYOUT_EMAIL PAGE_LAYOUT_VUE " +
-                "AWSRegion S3Bucket"))
-                G[key] = config(key);
+            // Database definitions can contain credentials, including inside host overrides.
+            G = Utils.cloneHashDeep(config()) ?? [];
+            G.Remove("db");
+            G.Remove("override");
 
             // per request settings
             G["request_url"] = request?.GetDisplayUrl() ?? "";
@@ -941,36 +934,6 @@ public class FW : IDisposable
         FORM = f;
     }
 
-    /// <summary>
-    /// Loads non-secret site settings only when a rendered response needs them. The request
-    /// constructor stays DB-independent; unavailable display overrides retain configured defaults during bootstrap.
-    /// </summary>
-    private void ensureSettingsGlobals()
-    {
-        if (isSettingsGlobalsLoaded || isRenderingError)
-            return;
-
-        isSettingsGlobalsLoaded = true;
-        try
-        {
-            var settings = model<Settings>();
-            G["SITE_NAME"] = settings.read("SITE_NAME");
-            G["feedback_email"] = settings.read("feedback_email");
-            G["support_email"] = settings.read("support_email");
-            G["is_list_btn_left"] = settings.readBool("is_list_btn_left");
-
-            if (string.IsNullOrEmpty(Session("ui_theme")))
-                G["ui_theme"] = settings.readInt("ui_theme");
-            if (string.IsNullOrEmpty(Session("ui_mode")))
-                G["ui_mode"] = settings.readInt("ui_mode");
-        }
-        catch (Exception)
-        {
-            // These presentation overrides are optional; operational Settings reads still report database failures.
-            logger(LogLevel.WARN, "Site display settings are unavailable; using configured defaults.");
-        }
-    }
-
     public void logger(params object?[] args)
     {
         if (args.Length == 0)
@@ -1019,7 +982,8 @@ public class FW : IDisposable
     /// <param name="layoutOverride">Explicit layout from the parser overload, or null to use controller/request defaults.</param>
     private void renderPage(string basedir, FwDict ps, string? layoutOverride)
     {
-        ensureSettingsGlobals();
+        if (!isRenderingError)
+            model<Settings>().applyGlobals();
 
         ps = new FwDict(ps, ps.Comparer);
         if (layoutOverride != null)
@@ -1250,7 +1214,8 @@ public class FW : IDisposable
 
     public string parsePage(string basedir, string layout, FwDict ps)
     {
-        ensureSettingsGlobals();
+        if (!isRenderingError)
+            model<Settings>().applyGlobals();
         logger(LogLevel.DEBUG, "parsing page bdir=", basedir, ", tpl=", layout);
         ParsePage parser_obj = parsePageInstance();
         return parser_obj.parse_page(basedir, layout, ps);

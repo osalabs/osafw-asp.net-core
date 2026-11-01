@@ -536,7 +536,9 @@ public class SecurityDynamicObjectLinkTests
         fw.config()["template"] = Path.Combine(repoRoot(), "osafw-app", "App_Data", "template");
         users.init(fw);
         TestHelpers.RegisterModel(fw, (Users)users);
-        TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
+        var settings = new StubSettings();
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
         return fw;
     }
 

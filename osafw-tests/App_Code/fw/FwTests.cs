@@ -272,31 +272,27 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void Constructor_DoesNotProjectBootstrapOrCredentialConfigurationIntoGlobals()
+        public void Constructor_ClonesCustomConfigurationWithoutDatabaseDefinitions()
         {
-            var configuration = new System.Collections.Generic.Dictionary<string, string?>
+            var configuration = new Dictionary<string, string?>
             {
                 ["appSettings:db:main:connection_string"] = "Server=secret.example;Password=db-secret;",
                 ["appSettings:db:main:type"] = "SQL",
-                ["appSettings:mail:password"] = "smtp-secret",
-                ["appSettings:AWSAccessKey"] = "access-secret",
-                ["appSettings:AWSSecretKey"] = "aws-secret",
-                ["appSettings:OPENAI_API_KEY"] = "openai-secret",
-                ["appSettings:API_KEY"] = "api-secret",
-                ["appSettings:CUSTOM_SERVICE_TOKEN"] = "custom-secret",
-                ["appSettings:override:Other:mail:password"] = "nested-secret",
+                ["appSettings:override:Other:db:main:connection_string"] = "Server=other.example;Password=other-secret;",
+                ["appSettings:custom:title"] = "Application title",
             };
             using var scope = new FwTestScope(_ => new RejectingDb(), configuration);
+            var fw = scope.Fw;
 
-            Assert.IsFalse(scope.Fw.G.ContainsKey("db"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("override"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("mail"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("AWSAccessKey"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("AWSSecretKey"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("OPENAI_API_KEY"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("API_KEY"));
-            Assert.IsFalse(scope.Fw.G.ContainsKey("CUSTOM_SERVICE_TOKEN"));
-            Assert.IsTrue(scope.Fw.config().ContainsKey("db"));
+            Assert.IsFalse(fw.G.ContainsKey("db"));
+            Assert.IsFalse(fw.G.ContainsKey("override"));
+            Assert.IsTrue(fw.config().ContainsKey("db"));
+            Assert.IsTrue(fw.config().ContainsKey("override"));
+
+            var globals = (FwDict)fw.G["custom"]!;
+            Assert.AreEqual("Application title", globals["title"]);
+            globals["title"] = "Request title";
+            Assert.AreEqual("Application title", fw.config("custom.title"));
         }
 
         [TestMethod]
@@ -332,8 +328,8 @@ namespace osafw.Tests
             string loginHelp = fw.parsePage("/login/index", "login_problem.html", []);
             StringAssert.Contains(loginHelp, "mailto:support@stored.test");
 
-            Assert.IsFalse(fw.G.ContainsKey("mail_from"));
-            Assert.IsFalse(fw.G.ContainsKey("is_mfa_enforced"));
+            Assert.AreEqual(fw.config("mail_from"), fw.G["mail_from"]);
+            Assert.AreEqual(fw.config("is_mfa_enforced"), fw.G["is_mfa_enforced"]);
             Assert.AreEqual(fw.config("timezone"), fw.G["timezone"]);
         }
 

@@ -18,11 +18,14 @@ public class FwCache
     }
 
     /// <summary>
-    /// Stores a cache value, defaulting expiration to 3600 seconds.
+    /// Stores a cache value, defaulting expiration to 3600 seconds. Zero disables timed expiration; removal, eviction and cache clear still apply.
     /// </summary>
     public static void setValue(string key, object? value, int expire_seconds = 3600)
     {
-        MemoryCache.Set(key, value, TimeSpan.FromSeconds(expire_seconds));
+        if (expire_seconds == 0)
+            MemoryCache.Set(key, value);
+        else
+            MemoryCache.Set(key, value, TimeSpan.FromSeconds(expire_seconds));
     }
 
     // remove one key from cache

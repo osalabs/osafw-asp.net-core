@@ -14,7 +14,7 @@ Inventory effective values for each environment and supported named/host overrid
 | `appSettings.mail.host`, `.port`, `.is_ssl`, `.username`, `.password` | `mail.host`, `mail.port`, `mail.is_ssl`, `mail.username`, `mail.password` setting codes |
 | `AWSAccessKey`, `AWSSecretKey` | Credential rows plus `AWS_CREDENTIAL_SOURCE=static` for a complete static pair; `sdk` selects the SDK identity chain |
 | API credentials and custom secrets | Explicit credential metadata (`input=90`), then protected model writes with `basis=1`; consumers use DB-only `readSecret`, with no configuration fallback |
-| Custom `GLOBAL[...]` templates relying on automatic config copying | Populate safe shared values through `FwHooks.initRequest` using `fw.G`, or move feature-only values into controller page state; server config remains available through `fw.config` |
+| Custom `GLOBAL[...]` templates relying on automatic config copying | Non-secret config still copies automatically; `db` and `override` do not. Remove secret config keys during migration; read credentials only at their consumer. Feature-specific values can use controller page state |
 | `FwSettingsProtection` consumers from an intermediate branch | `Settings.configureProtection`, `Settings.protect`, `Settings.unprotect`, `Settings.markSensitiveRequest` |
 | Intermediate migration helper, guards, CLI, or browser action | Remove after completing this one-time migration; no compiled replacement |
 
