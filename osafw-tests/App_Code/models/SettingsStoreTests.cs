@@ -1,5 +1,8 @@
 #if isSQLite
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Internal;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections;
@@ -9,6 +12,7 @@ using System.IO;
 namespace osafw.Tests;
 
 [TestClass]
+[DoNotParallelize]
 public class SettingsStoreTests
 {
     [TestMethod]
@@ -137,21 +141,80 @@ public class SettingsStoreTests
         assertValuesUnchanged(fixture);
     }
 
-    [TestMethod]
-    public void SnapshotLoadsOnceUntilCommittedWriteInvalidatesIt()
+    private sealed class CacheClock : ISystemClock
     {
-        using var fixture = new SettingsFixture();
-        var id = fixture.Seed("ordinary", Settings.INPUT_TEXT, "before");
+        public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
+    }
 
-        Assert.AreEqual("before", fixture.Model.getValue("ordinary"));
-        Assert.AreEqual("before", fixture.Model.getValue("ordinary"));
-        Assert.AreEqual(1, fixture.Db.SettingsArrayCalls);
+    [TestMethod]
+    [DataRow("update")]
+    [DataRow("batch")]
+    [DataRow("import")]
+    public void SnapshotIsSharedAcrossRequestsUntilWriteInvalidatesIt(string writePath)
+    {
+        var clock = new CacheClock();
+        using var cache = new MemoryCache(new MemoryCacheOptions { Clock = clock });
+        var previousCache = FwCache.MemoryCache;
+        FwCache.MemoryCache = cache;
+        try
+        {
+            using var fixture = new SettingsFixture(uiMode: 1);
+            var id = fixture.Seed("SITE_NAME", Settings.INPUT_TEXT, "Before");
+            fixture.Seed("ui_mode", Settings.INPUT_NUMBER, "2");
 
-        fixture.Model.update(id, DB.h("ivalue", "after", "basis", Settings.BASIS_VALUE));
+            fixture.Model.applyGlobals();
+            fixture.Model.applyGlobals();
+            Assert.AreEqual("Before", fixture.Fw.G["SITE_NAME"]);
+            Assert.AreEqual("1", fixture.Fw.G["ui_mode"]);
+            Assert.AreEqual(1, fixture.Db.SettingsArrayCalls);
 
-        Assert.AreEqual("after", fixture.Model.getValue("ordinary"));
-        Assert.AreEqual("after", fixture.Model.getValue("ordinary"));
-        Assert.AreEqual(2, fixture.Db.SettingsArrayCalls);
+            // Verify that time advances for timed entries while the Settings snapshot survives.
+            FwCache.setValue("timed-control", "expires");
+            clock.UtcNow += TimeSpan.FromDays(7);
+            Assert.IsNull(FwCache.getValue("timed-control"));
+            var dbConfig = (FwDict)((FwDict)fixture.Fw.config("db")!)["main"]!;
+            var nextDb = new CountingSqliteDb(dbConfig);
+            using (var request = new FwTestScope(_ => nextDb))
+            {
+                var settings = request.Fw.model<Settings>();
+                settings.applyGlobals();
+                Assert.AreEqual("Before", request.Fw.G["SITE_NAME"]);
+                Assert.AreEqual(2, request.Fw.G["ui_mode"]);
+                Assert.AreEqual("Before", settings.read("SITE_NAME"));
+                Assert.AreEqual(0, nextDb.SettingsArrayCalls);
+            }
+
+            switch (writePath)
+            {
+                case "update":
+                    fixture.Model.update(id, DB.h("ivalue", "After", "basis", Settings.BASIS_VALUE));
+                    break;
+                case "batch":
+                    fixture.Model.writeBatch([
+                        new Settings.ValueChange { icode = "SITE_NAME", basis = Settings.BASIS_VALUE, ivalue = "After" }
+                    ]);
+                    break;
+                case "import":
+                    fixture.Model.importJson("""
+                        {"version":1,"settings":[{"icode":"SITE_NAME","basis":1,"ivalue":"After"}]}
+                        """);
+                    break;
+            }
+
+            var readsAfterWrite = fixture.Db.SettingsArrayCalls;
+            fixture.Model.applyGlobals();
+            Assert.AreEqual("After", fixture.Fw.G["SITE_NAME"]);
+            var refreshedDb = new CountingSqliteDb(dbConfig);
+            using var refreshed = new FwTestScope(_ => refreshedDb);
+            refreshed.Fw.model<Settings>().applyGlobals();
+            Assert.AreEqual("After", refreshed.Fw.G["SITE_NAME"]);
+            Assert.AreEqual(0, refreshedDb.SettingsArrayCalls);
+            Assert.AreEqual(readsAfterWrite + 1, fixture.Db.SettingsArrayCalls);
+        }
+        finally
+        {
+            FwCache.MemoryCache = previousCache;
+        }
     }
 
     [TestMethod]
@@ -248,8 +311,9 @@ public class SettingsStoreTests
 
         public CountingSqliteDb Db { get; }
         public Settings Model { get; }
+        public FW Fw => scope.Fw;
 
-        public SettingsFixture()
+        public SettingsFixture(int? uiMode = null)
         {
             path = Path.Combine(Path.GetTempPath(), "osafw-settings-" + Guid.NewGuid().ToString("N") + ".sqlite");
             var connectionString = new SqliteConnectionStringBuilder
@@ -286,6 +350,8 @@ public class SettingsStoreTests
                 """);
             Db.exec("CREATE TABLE fwkeys (id INTEGER PRIMARY KEY AUTOINCREMENT, itype INTEGER NOT NULL, iname TEXT NOT NULL, XmlValue TEXT NOT NULL, upd_time DATETIME)");
             var context = TestHelpers.CreateHttpContext("settings-tests");
+            if (uiMode.HasValue)
+                context.Session.SetString("ui_mode", uiMode.Value.toStr());
             scope = new FwTestScope(
                 name => name == "main" ? Db : throw new InvalidOperationException("Unknown DB name."),
                 new Dictionary<string, string?>

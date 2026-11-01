@@ -2,10 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
-- `summary-2026-10-31-settings-globals.md` - Separated DB-only credentials from shared configuration, traced template globals and feature consumers, and reviewed PR 300 against the original goals.
-- `summary-2026-10-31-settings-pr300-cleanup.md` - Replaced Settings action allowlisting with overrides, simplified validation/display paths and formatting, and focused unapplied SQL updates.
-- `summary-2026-10-31-settings-bootstrap-review.md` - In progress: database-free bootstrap decision, generic Settings validation, shared Admin checks, SQL style and readable methods.
-- `summary-2026-10-31-settings-simplification.md` - Simplified the Settings PR stack around the existing model, centralized defaults, removed runtime migration code, and documented explicit app preparation and offline upgrades.
+- `summary-2026-10-31-settings.md` - Consolidated Settings PR feedback: model ownership, DB-free bootstrap, credential controls, configuration globals, shared initialization and invalidation-driven application caching.
 - `summary-2026-10-23-fpf-refresh.md` - Adopted the latest FPF edition, migrated the existing local cache, clarified exact references and method use, and added one optional procedure/capability/support route in instruction pack 1.13.2.
 - `summary-2026-10-21-nuget-refresh.md` - Updated all outdated stable NuGet references, patched Negotiate, and passed default/optional builds, audits, and 207 isolated tests.
 - `summary-2026-10-21-vue-button-boolean.md` - Exported Vue row-button alignment as a server Boolean, preserved simple frontend overrides, and passed server/browser regressions and live login/reload checks after rebuild.
