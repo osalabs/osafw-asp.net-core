@@ -217,14 +217,7 @@ public class FW : IDisposable
         if (dbFactory != null)
             db = dbFactory(config_name) ?? throw new InvalidOperationException("The DB factory returned null.");
         else
-        {
-            var dbconfig = config("db") as FwDict ?? [];
-            FwDict conf = dbconfig[config_name] as FwDict ?? [];
-            var resolvedConf = conf.ContainsKey("connection_string_secret")
-                ? FwDbConnections.Shared.Resolve(conf, config_name)
-                : conf;
-            db = new DB(resolvedConf, config_name);
-        }
+            db = new DB(FwConfig.getDatabaseSettings(config(), config_name), config_name);
 
         dbInstances.Add(db);
         db.is_log_pii = config("log_pii").toBool();

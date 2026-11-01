@@ -89,6 +89,10 @@ For a planned move:
 
 A database backup alone cannot recover encrypted credentials after the old machine's protection keys are lost. An unreadable credential can be replaced through Settings; it is never silently treated as blank.
 
+## Optional external secrets
+
+Site Settings remains the store for existing OAuth/API/SMTP credentials. Optional `FwSecretsManager.read(reference)` is a separate, process-cached integration for applications that explicitly need AWS Secrets Manager. It does not depend on this table or its credentials. `FwConfig.getDatabaseSettings` resolves external database references before creating DB objects; DB remains independent of the secret source. See [deployment configuration and external-secret usage](deploy.md#named-database-connections).
+
 ## Database-free pages
 
 Home and `/Dev/Configure` render with the defaults in `FwConfig`/`FwHooks` when the configured database is unavailable or uninitialized. Date/time formatting, language and timezone remain configuration defaults. `FW.G` starts as a deep copy of configuration except the `db` and `override` sections, which may contain database credentials. Custom non-secret configuration remains available to templates; integration credentials belong only in Settings and are read at their consumers.

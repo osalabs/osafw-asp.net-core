@@ -603,8 +603,7 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
     /// <summary>Registers the database key store; only session-cookie protection may tolerate missing storage during bootstrap.</summary>
     public static void configureProtection(IServiceCollection services, FwDict settings, bool isRequired = true)
     {
-        var definition = (settings["db"] as FwDict)?["main"] as FwDict ?? [];
-        definition = FwDbConnections.Shared.Resolve(definition, "main");
+        var definition = FwConfig.getDatabaseSettings(settings);
         var name = settings["DATA_PROTECTION_APPLICATION_NAME"].toStr();
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException("DATA_PROTECTION_APPLICATION_NAME must be configured before using protected data.");

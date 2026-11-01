@@ -32,6 +32,12 @@
   </PropertyGroup>
   -->
 
+  <!-- AWS Secrets Manager. Package reference and provider code are included only when enabled.
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);isSecretsManager</DefineConstants>
+  </PropertyGroup>
+  -->
+
   <!-- Role/resource permission checks. Initialize roles.sql when enabling this.
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);isRoles</DefineConstants>
@@ -65,7 +71,7 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.Core" Version="4.0.102.13" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.104.6" />
-    <PackageReference Include="AWSSDK.SecretsManager" Version="4.0.100.12" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="4.0.100.12" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSecretsManager($|;)'))" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.1" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageReference Include="Markdig" Version="1.4.2" />

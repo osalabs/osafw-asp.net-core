@@ -61,6 +61,8 @@ For existing applications, use the [one-time Settings migration instructions](ag
 
 ### Named Database Connections
 
+Secrets Manager is optional and disabled by default. Enable `isSecretsManager` in `osafw-app.csproj` to include the AWS implementation and `AWSSDK.SecretsManager` package. The ordinary build contains neither that package nor the AWS retrieval/cache implementation; it retains a clear configuration error if an AWS reference is used without the feature. Existing S3/Core references are unchanged.
+
 Every connection is named under `appSettings.db`, including `main` and any application-specific connections. A definition uses either an inline `connection_string` or an external `connection_string_secret`, never both:
 
 ```json
@@ -70,6 +72,7 @@ Every connection is named under `appSettings.db`, including `main` and any appli
       "main": {
         "type": "SQL",
         "timezone": "",
+        "connection_string": "",
         "connection_string_secret": {
           "provider": "aws-secrets-manager",
           "secret_id": "production/app/sql-main",
@@ -81,7 +84,28 @@ Every connection is named under `appSettings.db`, including `main` and any appli
 }
 ```
 
-The AWS secret string is the complete connection string. `region` is optional when the AWS SDK can resolve it from the host. The framework fetches each external secret once per application process and shares the cached value between startup and later named-connection use. Restart the IIS application pool after rotating the secret. Prefer an EC2 instance role over static AWS credentials.
+The empty `connection_string` explicitly overrides any inline value inherited from the base configuration. Non-empty inline and external sources together are rejected. The AWS secret string must be the complete, non-empty connection string; JSON fields are not assembled into a connection string. `region` is optional when the AWS SDK can resolve it from the host. Prefer an EC2 instance role; the SDK credential chain is independent of AWS credentials stored in Site Settings, which cannot bootstrap access to their own database.
+
+`FwConfig.getDatabaseSettings(settings, name)` resolves a copy of the named definition for startup sessions, Data Protection and `FW.getDB(name)`. The source configuration and template globals never receive the resolved value. `DB` itself accepts ordinary connection information and knows nothing about external providers. Applications constructing `DB` directly from a secret-backed definition must first use this configuration helper.
+
+Successful secret strings are cached in private process memory by region and secret ID until the IIS application pool restarts. Concurrent cold reads share one fetch; failures are not cached and a later read can retry. The cache is independent of general FwCache clearing and does not add a refresh timer, distributed cache or caching package. Restart after changing a secret or its identity/region configuration. If a required external secret cannot be resolved, startup or the requesting operation fails with a value-free error; it never silently substitutes another credential source.
+
+### Other External Secrets
+
+Existing OAuth/API/SMTP credentials stay in Site Settings. A copied application can explicitly opt into the same helper for another secret:
+
+```csharp
+string value = FwSecretsManager.read(new FwDict
+{
+    ["provider"] = "aws-secrets-manager",
+    ["secret_id"] = "production/app/custom-integration",
+    ["region"] = "us-east-1",
+});
+```
+
+The helper returns the secret string unchanged, including JSON or an empty string; the consumer owns format validation. Binary secrets are unsupported. Do not log returned values or put them in template globals. The public reference shape is provider-neutral: adding Azure Key Vault later requires its optional implementation and reference options, but callers using this entry point or the database configuration helper need not change. Azure is not implemented by this PR. There is no automatic external fallback for Settings reads.
+
+AWS documents [SDK retrieval and caching](https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets-net-sdk.html) and the [credential chain](https://docs.aws.amazon.com/sdk-for-net/v4/developer-guide/creds-assign.html).
 
 ### Data Protection Identity
 

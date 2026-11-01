@@ -39,6 +39,32 @@ public static class FwConfig
         return value;
     }
 
+    /// <summary>
+    /// Returns a copy of one named database definition, resolving connection_string_secret when configured.
+    /// The source configuration is unchanged. The returned connection string is confidential and must not
+    /// be logged or placed in template globals. Inline definitions do not access an external provider.
+    /// </summary>
+    public static FwDict getDatabaseSettings(FwDict settings, string name = "main")
+    {
+        var definition = (settings["db"] as FwDict)?[name] as FwDict ?? [];
+        var result = new FwDict(definition);
+        if (!definition.ContainsKey("connection_string_secret"))
+            return result;
+
+        if (!string.IsNullOrWhiteSpace(definition["connection_string"].toStr()))
+            throw new InvalidOperationException($"Database '{name}' defines both connection_string and connection_string_secret.");
+        if (definition["connection_string_secret"] is not FwDict reference)
+            throw new InvalidOperationException($"Database '{name}' requires a connection_string_secret reference object.");
+
+        string value = FwSecretsManager.read(reference);
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidOperationException($"Database '{name}' resolved an empty connection string.");
+
+        result["connection_string"] = value;
+        result.Remove("connection_string_secret");
+        return result;
+    }
+
     // The ordinary application shares state; explicit scopes get independent settings and caches.
     private sealed class ConfigurationState
     {

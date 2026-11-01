@@ -55,9 +55,8 @@ public static class Program
         var isDevelopmentEnv = settings["IS_DEV"].toBool();
 
         // Retrieve main DB connection info
-        var dbSection = settings["db"] as FwDict ?? [];
-        var mainDB = dbSection["main"] as FwDict ?? [];
-        var connStr = FwDbConnections.Shared.Resolve(mainDB, "main")["connection_string"].toStr();
+        var mainDB = FwConfig.getDatabaseSettings(settings);
+        var connStr = mainDB["connection_string"].toStr();
         var dbType = mainDB["type"].toStr();
         if (string.IsNullOrEmpty(connStr) || string.IsNullOrEmpty(dbType))
             throw new ApplicationException("Main DB configuration is missing");
