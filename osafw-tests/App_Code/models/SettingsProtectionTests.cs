@@ -43,7 +43,7 @@ public class SettingsProtectionTests
             }, context);
 
             Assert.ThrowsExactly<System.Security.Cryptography.CryptographicException>(
-                () => scope.Fw.model<Settings>().protect("credential", "test-value"));
+                () => scope.Fw.settings.protect("credential", "test-value"));
         }
         finally
         {

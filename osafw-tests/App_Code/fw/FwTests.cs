@@ -59,6 +59,57 @@ namespace osafw.Tests
             public override DBRow oneByIcode(string icode) => throw new System.InvalidOperationException("settings unavailable");
         }
 
+        private sealed class ApplicationSettings : Settings
+        {
+            public int GlobalsCalls { get; private set; }
+
+            public override string read(string code) => code == "custom.title" ? "Application value" : "";
+
+            public override void applyGlobals()
+            {
+                GlobalsCalls++;
+                fw.G["SITE_NAME"] = "Application site";
+            }
+        }
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void SettingsShortcutSharesInitializedModelWithoutDatabaseReads(bool shortcutFirst)
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb());
+            var fw = scope.Fw;
+
+            var first = shortcutFirst ? fw.settings : fw.model<Settings>();
+
+            Assert.AreSame(first, fw.settings);
+            Assert.AreSame(first, fw.model<Settings>());
+            Assert.AreSame(first, fw.model(typeof(Settings)));
+            Assert.AreSame(first, fw.model(nameof(Settings)));
+            Assert.AreSame(fw.db, first.getDB());
+        }
+
+        [TestMethod]
+        public void SettingsShortcutUsesApplicationOverridesAndExistingModelRegistration()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            {
+                ["appSettings:template"] = TestHelpers.TemplateRoot(),
+            });
+            var fw = scope.Fw;
+            _ = fw.settings;
+            var applicationSettings = new ApplicationSettings();
+            applicationSettings.init(fw);
+            TestHelpers.RegisterModel(fw, (Settings)applicationSettings);
+
+            Assert.AreSame(applicationSettings, fw.settings);
+            Assert.AreEqual("Application value", fw.settings.read("custom.title"));
+            string email = fw.parsePage("/emails", "signup.txt", []);
+
+            StringAssert.Contains(email, "Application site");
+            Assert.AreEqual(1, applicationSettings.GlobalsCalls);
+        }
+
         public sealed class RuntimeTypeModel : FwModel
         {
             public int InitCalls { get; private set; }
@@ -209,7 +260,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-configured");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " configured@example.test " });
-            fw.model<Settings>().init(fw);
+            fw.settings.init(fw);
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("configured@example.test", fw.resolveTestEmailRecipient());
@@ -220,7 +271,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-session-fallback");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-            fw.model<Settings>().init(fw);
+            fw.settings.init(fw);
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -231,7 +282,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-site-setting");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " site@example.test " });
-            fw.model<Settings>().init(fw);
+            fw.settings.init(fw);
             fw.Session("login", "session@example.test");
 
             Assert.AreEqual("site@example.test", fw.resolveTestEmailRecipient());
@@ -242,7 +293,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-current-user");
             TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " current_user " });
-            fw.model<Settings>().init(fw);
+            fw.settings.init(fw);
             fw.Session("login", " session@example.test ");
 
             Assert.AreEqual("session@example.test", fw.resolveTestEmailRecipient());
@@ -253,7 +304,7 @@ namespace osafw.Tests
         {
             var fw = CreateFwForHost("test-email-settings-failure");
             TestHelpers.RegisterModel(fw, (Settings)new ThrowingSettings());
-            fw.model<Settings>().init(fw);
+            fw.settings.init(fw);
 
             var error = Assert.ThrowsExactly<System.InvalidOperationException>(() => fw.resolveTestEmailRecipient());
 

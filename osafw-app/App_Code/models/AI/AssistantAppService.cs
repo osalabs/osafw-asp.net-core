@@ -24,7 +24,7 @@ public sealed class AssistantAppService
 
     public AssistantRuntimeStatus RuntimeStatus()
     {
-        bool isAssistantEnabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
+        bool isAssistantEnabled = fw.settings.readBool("ASSISTANT_ENABLED");
         bool isAssistantTablesReady = isTablesReady();
         bool isOpenAiConfigured = fw.model<LLM>().isConfigured();
         bool isWorkerEnabled = fw.config("ASSISTANT_WORKER_ENABLED").toBool();
@@ -660,7 +660,7 @@ public sealed class AssistantAppService
 
     private void validateAssistantFiles(IList<IFormFile> files)
     {
-        int maxFiles = Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", DEFAULT_MAX_FILES_PER_MESSAGE));
+        int maxFiles = Math.Max(1, fw.settings.readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", DEFAULT_MAX_FILES_PER_MESSAGE));
         int count = files.Count(file => file != null && file.Length > 0);
         if (count > maxFiles)
             throw new UserException("Upload up to " + maxFiles + " files per assistant message.");

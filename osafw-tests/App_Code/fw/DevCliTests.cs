@@ -334,7 +334,7 @@ public class DevCliTests
             fw.db.exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, icode TEXT, ivalue TEXT, input INTEGER, basis INTEGER)");
             fw.db.insert("settings", DB.h("id", 1, "icode", "SITE_NAME", "ivalue", "Before database reset",
                 "input", Settings.INPUT_TEXT, "basis", Settings.BASIS_VALUE));
-            var settings = fw.model<Settings>();
+            var settings = fw.settings;
             settings.applyGlobals();
             Assert.AreEqual("Before database reset", fw.G["SITE_NAME"]);
 

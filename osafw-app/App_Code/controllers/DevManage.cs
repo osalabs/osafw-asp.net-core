@@ -124,8 +124,8 @@ public class DevManageController : FwController
 
         var ps = new FwDict();
         ps["is_rbac"] = fw.model<Users>().isRoles();
-        ps["is_mfa_enforced"] = fw.model<Settings>().readBool("is_mfa_enforced");
-        ps["mail_from"] = fw.model<Settings>().read("mail_from");
+        ps["is_mfa_enforced"] = fw.settings.readBool("is_mfa_enforced");
+        ps["mail_from"] = fw.settings.read("mail_from");
         ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
 
         ps["isS3"] = S3.IS_ENABLED;

@@ -10,13 +10,15 @@ Inventory effective values for each environment and supported named/host overrid
 | --- | --- |
 | Database definitions, host trust, deployment identity, storage, worker switches, logging/hosting | `appsettings*.json`; environment files preferred, existing named/host overrides supported |
 | Route/XSS policy, signup, API origin, timezone, application defaults | Pure, DB-independent `FwHooks.configure(FwDict)`; framework fallbacks stay in `FwConfig` |
-| Site name, redirect defaults, contact/sender/test email, MFA policy, UI defaults | Settings rows with the same stable codes; runtime consumers use `fw.model<Settings>()` |
+| Site name, redirect defaults, contact/sender/test email, MFA policy, UI defaults | Settings rows with the same stable codes; runtime consumers use `fw.settings` |
 | `appSettings.mail.host`, `.port`, `.is_ssl`, `.username`, `.password` | `mail.host`, `mail.port`, `mail.is_ssl`, `mail.username`, `mail.password` setting codes |
 | `AWSAccessKey`, `AWSSecretKey` | Credential rows plus `AWS_CREDENTIAL_SOURCE=static` for a complete static pair; `sdk` selects the SDK identity chain |
 | API credentials and custom secrets | Explicit credential metadata (`input=90`), then protected model writes with `basis=1`; consumers use DB-only `readSecret`, with no configuration fallback |
 | Custom `GLOBAL[...]` templates relying on automatic config copying | Non-secret config still copies automatically; `db` and `override` do not. Remove secret config keys during migration; read credentials only at their consumer. Feature-specific values can use controller page state |
-| `FwSettingsProtection` consumers from an intermediate branch | `Settings.configureProtection`, `Settings.protect`, `Settings.unprotect`, `Settings.markSensitiveRequest` |
+| `FwSettingsProtection` consumers from an intermediate branch | `FwSettings.configureProtection`, `fw.settings.protect`, `fw.settings.unprotect`, `FwSettings.markSensitiveRequest` |
 | Intermediate migration helper, guards, CLI, or browser action | Remove after completing this one-time migration; no compiled replacement |
+
+When adopting the model split, include `fw/FwSettings.cs`, make the application Settings model inherit FwSettings, and retain application helpers and `applyGlobals()` in Settings. Remove duplicate old framework storage/protection implementations while preserving intentional application behavior. `fw.settings` is the preferred lookup; `fw.model<Settings>()` and inherited Settings DTO/constants/static APIs remain source-compatible. Preserve the existing protection purpose, prefix and application identity; this class move requires no credential rewrite or SQL update.
 
 Read nested JSON as nested objects and map mail fields to dotted setting codes; do not rename the JSON fields blindly. For non-credential settings, `Settings.read(code)` inherits `fw.config(code)`, including dotted lookup, for a missing row or `basis=0`. Credential reads never fall back to configuration, and inherited credentials are unconfigured. SMTP and AWS-mode consumers own their non-secret defaults (587/TLS enabled and `sdk`). An explicit caller fallback overrides that default. Use `readSecret(code)` for trusted credential consumers; never project decrypted credentials into generic page state.
 
@@ -32,8 +34,8 @@ Read nested JSON as nested objects and map mail fields to dotted setting codes; 
 A temporary app-specific offline tool can construct the reviewed changes and call the existing model boundary. The following fragment assumes `fw` already targets the authorized database with durable protection configured; the variables come from a secure, app-specific source:
 
 ```csharp
-Settings.markSensitiveRequest();
-var settings = fw.model<Settings>();
+FwSettings.markSensitiveRequest();
+var settings = fw.settings;
 settings.writeBatch([
     new Settings.ValueChange {
         icode = "mail.host", basis = Settings.BASIS_VALUE,

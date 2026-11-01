@@ -922,7 +922,7 @@ public class AdminSettingsControllerTests
             var users = new StubUsers();
             users.init(Fw);
             TestHelpers.RegisterModel(Fw, (Users)users);
-            Model = Fw.model<Settings>();
+            Model = Fw.settings;
             Model.is_log_changes = false;
             Controller = new AdminSettingsController();
             Controller.init(Fw);

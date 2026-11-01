@@ -159,7 +159,7 @@ public class FwSelfTest
         }
 
         // emails set
-        var settings = fw.model<Settings>();
+        var settings = fw.settings;
         var mailFrom = settings.read("mail_from");
         var supportEmail = settings.read("support_email");
         is_notempty("mail_from", mailFrom);

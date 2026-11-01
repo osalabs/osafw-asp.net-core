@@ -55,7 +55,7 @@ public class DocumentEmbeddingService
     /// </summary>
     public long MaxIndexedFileBytes()
     {
-        maxIndexedFileBytes ??= Math.Max(1, fw.model<Settings>().readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DEFAULT_MAX_INDEXED_FILE_BYTES));
+        maxIndexedFileBytes ??= Math.Max(1, fw.settings.readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES", DEFAULT_MAX_INDEXED_FILE_BYTES));
         return maxIndexedFileBytes.Value;
     }
 
@@ -332,7 +332,7 @@ public class DocumentEmbeddingService
 
     private async Task<string> generateKBAttachmentSummaryAsync(FwDict article, List<ParsedAttachmentDocument> documents, CancellationToken cancellationToken)
     {
-        string model = fw.model<Settings>().read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+        string model = fw.settings.read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
         if (string.IsNullOrWhiteSpace(model))
             model = LLM.MODEL_GPT5_MINI;
 
@@ -486,12 +486,12 @@ public class DocumentEmbeddingService
 
     private int maxIndexChars()
     {
-        return Math.Max(1000, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHARS", DEFAULT_MAX_INDEX_CHARS));
+        return Math.Max(1000, fw.settings.readInt("ASSISTANT_MAX_INDEX_CHARS", DEFAULT_MAX_INDEX_CHARS));
     }
 
     private int maxIndexChunks()
     {
-        return Math.Max(1, fw.model<Settings>().readInt("ASSISTANT_MAX_INDEX_CHUNKS", DEFAULT_MAX_INDEX_CHUNKS));
+        return Math.Max(1, fw.settings.readInt("ASSISTANT_MAX_INDEX_CHUNKS", DEFAULT_MAX_INDEX_CHUNKS));
     }
 
     private string resolveAttachmentPath(FwDict att)

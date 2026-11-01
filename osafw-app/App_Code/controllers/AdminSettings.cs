@@ -29,9 +29,9 @@ public class AdminSettingsController : FwAdminController
 
     public override void init(FW fw)
     {
-        Settings.markSensitiveRequest();
+        FwSettings.markSensitiveRequest();
         base.init(fw);
-        model = fw.model<Settings>();
+        model = fw.settings;
         model0 = model;
 
         base_url = "/Admin/Settings";

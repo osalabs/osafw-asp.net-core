@@ -105,7 +105,7 @@ public class MainController : FwController
         FwDict one;
         FwDict panes = [];
         ps["panes"] = panes;
-        bool isAssistantEnabled = fw.model<Settings>().readBool("ASSISTANT_ENABLED");
+        bool isAssistantEnabled = fw.settings.readBool("ASSISTANT_ENABLED");
         ps["is_assistant_enabled"] = isAssistantEnabled;
 
         const int DIFF_DAYS = -7;

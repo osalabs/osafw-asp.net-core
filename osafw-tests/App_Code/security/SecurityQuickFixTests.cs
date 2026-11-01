@@ -429,7 +429,7 @@ public class SecurityQuickFixTests
     {
         var fw = TestHelpers.CreateFw(settings);
         TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
-        fw.model<Settings>().init(fw);
+        fw.settings.init(fw);
         fw.is_log_events = false;
         return fw;
     }

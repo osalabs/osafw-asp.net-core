@@ -165,7 +165,7 @@ public class AdminSettingsRbacTests
             Fw.FORM = new FwDict { ["XSS"] = "token" };
             SetRoute(FW.ACTION_SHOW);
 
-            Fw.model<Settings>().is_log_changes = false;
+            Fw.settings.is_log_changes = false;
 
             Controller = new AdminSettingsController();
             Controller.init(Fw);
