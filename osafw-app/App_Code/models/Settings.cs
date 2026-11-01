@@ -233,25 +233,27 @@ public class Settings : FwModel<Settings.Row>
 
     private string effective(FwDict row, string defaultValue)
     {
-        if (row.Count == 0 || row["basis"].toInt(BASIS_VALUE) == BASIS_INHERIT)
+        if (row.Count == 0)
             return defaultValue;
+        if (row["basis"].toInt(BASIS_VALUE) == BASIS_INHERIT)
+            return isCredential(row) ? "" : defaultValue;
 
         var value = row["ivalue"].toStr();
         return isCredential(row) ? unprotect(row["icode"].toStr(), value) : value;
     }
 
-    /// <summary>Reads a credential for a trusted runtime consumer, never for generic page-state projection.</summary>
+    /// <summary>Reads a stored credential for a trusted runtime consumer. Missing/inherited credentials are unconfigured; configuration is never a fallback.</summary>
     public virtual string readSecret(string code)
     {
         markSensitiveRequest();
         var row = oneByIcode(code);
         if (row.Count == 0)
-            return fw.config(code).toStr();
+            return "";
 
         if (!isCredential(row))
             throw new InvalidOperationException("The setting is not defined as a credential.");
 
-        return effective(row, fw.config(code).toStr());
+        return effective(row, "");
     }
 
     public static bool isCredential(FwDict row)
@@ -269,7 +271,7 @@ public class Settings : FwModel<Settings.Row>
     public string display(FwDict row)
     {
         if (row["basis"].toInt(BASIS_VALUE) == BASIS_INHERIT)
-            return "Use default";
+            return isCredential(row) ? "Not configured" : "Use default";
 
         var mask = maskPolicy(row);
         try

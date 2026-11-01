@@ -11,6 +11,8 @@ namespace osafw.Tests
     {
         private class StubUsers : Users
         {
+            public override FwDict getRBAC(int? users_id = null, string? resource_icode = null) => [];
+
             public override DBRow one(int id) => new DBRow(new FwDict
             {
                 ["id"] = id.toStr(),
@@ -38,6 +40,18 @@ namespace osafw.Tests
                     ? new DBRow(new FwDict { ["ivalue"] = TestEmail })
                     : [];
             }
+        }
+
+        private sealed class DisplaySettings : Settings
+        {
+            public override DBRow oneByIcode(string code) => code switch
+            {
+                "SITE_NAME" => new DBRow(DB.h("ivalue", "Stored site")),
+                "support_email" => new DBRow(DB.h("ivalue", "support@stored.test")),
+                "mail_from" => new DBRow(DB.h("ivalue", "sender@stored.test")),
+                "is_mfa_enforced" => new DBRow(DB.h("ivalue", "1")),
+                _ => [],
+            };
         }
 
         private sealed class ThrowingSettings : Settings
@@ -269,6 +283,7 @@ namespace osafw.Tests
                 ["appSettings:AWSSecretKey"] = "aws-secret",
                 ["appSettings:OPENAI_API_KEY"] = "openai-secret",
                 ["appSettings:API_KEY"] = "api-secret",
+                ["appSettings:CUSTOM_SERVICE_TOKEN"] = "custom-secret",
                 ["appSettings:override:Other:mail:password"] = "nested-secret",
             };
             using var scope = new FwTestScope(_ => new RejectingDb(), configuration);
@@ -280,7 +295,73 @@ namespace osafw.Tests
             Assert.IsFalse(scope.Fw.G.ContainsKey("AWSSecretKey"));
             Assert.IsFalse(scope.Fw.G.ContainsKey("OPENAI_API_KEY"));
             Assert.IsFalse(scope.Fw.G.ContainsKey("API_KEY"));
+            Assert.IsFalse(scope.Fw.G.ContainsKey("CUSTOM_SERVICE_TOKEN"));
             Assert.IsTrue(scope.Fw.config().ContainsKey("db"));
+        }
+
+        [TestMethod]
+        public void PresentationGlobalsPreserveRealLayoutEmailAndCspConsumers()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            {
+                ["appSettings:template"] = TestHelpers.TemplateRoot(),
+                ["appSettings:SITE_NAME"] = "Configured site",
+                ["appSettings:SITE_VERSION"] = "42",
+                ["appSettings:ASSETS_URL"] = "/static",
+                ["appSettings:ROOT_DOMAIN"] = "https://example.test",
+                ["appSettings:AWSRegion"] = "us-east-1",
+                ["appSettings:S3Bucket"] = "public-images",
+            }, TestHelpers.CreateHttpContext("example.test"));
+            var fw = scope.Fw;
+            var settings = new DisplaySettings();
+            settings.init(fw);
+            TestHelpers.RegisterModel(fw, (Settings)settings);
+
+            // Email parsing also loads current site display values, without a preceding web render.
+            string email = fw.parsePage("/emails", "signup.txt", []);
+            StringAssert.Contains(email, "Stored site");
+            StringAssert.Contains(email, "https://example.test");
+            Assert.IsFalse(email.Contains("Configured site", System.StringComparison.Ordinal));
+
+            string layout = fw.parsePage("/home/index", fw.G["PAGE_LAYOUT_PUBLIC"].toStr(), []);
+            StringAssert.Contains(layout, "Stored site");
+            StringAssert.Contains(layout, "/static/img/logo.png");
+            StringAssert.Contains(layout, "?v42");
+            string csp = fw.parsePage("/layout", "content_security_policy.html", []);
+            StringAssert.Contains(csp, "public-images.s3.us-east-1.amazonaws.com");
+            string loginHelp = fw.parsePage("/login/index", "login_problem.html", []);
+            StringAssert.Contains(loginHelp, "mailto:support@stored.test");
+
+            Assert.IsFalse(fw.G.ContainsKey("mail_from"));
+            Assert.IsFalse(fw.G.ContainsKey("is_mfa_enforced"));
+            Assert.AreEqual(fw.config("timezone"), fw.G["timezone"]);
+        }
+
+        [TestMethod]
+        public void DeveloperDocumentationReadsFeatureSettingsIntoPageState()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            {
+                ["appSettings:template"] = TestHelpers.TemplateRoot(),
+                ["appSettings:is_mfa_enforced"] = "false",
+            }, TestHelpers.CreateHttpContext());
+            var fw = scope.Fw;
+            fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
+            var settings = new DisplaySettings();
+            settings.init(fw);
+            TestHelpers.RegisterModel(fw, (Settings)settings);
+            var users = new StubUsers();
+            users.init(fw);
+            TestHelpers.RegisterModel(fw, (Users)users);
+            var controller = new DevManageController();
+            controller.init(fw);
+
+            var ps = controller.DocsAction()!;
+            string overview = fw.parsePage("/dev/manage/docs", "tab_overview.md", ps);
+
+            Assert.IsTrue(ps["is_mfa_enforced"].toBool());
+            StringAssert.Contains(overview, "sender@stored.test");
+            StringAssert.Contains(overview, "Authentication (MFA) enforced:** Yes");
         }
 
         [TestMethod]

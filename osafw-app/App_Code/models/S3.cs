@@ -118,7 +118,7 @@ public class S3 : FwModel
     {
         var settings = fw.model<Settings>();
         var isExplicitCredentials = !string.IsNullOrEmpty(access_key) || !string.IsNullOrEmpty(secret_key);
-        var credentialSource = isExplicitCredentials ? "static" : settings.read("AWS_CREDENTIAL_SOURCE");
+        var credentialSource = isExplicitCredentials ? "static" : settings.read("AWS_CREDENTIAL_SOURCE", "sdk");
         string akey = "";
         string skey = "";
         if (credentialSource.Equals("static", StringComparison.OrdinalIgnoreCase))

@@ -638,7 +638,7 @@ Cherry
 
 
 - `<~session[var]>` - this tag is a SESSION variable, not in PS hashtable (for PHP it's $_SESSION, for ASP.NET it's current context's HttpSessionState object)
-- `<~global[var]>` - this tag is a global var, not in PS hashtable (for PHP it's $_GLOBALS, for ASP.NET it depends on framework global storage implementation). Special globals `ROOT_URL` and `ROOT_DOMAIN` are always available.
+- `<~global[var]>` reads `FW.G`, separate from page state. Framework globals contain explicitly selected presentation values and request state; arbitrary `fw.config()` keys are not copied into them. Use the existing `FwHooks.initRequest` to add safe app-wide values to `fw.G`, or controller page state for feature-specific values. Never add credentials. Global keys are case-sensitive (`lang`, `support_email`); `ROOT_URL` and `ROOT_DOMAIN` are also available as special standalone tags.
 
 ### Commenting tags
 

@@ -30,6 +30,38 @@ public class SettingsStoreTests
     }
 
     [TestMethod]
+    public void CredentialsNeverInheritConfigurationOrCallerDefaults()
+    {
+        using var fixture = new SettingsFixture();
+        const string code = "CUSTOM_INTEGRATION_TOKEN";
+        FwConfig.GetCurrentSettings()[code] = "configuration-secret";
+
+        Assert.AreEqual("", fixture.Model.readSecret(code));
+        var id = fixture.Seed(code, Settings.INPUT_CREDENTIAL);
+        fixture.Model.update(id, DB.h("basis", Settings.BASIS_INHERIT));
+
+        Assert.AreEqual("", fixture.Model.readSecret(code));
+        Assert.AreEqual("", fixture.Model.read(code));
+        Assert.AreEqual("", fixture.Model.read(code, "caller-secret"));
+        Assert.AreEqual("Not configured", fixture.Model.display(fixture.Model.one(id)));
+
+        fixture.Model.update(id, DB.h("basis", Settings.BASIS_VALUE, "ivalue", "stored-secret"));
+        Assert.AreEqual("stored-secret", fixture.Model.readSecret(code));
+        fixture.Model.update(id, DB.h("ivalue", ""));
+        Assert.AreEqual("", fixture.Model.readSecret(code));
+    }
+
+    [TestMethod]
+    public void NonCredentialRowsCannotBeReadAsCredentials()
+    {
+        using var fixture = new SettingsFixture();
+        fixture.Seed("ordinary", Settings.INPUT_TEXT, "visible");
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => fixture.Model.readSecret("ordinary"));
+        Assert.AreEqual("visible", fixture.Model.read("ordinary"));
+    }
+
+    [TestMethod]
     public void ExportImportAcrossDifferentProtectorsReencryptsCredential()
     {
         string transfer;

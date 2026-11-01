@@ -53,6 +53,12 @@ public class FwEmailTests
         }
     }
 
+    private sealed class DefaultSettings(bool isInherited) : Settings
+    {
+        public override DBRow oneByIcode(string code) => isInherited
+            ? new DBRow(DB.h("basis", BASIS_INHERIT)) : [];
+    }
+
     private sealed class TestAdminSendEmailController : AdminSendEmailController
     {
         public void MakeReadOnly() => is_readonly = true;
@@ -342,6 +348,36 @@ public class FwEmailTests
         Assert.IsTrue(server.ConnectionAccepted);
         CollectionAssert.AreEqual(new[] { "<recipient@example.test>" }, server.Recipients);
         Assert.IsFalse(scope.Fw.FORM["item"] is FwDict item && item.ContainsKey("password"));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AdminSendEmail_RendersConsumerDefaultsForMissingOrInheritedSettings(bool isInherited)
+    {
+        using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+        {
+            ["appSettings:template"] = TestHelpers.TemplateRoot(),
+        }, TestHelpers.CreateHttpContext());
+        var fw = scope.Fw;
+        var settings = new DefaultSettings(isInherited);
+        settings.init(fw);
+        TestHelpers.RegisterModel(fw, (Settings)settings);
+        TestHelpers.RegisterModel(fw, (Users)new StubUsers());
+        fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
+        fw.route.method = "GET";
+        var controller = new AdminSendEmailController();
+        controller.init(fw);
+
+        var ps = controller.ShowFormAction();
+        var item = (FwDict)ps["i"]!;
+        string html = fw.parsePage("/admin/sendemail/showform", "form_right.html", ps);
+
+        Assert.AreEqual(587, item["port"].toInt());
+        Assert.IsTrue(item["is_ssl"].toBool());
+        StringAssert.Contains(html, "value=\"587\"");
+        StringAssert.Contains(html, "checked");
+        Assert.IsFalse(item.ContainsKey("password"));
     }
 
     [TestMethod]

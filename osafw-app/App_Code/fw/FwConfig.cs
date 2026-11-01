@@ -39,15 +39,6 @@ public static class FwConfig
         return value;
     }
 
-    /// <summary>Copies presentation configuration without bootstrap connections or integration credentials.</summary>
-    internal static FwDict templateSettings()
-    {
-        var globals = Utils.cloneHashDeep(GetCurrentSettings()) ?? [];
-        foreach (var key in new[] { "db", "override", "mail", "AWSAccessKey", "AWSSecretKey", "OPENAI_API_KEY", "API_KEY" })
-            globals.Remove(key);
-        return globals;
-    }
-
     // The ordinary application shares state; explicit scopes get independent settings and caches.
     private sealed class ConfigurationState
     {
@@ -310,21 +301,6 @@ public static class FwConfig
         st["feedback_email"] = "";
         st["support_email"] = "support@website.com";
         st["mail_from"] = "admin@website.com";
-        st["admin_email"] = "";
-        st["test_email"] = "";
-        st["mail"] = new FwDict
-        {
-            ["host"] = "",
-            ["port"] = 587,
-            ["is_ssl"] = true,
-            ["username"] = "",
-            ["password"] = "",
-        };
-        st["AWS_CREDENTIAL_SOURCE"] = "sdk";
-        st["AWSAccessKey"] = "";
-        st["AWSSecretKey"] = "";
-        st["OPENAI_API_KEY"] = "";
-        st["API_KEY"] = "";
         st["is_mfa_enforced"] = false;
         st["is_list_btn_left"] = false;
         st["ui_theme"] = 0;

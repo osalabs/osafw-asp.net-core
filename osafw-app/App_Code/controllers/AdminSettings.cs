@@ -384,17 +384,17 @@ public class AdminSettingsController : FwAdminController
         var smtpRows = visibleRows(SMTP_CODES);
         ps["smtp"] = new FwDict
         {
-            ["host"] = model.getValue("mail.host"),
-            ["port"] = model.getValue("mail.port"),
-            ["is_ssl"] = model.getValue("mail.is_ssl").toBool(),
-            ["username"] = model.getValue("mail.username"),
+            ["host"] = model.read("mail.host", ""),
+            ["port"] = model.readInt("mail.port", 587),
+            ["is_ssl"] = model.readBool("mail.is_ssl", true),
+            ["username"] = model.read("mail.username", ""),
             ["password_display"] = model.display(smtpRows["mail.password"]),
         };
 
         var awsRows = visibleRows(AWS_CODES);
         ps["aws"] = new FwDict
         {
-            ["source"] = model.getValue("AWS_CREDENTIAL_SOURCE"),
+            ["source"] = model.read("AWS_CREDENTIAL_SOURCE", "sdk"),
             ["access_display"] = model.display(awsRows["AWSAccessKey"]),
             ["secret_display"] = model.display(awsRows["AWSSecretKey"]),
         };
@@ -459,6 +459,7 @@ public class AdminSettingsController : FwAdminController
     {
         int input = stored["input"].toInt();
         ps["editor_input"] = isProtectedEditor(stored) ? Settings.INPUT_CREDENTIAL : input;
+        ps["is_credential"] = Settings.isCredential(stored);
         ps["is_basis_inherit"] = stored["basis"].toInt() == Settings.BASIS_INHERIT;
         ps["is_basis_value"] = stored["basis"].toInt() == Settings.BASIS_VALUE;
         ps["can_reveal"] = Settings.maskPolicy(stored) == Settings.MASK_REVEAL;
@@ -477,7 +478,9 @@ public class AdminSettingsController : FwAdminController
     {
         int input = setting["input"].toInt();
         int oldBasis = setting["basis"].toInt(Settings.BASIS_VALUE);
-        int basis = item.ContainsKey("basis") ? item["basis"].toInt(-1) : oldBasis;
+        bool isCredential = Settings.isCredential(setting);
+        int basis = isCredential ? Settings.BASIS_VALUE
+            : item.ContainsKey("basis") ? item["basis"].toInt(-1) : oldBasis;
         FwDict itemdb = [];
 
         if (basis == Settings.BASIS_INHERIT)
@@ -499,7 +502,7 @@ public class AdminSettingsController : FwAdminController
                 itemdb["basis"] = Settings.BASIS_VALUE;
                 itemdb["ivalue"] = value;
             }
-            else if (oldBasis != Settings.BASIS_VALUE)
+            else if (!isCredential && oldBasis != Settings.BASIS_VALUE)
                 throw new UserException("Enter a value, select Clear, or keep Use default.");
 
             return itemdb;
