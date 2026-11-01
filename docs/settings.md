@@ -76,7 +76,7 @@ The existing SQL Server session provider tolerates unavailable storage; sessions
 
 ## Fresh installation and upgrade
 
-Provider `settings.sql` files own framework setting definitions and shipped values, with no credentials. Run after framework/application schema and before optional demo data. The shared initializer in `models/Dev/DevCli.cs` includes this step for both the CLI and `/Dev/Configure`; the controller keeps only its web guards and overridable delegation method. Demo-only settings remain in `demo.sql`.
+Provider `settings.sql` files own framework setting definitions and shipped values, with no credentials. Run after framework/application schema and before optional demo data. The shared initializer in `models/Dev/DevCli.cs` includes this step for both the CLI and `/Dev/Configure`; the controller applies its web guards and calls DevCli.initializeDatabase(fw) directly. Demo-only settings remain in `demo.sql`.
 
 Existing databases use the provider's additive `updates/upd2026-09-27-settings-foundation.sql`, never the destructive fresh schema. The update preserves existing values, adds metadata and missing definitions, and does not attempt application encryption in SQL. SQL Server is primary; SQLite has disposable integration coverage; the optional MySQL script does not imply full framework schema parity.
 

@@ -31,13 +31,14 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
     public const int INPUT_RANGE = 80;
     public const int INPUT_CREDENTIAL = 90;
 
-    public const int MASK_NONE = 0;
-    public const int MASK_HIDDEN = 10;
-    public const int MASK_EDGES = 20;
-    public const int MASK_SUFFIX = 30;
-    public const int MASK_REVEAL = 40;
-    public const int BASIS_INHERIT = 0;
-    public const int BASIS_VALUE = 1;
+    public const int MASK_NONE = 0; // Show the full value, e.g. "abc123"; credentials still default to hidden.
+    public const int MASK_HIDDEN = 10; // Show only "*** (configured)"; never offer Reveal.
+    public const int MASK_EDGES = 20; // Show first/last 4 characters, e.g. "abcd...wxyz"; hide values of 12 characters or fewer.
+    public const int MASK_SUFFIX = 30; // Show last 4 characters, e.g. "***wxyz"; hide values of 8 characters or fewer.
+    public const int MASK_REVEAL = 40; // Show "*** (configured)" until an authorized user chooses Reveal.
+
+    public const int BASIS_INHERIT = 0; // Use the config/caller default; stored values are ignored and credentials stay unconfigured.
+    public const int BASIS_VALUE = 1; // Use the stored value, including an explicitly saved empty string.
     public const int MAX_TRANSFER_BYTES = 1048576;
     private static readonly object storeLock = new();
 
