@@ -18,21 +18,30 @@
 
         <~value_source unless="is_credential" inline>
         <div class="row form-row">
-          <label class="col-form-label col-md-3">`Value source`</label>
+          <label class="col-form-label col-md-3">`Value`</label>
           <div class="col">
             <div class="form-check">
               <input class="form-check-input" type="radio" id="basis_value" name="item[basis]" value="1" <~/common/attr/checked if="is_basis_value">>
-              <label class="form-check-label" for="basis_value">`Use saved value`</label>
+              <label class="form-check-label" for="basis_value">`Set a custom value`</label>
+              <small class="form-text d-block">`Enter the value you want to use.`</small>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="radio" id="basis_inherit" name="item[basis]" value="0" <~/common/attr/checked if="is_basis_inherit">>
-              <label class="form-check-label" for="basis_inherit">`Use application default`</label>
+              <label class="form-check-label" for="basis_inherit">`Use default`</label>
+              <small class="form-text d-block">`Use the standard value shown below.`</small>
             </div>
           </div>
         </div>
 
         </~value_source>
 
+        <~application_default unless="is_credential" inline>
+        <div id="setting_default" class="row form-row" <~default_hidden unless="is_basis_inherit" inline>hidden</~default_hidden>>
+          <label class="col-form-label col-md-3">`Default value`</label>
+          <div class="col"><p class="form-control-plaintext text-break"><~default_display></p></div>
+        </div>
+        </~application_default>
+        <fieldset id="setting_saved_value" <~/common/attr/disabled if="is_basis_inherit" unless="is_credential"> <~saved_hidden if="is_basis_inherit" unless="is_credential" inline>hidden</~saved_hidden>>
         <~input_input ifeq="editor_input" value="0">
         <~input_textarea ifeq="editor_input" value="10">
         <~input_select ifeq="editor_input" value="20">
@@ -44,6 +53,7 @@
         <~input_switch ifeq="editor_input" value="70">
         <~input_range ifeq="editor_input" value="80">
         <~input_credential ifeq="editor_input" value="90">
+        </fieldset>
 
       </div>
       <div class="col-lg-6">

@@ -74,11 +74,14 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
     }
 
     /// <summary>
-    /// Reads a stored site setting, or fw.config(icode) when missing or inherited. Explicit empty values remain empty.
+    /// Resolves the application default without reading the database. Applications can extend feature defaults here.
     /// </summary>
+    public virtual string getDefault(string icode) => fw.config(icode).toStr();
+
+    /// <summary>Reads the stored value or the same application default shown in the editor.</summary>
     public virtual string read(string icode)
     {
-        return read(icode, fw.config(icode).toStr());
+        return read(icode, getDefault(icode));
     }
 
     /// <summary>
@@ -96,7 +99,7 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
 
     public virtual bool readBool(string icode)
     {
-        return readBool(icode, fw.config(icode).toBool());
+        return readBool(icode, getDefault(icode).toBool());
     }
 
     public virtual bool readBool(string icode, bool defaultValue)
@@ -107,7 +110,7 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
 
     public virtual int readInt(string icode)
     {
-        return readInt(icode, fw.config(icode).toInt());
+        return readInt(icode, getDefault(icode).toInt());
     }
 
     public virtual int readInt(string icode, int defaultValue)
@@ -118,7 +121,7 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
 
     public virtual long readLong(string icode)
     {
-        return readLong(icode, fw.config(icode).toLong());
+        return readLong(icode, getDefault(icode).toLong());
     }
 
     public virtual long readLong(string icode, long defaultValue)
@@ -151,7 +154,7 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
 
     public string getValue(string icode)
     {
-        return getValue(icode, fw.config(icode).toStr());
+        return getValue(icode, getDefault(icode));
     }
 
     public string getValue(string icode, string defaultValue)
@@ -293,6 +296,34 @@ public abstract class FwSettings : FwModel<FwSettings.Row>
         {
             return "Unavailable: replace the value or restore its keys";
         }
+    }
+
+    /// <summary>Formats an application default without exposing masked values. Credentials never inherit configuration secrets.</summary>
+    public string displayDefault(FwDict row)
+    {
+        if (isCredential(row))
+            return "Not configured";
+
+        var preview = new FwDict(row)
+        {
+            ["basis"] = BASIS_VALUE,
+            ["ivalue"] = getDefault(row["icode"].toStr()),
+        };
+        var value = display(preview);
+        if (maskPolicy(row) == MASK_NONE)
+        {
+            if (row["input"].toInt() == INPUT_SWITCH)
+                return value.toBool() ? "On" : "Off";
+
+            if (row["input"].toInt() is INPUT_SELECT or INPUT_RADIO)
+            {
+                var options = Utils.qh(row["allowed_values"].toStr(), "");
+                if (options.ContainsKey(value))
+                    return options[value].toStr();
+            }
+        }
+
+        return value.Length == 0 ? "(empty)" : value;
     }
 
     /// <summary>Enforces the row floor. Runtime system reads intentionally do not use this editor authorization.</summary>

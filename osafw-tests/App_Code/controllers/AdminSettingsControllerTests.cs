@@ -210,6 +210,38 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
+    public void FailedValidationPreservesSavedSourceAndCorrection()
+    {
+        var (fw, model, controller) = BuildController(
+            Setting(Settings.INPUT_TEXT, "", basis: Settings.BASIS_INHERIT, allowedValues: "local_url|1"),
+            new FwDict { ["basis"] = Settings.BASIS_VALUE, ["ivalue"] = "https://outside.invalid" });
+        Assert.ThrowsExactly<ValidationException>(() => controller.SaveAction(1));
+        var ps = controller.ShowFormAction(1);
+        Assert.IsTrue(ps["is_basis_value"].toBool());
+        fw.config()["template"] = TestHelpers.TemplateRoot();
+        string html = fw.parsePage("/admin/settings/showform", "form.html", ps);
+        StringAssert.Matches(html, new System.Text.RegularExpressions.Regex("id=\"basis_value\"[^>]*checked"));
+
+        fw.FormIssues.Clear();
+        ((FwDict)fw.FORM["item"]!)["ivalue"] = "/Home/About";
+        controller.SaveAction(1);
+        Assert.AreEqual(Settings.BASIS_VALUE, model.LastUpdate["basis"].toInt());
+        Assert.AreEqual("/Home/About", model.LastUpdate["ivalue"]);
+    }
+
+    [TestMethod]
+    public void InheritedDefaultPreviewMasksValuesAndDoesNotExposeThemInEditor()
+    {
+        var (fw, _, controller) = BuildController(
+            Setting(Settings.INPUT_TEXT, "", basis: Settings.BASIS_INHERIT, mask: Settings.MASK_SUFFIX), []);
+        fw.config()["test_setting"] = "private-default-1234";
+        fw.route.method = "GET";
+        var ps = controller.ShowFormAction(1);
+        Assert.AreEqual("***1234", ps["default_display"]);
+        Assert.AreEqual("", ((FwDict)ps["i"]!)["ivalue"]);
+    }
+
+    [TestMethod]
     public void Credential_BlankSubmissionKeepsExistingValue()
     {
         var (_, model, controller) = BuildController(
@@ -398,29 +430,29 @@ public class AdminSettingsControllerTests
     }
 
     [TestMethod]
-    public void SettingsIndexTemplate_RendersTransferAndGroupedControlsOnlyForSiteAdmin()
+    public void SettingsIndexTemplate_UsesActionRowAndEmailCategoryOnly()
     {
-        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
         var session = new TestHelpers.FakeSession();
         session.Set("XSS", System.Text.Encoding.UTF8.GetBytes("token"));
         var parser = new ParsePage(new ParsePageOptions
         {
-            TemplatesRoot = Path.Combine(root, "osafw-app", "App_Data", "template"),
+            TemplatesRoot = TestHelpers.TemplateRoot(),
             Session = session,
         });
         var state = new FwDict
         {
             ["is_site_admin"] = true,
             ["is_readonly"] = false,
-            ["smtp"] = new FwDict { ["host"] = "smtp.example.test", ["port"] = "587", ["username"] = "mailer", ["password_display"] = "***" },
-            ["aws"] = new FwDict { ["source"] = "sdk", ["access_display"] = "Not configured", ["secret_display"] = "Not configured" },
             ["settings_categories"] = new FwList(),
             ["list_rows"] = new FwList(),
         };
 
         string siteAdminHtml = parser.parse_page("/admin/settings/index", "main.html", state);
-        StringAssert.Contains(siteAdminHtml, "/(SaveEmail)");
-        StringAssert.Contains(siteAdminHtml, "/(SaveAWS)");
+        Assert.DoesNotContain("/(SaveEmail)", siteAdminHtml);
+        Assert.DoesNotContain("/(SaveAWS)", siteAdminHtml);
+        Assert.DoesNotContain("/(TestEmail)", siteAdminHtml);
+        state["is_email_category"] = true;
+        StringAssert.Contains(parser.parse_page("/admin/settings/index", "main.html", state), "/(TestEmail)");
         StringAssert.Contains(siteAdminHtml, "/(Export)");
         StringAssert.Contains(siteAdminHtml, "name=\"settings_file\"");
 
@@ -592,31 +624,7 @@ public class AdminSettingsControllerTests
         Assert.AreEqual("new", model.LastUpdate["ivalue"]);
     }
 
-#if isSQLite
-    [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
-    public void SaveAWS_ChangesOneCredentialAndKeepsTheOther(bool isAccessKey)
-    {
-        using var fixture = new TransferFixture();
-        fixture.Seed("AWS_CREDENTIAL_SOURCE", Settings.INPUT_TEXT, "static");
-        int accessId = fixture.Seed("AWSAccessKey", Settings.INPUT_CREDENTIAL);
-        int secretId = fixture.Seed("AWSSecretKey", Settings.INPUT_CREDENTIAL);
-        fixture.Model.update(accessId, DB.h("ivalue", "old-access"));
-        fixture.Model.update(secretId, DB.h("ivalue", "old-secret"));
-        fixture.Fw.FORM["aws"] = new FwDict
-        {
-            ["source"] = "static",
-            ["access_key"] = isAccessKey ? "new-access" : "",
-            ["secret_key"] = isAccessKey ? "" : "new-secret",
-        };
 
-        Assert.ThrowsExactly<RedirectException>(() => fixture.Controller.SaveAWSAction());
-
-        Assert.AreEqual(isAccessKey ? "new-access" : "old-access", fixture.Model.readSecret("AWSAccessKey"));
-        Assert.AreEqual(isAccessKey ? "old-secret" : "new-secret", fixture.Model.readSecret("AWSSecretKey"));
-    }
-#endif
 
     [TestMethod]
     public void TextSetting_BlankSubmissionClearsExistingValue()
@@ -786,40 +794,64 @@ public class AdminSettingsControllerTests
 
 #if isSQLite
     [TestMethod]
-    [DataRow(true, 587, "sdk")]
-    [DataRow(false, 2525, "static")]
-    public void IndexAction_RendersGroupedDefaultsAndExplicitValues(bool isInherited, int expectedPort, string expectedSource)
+    public void DefaultsMatchRuntimeAndInlineEditorsDoNotExposeProtectedValues()
     {
         using var fixture = new TransferFixture();
-        foreach (string code in new[] { "mail.host", "mail.port", "mail.is_ssl", "mail.username", "AWS_CREDENTIAL_SOURCE" })
-        {
-            int id = fixture.Seed(code, Settings.INPUT_TEXT);
-            fixture.Model.update(id, DB.h("basis", Settings.BASIS_INHERIT));
-        }
-        foreach (string code in new[] { "mail.password", "AWSAccessKey", "AWSSecretKey" })
-            fixture.Seed(code, Settings.INPUT_CREDENTIAL);
-        if (!isInherited)
-        {
-            fixture.Model.write("mail.port", "2525");
-            fixture.Model.write("mail.is_ssl", "0");
-            fixture.Model.write("AWS_CREDENTIAL_SOURCE", "static");
-        }
-        fixture.Fw.config()["template"] = TestHelpers.TemplateRoot();
-        fixture.Fw.route.controller = "AdminSettings";
-        fixture.Fw.route.action = FW.ACTION_INDEX;
+        int port = fixture.Seed("mail.port", Settings.INPUT_NUMBER);
+        fixture.Model.update(port, DB.h("basis", Settings.BASIS_INHERIT));
+        int secret = fixture.Seed("secret", Settings.INPUT_CREDENTIAL);
+        fixture.Model.update(secret, DB.h("ivalue", "never-in-inline-html"));
         fixture.Fw.route.method = "GET";
 
         var ps = fixture.Controller.IndexAction()!;
-        var smtp = (FwDict)ps["smtp"]!;
-        var aws = (FwDict)ps["aws"]!;
-        string smtpHtml = fixture.Fw.parsePage("/admin/settings/index", "smtp_group.html", ps);
-        string awsHtml = fixture.Fw.parsePage("/admin/settings/index", "aws_group.html", ps);
+        var rows = (FwList)ps["list_rows"]!;
+        var portRow = rows.Single(row => row["id"].toInt() == port);
+        var secretRow = rows.Single(row => row["id"].toInt() == secret);
+        Assert.IsFalse(portRow["can_inline"].toBool());
+        Assert.IsFalse(portRow.ContainsKey("inline_value"));
+        Assert.AreEqual("587", portRow["ivalue_display"]);
+        fixture.Fw.config()["template"] = TestHelpers.TemplateRoot();
+        string html = fixture.Fw.parsePage("/admin/settings/index", "list_table.html", ps);
+        Assert.IsFalse(html.Contains("data-autosave", StringComparison.Ordinal));
+        Assert.IsFalse(html.Contains("Edit to override", StringComparison.Ordinal));
+        StringAssert.Contains(html, "587");
+        Assert.AreEqual(587, fixture.Model.readInt("mail.port"));
+        Assert.IsFalse(secretRow["can_inline"].toBool());
+        Assert.IsFalse(secretRow.ContainsKey("inline_value"));
+        Assert.IsFalse(secretRow.ContainsKey("ivalue"));
 
-        Assert.AreEqual(expectedPort, smtp["port"].toInt());
-        Assert.AreEqual(isInherited, smtp["is_ssl"].toBool());
-        Assert.AreEqual(expectedSource, aws["source"]);
-        StringAssert.Contains(smtpHtml, $"value=\"{expectedPort}\"");
-        StringAssert.Matches(awsHtml, new System.Text.RegularExpressions.Regex("value=\"" + expectedSource + "\"\\s+selected"));
+        fixture.Model.update(port, DB.h("basis", Settings.BASIS_VALUE, "ivalue", "2526"));
+        ps = fixture.Controller.IndexAction()!;
+        portRow = ((FwList)ps["list_rows"]!).Single(row => row["id"].toInt() == port);
+        Assert.IsTrue(portRow["can_inline"].toBool());
+        Assert.AreEqual("2526", portRow["inline_value"]);
+        html = fixture.Fw.parsePage("/admin/settings/index", "list_table.html", ps);
+        StringAssert.Contains(html, "data-autosave");
+        StringAssert.Contains(html, "value=\"2526\"");
+
+        fixture.Model.update(port, DB.h("basis", Settings.BASIS_INHERIT));
+        ps = fixture.Controller.IndexAction()!;
+        portRow = ((FwList)ps["list_rows"]!).Single(row => row["id"].toInt() == port);
+        Assert.IsFalse(portRow["can_inline"].toBool());
+        Assert.AreEqual("587", portRow["ivalue_display"]);
+
+        fixture.Fw.config()["mail"] = new FwDict { ["port"] = 2525 };
+        Assert.AreEqual("2525", fixture.Model.getDefault("mail.port"));
+        Assert.AreEqual(2525, fixture.Model.readInt("mail.port"));
+        Assert.AreEqual("1", fixture.Model.getDefault("mail.is_ssl"));
+        Assert.AreEqual("sdk", fixture.Model.getDefault("AWS_CREDENTIAL_SOURCE"));
+        Assert.AreEqual(LLM.MODEL_GPT5_MINI, fixture.Model.read("ASSISTANT_MODEL"));
+        Assert.AreEqual(AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS, fixture.Model.readInt("ASSISTANT_RUN_TIMEOUT_SECONDS"));
+        Assert.AreEqual(DocumentEmbeddingService.DEFAULT_MAX_INDEXED_FILE_BYTES, fixture.Model.readLong("ASSISTANT_MAX_INDEXED_FILE_BYTES"));
+    }
+
+    [TestMethod]
+    public void TestEmailFailureUsesIndexErrorRoute()
+    {
+        using var fixture = new TransferFixture();
+        fixture.Seed("mail.host", Settings.INPUT_TEXT, "");
+        Assert.ThrowsExactly<UserException>(() => fixture.Controller.TestEmailAction());
+        Assert.AreEqual(FW.ACTION_INDEX, fixture.Controller.route_onerror);
     }
 
     [TestMethod]

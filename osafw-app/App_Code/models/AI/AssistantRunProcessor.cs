@@ -105,7 +105,7 @@ public sealed class AssistantRunProcessor
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new UserException("OpenAI API key is not configured.");
 
-            string model = fw.settings.read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+            string model = fw.settings.read("ASSISTANT_MODEL");
             if (string.IsNullOrWhiteSpace(model))
                 model = LLM.MODEL_GPT5_MINI;
 
@@ -286,7 +286,7 @@ public sealed class AssistantRunProcessor
     private static int runTimeoutSeconds(FW fw)
     {
         return Math.Clamp(
-            fw.settings.readInt("ASSISTANT_RUN_TIMEOUT_SECONDS", AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS),
+            fw.settings.readInt("ASSISTANT_RUN_TIMEOUT_SECONDS"),
             30,
             1800
         );
@@ -407,7 +407,7 @@ public sealed class AssistantRunProcessor
             { "existing_memory", existing?.summary ?? string.Empty },
             { "conversation_excerpts", string.Join("\n", messages) },
         }).Trim();
-        string model = fw.settings.read("ASSISTANT_MODEL", LLM.MODEL_GPT5_MINI);
+        string model = fw.settings.read("ASSISTANT_MODEL");
 
         try
         {

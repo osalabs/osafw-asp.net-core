@@ -102,7 +102,8 @@ public static class FwConfig
         }
     }
 
-    private static string getConfiguredEnvironmentName()
+    /// <summary>Returns the host-selected environment, falling back to environment variables for standalone callers.</summary>
+    public static string getEnvironmentName()
     {
         if (currentState.environmentName is string selected)
             return selected;
@@ -485,7 +486,7 @@ public static class FwConfig
     {
         setConfiguration(cfg);
 
-        var environment = getConfiguredEnvironmentName();
+        var environment = getEnvironmentName();
         var st = Utils.cloneHashDeep(getBaseSettings()) ?? [];
 
         // Apply an explicitly configured named override after the environment providers.
@@ -499,7 +500,7 @@ public static class FwConfig
         var trimmed = host?.Trim() ?? string.Empty;
         if (!string.IsNullOrEmpty(trimmed)) return trimmed;
 
-        var environment = getConfiguredEnvironmentName();
+        var environment = getEnvironmentName();
         return string.IsNullOrEmpty(environment) ? DEFAULT_HOST_KEY : environment;
     }
 

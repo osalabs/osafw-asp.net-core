@@ -12,6 +12,28 @@ public class Settings : FwSettings
     public const string ICAT_AI = "AI";
     public const string ICODE_TEST_EMAIL = "test_email";
 
+    /// <summary>Shared runtime/editor defaults for application integrations; configured overrides win.</summary>
+    public override string getDefault(string icode)
+    {
+        if (fw.config(icode) != null)
+            return base.getDefault(icode);
+
+        return icode switch
+        {
+            "mail.port" => "587",
+            "mail.is_ssl" => "1",
+            "AWS_CREDENTIAL_SOURCE" => "sdk",
+            "ASSISTANT_MODEL" => LLM.MODEL_GPT5_MINI,
+            "ASSISTANT_VECTOR_MODE" => RagChunks.VECTOR_MODE_AUTO,
+            "ASSISTANT_RUN_TIMEOUT_SECONDS" => AssistantRuns.DEFAULT_RUN_TIMEOUT_SECONDS.toStr(),
+            "ASSISTANT_MAX_FILES_PER_MESSAGE" => AssistantAppService.DEFAULT_MAX_FILES_PER_MESSAGE.toStr(),
+            "ASSISTANT_MAX_INDEXED_FILE_BYTES" => DocumentEmbeddingService.DEFAULT_MAX_INDEXED_FILE_BYTES.toStr(),
+            "ASSISTANT_MAX_INDEX_CHARS" => DocumentEmbeddingService.DEFAULT_MAX_INDEX_CHARS.toStr(),
+            "ASSISTANT_MAX_INDEX_CHUNKS" => DocumentEmbeddingService.DEFAULT_MAX_INDEX_CHUNKS.toStr(),
+            _ => "",
+        };
+    }
+
     private bool isGlobalsLoaded;
 
     /// <summary>

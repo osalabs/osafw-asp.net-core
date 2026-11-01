@@ -1,15 +1,19 @@
 <~/common/list/page_header>
 
-<~smtp_group if="is_site_admin">
-<~aws_group if="is_site_admin">
-<~transfer if="is_site_admin">
-
 <~/common/list/filter_std>
 
 <ul class="nav nav-tabs">
   <li role="presentation" class="nav-item"><a class="nav-link <~/common/cl/active unless="has_icat_filter">" href="<~../url>?dofilter=1">All</a></li>
   <~settings_categories repeat inline>
-  <li role="presentation" class="nav-item"><a class="nav-link <~settings_category_active if="PARSEPAGE.TOP[has_icat_filter]" inline><~/common/cl/active ifeq="PARSEPAGE.TOP[f][icat]" vvalue="icat"></~settings_category_active>" href="<~../url>?dofilter=1&f[icat]=<~icat urlencode>"><~settings_category_site unless="icat" inline>Site</~settings_category_site><~icat if="icat"></a></li>
+  <li role="presentation" class="nav-item"><a class="nav-link <~settings_category_active if="PARSEPAGE.TOP[has_icat_filter]" inline><~/common/cl/active ifeq="PARSEPAGE.TOP[f][icat]" vvalue="icat"></~settings_category_active>" href="<~../url>?dofilter=1&f[icat]=<~icat urlencode>"><~settings_category_site unless="icat" inline>Uncategorized</~settings_category_site><~icat if="icat"></a></li>
   </~settings_categories>
 </ul>
 <~list_table>
+<~email_actions if="is_email_category" inline>
+<~test_email if="is_site_admin" inline>
+<form method="post" action="<~../url>/(TestEmail)" class="mt-3">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <button class="btn btn-default" type="submit" <~/common/attr/disabled if="is_readonly">><~/common/icons/envelope> `Send test email`</button>
+</form>
+</~test_email>
+</~email_actions>

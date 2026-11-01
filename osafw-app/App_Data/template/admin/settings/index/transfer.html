@@ -1,17 +1,11 @@
-<div class="card mb-3">
-  <div class="card-header">Settings transfer</div>
-  <div class="card-body">
-    <p class="card-text">Export contains every saved setting, including decrypted credentials. Store and transfer the file as a password file.</p>
-    <form method="post" action="<~../url>/(Export)" class="d-inline-block me-2">
-      <input type="hidden" name="XSS" value="<~session[XSS]>">
-      <button class="btn btn-outline-primary" type="submit">Export</button>
-    </form>
-    <form method="post" enctype="multipart/form-data" action="<~../url>/(Import)" class="d-inline-flex align-items-center gap-2">
-      <input type="hidden" name="XSS" value="<~session[XSS]>">
-      <fieldset class="d-inline-flex align-items-center gap-2" <~/common/attr/disabled if="is_readonly">>
-        <input class="form-control" type="file" name="settings_file" accept="application/json,.json" required>
-        <button class="btn btn-outline-primary" type="submit">Import</button>
-      </fieldset>
-    </form>
-  </div>
-</div>
+<form method="post" action="<~../url>/(Export)">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <button class="btn btn-default" type="submit" title="`Export all settings, including credentials`"><~/common/icons/cloud-download> `Export`</button>
+</form>
+<form method="post" enctype="multipart/form-data" action="<~../url>/(Import)">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <fieldset class="d-flex flex-wrap align-items-center gap-2" <~/common/attr/disabled if="is_readonly">>
+    <input class="form-control w-auto" type="file" name="settings_file" aria-label="`Settings file to import`" accept="application/json,.json" required>
+    <button class="btn btn-warning" type="submit"><~/common/icons/cloud-upload> `Import`</button>
+  </fieldset>
+</form>

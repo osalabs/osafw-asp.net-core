@@ -1671,10 +1671,10 @@ public class FW : IDisposable
 
             FwDict mailSettings = new()
             {
-                ["host"] = settings.read("mail.host", ""),
-                ["port"] = settings.readInt("mail.port", 587),
-                ["is_ssl"] = settings.readBool("mail.is_ssl", true),
-                ["username"] = settings.read("mail.username", ""),
+                ["host"] = settings.read("mail.host"),
+                ["port"] = settings.readInt("mail.port"),
+                ["is_ssl"] = settings.readBool("mail.is_ssl"),
+                ["username"] = settings.read("mail.username"),
                 ["password"] = settings.readSecret("mail.password"),
             };
             if (options.TryGetValue("smtp", out object? value) && value is FwDict smtpOptions)

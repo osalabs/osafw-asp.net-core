@@ -33,10 +33,10 @@ public class DevConfigureController : FwController
         FwDict ps = [];
 
         ps["hide_sidebar"] = true;
-        var aspnet_env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        ps["ASPNETCORE_ENVIRONMENT"] = aspnet_env;
+        ps["ASPNETCORE_ENVIRONMENT"] = FwConfig.getEnvironmentName();
         ps["config_file_name"] = fw.config("config_override");
-        ps["is_config_env"] = String.IsNullOrEmpty(aspnet_env) || aspnet_env == ps["config_file_name"].toStr();
+        // Named overrides are optional and can have a different name from the runtime environment.
+        ps["is_config_env"] = true;
 
         ps["is_db_config"] = false;
         var configdb = (FwDict?)fw.config("db");

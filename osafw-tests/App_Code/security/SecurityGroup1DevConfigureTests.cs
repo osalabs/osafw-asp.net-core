@@ -214,6 +214,25 @@ public class SecurityGroup1DevConfigureTests
     }
 
     [TestMethod]
+    [DataRow("")]
+    [DataRow("DevelopmentOleg")]
+    public void DevConfigure_EnvironmentDoesNotRequireMatchingNamedOverride(string profile)
+    {
+        using var scope = FwConfig.beginScope();
+        FwConfig.setDefaultOverrideName("Development");
+        using var fw = createFw(new Dictionary<string, string?>());
+        fw.config()["config_override"] = profile;
+        var controller = new DevConfigureController();
+        controller.init(fw);
+
+        var ps = controller.IndexAction();
+
+        Assert.AreEqual("Development", ps["ASPNETCORE_ENVIRONMENT"]);
+        Assert.AreEqual(profile, ps["config_file_name"]);
+        Assert.IsTrue(ps["is_config_env"].toBool());
+    }
+
+    [TestMethod]
     public void InitDB_RejectsGetEvenWithToken()
     {
         using var scope = createInitDbScope();

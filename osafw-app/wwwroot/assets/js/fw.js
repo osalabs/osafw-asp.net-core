@@ -273,12 +273,21 @@ window.fw={
     }
     var isProgress = $f.data('is-progress') === true;
 
-    var cls = changed ? 'bg-danger' : 'bg-success';
-    var txt = changed ? 'not saved' : 'saved';
-    var html = (isProgress ? fw.HTML_SPINNER_SM : '') + ' <span class="badge ' + cls + '">' + txt + '</span>';
+    function statusHtml(changed, isProgress) {
+      var cls = changed ? 'bg-danger' : 'bg-success';
+      var txt = changed ? 'not saved' : 'saved';
+      return (isProgress ? fw.HTML_SPINNER_SM : '') + ' <span class="badge ' + cls + '">' + txt + '</span>';
+    }
 
-    $f.find('.form-saved-status').html(html);
-    $('.form-saved-status-global').html(html);
+    $f.find('.form-saved-status').html(statusHtml(changed, isProgress));
+
+    // A page can have several autosave forms; saved means all of them are saved.
+    if ($f.is('form[data-autosave]')) {
+      var $forms = $('form[data-autosave]');
+      changed = $forms.toArray().some(form => $(form).data('is-changed') === true);
+      isProgress = $forms.toArray().some(form => $(form).data('is-progress') === true);
+    }
+    $('.form-saved-status-global').html(statusHtml(changed, isProgress));
   },
 
   // requires https://github.com/osalabs/bootstrap-toaster
