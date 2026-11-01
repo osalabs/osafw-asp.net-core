@@ -227,7 +227,15 @@ public class LoginController : FwController
         if (!fw.config("IS_DEV").toBool())
             return false;
 
-        if (!fw.config("config_override").toStr().StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+        var environment = FwConfig.getEnvironmentName();
+        var profile = fw.config("config_override").toStr();
+        if (string.IsNullOrEmpty(profile))
+            profile = environment;
+
+        if (!profile.StartsWith("Development", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.IsNullOrEmpty(environment) && !environment.StartsWith("Development", StringComparison.OrdinalIgnoreCase))
             return false;
 
         var context = fw.context;

@@ -27,7 +27,7 @@ INSERT IGNORE INTO settings (is_user_edit, input, access_level, mask, basis, ica
 (1, 70, 100, 0, 0, 'Email', 'mail.is_ssl', '', 'SMTP TLS', 'Use TLS when connecting to the SMTP server.', ''),
 (1, 0, 100, 0, 0, 'Email', 'mail.username', '', 'SMTP Username', 'Username used to authenticate to the SMTP server.', ''),
 (1, 90, 100, 10, 1, 'Email', 'mail.password', '', 'SMTP Password', 'Password used to authenticate to the SMTP server.', ''),
-(1, 20, 100, 0, 0, 'AWS', 'AWS_CREDENTIAL_SOURCE', '', 'AWS Credential Source', 'Use the AWS SDK credential chain or the encrypted static key pair.', 'sdk|SDK static|Static'),
+(1, 20, 100, 0, 0, 'AWS', 'AWS_CREDENTIAL_SOURCE', '', 'AWS Authentication', 'Server uses the EC2 role, environment credentials or server AWS profile. Saved uses the encrypted access and secret keys entered here. Server ignores saved keys; it does not delete them.', 'sdk|Server static|Saved'),
 (1, 90, 100, 10, 1, 'AWS', 'AWSAccessKey', '', 'AWS Access Key', 'Static AWS access key used only when Static credential source is selected.', ''),
 (1, 90, 100, 10, 1, 'AWS', 'AWSSecretKey', '', 'AWS Secret Key', 'Static AWS secret key used only when Static credential source is selected.', ''),
 (1, 90, 100, 10, 1, 'AI', 'OPENAI_API_KEY', '', 'OpenAI API Key', 'API key used by Assistant and LLM features.', ''),

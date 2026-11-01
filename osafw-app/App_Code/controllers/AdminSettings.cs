@@ -4,7 +4,6 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.AspNetCore.Http;
@@ -14,16 +13,6 @@ namespace osafw;
 public class AdminSettingsController : FwAdminController
 {
     public static new int access_level = Users.ACL_ADMIN;
-
-    private static readonly string[] SMTP_CODES =
-    [
-        "mail.host", "mail.port", "mail.is_ssl", "mail.username", "mail.password"
-    ];
-
-    private static readonly string[] AWS_CODES =
-    [
-        "AWS_CREDENTIAL_SOURCE", "AWSAccessKey", "AWSSecretKey"
-    ];
 
     protected Settings model = null!;
 
@@ -47,8 +36,6 @@ public class AdminSettingsController : FwAdminController
             ["Reveal"] = Permissions.PERMISSION_VIEW,
             ["Export"] = Permissions.PERMISSION_VIEW,
             ["Import"] = Permissions.PERMISSION_EDIT,
-            ["SaveEmail"] = Permissions.PERMISSION_EDIT,
-            ["SaveAWS"] = Permissions.PERMISSION_EDIT,
             ["TestEmail"] = Permissions.PERMISSION_EDIT,
         };
     }
@@ -101,8 +88,7 @@ public class AdminSettingsController : FwAdminController
         ps["settings_categories"] = listVisibleCategories();
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
 
-        if (fw.model<Users>().isSiteAdmin())
-            addGroupState(ps);
+        ps["is_email_category"] = list_filter["icat"].toStr() == "Email";
 
         return ps;
     }
@@ -149,11 +135,26 @@ public class AdminSettingsController : FwAdminController
         var ps = base.ShowFormAction(id) ?? [];
         var item = safeProjection(stored);
 
-        if (!isGet() && !isProtectedEditor(stored))
+        if (!isGet())
         {
             var submitted = reqh("item");
-            if (submitted.ContainsKey("ivalue"))
-                item["ivalue"] = submitted["ivalue"];
+            if (!Settings.isCredential(stored) && submitted.ContainsKey("basis"))
+            {
+                int basis = submitted["basis"].toInt(-1);
+                if (basis is Settings.BASIS_INHERIT or Settings.BASIS_VALUE)
+                    item["basis"] = basis;
+            }
+
+            if (!isProtectedEditor(stored))
+            {
+                if (submitted.ContainsKey("ivalue"))
+                    item["ivalue"] = submitted["ivalue"];
+                else if (stored["input"].toInt() is Settings.INPUT_SWITCH or Settings.INPUT_SELECT_MULTI)
+                    item["ivalue"] = "";
+
+                if (stored["input"].toInt() == Settings.INPUT_CHECKBOX)
+                    item["ivalue"] = FormUtils.multi2ids(reqh("ivalue_multi"));
+            }
         }
 
         ps["i"] = item;
@@ -219,6 +220,8 @@ public class AdminSettingsController : FwAdminController
 
     public FwDict? ImportAction()
     {
+        route_onerror = FW.ACTION_INDEX;
+        route_return = FW.ACTION_INDEX;
         enforcePost();
         checkReadOnly();
         requireSiteAdmin();
@@ -245,72 +248,10 @@ public class AdminSettingsController : FwAdminController
         return afterSave(true, new FwDict { ["updated"] = count });
     }
 
-    public FwDict? SaveEmailAction()
-    {
-        enforcePost();
-        checkReadOnly();
-        requireSiteAdmin();
-
-        var form = reqh("smtp");
-        var rows = visibleRows(SMTP_CODES, true);
-        List<Settings.ValueChange> changes =
-        [
-            change("mail.host", form["host"].toStr()),
-            change("mail.port", form["port"].toStr().Trim()),
-            change("mail.is_ssl", form.ContainsKey("is_ssl") ? "1" : "0"),
-            change("mail.username", form["username"].toStr()),
-        ];
-
-        string password = form["password"].toStr();
-        if (form["password_clear"].toBool())
-            changes.Add(change("mail.password", ""));
-        else if (password.Length > 0)
-            changes.Add(change("mail.password", password));
-
-        authorizeChanges(rows, changes);
-        int count = model.writeBatch(changes);
-        form.Remove("password");
-        fw.flash("success", "SMTP settings updated.");
-        return afterSave(true, new FwDict { ["updated"] = count });
-    }
-
-    public FwDict? SaveAWSAction()
-    {
-        enforcePost();
-        checkReadOnly();
-        requireSiteAdmin();
-
-        var form = reqh("aws");
-        var rows = visibleRows(AWS_CODES, true);
-        string source = form["source"].toStr();
-        string accessKey = form["access_key"].toStr();
-        string secretKey = form["secret_key"].toStr();
-        List<Settings.ValueChange> changes = [change("AWS_CREDENTIAL_SOURCE", source)];
-
-        if (source == "sdk")
-        {
-            changes.Add(change("AWSAccessKey", ""));
-            changes.Add(change("AWSSecretKey", ""));
-        }
-        else
-        {
-            if (accessKey.Length > 0)
-                changes.Add(change("AWSAccessKey", accessKey));
-
-            if (secretKey.Length > 0)
-                changes.Add(change("AWSSecretKey", secretKey));
-        }
-
-        authorizeChanges(rows, changes);
-        int count = model.writeBatch(changes);
-        form.Remove("access_key");
-        form.Remove("secret_key");
-        fw.flash("success", "AWS credential settings updated.");
-        return afterSave(true, new FwDict { ["updated"] = count });
-    }
-
     public FwDict? TestEmailAction()
     {
+        route_onerror = FW.ACTION_INDEX;
+        route_return = FW.ACTION_INDEX;
         enforcePost();
         checkReadOnly();
         requireSiteAdmin();
@@ -379,56 +320,6 @@ public class AdminSettingsController : FwAdminController
         return result;
     }
 
-    private void addGroupState(FwDict ps)
-    {
-        var smtpRows = visibleRows(SMTP_CODES);
-        ps["smtp"] = new FwDict
-        {
-            ["host"] = model.read("mail.host", ""),
-            ["port"] = model.readInt("mail.port", 587),
-            ["is_ssl"] = model.readBool("mail.is_ssl", true),
-            ["username"] = model.read("mail.username", ""),
-            ["password_display"] = model.display(smtpRows["mail.password"]),
-        };
-
-        var awsRows = visibleRows(AWS_CODES);
-        ps["aws"] = new FwDict
-        {
-            ["source"] = model.read("AWS_CREDENTIAL_SOURCE", "sdk"),
-            ["access_display"] = model.display(awsRows["AWSAccessKey"]),
-            ["secret_display"] = model.display(awsRows["AWSSecretKey"]),
-        };
-    }
-
-    private Dictionary<string, FwDict> visibleRows(IEnumerable<string> codes, bool isEdit = false)
-    {
-        var result = new Dictionary<string, FwDict>(StringComparer.Ordinal);
-        foreach (string code in codes)
-        {
-            var row = model.oneByIcode(code);
-            model.authorize(row, isEdit);
-            result.Add(code, row);
-        }
-        return result;
-    }
-
-    private static Settings.ValueChange change(string code, string value)
-    {
-        return new Settings.ValueChange
-        {
-            icode = code,
-            basis = Settings.BASIS_VALUE,
-            ivalue = value,
-        };
-    }
-
-    private static void authorizeChanges(Dictionary<string, FwDict> rows, IEnumerable<Settings.ValueChange> changes)
-    {
-        foreach (var item in changes)
-            if (!rows.ContainsKey(item.icode))
-                throw new AuthException();
-    }
-
     private void requireSiteAdmin()
     {
         if (!fw.model<Users>().isSiteAdmin())
@@ -449,9 +340,24 @@ public class AdminSettingsController : FwAdminController
 
     private void prepareListRow(FwDict row)
     {
-        row["ivalue_display"] = model.display(row);
-        row["is_switch_on"] = row["input"].toInt() == Settings.INPUT_SWITCH
-            && model.getValue(row["icode"].toStr()).toBool();
+        bool isInherited = row["basis"].toInt() == Settings.BASIS_INHERIT;
+        row["ivalue_display"] = isInherited ? model.displayDefault(row) : model.display(row);
+        row["can_inline"] = !isInherited && !is_readonly && row["is_user_edit"].toBool()
+            && !isProtectedEditor(row)
+            && row["input"].toInt() is Settings.INPUT_TEXT or Settings.INPUT_SELECT or Settings.INPUT_NUMBER or Settings.INPUT_SWITCH;
+
+        if (row["can_inline"].toBool())
+        {
+            var value = row["ivalue"].toStr();
+            row["inline_value"] = value;
+            row["is_switch_on"] = value.toBool();
+            row["settings_options"] = listInputOptions(row, false);
+            var meta = Utils.qh(row["allowed_values"].toStr(), "");
+            row["input_min"] = meta["min"];
+            row["input_max"] = meta["max"];
+            row["input_step"] = meta["step"];
+        }
+
         row.Remove("ivalue");
     }
 
@@ -460,9 +366,13 @@ public class AdminSettingsController : FwAdminController
         int input = stored["input"].toInt();
         ps["editor_input"] = isProtectedEditor(stored) ? Settings.INPUT_CREDENTIAL : input;
         ps["is_credential"] = Settings.isCredential(stored);
-        ps["is_basis_inherit"] = stored["basis"].toInt() == Settings.BASIS_INHERIT;
-        ps["is_basis_value"] = stored["basis"].toInt() == Settings.BASIS_VALUE;
+        ps["is_basis_inherit"] = item["basis"].toInt() == Settings.BASIS_INHERIT;
+        ps["is_basis_value"] = item["basis"].toInt() == Settings.BASIS_VALUE;
+        ps["default_display"] = model.displayDefault(stored);
         ps["can_reveal"] = Settings.maskPolicy(stored) == Settings.MASK_REVEAL;
+
+        if (isGet() && ps["is_basis_inherit"].toBool() && !isProtectedEditor(stored))
+            item["ivalue"] = model.getDefault(stored["icode"].toStr());
 
         var meta = Utils.qh(stored["allowed_values"].toStr(), "");
         ps["input_min"] = meta["min"];

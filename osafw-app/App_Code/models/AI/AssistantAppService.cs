@@ -11,7 +11,7 @@ namespace osafw;
 public sealed class AssistantAppService
 {
     internal const string ANONYMOUS_OWNER_SESSION_KEY = "assistant_owner_token";
-    private const int DEFAULT_MAX_FILES_PER_MESSAGE = 5;
+    internal const int DEFAULT_MAX_FILES_PER_MESSAGE = 5;
 
     private readonly FW fw;
 
@@ -660,7 +660,7 @@ public sealed class AssistantAppService
 
     private void validateAssistantFiles(IList<IFormFile> files)
     {
-        int maxFiles = Math.Max(1, fw.settings.readInt("ASSISTANT_MAX_FILES_PER_MESSAGE", DEFAULT_MAX_FILES_PER_MESSAGE));
+        int maxFiles = Math.Max(1, fw.settings.readInt("ASSISTANT_MAX_FILES_PER_MESSAGE"));
         int count = files.Count(file => file != null && file.Length > 0);
         if (count > maxFiles)
             throw new UserException("Upload up to " + maxFiles + " files per assistant message.");
