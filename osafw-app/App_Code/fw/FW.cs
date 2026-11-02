@@ -1943,7 +1943,7 @@ public class FW : IDisposable
             var controller_icode = controller_name;
 
             var fwcon = model<FwControllers>().oneByIcode(controller_icode);
-            if (fwcon.Count == 0)
+            if (fwcon.Count == 0 || fwcon["status"].toInt() != FwModel.STATUS_ACTIVE)
                 return null; // controller class not found even in virtual controllers TODO NoControllerException?
 
             var canonicalControllerName = fwcon["icode"].toStr(controller_icode);

@@ -78,7 +78,6 @@ public class FwCustomReport : FwReportsBase
                 def["options"] = reportModel.listParamOptions(def, db);
         }
 
-        f_data["custom_params"] = paramDefs;
         addTemplateState();
     }
 
@@ -169,8 +168,23 @@ public class FwCustomReport : FwReportsBase
     /// </summary>
     private void addTemplateState()
     {
-        ps["custom_report"] = report;
-        ps["custom_params"] = paramDefs;
+        // Only presentation metadata may enter page state, including JSON exports.
+        ps["custom_report"] = FormUtils.filter(report, "id icode iname idesc icon");
+        var publicParams = new FwList();
+        foreach (var def in paramDefs)
+        {
+            var field = FormUtils.filter(def, "name label type required value");
+            if (def["options"] is FwList options)
+            {
+                var publicOptions = new FwList();
+                foreach (var option in options)
+                    publicOptions.Add(FormUtils.filter(option, "id iname"));
+                field["options"] = publicOptions;
+            }
+            publicParams.Add(field);
+        }
+        ps["custom_params"] = publicParams;
+        f_data["custom_params"] = publicParams;
         ps["is_custom_report"] = true;
         ps["is_site_admin"] = fw.model<Users>().isSiteAdmin();
         ps["has_custom_params"] = paramDefs.Count > 0;

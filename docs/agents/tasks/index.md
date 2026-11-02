@@ -145,6 +145,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-03-security-remediation-plan.md` - Created a private remediation checklist and grouped follow-up hardening tasks.
 - `summary-2026-06-03-security-user-owned-preferences.md` - Added owner-aware helpers to saved view, filter, and list models.
 - `summary-2026-06-04-custom-reports-review.md` - Created `docs/drafts/custom_reports_review.md` with architecture, code, docs, security, template/UI, simplification, test-gap, and open-question findings for the custom reports ...
+- `summary-2026-11-02-security-reports-modules.md` - Viewer-safe custom-report metadata and active-only virtual-module lifecycle.
 - `summary-2026-06-04-custom-reports-review-fixes.md` - Renamed the report runtime/base class to `FwReportsBase` and moved the `fwreports` table model to `osafw-app/App_Code/fw/FwReports.cs` as `FwReports`.
 - `summary-2026-06-05-security-attachments.md` - Hardened attachment authorization and browser delivery behavior.
 - `summary-2026-06-05-security-dynamic-object-links.md` - Hardened dynamic child-row and object-link authorization while preserving create-only public signup behavior.

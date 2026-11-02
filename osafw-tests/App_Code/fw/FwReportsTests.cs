@@ -323,6 +323,43 @@ public class FwReportsTests
     }
 
     [TestMethod]
+    public void CustomReportJsonContainsPresentationMetadataWithoutStoredDefinition()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.response.Body = new MemoryStream();
+        var users = new ReportUsers();
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
+        var report = new FwCustomReport(DB.h("icode", "safe", "iname", "Visible report", "icon", "table",
+            "sql_template", "select @choice as public_result", "params_json",
+            """{"choice":{"type":"lookup_sql","label":"Choice","source":"select private_lookup from private_table","private_note":"hidden-param-marker","options":[{"id":"1","iname":"Visible choice"}]}}""", "render_options_json", "{\"row_limit\":10}",
+            "future_private_field", "private-marker"));
+        report.init(fw, "safe", DB.h("format", "json", "choice", "1"));
+        report.setFilters();
+        report.render();
+        fw.response.Body.Position = 0;
+        var body = new StreamReader(fw.response.Body).ReadToEnd();
+        var payload = (FwDict)Utils.jsonDecode(body)!;
+        var metadata = (FwDict)payload["custom_report"]!;
+        Assert.AreEqual("Visible report", metadata["iname"]);
+        Assert.AreEqual("table", metadata["icon"]);
+        Assert.IsFalse(body.Contains("sql_template", StringComparison.Ordinal));
+        Assert.IsFalse(body.Contains("render_options_json", StringComparison.Ordinal));
+        Assert.IsFalse(body.Contains("private-marker", StringComparison.Ordinal));
+        Assert.IsTrue(payload.ContainsKey("list_rows"));
+        Assert.IsFalse(body.Contains("private_lookup", StringComparison.Ordinal));
+        Assert.IsFalse(body.Contains("hidden-param-marker", StringComparison.Ordinal));
+        StringAssert.Contains(body, "Visible choice");
+        var fields = (ObjList)payload["custom_params"]!;
+        Assert.AreEqual("1", ((FwDict)fields[0]!)["value"]);
+    }
+
+    private sealed class ReportUsers : Users
+    {
+        public override bool isAccessLevel(int min_acl) => false;
+    }
+
+    [TestMethod]
     public void Render_Json_WritesReportPayloadToResponse()
     {
         var fw = TestHelpers.CreateFw();

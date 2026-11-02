@@ -58,7 +58,7 @@ public class FwControllers : FwModel
     {
         return db.array(table_name, new FwDict
         {
-            ["status"] = db.opNOT(STATUS_DELETED),
+            ["status"] = STATUS_ACTIVE,
             ["access_level"] = db.opLE(fw.userAccessLevel)
         }, "igroup, iname");
     }
