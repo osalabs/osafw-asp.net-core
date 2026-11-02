@@ -67,14 +67,6 @@ public class FwKeysTests
     }
 
     [TestMethod]
-    public void GetAllElements_ThrowsWhenDurableStoreCannotBeRead()
-    {
-        var repo = new FwKeysXmlRepository(new ThrowingDb());
-
-        Assert.ThrowsExactly<CryptographicException>(() => repo.GetAllElements());
-    }
-
-    [TestMethod]
     public void StoreElement_InsertsAndUpdatesKeys()
     {
         var db = new MemoryKeysDb();

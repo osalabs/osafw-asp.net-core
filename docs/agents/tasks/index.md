@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-11-01-test-cleanup.md` - Audited all tests, simplified low-value coverage, added automatic isolated test profiles and clarified retained-test guidance.
 - `summary-2026-11-01-strong-passwords.md` - Enforced a shared good-or-better password rating in all four password-setting forms, aligned server/browser scoring, added concise validation hints and asset cache invalidation, and verified legacy compatibility and Chromium feedback.
 - `summary-2026-10-31-settings.md` - Consolidated Settings PR feedback: FwSettings/application model split, fw.settings access, DB-free bootstrap, credential controls, globals, direct shared initialization, application caching, local acceptance, inline-autosave UI, and optional process-cached FwSecretsManager with source-agnostic DB setup.
 - `summary-2026-10-24-settings-stack-sync.md` - Documented FwHooks defaults and synced the four Settings PRs with master, preserving renderer isolation/redaction and validating stable-SDK and optional integrations.

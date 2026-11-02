@@ -93,7 +93,7 @@ public class FwDynamicControllerTests
                 new FwDict { ["field"] = "secret", ["type"] = "password", ["is_edit_readonly"] = true }
             }
         });
-        var root = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.AppContext.BaseDirectory, "../../../.."));
+        var root = TestHelpers.RepoRoot();
         var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = System.IO.Path.Combine(root, "osafw-app/App_Data/template") });
 
         foreach (var id in new[] { 7, 0 })

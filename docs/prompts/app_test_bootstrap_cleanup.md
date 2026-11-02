@@ -20,6 +20,8 @@ Goal: keep framework tests in the framework repo, remove inherited framework imp
 6. If an inherited framework test is kept because the app changed the framework behavior, rename it around the app contract and add a short comment naming the customization.
 7. Do not weaken failing app tests by deleting them as "framework tests" unless the same behavior is verified in the framework repo and the app has no local customization.
 
+Use the repository test command for automatic temporary databases. Preserve app-specific schema and provider requirements; a SQLite pass does not establish SQL Server correctness. Do not use developers' working data for write tests.
+
 ## Verification
 
 - Run the app test project after removals.

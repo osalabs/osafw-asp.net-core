@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace osafw.Tests;
 
-[TestClass]
+[TestClass, TestCategory("Browser")]
 public class PdfLocalAssetTests
 {
     [TestMethod, TestCategory("PdfBrowser")]
@@ -212,7 +212,7 @@ public class PdfLocalAssetTests
 
         try
         {
-            File.Copy(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../osafw-app/App_Data/template/layout_print_local.html")), Path.Combine(templates, "layout_print_local.html"));
+            File.Copy(Path.Combine(TestHelpers.RepoRoot(), "osafw-app/App_Data/template/layout_print_local.html"), Path.Combine(templates, "layout_print_local.html"));
             File.WriteAllText(Path.Combine(templates, "layout_print.html"), "<img src='/wrong-layout.png'>");
             File.WriteAllText(Path.Combine(templates, "admin", "reports", "local", "main.html"), "<p>Report output</p>");
             File.WriteAllText(Path.Combine(assets, "lib", "bootstrap", "css", "bootstrap.min.css"), "body { color: black; }");

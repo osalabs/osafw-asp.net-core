@@ -41,7 +41,7 @@ public class ErrorPageGuidanceTests
                 ["appSettings:ROOT_URL"] = "/portal",
                 ["appSettings:ROOT_DOMAIN"] = "https://example.test",
                 ["appSettings:PAGE_LAYOUT"] = "main.html",
-                ["appSettings:template"] = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../osafw-app/App_Data/template")),
+                ["appSettings:template"] = Path.Combine(TestHelpers.RepoRoot(), "osafw-app/App_Data/template"),
             }, context);
             var fw = scope.Fw;
             if (loggedIn) fw.Session("user_id", "7");

@@ -26,25 +26,6 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void setValueTest()
-        {
-            FwCache.setValue("testCacheKey", "testing set");
-            var strValue = FwCache.getValue("testCacheKey");
-            Assert.IsNotNull(strValue);
-            Assert.AreEqual("testing set", strValue.ToString());
-
-            // test serialization
-            FwDict h = [];
-            h["CCC"] = "3";
-            h["DDD"] = "4";
-            FwCache.setValue("testCacheKey2", h);
-            var r = (FwDict?)FwCache.getValue("testCacheKey2");
-            Assert.IsNotNull(r);
-            Assert.AreEqual("3", r!["CCC"]);
-            Assert.AreEqual("4", r["DDD"]);
-        }
-
-        [TestMethod()]
         public void removeTest()
         {
             FwCache.setValue("testCacheKey", "testing remove");
@@ -89,7 +70,7 @@ namespace osafw.Tests
 
             // test serialization of decimal
             cache.setRequestValue("testCacheKey3", 123.456);
-            Assert.AreEqual((System.Decimal)123.456, cache.getRequestValue("testCacheKey3"));
+            Assert.AreEqual(123.456m, cache.getRequestValue("testCacheKey3"));
 
             // test serialization of bool
             cache.setRequestValue("testCacheKey4", true);
@@ -129,26 +110,6 @@ namespace osafw.Tests
             cache.setRequestValue("testCacheKey5", new System.IO.MemoryStream());
             var result = cache.getRequestValue("testCacheKey5");
             Assert.IsInstanceOfType(result, typeof(System.IO.MemoryStream));
-        }
-
-        [TestMethod()]
-        public void setRequestValueTest()
-        {
-            FwCache cache = new();
-            cache.setRequestValue("testCacheKey", "testing set");
-            var strValue = cache.getRequestValue("testCacheKey");
-            Assert.IsNotNull(strValue);
-            Assert.AreEqual("testing set", strValue.ToString());
-
-            // test serialization
-            FwDict h = [];
-            h["CCC"] = "3";
-            h["DDD"] = "4";
-            cache.setRequestValue("testCacheKey2", h);
-            var r = (FwDict?)cache.getRequestValue("testCacheKey2");
-            Assert.IsNotNull(r);
-            Assert.AreEqual("3", r["CCC"]);
-            Assert.AreEqual("4", r["DDD"]);
         }
 
         [TestMethod()]

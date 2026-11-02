@@ -6,14 +6,6 @@ namespace osafw.Tests
     public class FwLogTypesTests
     {
         [TestMethod]
-        public void Constructor_SetsTableName()
-        {
-            var model = new FwLogTypes();
-
-            Assert.AreEqual("log_types", model.table_name);
-        }
-
-        [TestMethod]
         public void Constants_AreStable()
         {
             Assert.AreEqual(0, value(FwLogTypes.ITYPE_SYSTEM));

@@ -145,54 +145,6 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void filterCheckboxesOverloadTest()
-        {
-            // Case 1: Populate itemdb with values from item when item is not null
-            FwDict itemdb1 = [];
-            FwDict item1 = new() { { "field1", "value1" }, { "field2", "value2" } };
-            FormUtils.filterCheckboxes(itemdb1, item1, new string[] { "field1", "field2" });
-            Assert.AreEqual("value1", itemdb1["field1"], "Itemdb should contain value from item for existing field");
-            Assert.AreEqual("value2", itemdb1["field2"], "Itemdb should contain value from item for existing field");
-
-            // Case 2: Populate itemdb with default values for non-existing fields when item is not null
-            FwDict itemdb2 = [];
-            FwDict item2 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb2, item2, new string[] { "field1", "field2" });
-            Assert.AreEqual("value1", itemdb2["field1"], "Itemdb should contain value from item for existing field");
-            Assert.AreEqual("0", itemdb2["field2"], "Itemdb should contain default value for non-existing field");
-
-            // Case 3: Populate itemdb with default values for all fields when item is null
-            FwDict itemdb3 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb3, null!, new string[] { "field1", "field2" });
-            Assert.AreEqual("value1", itemdb3["field1"], "Itemdb should be same when item is null");
-            Assert.HasCount(1, itemdb3, "Itemdb should be same when item is null");
-
-            // Case 4: Populate itemdb with custom default value for non-existing fields when item is not null
-            FwDict itemdb4 = [];
-            FwDict item4 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb4, item4, new string[] { "field1", "field2" }, false, "custom_default");
-            Assert.AreEqual("value1", itemdb4["field1"], "Itemdb should contain value from item for existing field");
-            Assert.AreEqual("custom_default", itemdb4["field2"], "Itemdb should contain custom default value for non-existing field");
-
-            // Case 5: Populate itemdb with default values when fields array is null
-            FwDict itemdb5 = [];
-            FwDict item5 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb5, item5, (IList)null!);
-            Assert.IsEmpty(itemdb5, "Itemdb should be empty when fields array is null");
-
-            // Case 6: Populate itemdb with default values when fields array is empty
-            FwDict itemdb6 = [];
-            FwDict item6 = new() { { "field1", "value1" } };
-            FormUtils.filterCheckboxes(itemdb6, item6, Array.Empty<string>());
-            Assert.IsEmpty(itemdb6, "Itemdb should be empty when fields array is empty");
-
-            // Case 7: Populate itemdb with default values when item is null and fields array is null
-            FwDict itemdb7 = [];
-            FormUtils.filterCheckboxes(itemdb7, null!, (IList)null!);
-            Assert.IsEmpty(itemdb7, "Itemdb should be empty when item is null and fields array is null");
-        }
-
-        [TestMethod]
         public void FilterNullableTest()
         {
             // Case 1: Check if value is empty '' and make it null for existing field

@@ -369,7 +369,7 @@ public class FwReportsTests
     [TestMethod]
     public void Init_ConfiguredReportUsesNamedDb()
     {
-        var fw = TestHelpers.CreateFw();
+        using var fw = new FW(TestHelpers.CreateHttpContext(), new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
         addReadonlyDbConfig(fw);
         var report = new DbExposedReportForTest("readonly");
 
@@ -383,7 +383,7 @@ public class FwReportsTests
     [TestMethod]
     public void CustomReport_ConfiguredDbKeepsMetadataOnFrameworkDb()
     {
-        var fw = TestHelpers.CreateFw();
+        using var fw = new FW(TestHelpers.CreateHttpContext(), new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
         addReadonlyDbConfig(fw);
         var report = new DbConfiguredCustomReportForTest(new FwDict
         {

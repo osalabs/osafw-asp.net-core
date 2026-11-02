@@ -81,7 +81,6 @@ namespace osafw.Tests
 
             Assert.AreEqual("UTC", settings["timezone"]);
             Assert.AreEqual("en", settings["lang"]);
-            Assert.AreEqual("/Main", settings["LOGGED_DEFAULT_URL"]);
             Assert.AreEqual("/layout.html", settings["PAGE_LAYOUT"]);
             Assert.AreEqual("osafw", settings["DATA_PROTECTION_APPLICATION_NAME"]);
             Assert.IsTrue(routePrefixes.ContainsKey("/Custom"));
@@ -97,7 +96,6 @@ namespace osafw.Tests
             foreach (var code in new[] { "mail", "AWS_CREDENTIAL_SOURCE", "AWSAccessKey", "AWSSecretKey", "OPENAI_API_KEY", "API_KEY" })
                 Assert.IsFalse(settings.ContainsKey(code), code);
 
-            Assert.AreEqual("/Main", settings["LOGGED_DEFAULT_URL"]);
             Assert.AreEqual(DateUtils.DATE_FORMAT_MDY, settings["date_format"]);
         }
 

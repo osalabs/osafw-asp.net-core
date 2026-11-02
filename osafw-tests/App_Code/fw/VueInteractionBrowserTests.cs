@@ -11,11 +11,10 @@ namespace osafw.Tests;
 [TestClass]
 public class VueInteractionBrowserTests
 {
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task RowButtonAlignmentUsesBooleanGlobalsAndPreservesOverrides()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<list-row-btn :row='{id:1}' :is-left='fwStore.uioptions.list.table.isButtonsLeft ?? false'></list-row-btn>");
         var failures = await page.EvaluateAsync<string[]>("""
             async () => {
@@ -42,13 +41,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow("relations", "relations")]
     [DataRow("unknown", "")]
     public async Task StartupPreservesValidTabLinksAndRejectsUnknownTabs(string requestedTab, string expectedTab)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div>Startup test</div>");
         var appScript = Template("app.js").Replace("const app = createFwApp(mainApp);", "window.testMainApp = mainApp;");
         await page.AddScriptTagAsync(new() { Type = "module", Content = appScript });
@@ -72,7 +70,7 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    private static string RepoRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+    private static string RepoRoot => TestHelpers.RepoRoot();
 
     private static string Template(string name)
     {
@@ -183,10 +181,34 @@ public class VueInteractionBrowserTests
         Assert.IsEmpty(errors, "Vue browser fixture reported client errors: " + string.Join("; ", errors));
     }
 
-    private static async Task<IBrowser> Browser(IPlaywright playwright)
+    private static IPlaywright? playwright;
+    private static IBrowser? sharedBrowser;
+
+    private static async Task<IBrowser> Browser()
     {
-        if (!File.Exists(playwright.Chromium.ExecutablePath)) Assert.Inconclusive("Install matching Chromium for Vue browser checks.");
-        return await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chromium" });
+        if (sharedBrowser != null)
+            return sharedBrowser;
+        playwright = await Playwright.CreateAsync();
+        sharedBrowser = await playwright.Chromium.LaunchAsync(new() { Headless = true, Channel = "chromium" });
+        return sharedBrowser;
+    }
+
+    [TestCleanup]
+    public async Task CloseContexts()
+    {
+        if (sharedBrowser != null)
+            foreach (var context in sharedBrowser.Contexts)
+                await context.CloseAsync();
+    }
+
+    [ClassCleanup]
+    public static async Task CloseBrowser()
+    {
+        if (sharedBrowser != null)
+            await sharedBrowser.DisposeAsync();
+        playwright?.Dispose();
+        sharedBrowser = null;
+        playwright = null;
     }
 
     [TestMethod]
@@ -208,11 +230,10 @@ public class VueInteractionBrowserTests
         Assert.IsFalse(virtualController.Contains("/Admin/Demos/"));
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task LocalizedValidationMessages_ArePlainTextInIssueSummary()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         const string REQUIRED_MESSAGE = "必填字段 ' \" </script><img src=x onerror=alert(1)>";
         var messages = new FwDict
         {
@@ -237,11 +258,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task ColumnResizeSupportsKeyboardPointerBoundsAndCleanup()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<table class='list'><list-table-header v-if='fwStore.count !== -1'></list-table-header></table>");
         await page.EvaluateAsync("() => { testStore.list_headers=[{field_name:'title',field_name_visible:'Title'}]; testStore.count=1; window.widthSaves=[]; testStore.api.post=async (_, data) => { widthSaves.push(JSON.parse(data.widths)); return {}; }; }");
         var resize = page.GetByRole(AriaRole.Button, new() { Name = "Resize Title", Exact = true });
@@ -302,11 +322,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task FullTableLoadsSavedWidthsAndResizeStyles()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<list-table v-if='fwStore.count > 0'></list-table>");
         await page.EvaluateAsync("""
             () => {
@@ -339,13 +358,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task FixedWidthRowActionsRemainInsideTheirCellAndClickable(bool isButtonsLeft)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, """
             <list-table v-if="fwStore.count > 0">
                 <template #list-row-btn-prepend><a href="#" @click.prevent="fwStore.count++">Audit</a> </template>
@@ -407,15 +425,14 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false, false)]
     [DataRow(false, true)]
     [DataRow(true, false)]
     [DataRow(true, true)]
     public async Task FirstColumnResizePreservesOtherColumnsAndSingleLineActions(bool isEditable, bool isButtonsLeft)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<list-table v-if='fwStore.count > 0'></list-table>", isRealListCells: true);
         await page.EvaluateAsync("""
             options => {
@@ -503,13 +520,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task CtrlDoubleClickFitsVisibleColumnsInOneSaveAndRetainsHiddenWidths(bool isEditable)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var title = new string('W', 120);
         var titleCell = isEditable ? "<input value='" + title + "'>" : title;
         var page = await Page(browser, "<table class='list'><list-table-header></list-table-header><tbody><tr><td></td>"
@@ -541,11 +557,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task ValidationRevealsTabAndFieldsetAndReadonlyOnEditFieldsStayReadOnly()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<edit-form></edit-form>");
         await page.EvaluateAsync("""
             () => {
@@ -579,11 +594,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task ValidationPresentationUsesOneFieldMessageOptionalSummaryAndDeduplicatedToast()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<edit-form></edit-form>");
         await page.EvaluateAsync("""
             async () => {
@@ -634,11 +648,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task FilterToggleKeepsItsPositionAndDraftValuesWhenCollapsed()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<list-header></list-header><list-filters></list-filters><div id='table-start'>List table</div>");
         var toggle = page.Locator(".fw-filter-toggle");
         var search = page.Locator("#list-filters-s");
@@ -669,11 +682,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task SaveFailuresWarningsDuplicateCallsPermissionsAndVisibilityKeepTheirContracts()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<list-header></list-header>");
         await page.EvaluateAsync("""
             () => {
@@ -700,11 +712,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task AddNewUsesCreateCapabilityWhileExistingRowEditIsDenied()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<edit-header></edit-header>");
         await page.EvaluateAsync("""
             () => {
@@ -728,11 +739,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task QuickEditPaneAutosavesFromListScreen()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<list-edit-pane></list-edit-pane>");
         await page.EvaluateAsync("""
             async () => {
@@ -755,11 +765,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task QuickEditSaveRefreshesListAndPreservesFocusedDraftContext()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, """
             <div class="list-edit-pane" style="height:60px;overflow:auto">
                 <div style="height:100px"></div>
@@ -810,11 +819,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task ChangedDraftDuringInflightSaveQueuesExactlyOneFollowup()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<input v-if='fwStore.edit_data' id='queued-draft' v-model='fwStore.edit_data.i.title'>");
         await page.EvaluateAsync("""
             () => {
@@ -840,15 +848,14 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false, false, 100)]
     [DataRow(true, false, 200)]
     [DataRow(false, true, 300)]
     [DataRow(true, true, 300)]
     public async Task QueuedColumnWidthsRollbackToLastConfirmedValue(bool isFirstSuccess, bool isSecondSuccess, int expected)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             results => {
@@ -871,15 +878,14 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow("reset", 0)]
     [DataRow("load", 450)]
     [DataRow("density", 300)]
     [DataRow("named-save", 300)]
     public async Task UserViewMutationWaitsForPendingWidthsAndRemainsLast(string mutation, int expectedWidth)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             mutation => {
@@ -931,15 +937,14 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false, false)]
     [DataRow(false, true)]
     [DataRow(true, false)]
     [DataRow(true, true)]
     public async Task ColumnResizeAfterViewMutationUsesRefreshedWidths(bool isLoad, bool isWidthSuccess)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             options => {
@@ -973,15 +978,14 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false, false)]
     [DataRow(false, true)]
     [DataRow(true, false)]
     [DataRow(true, true)]
     public async Task ColumnResizeUsesMutationResultWhenRefreshCannotRun(bool isLoad, bool isContextChange)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             options => {
@@ -1019,11 +1023,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task ColumnResizeWaitsForKnownLoadedWidths()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         Assert.IsFalse(await page.EvaluateAsync<bool>("""
             async () => {
@@ -1040,11 +1043,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task WidthWritesAcrossViewRefreshKeepNewerResizes()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             () => {
@@ -1071,13 +1073,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task OtherTabSuccessCannotNavigatePastNewerUnsavedEdits(bool isQueued)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("""
             queued => {
@@ -1099,11 +1100,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task LoadedDraftKeepsUnsubmittedOtherTabChanges()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("""
             async () => {
@@ -1125,7 +1125,7 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow("multicb", false)]
     [DataRow("multicb_prio", false)]
     [DataRow("att_files_edit", false)]
@@ -1136,8 +1136,7 @@ public class VueInteractionBrowserTests
     [DataRow("att_links_edit", true)]
     public async Task CompoundFieldChangesRemainUnsavedUntilTheirOwnTabSucceeds(string type, bool isNew)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             async ({type,isNew}) => {
@@ -1171,15 +1170,14 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow("New", "edit", 0)]
     [DataRow("Show", "view", 41)]
     [DataRow("Index", "list", 0)]
     [DataRow("", "edit", 41)]
     public async Task NewFormEntryFollowsSuccessfulSaveDestination(string destination, string screen, int id)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             async destination => {
@@ -1198,11 +1196,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task NewFormAcknowledgesCompoundFieldsSavedInReverseOrder()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("""
             async () => {
@@ -1255,13 +1252,12 @@ public class VueInteractionBrowserTests
         return page;
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task InflightSaveUsesTheTabOfTheRequestedExplicitOrAutosave(bool autosave)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("() => { window.firstSave=testStore.saveEditData(); }");
         await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
@@ -1275,13 +1271,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task TabIdentityAndIgnoredSubtableResponsesPreserveAnUnchangedDraft(bool requestRelationSave)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("() => { originalRelation.idesc='Draft before first request'; window.firstSave=testStore.saveEditData(); }");
         await page.GetByRole(AriaRole.Link, new() { Name = "Relations", Exact = true }).ClickAsync();
@@ -1294,13 +1289,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task MultipleRequestedTabsCoalesceInOrderAndSurviveLaterNavigation(bool autosave)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("""
             () => {
@@ -1320,7 +1314,7 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow("structured")]
     [DataRow("form-wide")]
     [DataRow("details")]
@@ -1329,8 +1323,7 @@ public class VueInteractionBrowserTests
     [DataRow("server")]
     public async Task FailedTabSaveSurvivesOtherTabSuccessUntilItsOwnSuccessfulRetry(string failureKind)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await TabbedSavePage(browser);
         await page.EvaluateAsync("""
             kind => {
@@ -1433,11 +1426,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task SubtableInflightEditsAdditionsAndRemovalsSurviveServerReconciliation()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, """
             <form v-if="fwStore.edit_data">
                 <subtable_demos_items :def="{field:'lines',type:'subtable_edit'}" :lookups="fwStore.lookups" :form="fwStore.edit_data"></subtable_demos_items>
@@ -1506,13 +1498,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(false)]
     [DataRow(true)]
     public async Task InflightSaveKeepsOtherFormsSaveEntryAndResultsIndependent(bool autosave)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<edit-form></edit-form>");
         await page.SetViewportSizeAsync(900, 700); // Exercise the real responsive form Save button.
         await page.EvaluateAsync("""
@@ -1542,11 +1533,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task RequestedFollowupStaysWithCapturedFormAndApiAfterNavigation()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             () => {
@@ -1571,11 +1561,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task NavigationAloneNeverSavesANewFormAndStaleResponseKeepsItsDraftIds()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             () => {
@@ -1600,13 +1589,12 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     [DataRow(true)]
     [DataRow(false)]
     public async Task QueuedCreateUsesAssignedIdAndLastChildRemovalStaysRemoved(bool requestFollowup)
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             queue => {
@@ -1637,11 +1625,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task FailedRowDeleteDoesNotReloadAndSuccessfulDeleteStillDoes()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<table><tbody><list-table-row v-if='fwStore.list_rows.length' :row='fwStore.list_rows[0]'></list-table-row></tbody></table>");
         await page.EvaluateAsync("""
             () => {
@@ -1667,11 +1654,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task DebouncedSaveDoesNotCrossFormsAndStillSavesTheActiveForm()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, "<div></div>");
         await page.EvaluateAsync("""
             () => {
@@ -1693,11 +1679,10 @@ public class VueInteractionBrowserTests
         await AssertNoClientErrors(page);
     }
 
-    [TestMethod, TestCategory("VueBrowser")]
+    [TestMethod, TestCategory("VueBrowser"), TestCategory("Browser")]
     public async Task SubtableIssuesFocusTheMatchingRowAndReadonlyOnEditExistingRowsOnly()
     {
-        using var playwright = await Playwright.CreateAsync();
-        await using var browser = await Browser(playwright);
+        var browser = await Browser();
         var page = await Page(browser, """
             <form id="subtable-form" v-if="fwStore.edit_data">
                 <button v-if="fwStore.formIssues().length" id="subtable-issue" type="button" @click="fwStore.focusFormIssue(fwStore.formIssues()[0], $event.currentTarget.closest('form'))">{{fwStore.issueLabel(fwStore.formIssues()[0])}}: {{fwStore.formIssues()[0].message}}</button>

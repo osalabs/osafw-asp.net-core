@@ -201,12 +201,6 @@ public class AdminSettingsControllerTests
         string html = fw.parsePage("/admin/settings/showform", "form.html", ps);
 
         Assert.AreEqual(hasDefaultSelection, html.Contains("id=\"basis_inherit\"", StringComparison.Ordinal));
-        if (!hasDefaultSelection)
-        {
-            StringAssert.Contains(html, "Not configured");
-            StringAssert.Contains(html, "Leave blank to keep the current value.");
-            StringAssert.Contains(html, "Clear the saved value");
-        }
     }
 
     [TestMethod]
@@ -218,6 +212,7 @@ public class AdminSettingsControllerTests
         Assert.ThrowsExactly<ValidationException>(() => controller.SaveAction(1));
         var ps = controller.ShowFormAction(1);
         Assert.IsTrue(ps["is_basis_value"].toBool());
+        // The form must project the correction state into the selected radio on retry.
         fw.config()["template"] = TestHelpers.TemplateRoot();
         string html = fw.parsePage("/admin/settings/showform", "form.html", ps);
         StringAssert.Matches(html, new System.Text.RegularExpressions.Regex("id=\"basis_value\"[^>]*checked"));

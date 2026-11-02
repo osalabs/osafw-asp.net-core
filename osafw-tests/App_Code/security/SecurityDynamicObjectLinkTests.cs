@@ -542,9 +542,21 @@ public class SecurityDynamicObjectLinkTests
         return fw;
     }
 
+    private sealed class FixtureSchemaDb : RejectingDb
+    {
+        public override FwList loadTableSchemaFull(string table)
+        {
+            // Synthetic models in this fixture store raw fields; no conversion metadata.
+            if (table is "parent_rows" or "child_rows" or "users")
+                return [];
+            throw Unexpected("schema: " + table);
+        }
+    }
+
     private static FW createFw(IDictionary<string, string?>? settings = null)
     {
         var fw = TestHelpers.CreateFw(settings);
+        fw.db = new FixtureSchemaDb();
         fw.is_log_events = false;
         var users = new StubUsers();
         users.init(fw);
@@ -565,8 +577,8 @@ public class SecurityDynamicObjectLinkTests
         {
             ["id"] = id,
             ["email"] = "new@example.test",
-            ["pwd"] = "secret123",
-            ["pwd2"] = "secret123",
+            ["pwd"] = "Valid-Signup-Password-42!",
+            ["pwd2"] = "Valid-Signup-Password-42!",
             ["fname"] = "New",
             ["lname"] = "User",
         };

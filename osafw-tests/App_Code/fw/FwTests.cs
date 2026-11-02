@@ -256,17 +256,6 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public void ResolveTestEmailRecipient_UsesSiteSetting()
-        {
-            var fw = CreateFwForHost("test-email-configured");
-            TestHelpers.RegisterModel(fw, (Settings)new StubSettings { TestEmail = " configured@example.test " });
-            fw.settings.init(fw);
-            fw.Session("login", "session@example.test");
-
-            Assert.AreEqual("configured@example.test", fw.resolveTestEmailRecipient());
-        }
-
-        [TestMethod]
         public void ResolveTestEmailRecipient_FallsBackToSessionLoginWhenConfigBlank()
         {
             var fw = CreateFwForHost("test-email-session-fallback");

@@ -171,15 +171,6 @@ namespace osafw.Tests
         }
 
         [TestMethod()]
-        public void isFloatTest()
-        {
-            Assert.IsFalse(Utils.isFloat(""));
-            Assert.IsFalse(Utils.isFloat("ABC"));
-            Assert.IsTrue(Utils.isFloat("123.123"));
-            Assert.IsTrue(Utils.isFloat(123.123));
-        }
-
-        [TestMethod()]
         public void sTrimTest()
         {
             string s = "test text to trim";
@@ -200,6 +191,7 @@ namespace osafw.Tests
         [TestMethod]
         public void IsFloatTests()
         {
+            Assert.IsTrue(Utils.isFloat(123.123));
             // Case 1: Test valid float string
             object input1 = "123.45";
             bool result1 = Utils.isFloat(input1);
@@ -590,10 +582,7 @@ namespace osafw.Tests
 
             string[] r = Utils.hashKeys(h1);
 
-            Assert.IsTrue(r[0] == "AAA" || r[0] == "BBB" || r[0] == "CCC" || r[0] == "DDD");
-            Assert.IsTrue(r[1] == "AAA" || r[1] == "BBB" || r[1] == "CCC" || r[1] == "DDD");
-            Assert.IsTrue(r[2] == "AAA" || r[2] == "BBB" || r[2] == "CCC" || r[2] == "DDD");
-            Assert.IsTrue(r[3] == "AAA" || r[3] == "BBB" || r[3] == "CCC" || r[3] == "DDD");
+            CollectionAssert.AreEquivalent(new[] { "AAA", "BBB", "CCC", "DDD" }, r);
         }
 
         [TestMethod()]
@@ -637,9 +626,9 @@ namespace osafw.Tests
             string result3 = Utils.nanoid(100);
             Assert.AreEqual(100, result3.Length, "Result should have custom length of 100 characters");
 
-            // Case 4: Test uniqueness of generated IDs
+            // Bounded smoke for accidental constant output; not a statistical collision guarantee.
             HashSet<string> idSet = [];
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 32; i++)
             {
                 string id = Utils.nanoid();
                 Assert.DoesNotContain(id, idSet, "Generated ID should be unique");

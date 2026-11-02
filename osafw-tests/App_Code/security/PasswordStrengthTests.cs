@@ -175,7 +175,7 @@ public class PasswordStrengthTests
 
     }
 
-    [TestMethod]
+    [TestMethod, TestCategory("Browser")]
     public async Task BrowserMeter_MatchesServerAndDisplaysFieldError()
     {
         var root = Path.GetFullPath(Path.Combine(TestHelpers.TemplateRoot(), "../.."));

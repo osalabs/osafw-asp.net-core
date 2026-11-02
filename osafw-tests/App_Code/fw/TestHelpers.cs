@@ -13,7 +13,7 @@ internal static class TestHelpers
         var context = CreateHttpContext();
 
         var configurationBuilder = new ConfigurationBuilder().AddInMemoryCollection(settings ?? new Dictionary<string, string?>());
-        var fw = new FW(context, configurationBuilder.Build());
+        var fw = new FW(context, configurationBuilder.Build(), name => new RejectingDb(name));
         return fw;
     }
 
@@ -30,6 +30,8 @@ internal static class TestHelpers
 
         return context;
     }
+
+    public static string RepoRoot() => System.IO.Path.GetFullPath(System.IO.Path.Combine(TemplateRoot(), "../../.."));
 
     public static string TemplateRoot()
     {

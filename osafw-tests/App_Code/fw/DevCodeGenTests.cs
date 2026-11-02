@@ -28,7 +28,7 @@ public class DevCodeGenTests
     [DataRow("vue", "AdminDemosVue", "demosvue", "FwVueController")]
     public void CreateController_ExcludesDemoValidation(string type, string sourceClass, string sourceFolder, string baseClass)
     {
-        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+        var repoRoot = TestHelpers.RepoRoot();
         var tempRoot = Path.Combine(Path.GetTempPath(), "osafw-controller-" + Guid.NewGuid().ToString("N"));
         var controllerDir = Path.Combine(tempRoot, "App_Code", "controllers");
         var templateDir = Path.Combine(tempRoot, "App_Data", "template");

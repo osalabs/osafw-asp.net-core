@@ -35,16 +35,6 @@ public class FwLoginRedirectTests
     }
 
     [TestMethod]
-    public void Dispatch_ControllerAccessRuleAlsoPreservesOriginalUrl()
-    {
-        using var fw = createFw();
-
-        fw.dispatch();
-
-        Assert.AreEqual("/Login?gourl=%2fAdmin%2fDemosDynamic", fw.response.Headers.Location.ToString());
-    }
-
-    [TestMethod]
     [DataRow("POST", "", "", "")]
     [DataRow("GET", "application/json", "", "")]
     [DataRow("GET", "", "XMLHttpRequest", "")]

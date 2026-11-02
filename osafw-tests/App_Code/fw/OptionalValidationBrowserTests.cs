@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace osafw.Tests;
 
-[TestClass]
+[TestClass, TestCategory("Browser")]
 public class OptionalValidationBrowserTests
 {
     [TestMethod]
     public async Task DynamicForms_AcceptBothDataErrorsFormatsAndKeepFeedbackScoped()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+        var root = TestHelpers.RepoRoot();
         var assets = Environment.GetEnvironmentVariable("FW_BROWSER_ASSETS_ROOT") ?? Path.Combine(root, "osafw-app/wwwroot/assets");
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });

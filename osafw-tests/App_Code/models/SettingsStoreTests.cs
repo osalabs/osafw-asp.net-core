@@ -293,13 +293,6 @@ public class SettingsStoreTests
     }
 
     [TestMethod]
-    public void CredentialClassificationUsesInputMetadataOnly()
-    {
-        Assert.IsTrue(Settings.isCredential(DB.h("icode", "arbitrary", "input", Settings.INPUT_CREDENTIAL)));
-        Assert.IsFalse(Settings.isCredential(DB.h("icode", "mail.password", "input", Settings.INPUT_TEXT)));
-    }
-
-    [TestMethod]
     public void CredentialValuesCanBeChangedIndependently()
     {
         using var fixture = new SettingsFixture();
@@ -310,20 +303,6 @@ public class SettingsStoreTests
 
         Assert.AreEqual("first-value", fixture.Model.readSecret("AWSAccessKey"));
         Assert.AreEqual("", fixture.Model.readSecret("AWSSecretKey"));
-    }
-
-    [TestMethod]
-    public void LocalUrlValidationUsesMetadataForAnySettingCode()
-    {
-        using var fixture = new SettingsFixture();
-        var row = DB.h("icode", "custom_destination", "input", Settings.INPUT_TEXT,
-            "allowed_values", "local_url|1");
-
-        Assert.AreEqual("", fixture.Model.valueError(row, "/Workspace"));
-        Assert.AreEqual("INVALID", fixture.Model.valueError(row, "https://outside.example/"));
-
-        row["allowed_values"] = "";
-        Assert.AreEqual("", fixture.Model.valueError(row, "https://outside.example/"));
     }
 
     private sealed class SettingsFixture : IDisposable

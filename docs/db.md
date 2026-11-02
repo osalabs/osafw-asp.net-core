@@ -78,11 +78,11 @@ Scopes do not isolate environment variables, caller-owned configuration-provider
 For the current Debug defaults, run the safe suites with:
 
 ```powershell
-dotnet test osafw-tests/osafw-tests.csproj --filter 'FullyQualifiedName!~osafw.Tests.DBTests'
-dotnet test osafw-tests/osafw-tests.csproj '-p:DefineConstants=TRACE%3BDEBUG%3BisSQLite' --filter 'FullyQualifiedName!~osafw.Tests.DBTests'
+pwsh -NoProfile -File scripts/test.ps1
+pwsh -NoProfile -File scripts/test.ps1 -Profile SqlServer
 ```
 
-The excluded legacy class connects to a configured SQL Server database and mutates a test table. Do not include it without separate resource authority. Preserve any additional project constants when selecting the SQLite variant. SQLite evidence does not prove other providers' SQL, locking, precision, mapping, or deployment behavior.
+The SQL Server profile provisions its own disposable LocalDB database and never reads application connection settings. Fast includes temporary SQLite fixtures. Preserve any additional project constants when selecting the SQLite variant. SQLite evidence does not prove other providers' SQL, locking, precision, mapping, or deployment behavior.
 
 ### SQLite provider
 SQLite is optional and intended for embedded single-node deployments or disposable provider-neutral local/integration tests. It is the preferred database for parallel worktree isolation when the task does not depend on SQL Server-specific SQL, types, locking, or deployment behavior. SQL Server is the production-primary provider.

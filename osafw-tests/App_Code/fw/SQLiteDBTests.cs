@@ -12,27 +12,23 @@ namespace osafw.Tests;
 [TestClass]
 public class SQLiteDBTests
 {
-    private string dbPath = "";
+    private SqliteFile file = null!;
     private string connstr = "";
     private DB db = null!;
 
     [TestInitialize]
     public void Startup()
     {
-        dbPath = Path.Combine(Path.GetTempPath(), "osafw-" + Guid.NewGuid().ToString("N") + ".sqlite");
-        connstr = "Data Source=" + dbPath + ";Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=False;";
-        db = new DB(DB.h(
-            "connection_string", connstr,
-            "type", DB.DBTYPE_SQLITE,
-            "timezone", "UTC"), "sqlite-test");
+        file = new SqliteFile();
+        connstr = file.ConnectionString;
+        db = file.CreateDb("sqlite-test");
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        db.disconnect();
-        if (File.Exists(dbPath))
-            File.Delete(dbPath);
+        try { db.Dispose(); }
+        finally { file.Dispose(); }
     }
 
     [TestMethod]
@@ -271,15 +267,8 @@ public class SQLiteDBTests
         Assert.HasCount(1, fks);
         Assert.AreEqual("parents", fks[0]["pk_table"]);
 
-        try
-        {
-            db.exec("INSERT INTO children (parents_id, iname) VALUES (999, 'orphan')");
-            Assert.Fail("SQLite foreign key enforcement should reject orphan rows.");
-        }
-        catch (Exception)
-        {
-            // Expected provider exception.
-        }
+        Assert.ThrowsExactly<Microsoft.Data.Sqlite.SqliteException>(() =>
+            db.exec("INSERT INTO children (parents_id, iname) VALUES (999, 'orphan')"));
     }
 
     [TestMethod]

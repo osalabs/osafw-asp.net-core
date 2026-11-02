@@ -186,13 +186,17 @@ public class SecurityGroup9ATests
         Assert.IsTrue(panes.ContainsKey("linechart"));
         Assert.IsTrue(panes.ContainsKey("progress"));
 
+        foreach (var table in new[] { "spages", "att", "users" })
+            Assert.IsTrue(db.ValueCalls.Any(call => call.Table == table), table);
+        Assert.IsNotEmpty(db.ValuepCalls);
+        Assert.IsTrue(db.ArraypCalls.Any(call => call.Sql.Contains("activity_logs", StringComparison.OrdinalIgnoreCase)));
         Assert.IsTrue(db.ValueCalls.Where(call => call.Table == "spages").All(call => call.Where["add_users_id"].toInt() == 9));
         Assert.IsTrue(db.ValueCalls.Where(call => call.Table == "att").All(call => call.Where["add_users_id"].toInt() == 9));
         Assert.IsTrue(db.ValueCalls.Where(call => call.Table == "users").All(call => call.Where["id"].toInt() == 9));
-        Assert.IsTrue(db.ValuepCalls.All(call => hasUsersIdScope(call.Params)));
+        Assert.IsTrue(db.ValuepCalls.All(call => hasUsersIdScope(call)));
         Assert.IsTrue(db.ArraypCalls
             .Where(call => call.Sql.Contains("activity_logs", StringComparison.OrdinalIgnoreCase))
-            .All(call => hasUsersIdScope(call.Params)));
+            .All(call => hasUsersIdScope(call)));
 
         var pagesPane = panes["plate1"] as FwDict ?? [];
         Assert.AreEqual("/Admin/Spages", pagesPane["url"].toStr());
@@ -310,9 +314,11 @@ public class SecurityGroup9ATests
         Assert.IsFalse(appSettings.TryGetProperty("accesss_levels", out _));
     }
 
-    private static bool hasUsersIdScope(FwDict parameters)
+    private static bool hasUsersIdScope(QueryCall call)
     {
-        return parameters.ContainsKey("users_id") || parameters.ContainsKey("@users_id");
+        var userId = call.Params.ContainsKey("@users_id") ? call.Params["@users_id"] : call.Params["users_id"];
+        return userId.toInt() == 9 && System.Text.RegularExpressions.Regex.IsMatch(
+            call.Sql, @"\b(?:users_id|id)\s*=\s*@users_id\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
     private static string findRepoFile(params string[] relativeParts)

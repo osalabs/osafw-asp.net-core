@@ -54,6 +54,8 @@
 - Authorize attachments before linking, serving, or issuing S3 redirects. Block or force-download active content and retain safe image-decode limits.
 - Gate dev/admin tools, generated SQL/files, assistant calls, and schema writes by environment, allowlists, resource authorization, and sensitive-telemetry redaction. Parameterize SQL values and model constants through `DB`; use model `qTable()` identifiers and the indented clause/condition formatting in `docs/db.md#sql-readability`.
 
+- Retain tests for identifiable regression risks, not assignment round trips or incidental wording; follow `docs/agents/verification.md` for test selection, temporary probes, and automatic profiles.
+
 ## Compatibility and closeout
 
 - Protect copied-app APIs, actions/routes, templates/includes/page state, config/defaults/symbols, generated output, schema/providers, storage, security, frontend, and email contracts. Preserve intentional app customizations when adapting upstream changes.
