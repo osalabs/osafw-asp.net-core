@@ -878,10 +878,20 @@ ORDER BY {getOrderBy()}";
             where_params["status"] = STATUS_ACTIVE;
         }
 
+        where += $" AND ({autocompleteWhere(where_params)})";
         var sql = $"SELECT {qfield_id} AS id, {qfield_iname} AS iname FROM {table} WHERE {where} ORDER BY {getOrderBy()}";
         if (limit > 0)
             sql = db.limit(sql, limit);
         return db.arrayp(sql, where_params);
+    }
+
+    /// <summary>
+    /// Adds model-owned visibility to autocomplete queries before sorting and limiting.
+    /// Overrides add SQL parameters to the supplied dictionary and return a predicate.
+    /// </summary>
+    protected virtual string autocompleteWhere(FwDict parameters)
+    {
+        return "1=1";
     }
 
     /// <summary>

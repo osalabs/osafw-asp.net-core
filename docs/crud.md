@@ -192,3 +192,9 @@ FwModel model = fw.model(modelType);
 ```
 
 The type must be a closed, non-abstract `FwModel` type with a public parameterless constructor. The overload initializes the model through the current `FW` instance and shares the same per-instance cache used by `fw.model<T>()` and class-name lookups.
+
+## Administrative attachment and autocomplete permissions
+
+`AdminAttController` checks the existing parent for administrative reads and mutations, and the proposed parent before saving a binding. `Att.checkAdminAccess` retains management of inactive rows and delegates parent policy to the overridable `isParentAccessAllowed` hook. Copied-app parent models must authorize `view`, `edit`, and `delete` as appropriate. Read-only users cannot save attachment metadata or administer user credentials.
+
+Autocomplete queries apply the model's protected `autocompleteWhere(FwDict parameters)` predicate before ordering and limiting. User Views and Filters include owned or system rows; User Lists include only owned rows. Models with other ownership rules should override this hook rather than filter an already limited result.

@@ -431,6 +431,35 @@ public class Att : FwModel<Att.Row>
         return isParentAccessAllowed(binding, action);
     }
 
+    /// <summary>
+    /// Authorizes administrative reads or mutations against the existing direct parent and any proposed binding.
+    /// Inactive rows remain manageable; missing rows and unauthorized parents fail closed.
+    /// </summary>
+    public virtual void checkAdminAccess(int id, string action, FwDict? fields = null)
+    {
+        var item = id > 0 ? one(id) : new DBRow();
+        if (id > 0 && item.Count == 0)
+            throw new NotFoundException("Wrong Attachment ID");
+        if (id > 0 && !isParentAccessAllowed(item, action))
+            throw new AuthException();
+
+        if (fields != null)
+        {
+            var proposed = new FwDict(item);
+            Utils.mergeHash(proposed, fields);
+            if (!isParentAccessAllowed(proposed, action))
+                throw new AuthException();
+        }
+    }
+
+    /// <summary>Quick search shares the attachment library's unbound-row visibility.</summary>
+    protected override string autocompleteWhere(FwDict parameters)
+    {
+        parameters["autocomplete_unbound"] = 0;
+        var field = db.qid("fwentities_id");
+        return $"({field} IS NULL OR {field}=@autocomplete_unbound)";
+    }
+
     private static string filenameForPolicy(FwDict item)
     {
         var filename = item["fname"].toStr();

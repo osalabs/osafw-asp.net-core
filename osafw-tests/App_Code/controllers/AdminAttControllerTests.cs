@@ -26,6 +26,12 @@ public class AdminAttControllerTests
             };
         }
 
+        public bool IsParentAllowed { get; set; } = true;
+        protected override bool isParentAccessAllowed(FwDict item, string action)
+        {
+            return item["fwentities_id"].toInt() <= 0 || IsParentAllowed;
+        }
+
         public override DBRow one(int id)
         {
             return Rows.TryGetValue(id, out var row) ? new DBRow(new FwDict(row)) : [];
@@ -52,6 +58,40 @@ public class AdminAttControllerTests
         {
             return [];
         }
+    }
+
+    [TestMethod]
+    public void SaveAction_RejectsUnauthorizedExistingParentBeforeClearingBinding()
+    {
+        var fw = TestHelpers.CreateFw();
+        fw.request.Form = new FormCollection(new Dictionary<string, StringValues>(), new FormFileCollection());
+        fw.FORM["item"] = DB.h("iname", "Changed", "fwentities_id", 0, "item_id", 0);
+        var att = new StubAtt { IsParentAllowed = false };
+        att.init(fw);
+        att.Rows[15] = DB.h("id", 15, "fwentities_id", 7, "item_id", 20, "fsize", 123);
+        var users = new StubUsers();
+        users.init(fw);
+        TestHelpers.RegisterModel(fw, (Users)users);
+        TestHelpers.RegisterModel(fw, (Att)att);
+        var controller = new AdminAttController();
+        controller.init(fw);
+        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction(15));
+        Assert.IsEmpty(att.LastUpdate);
+        Assert.ThrowsExactly<AuthException>(() => controller.modelOne(15));
+        Assert.ThrowsExactly<AuthException>(() => controller.DeleteAction(15));
+        Assert.ThrowsExactly<AuthException>(() => controller.RestoreDeletedAction(15));
+    }
+
+    [TestMethod]
+    public void CheckAdminAccess_RejectsUnauthorizedNewParentAndAllowsAuthorizedUnbinding()
+    {
+        var att = new StubAtt { IsParentAllowed = false };
+        att.Rows[15] = DB.h("id", 15, "fwentities_id", 0);
+        Assert.ThrowsExactly<AuthException>(() => att.checkAdminAccess(15, "edit", DB.h("fwentities_id", 7, "item_id", 20)));
+        Assert.ThrowsExactly<AuthException>(() => att.checkAdminAccess(0, "edit", DB.h("fwentities_id", 7, "item_id", 20)));
+        att.IsParentAllowed = true;
+        att.Rows[15]["fwentities_id"] = 7;
+        att.checkAdminAccess(15, "edit", DB.h("fwentities_id", 0));
     }
 
     [TestMethod]

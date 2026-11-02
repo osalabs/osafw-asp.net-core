@@ -94,6 +94,8 @@ public class AdminAttController : FwAdminController
 
     public override FwDict? SaveAction(int id = 0)
     {
+        checkReadOnly();
+        model.checkAdminAccess(id, "edit");
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         FwDict ps = [];
@@ -125,6 +127,7 @@ public class AdminAttController : FwAdminController
         if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
         model.convertUserInput(itemdb);
+        model.checkAdminAccess(id, "edit", itemdb);
 
         if (id > 0)
         {
@@ -190,6 +193,32 @@ public class AdminAttController : FwAdminController
         }
 
         this.validateCheckResult();
+    }
+
+    public override FwDict modelOne(int id)
+    {
+        if (id > 0)
+            model.checkAdminAccess(id, Att.ACCESS_ACTION_VIEW);
+        return base.modelOne(id);
+    }
+
+    public override FwDict? DeleteAction(int id)
+    {
+        model.checkAdminAccess(id, "delete");
+        return base.DeleteAction(id);
+    }
+
+    public override FwDict? RestoreDeletedAction(int id)
+    {
+        model.checkAdminAccess(id, "edit");
+        return base.RestoreDeletedAction(id);
+    }
+
+    protected override int saveMultiRows(System.Collections.ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        foreach (string key in keys)
+            model.checkAdminAccess(key.toInt(), is_delete ? "delete" : Att.ACCESS_ACTION_VIEW);
+        return base.saveMultiRows(keys, is_delete, user_lists_id, remove_user_lists_id);
     }
 
     public FwDict SelectAction()
