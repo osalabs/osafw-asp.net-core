@@ -199,3 +199,11 @@ Do not make server-local edits to tracked files. `git reset --hard` discards tra
 - **No deploy happens:** check `deploy-<env>.status.json`, `deploy-<env>.last_successful_commit`, and the configured `$GitBranch`.
 - **App stays offline:** inspect `deploy-<env>.log`; a failure after copy starts intentionally leaves `app_offline.htm` in place so the next scheduled run can retry safely.
 - **Deploy script changed:** the server uses the updated script on the next run after the repo is reset to the commit containing that change.
+
+## Developer tool authorization and diagnostics
+
+The public configuration page is diagnostic only. Fresh local development setup uses `database-init`; the retained web `InitDB` action requires a tokened POST and a Site Admin session. Both entry points reject any database that already contains tables. There is no destructive reset/force mode and no public bootstrap password response.
+
+The SQL console requires an active Site Admin account, a tokened POST, a writable account, and that account's current password for every SQL execution. The former shared source password and session unlock flag no longer grant access. Table-result links only prefill the form; execution still requires a new password-confirmed POST. Windows-only administrators must establish an application password through an authorized account-management flow before using this console.
+
+Assistant DEBUG diagnostics redact tool arguments, result summaries, and retrieval queries when `log_pii=false`. Explicitly enabling PII diagnostics permits sensitive content in logs; retain the application's existing access/retention controls. The developer log viewer escapes file content as text.

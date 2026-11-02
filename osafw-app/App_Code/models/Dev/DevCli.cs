@@ -161,9 +161,6 @@ internal static class DevCli
             }
 
             fw = new FW(null, configuration);
-            if (fw.db.tables().Count != 0)
-                throw new UserException("Database initialization requires an empty database.");
-
             var password = initializeDatabase(fw)["pwd"].toStr();
             if (password.Length == 0)
                 throw new UserException("Database initialization did not create a bootstrap password.");
@@ -189,19 +186,23 @@ internal static class DevCli
     }
 
     /// <summary>
-    /// Replays the provider's fresh-install scripts and returns the generated admin password in page data.
-    /// Callers must apply development/access guards first; these scripts replace existing schema/data.
+    /// Initializes an empty development database using the provider's fresh-install scripts and returns the generated admin password in page data.
+    /// Web callers must authorize the operator first; this method rejects every nonempty database.
     /// </summary>
     internal static FwDict initializeDatabase(FW fw)
     {
+        if (!fw.config("IS_DEV").toBool())
+            throw new AuthException("Database initialization requires development mode");
         var db = fw.db;
+        if (db.tables().Count != 0)
+            throw new UserException("Database initialization requires an empty database.");
+
         FwDict ps = [];
         int sql_ctr = 0;
 
         try
         {
             var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
-            dropExistingForeignKeys(db);
 
             string[] files = ["fwdatabase.sql", "database.sql", "settings.sql", "demo.sql", "lookups.sql", "views.sql"];
             foreach (string file in files)
@@ -231,30 +232,6 @@ internal static class DevCli
         }
 
         return ps;
-    }
-
-    /// <summary>
-    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
-    /// </summary>
-    private static void dropExistingForeignKeys(DB db)
-    {
-        if (db.dbtype != DB.DBTYPE_SQLSRV)
-            return;
-
-        db.exec($@"
-            DECLARE @sql NVARCHAR(MAX) = N'';
-
-            SELECT @sql += N'ALTER TABLE '
-                + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
-                + N'.'
-                + QUOTENAME(OBJECT_NAME(parent_object_id))
-                + N' DROP CONSTRAINT '
-                + QUOTENAME(name)
-                + N';'
-            FROM sys.foreign_keys;
-
-            IF LEN(@sql) > 0
-                EXEC sp_executesql @sql");
     }
 
     internal static bool tryParse(string[] args, out Options options, out string error)

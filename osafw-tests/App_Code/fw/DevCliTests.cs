@@ -323,7 +323,7 @@ public class DevCliTests
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
-    public void WebDatabaseInitBootstrapsEmptySqliteDatabase(bool isTokenAvailable)
+    public void WebDatabaseInitRequiresAuthorizedAdmin(bool isAdmin)
     {
         using var configurationScope = FwConfig.beginScope();
         var dbPath = Path.Combine(Path.GetTempPath(), "osafw-web-init-" + Guid.NewGuid().ToString("N") + ".sqlite");
@@ -332,17 +332,25 @@ public class DevCliTests
         {
             using var fw = new FW(TestHelpers.CreateHttpContext(), sqliteConfiguration(dbPath));
             fw.route.method = "POST";
-            if (isTokenAvailable)
+            fw.Session("XSS", "bootstrap-token");
+            fw.FORM["XSS"] = "bootstrap-token";
+            if (isAdmin)
             {
-                fw.Session("XSS", "bootstrap-token");
-                fw.FORM["XSS"] = "bootstrap-token";
+                fw.Session("user_id", "1");
+                fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
             }
             var controller = new DevConfigureController();
             controller.init(fw);
 
+            if (!isAdmin)
+            {
+                Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
+                Assert.IsEmpty(fw.db.tables());
+                return;
+            }
             var result = controller.InitDBAction();
 
-            Assert.IsFalse(fw.isLogged);
+            Assert.IsTrue(fw.isLogged);
             var password = result["pwd"].toStr();
             Assert.IsFalse(string.IsNullOrEmpty(password));
             var passwordHash = fw.db.value("users", DB.h("id", 1), "pwd").toStr();
@@ -356,7 +364,7 @@ public class DevCliTests
     }
 
     [TestMethod]
-    public void SharedDatabaseInitializerInvalidatesPreviouslyCachedSettings()
+    public void SharedDatabaseInitializerRejectsPopulatedDatabaseWithoutChangingSettings()
     {
         using var configurationScope = FwConfig.beginScope();
         var dbPath = Path.Combine(Path.GetTempPath(), "osafw-database-reset-" + Guid.NewGuid().ToString("N") + ".sqlite");
@@ -373,11 +381,11 @@ public class DevCliTests
             settings.applyGlobals();
             Assert.AreEqual("Before database reset", fw.G["SITE_NAME"]);
 
-            DevCli.initializeDatabase(fw);
+            Assert.ThrowsExactly<UserException>(() => DevCli.initializeDatabase(fw));
 
             settings.applyGlobals();
-            Assert.AreEqual(fw.config("SITE_NAME"), fw.G["SITE_NAME"]);
-            Assert.AreEqual(fw.config("SITE_NAME"), settings.read("SITE_NAME"));
+            Assert.AreEqual("Before database reset", fw.G["SITE_NAME"]);
+            Assert.AreEqual("Before database reset", settings.read("SITE_NAME"));
         }
         finally
         {

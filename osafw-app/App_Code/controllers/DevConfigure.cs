@@ -126,6 +126,9 @@ public class DevConfigureController : FwController
 
         enforcePost();
 
+        if (fw.userId <= 0 || fw.userAccessLevel < Users.ACL_SITEADMIN)
+            throw new AuthException("Use the local database-init command for first-time setup");
+
         return DevCli.initializeDatabase(fw);
     }
 

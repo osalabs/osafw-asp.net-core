@@ -305,7 +305,7 @@ public class SecurityGroup1DevConfigureTests
     }
 
     [TestMethod]
-    public void InitDB_AllowsAnonymousDevPostWithToken()
+    public void InitDB_RejectsAnonymousDevPostWithToken()
     {
         using var scope = createInitDbScope();
         var fw = scope.Fw;
@@ -313,10 +313,7 @@ public class SecurityGroup1DevConfigureTests
         setXssTokens(fw);
         var controller = createInitDbController(fw);
 
-        // The allowed request reaches the actual initializer; this DB rejects every SQL operation.
-        var error = Assert.ThrowsExactly<InvalidOperationException>(() => controller.InitDBAction());
-
-        Assert.AreEqual("Unexpected DB operation: exec", error.Message);
+        Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
     }
 
     [TestMethod]
