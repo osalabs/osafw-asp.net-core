@@ -31,6 +31,23 @@ public class MyMFAController : FwController
         }
     }
 
+    /// <summary>Anonymous enrollment requires a recent setup-purpose login and no existing factor.</summary>
+    private DBRow checkEnrollmentAccess()
+    {
+        var user = model.one(user_id);
+        if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE)
+            throw new AuthException();
+        if (fw.userId == 0)
+        {
+            var started = fw.Session("mfa_login_time").toLong();
+            var elapsed = DateUtils.UnixTimestamp() - started;
+            if (fw.Session("mfa_login_purpose") != "setup" || started <= 0 || elapsed < 0 || elapsed > 300
+                || !Utils.isEmpty(user["mfa_secret"]))
+                throw new AuthException("Complete the existing MFA challenge before changing enrollment");
+        }
+        return user;
+    }
+
     public void IndexAction()
     {
         fw.redirect(base_url + "/new");
@@ -38,7 +55,7 @@ public class MyMFAController : FwController
 
     public FwDict ShowFormAction()
     {
-        var user = model.one(user_id);
+        var user = checkEnrollmentAccess();
 
         var remoteIp = Utils.getIP(fw.context);
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGIN, FwEntities.ICODE_USERS, user_id, "MFA setup, IP:" + remoteIp);
@@ -55,7 +72,8 @@ public class MyMFAController : FwController
     public FwDict SaveAction()
     {
         route_onerror = FW.ACTION_SHOW_FORM_NEW; //set route to go if error happens
-        checkXSS();
+        enforcePost();
+        checkEnrollmentAccess();
 
         if (string.IsNullOrEmpty(fw.Session("mfa_secret")))
             fw.redirect(base_url); //no code generated yet

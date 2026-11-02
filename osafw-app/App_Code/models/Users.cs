@@ -147,6 +147,17 @@ public class Users : FwModel<Users.Row>
     {
         if (id == 0) return false;//no anonymous updates
 
+        var is_revoke = item.ContainsKey("pwd");
+        if (item.ContainsKey("status") || item.ContainsKey("mfa_secret") || item.ContainsKey("mfa_recovery"))
+        {
+            var previous = one(id);
+            is_revoke |= item.ContainsKey("status") && item["status"].toInt() != previous["status"].toInt();
+            is_revoke |= item.ContainsKey("mfa_secret") && item["mfa_secret"].toStr() != previous["mfa_secret"].toStr();
+            is_revoke |= item.ContainsKey("mfa_recovery") && item["mfa_recovery"].toStr() != previous["mfa_recovery"].toStr();
+        }
+        if (is_revoke)
+            db.del(table_users_cookies, DB.h("users_id", id));
+
         if (item.TryGetValue("pwd", out object? value))
             item["pwd"] = this.hashPwd(value.toStr());
         return base.update(id, item);
@@ -367,6 +378,10 @@ public class Users : FwModel<Users.Row>
     /// <param name="timezone">Browser-detected timezone id used only when the saved user preference is empty (<c>auto</c>).</param>
     public void doLogin(int id, string timezone = "")
     {
+        var currentUser = one(id);
+        if (currentUser.Count == 0 || currentUser["status"].toInt() != STATUS_ACTIVE)
+            throw new AuthException("Login disabled");
+
         reloadSession(id, is_clear: true);
 
         var ip = Utils.getIP(fw.context);
@@ -844,9 +859,17 @@ public class Users : FwModel<Users.Row>
     #region Permanent Login Cookies
     public string createPermCookie(int id)
     {
+        var user = one(id);
+        if (user.Count == 0 || user["status"].toInt() != STATUS_ACTIVE
+            || !Utils.isEmpty(user["mfa_secret"]) || fw.settings.readBool("is_mfa_enforced"))
+        {
+            removePermCookie(id);
+            return string.Empty;
+        }
+
         string cookieId = Utils.getRandStr(64);
         string hashed = Utils.sha256(cookieId);
-        var fields = DB.h("cookie_id", hashed, "users_id", id);
+        var fields = DB.h("cookie_id", hashed, "users_id", id, "add_time", DB.NOW);
         db.updateOrInsert(table_users_cookies, fields, DB.h("users_id", id));
 
         Utils.createCookie(fw, PERM_COOKIE_NAME, cookieId, 60 * 60 * 24 * PERM_COOKIE_DAYS);
@@ -860,9 +883,17 @@ public class Users : FwModel<Users.Row>
         if (!string.IsNullOrEmpty(cookieId))
         {
             var hashed = Utils.sha256(cookieId);
-            DBRow row = db.row(table_users_cookies, DB.h("cookie_id", hashed));
+            DBRow row = db.row(table_users_cookies, DB.h("cookie_id", hashed, "add_time", db.opGE(DateTime.UtcNow.AddDays(-PERM_COOKIE_DAYS))));
             if (row.Count > 0)
             {
+                var user = one(row["users_id"].toInt());
+                if (user.Count == 0 || user["status"].toInt() != STATUS_ACTIVE
+                    || !Utils.isEmpty(user["mfa_secret"]) || fw.settings.readBool("is_mfa_enforced"))
+                {
+                    removePermCookie(row["users_id"].toInt());
+                    return false;
+                }
+
                 doLogin(row["users_id"].toInt());
                 return true;
             }

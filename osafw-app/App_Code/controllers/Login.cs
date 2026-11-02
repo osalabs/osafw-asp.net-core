@@ -56,6 +56,15 @@ public class LoginController : FwController
 
     public void SaveAction()
     {
+        enforcePost();
+        if (string.IsNullOrEmpty(fw.Session("XSS")))
+            throw new AuthException("Reload the login page before signing in");
+        foreach (var key in fw.request.Query.Keys)
+        {
+            if (key.Equals("item", StringComparison.OrdinalIgnoreCase) || key.StartsWith("item[", StringComparison.OrdinalIgnoreCase))
+                throw new AuthException("Login credentials must be submitted in the request body");
+        }
+
         try
         {
             var item = reqh("item");
@@ -105,6 +114,7 @@ public class LoginController : FwController
                 if (!Utils.isEmpty(user["mfa_secret"]))
                 {
                     fw.Session("mfa_login_users_id", user["id"]);
+                    fw.Session("mfa_login_purpose", "challenge");
                     fw.Session("mfa_login_attempts", "0");
                     fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
                     fw.Session("mfa_login_remember", item["remember"].toStr());
@@ -117,6 +127,8 @@ public class LoginController : FwController
                 if (fw.settings.readBool("is_mfa_enforced"))
                 {
                     fw.Session("mfa_login_users_id", user["id"]);
+                    fw.Session("mfa_login_purpose", "setup");
+                    fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
                     fw.Session("mfa_login_timezone", item["timezone"].toStr());
                     fw.redirect("/My/MFA");
                 }
@@ -159,6 +171,7 @@ public class LoginController : FwController
 
     public void SaveMFAAction()
     {
+        enforcePost();
         route_onerror = FW.ACTION_INDEX;
         checkXSS();
         var users_id = fw.Session("mfa_login_users_id").toInt();

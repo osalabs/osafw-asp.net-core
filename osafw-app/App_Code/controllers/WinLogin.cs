@@ -57,7 +57,7 @@ public class WinLoginController : FwController
         {
             // if we have username - it means it's authenticated
             // try to find such a user
-            var user = fw.model<Users>().oneByLogin(username);
+            var user = fw.model<Users>().oneByLogin(authUser);
             int usersId = 0;
             if (user.Count > 0)
             {
@@ -76,7 +76,7 @@ public class WinLoginController : FwController
                     usersId = fw.model<Users>().add(new FwDict {
                         {"email",  username+"@company.tld"},
                         {"access_level", Users.ACL_MEMBER},
-                        {"login", username},
+                        {"login", authUser},
                         {"fname", username},
                         {"status", FwModel.STATUS_ACTIVE}
                     });
@@ -89,6 +89,27 @@ public class WinLoginController : FwController
                     fw.redirect("/Login");
                 }
             }
+            var currentUser = model.one(usersId);
+            if (!Utils.isEmpty(currentUser["mfa_secret"]))
+            {
+                fw.Session("mfa_login_users_id", usersId.toStr());
+                fw.Session("mfa_login_purpose", "challenge");
+                fw.Session("mfa_login_attempts", "0");
+                fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
+                fw.Session("mfa_login_remember", "");
+                fw.Session("mfa_login_gourl", "");
+                fw.Session("mfa_login_timezone", "");
+                fw.redirect("/Login/(MFA)");
+            }
+            if (fw.settings.readBool("is_mfa_enforced"))
+            {
+                fw.Session("mfa_login_users_id", usersId.toStr());
+                fw.Session("mfa_login_purpose", "setup");
+                fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
+                fw.Session("mfa_login_timezone", "");
+                fw.redirect("/My/MFA");
+            }
+
             model.doLogin(usersId);
             fw.redirect(fw.settings.read("LOGGED_DEFAULT_URL"));
         }

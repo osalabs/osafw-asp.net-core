@@ -4,6 +4,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 ## Framework Docs
 
+- [authentication.md](authentication.md): login POST/token, persistent-cookie policy, and Windows identity migration.
+
 - [templates.md](templates.md): ParsePage syntax, template composition, shared fragments, parser rules, and frontend component conventions.
 - [dynamic.md](dynamic.md): `config.json` reference for Dynamic and Vue controllers.
 - [crud.md](crud.md): `FwModel` CRUD workflows using framework collections or typed DTOs.

@@ -2,6 +2,10 @@
 
 This changelog records only breaking framework changes and the actions needed to upgrade an existing application. Entries are grouped by the date of the breaking change, not by followup commits. Additive features, internal refactoring, bug fixes, and renames within an unreleased branch belong in the relevant feature documentation or task summary. Coverage starts at 2025-06-01.
 
+## 2026-11-02
+
+- Sign-in now requires a tokened POST and rejects query-string credential fields. Copy the login form token field into customized forms and update scripted login callers. Remember-me auto-login is restricted to active accounts without enrolled/enforced MFA; MFA users must complete interactive sign-in after session expiry. Password, status, and MFA changes revoke persistent cookies. Windows login now matches the full `DOMAIN\username` principal; migrate each existing Windows user's `users.login` value to its exact trusted full identity before enabling the updated route. Windows login also follows application MFA challenges/setup. See [sign-in contracts](authentication.md).
+
 ## 2026-11-01
 
 - Development initialization: removed the protected DevConfigureController.initDatabase() forwarding hook. Move any copied-app override into DevCli.initializeDatabase(FW); InitDBAction calls it directly after its existing development/POST/token guards.
