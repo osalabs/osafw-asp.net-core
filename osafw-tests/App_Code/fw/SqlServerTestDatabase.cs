@@ -12,7 +12,7 @@ internal sealed class SqlServerTestDatabase : IDisposable
     private bool isOwned;
     public string ConnectionString { get; }
 
-    public SqlServerTestDatabase()
+    public SqlServerTestDatabase(bool isInitializeSchema = true)
     {
         var builder = new SqlConnectionStringBuilder
         {
@@ -30,6 +30,8 @@ internal sealed class SqlServerTestDatabase : IDisposable
         {
             ExecuteMaster("CREATE DATABASE [" + name + "]");
             isOwned = true;
+            if (!isInitializeSchema)
+                return;
             using var db = new DB(ConnectionString, DB.DBTYPE_SQLSRV);
             var root = Path.Combine(TestHelpers.RepoRoot(), "osafw-app", "App_Data", "sql");
             foreach (var script in new[] { "fwdatabase.sql", "database.sql", "settings.sql", "demo.sql", "lookups.sql", "views.sql", "roles.sql" })

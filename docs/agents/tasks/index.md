@@ -167,6 +167,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-08-fwupdates-post-flow.md` - Split developer update discovery from authenticated update execution.
 - `summary-2026-06-08-security-group-1-devconfigure-origin.md` - Hardened trusted-origin handling for development/bootstrap flows and host-derived framework URLs.
 - `summary-2026-11-02-security-devtools-diagnostics.md` - Empty-only authorized bootstrap, SQL-console reauthentication, and private/escaped diagnostics.
+- `summary-2026-11-03-security-devtools-diagnostics-integration.md` - Browser and native SQL Server verification for PR #306 with focused regression coverage.
 - `summary-2026-06-09-deploy-script.md` - Added repo-contained PowerShell deploy profiles/core plus a Task Scheduler setup helper with temp worktree publishing, app_offline deployment, logging, locking, status files, webhook notification, and runtime-folder preservation notes.
 - `summary-2026-06-09-devmanage-write-guards.md` - Added DevManage request-method and token guards before generator, schema, and file-write side effects.
 - `summary-2026-06-09-markdown-modal-escape.md` - Added modal-aware Escape handling so Bootstrap Markdown fullscreen exits before Escape closes the containing Bootstrap modal.
