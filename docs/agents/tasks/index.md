@@ -148,6 +148,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-04-custom-reports-review-fixes.md` - Renamed the report runtime/base class to `FwReportsBase` and moved the `fwreports` table model to `osafw-app/App_Code/fw/FwReports.cs` as `FwReports`.
 - `summary-2026-06-05-security-attachments.md` - Hardened attachment authorization and browser delivery behavior.
 - `summary-2026-11-02-security-object-permissions.md` - Parent-aware attachment administration, read-only account guards, and owner-scoped autocomplete.
+- `summary-2026-11-03-security-object-permissions-integration.md` - Browser and native SQL Server verification for PR #303 with focused regression coverage.
 - `summary-2026-06-05-security-dynamic-object-links.md` - Hardened dynamic child-row and object-link authorization while preserving create-only public signup behavior.
 - `summary-2026-06-05-stored-rendering-hardening.md` - Made stored markdown and selected raw-rendering surfaces safe by default with explicit trusted opt-ins.
 - `summary-2026-06-06-breaking-changelog.md` - Rebuilt `docs/CHANGELOG.md` into dated breaking-upgrade sections covering commits since 2025-06-01.
