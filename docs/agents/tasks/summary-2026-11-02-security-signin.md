@@ -1,19 +1,15 @@
 # Sign-in security
 
-## Outcome and compatibility
+Password login requires a tokened POST; missing/stale tokens or missing credentials quietly redisplay Login. Removed query-key scanning and duplicate MFA token validation. The login caller owns remember-cookie eligibility; cookie creation only creates it. Restoration enforces age, active status and MFA policy, and account security changes revoke persistent tokens. Anonymous MFA setup requires a recent setup-purpose login for an active unenrolled account. Windows SSO matches the full trusted principal and does not add application MFA. Only the concrete short-to-full Windows identity migration remains in CHANGELOG; no schema change.
 
-- Login requires tokened POST and body credentials; default form supplies the token. MFA completion also requires POST.
-- Remember cookies require an active account, server-side age check, and no enrolled/enforced MFA. MFA users sign in interactively after session expiry; trusted-device infrastructure is outside this change.
-- Password replacements and actual status/MFA changes revoke persistent tokens; unchanged status in profile payloads preserves them. Session creation rechecks current status. Token renewal refreshes issuance time.
-- Pending MFA challenge and setup have distinct purposes. Anonymous setup requires a recent setup-purpose request for a currently active, unenrolled account, rechecked before saving.
-- Windows login matches full domain-qualified identities and follows application MFA challenges/setup. Copied applications must migrate short Windows login values before importing the route. No schema change.
-- The authentication guide and changelog record caller and identity migration requirements.
+Removed SigninSqlServerTests, added during acceptance verification. Retained SigninSecurityTests (restoration, revocation, renewal and Windows policy), SecurityQuickFixTests (public login/MFA/redirect behavior) and UsersTimezoneTests. The removed native test repeated this security behavior without a distinct SQL Server regression.
 
-## Verification
+Verification:
+- Before test cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile Full -SqlServer localhost`: Default 980, Fast 1028, Browser 87 and SQL Server 36 passed, zero skipped. Those SQL counts include the subsequently removed acceptance probes.
+- After cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile SqlServer -SqlServer localhost`: the original 35 tests passed, zero skipped; build reported zero warnings/errors.
+- After the stale-token recovery correction, final focused SigninSecurityTests|SecurityQuickFixTests: 79 passed. A replacement session token is treated as a quiet retry, before authentication.
+- Live browser on a disposable native SQL database: missing/stale tokens displayed Login without technical errors, stale tokens with valid test credentials did not authenticate, and normal password/local development login reached Main.
+- Optional `dotnet build osafw-app/osafw-app.csproj -p:DefineConstants=isWindowsAuth -p:OutputPath=../artifacts/feedback-windows-build/ --verbosity quiet`: passed with zero warnings/errors.
+- `git diff --check`: passed. Provider/browser verification uses disposable resources; task-owned apps/databases and the temporary bootstrap credential were removed, with evidence kept in ignored artifacts.
 
-- Initial focused run found fixture type/POST/token assumptions; corrected the tests to exercise the required contract.
-- Passed focused Fast checks with filter SigninSecurityTests|SecurityQuickFixTests|FwLoginRedirectTests|UsersTimezoneTests after independent review corrections: clean build, 90 passed, zero skipped.
-- Passed the full Fast profile after corrections: clean build, 1,028 passed, zero skipped.
-- Independent reviewer rechecked the accepted corrections and active summary with no remaining blocking findings; no blocking findings remain after final evidence and summary audit.
-- App build with `DefineConstants=isWindowsAuth` passed with zero warnings/errors.
-- Optional Negotiate hosting/domain trusts and real browser behavior remain deployment acceptance checks. No live credentials, external identity provider, or configured application database is used.
+The three PR-local summaries were consolidated into this single current record at the user's request; unrelated merged history is unchanged. Prior independent runtime/security reviews found no remaining blocking findings. Independent cleanup review and consolidated-summary audit completed with no blocking findings. Existing short Windows login mappings require application-owned migration to exact trusted principals. Real Windows Negotiate/domain deployment remains unverified.

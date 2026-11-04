@@ -2,8 +2,6 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
-- `summary-2026-11-03-security-signin-feedback.md` - Reviewed PR #304 feedback, simplified the relevant contracts, and reran browser/SQL Server/regression checks.
-
 - `summary-2026-11-01-test-cleanup.md` - Audited all tests, simplified low-value coverage, added automatic isolated test profiles and clarified retained-test guidance.
 - `summary-2026-11-01-strong-passwords.md` - Enforced a shared good-or-better password rating in all four password-setting forms, aligned server/browser scoring, added concise validation hints and asset cache invalidation, and verified legacy compatibility and Chromium feedback.
 - `summary-2026-10-31-settings.md` - Consolidated Settings PR feedback: FwSettings/application model split, fw.settings access, DB-free bootstrap, credential controls, globals, direct shared initialization, application caching, local acceptance, inline-autosave UI, and optional process-cached FwSecretsManager with source-agnostic DB setup.
@@ -163,7 +161,6 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-07-security-group-9a.md` - Hardened routing consistency, virtual-controller cache invalidation, logging defaults, telemetry defaults, and dashboard docs.
 - `summary-2026-06-07-security-group-9b.md` - Added central privileged user-management checks, activity-log comment handling, and Data Protection setup.
 - `summary-2026-11-02-security-signin.md` - Tokened POST sign-in, persistent-cookie revocation/MFA policy, and full Windows identity mapping.
-- `summary-2026-11-03-security-signin-integration.md` - Browser and native SQL Server verification for PR #304 with focused regression coverage.
 - `summary-2026-06-07-test-email-priority.md` - Made configured `appSettings.test_email` take priority over the current session login in test mode.
 - `summary-2026-06-08-agent-performance-review.md` - Added concise performance guardrails and reviewer checks for repeated expensive work, unbounded data, blocking I/O, and invasive optimizations.
 - `summary-2026-06-08-agent-testing-balance.md` - Added behavior-level testing guidance and production-code simplicity checks to agent and reviewer instructions.
