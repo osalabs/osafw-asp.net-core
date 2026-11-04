@@ -17,13 +17,15 @@
         <small class="form-text">run one query at a time</small>
       </div>
     </div>
+    <~pwd_check unless="SESSION[admindb_pwd_checked]" inline>
     <div class="row form-row">
       <label class="col-form-label col-md-3" for="pwd">Password</label>
       <div class="col-md-9">
         <input type="password" id="pwd" name="pwd" class="form-control">
-        <small class="form-text">your current account password; required for each execution</small>
+        <small class="form-text">your current account password; required once per session</small>
       </div>
     </div>
+    </~pwd_check>
     <div>
             <button type="submit" class="btn btn-primary">Run query</button>
             <button class="btn btn-default" onclick="$('#sql').val('');return false">Clear</button>

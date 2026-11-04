@@ -223,28 +223,6 @@ public class DevCliTests
     }
 
     [TestMethod]
-    public void Run_DatabaseInitRejectsNonDevelopmentBeforeOpeningDatabase()
-    {
-        using var configurationScope = FwConfig.beginScope();
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["appSettings:IS_DEV"] = "false",
-                ["appSettings:db:main:type"] = "unusable-provider",
-                ["appSettings:db:main:connection_string"] = "must-not-be-opened",
-            })
-            .Build();
-        var output = new StringWriter();
-        var error = new StringWriter();
-
-        var exitCode = DevCli.run(["database-init"], configuration, output, error);
-
-        Assert.AreEqual(DevCli.EXIT_ENVIRONMENT, exitCode);
-        Assert.AreEqual(string.Empty, output.ToString());
-        StringAssert.Contains(error.ToString(), "IS_DEV=true");
-    }
-
-    [TestMethod]
     public void Run_DatabaseInitFailureDoesNotExposeConfigurationOrExceptionDetails()
     {
         using var configurationScope = FwConfig.beginScope();
@@ -272,11 +250,14 @@ public class DevCliTests
 
 #if isSQLite
     [TestMethod]
-    public void Run_DatabaseInitBootstrapsEmptySqliteDatabaseAndRejectsSecondRun()
+    [DataRow(true)]
+    [DataRow(false)]
+    public void Run_DatabaseInitBootstrapsEmptySqliteDatabaseAndRejectsSecondRun(bool isDev)
     {
         using var configurationScope = FwConfig.beginScope();
         var dbPath = Path.Combine(Path.GetTempPath(), "osafw-database-init-" + Guid.NewGuid().ToString("N") + ".sqlite");
         var configuration = sqliteConfiguration(dbPath);
+        configuration["appSettings:IS_DEV"] = isDev ? "true" : "false";
 
         try
         {
@@ -313,49 +294,6 @@ public class DevCliTests
             StringAssert.Contains(error.ToString(), "empty and reachable");
             Assert.AreEqual(passwordHash, db.value("users", DB.h("id", 1), "pwd").toStr());
             Assert.AreEqual(settingsCount, db.valuep("SELECT COUNT(*) FROM settings").toInt());
-        }
-        finally
-        {
-            deleteSqliteDatabase(dbPath);
-        }
-    }
-
-    [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
-    public void WebDatabaseInitRequiresAuthorizedAdmin(bool isAdmin)
-    {
-        using var configurationScope = FwConfig.beginScope();
-        var dbPath = Path.Combine(Path.GetTempPath(), "osafw-web-init-" + Guid.NewGuid().ToString("N") + ".sqlite");
-
-        try
-        {
-            using var fw = new FW(TestHelpers.CreateHttpContext(), sqliteConfiguration(dbPath));
-            fw.route.method = "POST";
-            fw.Session("XSS", "bootstrap-token");
-            fw.FORM["XSS"] = "bootstrap-token";
-            if (isAdmin)
-            {
-                fw.Session("user_id", "1");
-                fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
-            }
-            var controller = new DevConfigureController();
-            controller.init(fw);
-
-            if (!isAdmin)
-            {
-                Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-                Assert.IsEmpty(fw.db.tables());
-                return;
-            }
-            var result = controller.InitDBAction();
-
-            Assert.IsTrue(fw.isLogged);
-            var password = result["pwd"].toStr();
-            Assert.IsFalse(string.IsNullOrEmpty(password));
-            var passwordHash = fw.db.value("users", DB.h("id", 1), "pwd").toStr();
-            Assert.IsTrue(fw.model<Users>().checkPwd(password, passwordHash));
-            Assert.IsGreaterThan(0, fw.db.valuep("SELECT COUNT(*) FROM settings").toInt());
         }
         finally
         {

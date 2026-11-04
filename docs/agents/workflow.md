@@ -27,6 +27,7 @@ Honor existing task authority: scoped edits and verification need no renewed per
 ## Implement and verify
 
 - Implement requested behavior before ancillary cleanup; follow nearby app/framework patterns and the canonical topic owner.
+- Read the existing helper and dispatch contracts before adding guards, fallback values, wrappers, or repeated checks. Use established empty/not-found behavior (for example, `one(id)` returns an empty row for nonpositive or missing IDs). Put each check at its owning boundary: framework controller authorization, model row/parent authorization, and validation of a proposed binding serve different purposes; reuse their existing hooks rather than copying checks into every action.
 - Use [verification.md](verification.md) for resource isolation and proportional checks. Start with the smallest falsifying check; a broad suite does not replace a missing behavior-level check.
 - When a requirement, source, assumption, or result changes, revisit dependent conclusions/checks and retain evidence whose conditions still hold. Prefer a fresh scoped check over an expensive one-off dependency ledger.
 - For classifiers, defaults, security boundaries, and source-copy/public contracts, inventory established entry paths and baseline consumers. Pair plausible attacker/ordinary negative controls with intended-safe/trusted and preserved-compatibility positives at those paths. A new helper or wrapper alone is insufficient.

@@ -13,7 +13,7 @@ public class DevtoolsSqlServerTests
         return new FwTestScope(name => new DB(database.ConnectionString, DB.DBTYPE_SQLSRV, name),
             new Dictionary<string, string?>
             {
-                ["appSettings:IS_DEV"] = "true",
+                ["appSettings:IS_DEV"] = "false",
                 ["appSettings:site_root"] = Path.Combine(TestHelpers.RepoRoot(), "osafw-app")
             }, TestHelpers.CreateHttpContext());
     }
@@ -26,8 +26,7 @@ public class DevtoolsSqlServerTests
         using var database = new SqlServerTestDatabase(isInitializeSchema: false);
         using var scope = Scope(database);
         var fw = scope.Fw;
-        var state = DevCli.initializeDatabase(fw);
-        var password = state["pwd"].toStr();
+        var password = DevCli.initializeDatabase(fw);
         Assert.IsFalse(string.IsNullOrEmpty(password));
         Assert.IsTrue(fw.model<Users>().checkPwd(password, fw.db.value("users", DB.h("id", 1), "pwd").toStr()));
         Assert.IsGreaterThan(0, fw.db.value("settings", [], "count(*)").toInt());
@@ -36,7 +35,7 @@ public class DevtoolsSqlServerTests
     }
 
     [TestMethod]
-    public void NativeSqlConsoleReauthenticatesAndWebBootstrapCannotResetExistingData()
+    public void NativeSqlConsoleUnlocksOncePerSessionAndRetainsMutationGuards()
     {
         if (Environment.GetEnvironmentVariable("FW_TEST_SQLSERVER") != "1")
             Assert.Inconclusive("Run the SqlServer profile.");
@@ -46,12 +45,8 @@ public class DevtoolsSqlServerTests
         fw.route.method = "POST";
         fw.Session("XSS", "test-token");
         fw.FORM["XSS"] = "test-token";
-        var bootstrap = new DevConfigureController();
-        bootstrap.init(fw);
-        Assert.ThrowsExactly<AuthException>(() => bootstrap.InitDBAction());
         fw.Session("user_id", "1");
         fw.Session("access_level", Users.ACL_SITEADMIN.toStr());
-        Assert.ThrowsExactly<UserException>(() => bootstrap.InitDBAction());
 
         var users = fw.model<Users>();
         users.is_log_changes = false;
@@ -61,6 +56,18 @@ public class DevtoolsSqlServerTests
         var console = new AdminDBController();
         console.init(fw);
         fw.FORM["pwd"] = "wrong-password";
+        Assert.ThrowsExactly<AuthException>(() => console.IndexAction());
+        fw.FORM["pwd"] = "Console regression12!";
+        Assert.AreEqual(1, console.IndexAction()["sql_ctr"].toInt());
+        fw.FORM.Remove("pwd");
+        Assert.AreEqual(1, console.IndexAction()["sql_ctr"].toInt());
+        fw.route.method = "GET";
+        Assert.ThrowsExactly<AuthException>(() => console.IndexAction());
+        fw.route.method = "POST";
+        fw.FORM["XSS"] = "wrong-token";
+        Assert.ThrowsExactly<AuthException>(() => console.IndexAction());
+        fw.FORM["XSS"] = "test-token";
+        fw.SessionBool("admindb_pwd_checked", false);
         Assert.ThrowsExactly<AuthException>(() => console.IndexAction());
         fw.FORM["pwd"] = "Console regression12!";
         Assert.AreEqual(1, console.IndexAction()["sql_ctr"].toInt());

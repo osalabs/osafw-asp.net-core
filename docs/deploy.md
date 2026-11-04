@@ -47,15 +47,15 @@ ASP.NET Core selects `appsettings.Development.json`, `appsettings.Beta.json`, or
 
 Apply the active provider's `upd2026-09-27-settings-foundation.sql` before deploying runtime code that reads Site Settings. Fresh installations receive the same rows from the provider's `settings.sql` during database initialization. Do not rely on web routes to bridge an old Settings schema: finish the controlled database and value migration before starting the upgraded web host.
 
-For a first local clone with an empty development database, run the guarded initializer:
+For an empty database, run the command-line initializer:
 
 ```powershell
 dotnet run --project osafw-app -- database-init
 ```
 
-The command is owned by `DevCli` and dispatched through the common CLI entry path in `Program.cs`. It accepts no other arguments, requires the resolved configuration to have `IS_DEV=true`, refuses a database that already contains any tables, and has no force mode. It applies the existing provider-specific development initialization chain and prints the generated bootstrap administrator password to the console. Treat that output as a credential.
+The command is owned by `DevCli` and dispatched through the common CLI entry path in `Program.cs`. It accepts no other arguments, refuses a database that already contains any tables, and has no force mode. It applies the provider-specific initialization chain and prints the generated bootstrap administrator password to the console. Treat that output as a credential.
 
-Initialize an empty production database through the application's normal controlled SQL deployment before starting the IIS application pool. Its provider-specific initialization must include the framework/session/key tables and `settings.sql`; `database-init` deliberately cannot initialize a production configuration. Local developers can still start with the configured database unavailable and use Home or `/Dev/Configure`; sessions become usable after initialization. Session-cookie keys tolerate bootstrap storage failures, while stored credentials always require durable keys.
+The same command supports an empty production database. Set the intended host environment explicitly and use `--no-launch-profile` (for example, `dotnet run --no-launch-profile --project osafw-app -- database-init`) so a development launch profile cannot override it. Review the effective connection and the bundled initialization data before running against the authorized target; finish initialization before starting the IIS application pool. Local developers can still start with the configured database unavailable and use Home or `/Dev/Configure`; sessions become usable after initialization. Session-cookie keys tolerate bootstrap storage failures, while stored credentials always require durable keys.
 
 For existing applications, use the [one-time Settings migration instructions](agents/migrations/settings.md) to prepare a reviewed app-specific migration. Select the target environment and connection explicitly, stop traffic during the final migration, and obtain authority before changing a configured database. Keep legacy configuration and rollback material outside tracked files. The runtime includes no legacy-JSON migration CLI or browser action.
 
@@ -202,8 +202,8 @@ Do not make server-local edits to tracked files. `git reset --hard` discards tra
 
 ## Developer tool authorization and diagnostics
 
-The public configuration page is diagnostic only. Fresh local development setup uses `database-init`; the retained web `InitDB` action requires a tokened POST and a Site Admin session. Both entry points reject any database that already contains tables. There is no destructive reset/force mode and no public bootstrap password response.
+The public configuration page is diagnostic only. Database setup uses the local `database-init` CLI; the web `InitDB` action and its templates have been removed. The CLI supports explicitly selected production configurations and rejects any database that already contains tables. There is no destructive reset/force mode and no public bootstrap password response.
 
-The SQL console requires an active Site Admin account, a tokened POST, a writable account, and that account's current password for every SQL execution. The former shared source password and session unlock flag no longer grant access. Table-result links only prefill the form; execution still requires a new password-confirmed POST. Windows-only administrators must establish an application password through an authorized account-management flow before using this console.
+The SQL console uses the framework's Site Admin route restriction. SQL execution requires a tokened POST and a writable account. Confirm the current account password once to unlock the console for the session (`admindb_pwd_checked`); the former shared source password is removed. Table-result links only prefill the form, and each execution still requires a tokened POST. Windows-only administrators must establish an application password through an authorized account-management flow before using this console.
 
 Assistant DEBUG diagnostics redact tool arguments, result summaries, and retrieval queries when `log_pii=false`. Explicitly enabling PII diagnostics permits sensitive content in logs; retain the application's existing access/retention controls. The developer log viewer escapes file content as text.

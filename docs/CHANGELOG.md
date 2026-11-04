@@ -2,10 +2,6 @@
 
 This changelog records only breaking framework changes and the actions needed to upgrade an existing application. Entries are grouped by the date of the breaking change, not by followup commits. Additive features, internal refactoring, bug fixes, and renames within an unreleased branch belong in the relevant feature documentation or task summary. Coverage starts at 2025-06-01.
 
-## 2026-11-02
-
-- Fresh development setup now uses the local `database-init` command; anonymous web initialization is denied and every initializer rejects a nonempty database. Copied custom bootstrap flows must keep these guards and use additive updates for existing data. The SQL console no longer accepts its source-embedded shared password or remembered unlock flag: each execution requires an active writable Site Admin account, a tokened POST, and the current account password. See [developer tool authorization](deploy.md#developer-tool-authorization-and-diagnostics).
-
 ## 2026-11-01
 
 - Development initialization: removed the protected DevConfigureController.initDatabase() forwarding hook. Move any copied-app override into DevCli.initializeDatabase(FW); InitDBAction calls it directly after its existing development/POST/token guards.

@@ -19,13 +19,13 @@ Resolve choices that materially affect security, data, compatibility, or authori
 
 Keep deployment/bootstrap values in `appsettings*.json`, framework fallbacks in `FwConfig`, and application defaults/policy in `FwHooks.configure`. Use database Site Settings for site-managed operational values; define credentials with `input=90` before writing them through the model. Give the app a stable Data Protection identity. See [Settings](../settings.md) and [deployment](../deploy.md#runtime-configuration-ownership).
 
-For an explicitly authorized empty local development database, use the established `DevCli` entry path from the repository root:
+For an explicitly authorized empty database, use the established `DevCli` entry path from the repository root:
 
 ```powershell
 dotnet run --project osafw-app -- database-init
 ```
 
-Confirm the effective target and development mode before running it. The command accepts no extra arguments, requires `IS_DEV=true`, refuses any existing tables, and has no force mode. It applies provider-specific initialization including Settings and prints the generated administrator password; keep that credential out of tracked files and reports. Enable the matching project/provider symbol when needed. Never substitute destructive fresh-schema scripts for an existing database or run initialization against a configured shared resource without explicit authority.
+Confirm the effective target and host environment before running it. For production, select the environment explicitly and pass `--no-launch-profile` so a development launch profile cannot override it. The command accepts no extra arguments, supports development and production configurations, refuses any existing tables, and has no force mode. Database initialization has no web action; scaffolding remains development-only. It applies provider-specific initialization including Settings and prints the generated administrator password; keep that credential out of tracked files and reports. Enable the matching project/provider symbol when needed. Never substitute destructive fresh-schema scripts for an existing database or run initialization against a configured shared resource without explicit authority.
 
 Once the database is ready, start through the application's established launch path and check `/Dev/Configure`, login, the intended roles, and representative application flows. Verify preserved defaults and a rejected unauthorized access path. Record actual provider/environment coverage and unresolved acceptance checks; do not claim a production deployment from a local bootstrap.
 

@@ -40,8 +40,6 @@ public class DiagnosticSecurityTests
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
         users.IsReadOnly = false;
         fw.FORM["pwd"] = "wrong-password";
-        // Old sessions cannot satisfy the removed shared-password gate.
-        fw.SessionBool("admindb_pwd_checked", true);
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
     }
 

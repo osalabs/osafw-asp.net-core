@@ -16,9 +16,6 @@ public class AdminDBController : FwController
 
     public FwDict IndexAction()
     {
-        if (fw.userId <= 0 || fw.userAccessLevel < Users.ACL_SITEADMIN)
-            throw new AuthException();
-
         FwDict ps = [];
         var selected_db = reqs("db", "main");
 
@@ -28,10 +25,15 @@ public class AdminDBController : FwController
             enforcePost();
             var users = fw.model<Users>();
             users.checkReadOnly();
-            var user = users.one(fw.userId);
-            if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE
-                || user["access_level"].toInt() < Users.ACL_SITEADMIN || !users.checkPwd(reqs("pwd"), user["pwd"]))
-                throw new AuthException("Re-enter your current account password to run SQL");
+            if (!fw.SessionBool("admindb_pwd_checked"))
+            {
+                var user = users.one(fw.userId);
+                if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE
+                    || user["access_level"].toInt() < Users.ACL_SITEADMIN || !users.checkPwd(reqs("pwd"), user["pwd"]))
+                    throw new AuthException("Enter your current account password to run SQL");
+
+                fw.SessionBool("admindb_pwd_checked", true);
+            }
         }
         FwList tablehead = [];
         FwList tablerows = [];
