@@ -45,7 +45,9 @@ public class ObjectPermissionsSqlServerTests
         Assert.HasCount(1, items);
         Assert.IsTrue(items[0].Contains("library", StringComparison.Ordinal));
         fw.FORM["item"] = DB.h("iname", "Forged", "fwentities_id", 0, "item_id", 0);
-        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction(privateId));
+        fw.route.id = privateId.toStr();
+        fw.route.action = FW.ACTION_SAVE;
+        Assert.ThrowsExactly<AuthException>(() => controller.checkAccess());
         Assert.AreEqual(entity, fw.db.value("att", DB.h("id", privateId), "fwentities_id").toInt());
     }
 }

@@ -195,6 +195,6 @@ The type must be a closed, non-abstract `FwModel` type with a public parameterle
 
 ## Administrative attachment and autocomplete permissions
 
-`AdminAttController` checks the existing parent for administrative reads and mutations, and the proposed parent before saving a binding. `Att.checkAdminAccess` retains management of inactive rows and delegates parent policy to the overridable `isParentAccessAllowed` hook. Copied-app parent models must authorize `view`, `edit`, and `delete` as appropriate. Read-only users cannot save attachment metadata or administer user credentials.
+`AdminAttController.checkAccess` checks the existing parent before the framework dispatches an action, including bulk selections. Saving also checks the proposed parent after input conversion. `Att.checkAccess(FwDict, string)` shares the parent policy with file-serving checks while allowing administrators to manage inactive rows; the id overload still requires an active attachment. Both use the overridable `isParentAccessAllowed` hook. Copied-app parent models must authorize `view`, `edit`, and `delete` as appropriate. Read-only users cannot save attachment metadata or administer user credentials.
 
 Autocomplete queries apply the model's protected `autocompleteWhere(FwDict parameters)` predicate before ordering and limiting. User Views and Filters include owned or system rows; User Lists include only owned rows. Models with other ownership rules should override this hook rather than filter an already limited result.

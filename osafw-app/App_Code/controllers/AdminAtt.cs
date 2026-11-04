@@ -39,6 +39,24 @@ public class AdminAttController : FwAdminController
             { "Select", Permissions.PERMISSION_LIST },
         };
         base.checkAccess();
+
+        var action = fw.route.action;
+        var permission = action switch
+        {
+            FW.ACTION_SAVE or FW.ACTION_SHOW_FORM or "RestoreDeleted" => Permissions.PERMISSION_EDIT,
+            FW.ACTION_DELETE => Permissions.PERMISSION_DELETE,
+            _ => Att.ACCESS_ACTION_VIEW
+        };
+        var id = fw.route.id.toInt();
+        if (id > 0)
+            model.checkAccess(model.one(id), permission);
+
+        if (action == "SaveMulti")
+        {
+            permission = fw.FORM.ContainsKey("delete") ? Permissions.PERMISSION_DELETE : Att.ACCESS_ACTION_VIEW;
+            foreach (string key in reqh("cb").Keys)
+                model.checkAccess(model.one(key.toInt()), permission);
+        }
     }
 
     public override void setListSearch()
@@ -95,7 +113,6 @@ public class AdminAttController : FwAdminController
     public override FwDict? SaveAction(int id = 0)
     {
         checkReadOnly();
-        model.checkAdminAccess(id, "edit");
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         FwDict ps = [];
@@ -127,7 +144,10 @@ public class AdminAttController : FwAdminController
         if (Utils.isEmpty(itemdb["iname"]))
             itemdb["iname"] = "new file upload";
         model.convertUserInput(itemdb);
-        model.checkAdminAccess(id, "edit", itemdb);
+        // Authorize the proposed parent after aliases and input types have been resolved.
+        var proposed = new FwDict(model.one(id));
+        Utils.mergeHash(proposed, itemdb);
+        model.checkAccess(proposed, Permissions.PERMISSION_EDIT);
 
         if (id > 0)
         {
@@ -193,32 +213,6 @@ public class AdminAttController : FwAdminController
         }
 
         this.validateCheckResult();
-    }
-
-    public override FwDict modelOne(int id)
-    {
-        if (id > 0)
-            model.checkAdminAccess(id, Att.ACCESS_ACTION_VIEW);
-        return base.modelOne(id);
-    }
-
-    public override FwDict? DeleteAction(int id)
-    {
-        model.checkAdminAccess(id, "delete");
-        return base.DeleteAction(id);
-    }
-
-    public override FwDict? RestoreDeletedAction(int id)
-    {
-        model.checkAdminAccess(id, "edit");
-        return base.RestoreDeletedAction(id);
-    }
-
-    protected override int saveMultiRows(System.Collections.ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
-    {
-        foreach (string key in keys)
-            model.checkAdminAccess(key.toInt(), is_delete ? "delete" : Att.ACCESS_ACTION_VIEW);
-        return base.saveMultiRows(keys, is_delete, user_lists_id, remove_user_lists_id);
     }
 
     public FwDict SelectAction()

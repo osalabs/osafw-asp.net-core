@@ -335,16 +335,7 @@ public class Att : FwModel<Att.Row>
     /// <param name="action">Optional action code for app-specific overrides.</param>
     public override void checkAccess(int id = 0, string action = "")
     {
-        bool result = true;
-        var item = oneActive(id);
-
-        if (item.Count == 0)
-            result = false;
-        else
-            result = isParentAccessAllowed(item, action);
-
-        if (!result)
-            throw new AuthException("Access Denied. You don't have enough rights to get this file");
+        checkAccess(oneActive(id), action);
     }
 
     /// <summary>
@@ -431,25 +422,13 @@ public class Att : FwModel<Att.Row>
         return isParentAccessAllowed(binding, action);
     }
 
-    /// <summary>
-    /// Authorizes administrative reads or mutations against the existing direct parent and any proposed binding.
-    /// Inactive rows remain manageable; missing rows and unauthorized parents fail closed.
-    /// </summary>
-    public virtual void checkAdminAccess(int id, string action, FwDict? fields = null)
+    /// <summary>Checks the parent policy for a loaded or proposed attachment, including inactive rows managed by administrators.</summary>
+    /// <param name="item">Existing or proposed attachment row; an empty row is denied.</param>
+    /// <param name="action">Action to authorize against the parent business record.</param>
+    public virtual void checkAccess(FwDict item, string action)
     {
-        var item = id > 0 ? one(id) : new DBRow();
-        if (id > 0 && item.Count == 0)
-            throw new NotFoundException("Wrong Attachment ID");
-        if (id > 0 && !isParentAccessAllowed(item, action))
-            throw new AuthException();
-
-        if (fields != null)
-        {
-            var proposed = new FwDict(item);
-            Utils.mergeHash(proposed, fields);
-            if (!isParentAccessAllowed(proposed, action))
-                throw new AuthException();
-        }
+        if (item.Count == 0 || !isParentAccessAllowed(item, action))
+            throw new AuthException("Access Denied. You don't have enough rights to get this file");
     }
 
     /// <summary>Quick search shares the attachment library's unbound-row visibility.</summary>
