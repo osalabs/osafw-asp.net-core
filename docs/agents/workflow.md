@@ -37,7 +37,7 @@ Honor existing task authority: scoped edits and verification need no renewed per
 
 Read-only diagnosis, explanation, audit, review, or planning needs no environment initialization, summary, delegation, or review loop merely to answer; create no repository files unless a saved report is requested. Meaning-neutral corrections use scoped text/link checks and need no summary unless requested. Runtime, schema, runtime configuration, test, script, and behavior-changing shared agent-workflow changes require a summary even when small.
 
-For those changes and other non-trivial or iterative implementation, maintain one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` plus one concise `tasks/index.md` entry. Never reformat historical summaries. Keep only headings needed for:
+For those changes and other non-trivial or iterative implementation, maintain one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` plus one concise `tasks/index.md` entry per PR or continuing task. Update that same summary through verification and review feedback; another run or feedback round does not need another summary. Do not rewrite historical summaries already merged. Keep only headings needed for:
 
 - Outcome/acceptance, material decisions/exclusions, changed contracts, and migration decisions.
 - Reviewed scope, exact final commands/results, manual evidence, prerequisites, and material omissions. Combine reproduction and verification when identical.

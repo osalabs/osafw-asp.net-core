@@ -104,7 +104,7 @@ public class DiagnosticSecurityTests
 
 #if isSQLite
     [TestMethod]
-    public void SqlConsoleRunsAuthorizedTokenedPostWithCurrentPassword()
+    public void SqlConsoleUnlocksForSessionAndKeepsMutationGuards()
     {
         using var database = new SqliteFile();
         using var scope = new FwTestScope(database.CreateDb, context: TestHelpers.CreateHttpContext());
@@ -127,6 +127,20 @@ public class DiagnosticSecurityTests
         var rows = (FwList)ps["rows"]!;
         var fields = (FwList)rows[0]["fields"]!;
         Assert.AreEqual(42, fields[0]["value"].toInt());
+
+        fw.FORM.Remove("pwd");
+        Assert.AreEqual(1, controller.IndexAction()["sql_ctr"].toInt());
+        users.IsReadOnly = true;
+        Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
+        users.IsReadOnly = false;
+        fw.route.method = "GET";
+        Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
+        fw.route.method = "POST";
+        fw.FORM["XSS"] = "wrong-token";
+        Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
+        fw.FORM["XSS"] = "token";
+        fw.SessionBool("admindb_pwd_checked", false);
+        Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
     }
 #endif
 
