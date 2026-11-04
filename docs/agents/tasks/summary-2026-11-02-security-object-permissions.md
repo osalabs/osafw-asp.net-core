@@ -1,15 +1,13 @@
 # Security object permissions
 
-## Outcome
+Attachment administration checks existing parents in the framework-dispatched controller access hook and proposed bindings after normalization. Standard Att.checkAccess overloads share parent policy; inactive rows remain manageable by authorized administrators while public serving requires active rows. Removed checkAdminAccess, per-action wrappers, and redundant empty-row fallback. Read-only account-administration guards and owner/system autocomplete predicates remain; bound attachment names are excluded from quick search. No schema change.
 
-- Attachment administration authorizes existing and proposed direct parents for direct reads, metadata/file saves, deletion, restore, and bulk operations. Inactive rows remain manageable when their parent permits access.
-- Read-only account administration is blocked before account/credential mutations.
-- Saved-preference autocomplete applies owner/system visibility before result limits. Attachment quick search excludes bound rows, matching library list/select visibility.
-- No schema changes. Copied-app parent policies continue through `isParentAccessAllowed`; the additive autocomplete visibility hook is documented in `docs/crud.md`.
+Removed ObjectPermissionsSqlServerTests, added during acceptance verification. Retained AdminAttControllerTests (existing/proposed parents, bulk access, inactive administration), PreferenceAutocompleteTests (visibility before limits), SecurityGroup9BTests and existing ownership/attachment tests. These protect the behavior without a second provider copy.
 
-## Verification
+Verification:
+- Before test cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile Full -SqlServer localhost`: Default 969, Fast 1013, Browser 87 and SQL Server 36 passed, zero skipped. Those SQL counts include the subsequently removed acceptance probes.
+- After cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile SqlServer -SqlServer localhost`: the original 35 tests passed, zero skipped; build reported zero warnings/errors.
+- Final focused AdminAttControllerTests run: 3 passed, including the proposed-parent assertion.
+- `git diff --check`: passed. Provider/browser verification uses disposable resources; task-owned apps/databases and the temporary bootstrap credential were removed, with evidence kept in ignored artifacts.
 
-- Passed `pwsh -NoProfile -File scripts/test.ps1 -Filter 'FullyQualifiedName~AdminAttControllerTests|FullyQualifiedName~SecurityAttachmentTests|FullyQualifiedName~SecurityGroup9BTests|FullyQualifiedName~UserOwnedPreferencesSecurityTests|FullyQualifiedName~PreferenceAutocompleteTests'`: build clean, 63 passed, zero skipped.
-- Passed the full Fast profile: clean build, 1,013 passed, zero skipped.
-- Fresh independent reviewer completed security/consumer-contract review and summary audit. A discovered attachment-search gap was corrected and rechecked; no blocking findings remain.
-- SQL Server-specific behavior is unchanged; provider-neutral query behavior is exercised with isolated SQLite fixtures. No configured application database is used.
+The three PR-local summaries were consolidated into this single current record at the user's request; unrelated merged history is unchanged. Prior independent runtime/security reviews found no remaining blocking findings. Independent cleanup review and consolidated-summary audit completed with no blocking findings. Copied-application parent overrides remain application-specific acceptance checks.

@@ -2,8 +2,6 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
-- `summary-2026-11-03-security-object-permissions-feedback.md` - Reviewed PR #303 feedback, simplified the relevant contracts, and reran browser/SQL Server/regression checks.
-
 - `summary-2026-11-01-test-cleanup.md` - Audited all tests, simplified low-value coverage, added automatic isolated test profiles and clarified retained-test guidance.
 - `summary-2026-11-01-strong-passwords.md` - Enforced a shared good-or-better password rating in all four password-setting forms, aligned server/browser scoring, added concise validation hints and asset cache invalidation, and verified legacy compatibility and Chromium feedback.
 - `summary-2026-10-31-settings.md` - Consolidated Settings PR feedback: FwSettings/application model split, fw.settings access, DB-free bootstrap, credential controls, globals, direct shared initialization, application caching, local acceptance, inline-autosave UI, and optional process-cached FwSecretsManager with source-agnostic DB setup.
@@ -150,7 +148,6 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-04-custom-reports-review-fixes.md` - Renamed the report runtime/base class to `FwReportsBase` and moved the `fwreports` table model to `osafw-app/App_Code/fw/FwReports.cs` as `FwReports`.
 - `summary-2026-06-05-security-attachments.md` - Hardened attachment authorization and browser delivery behavior.
 - `summary-2026-11-02-security-object-permissions.md` - Parent-aware attachment administration, read-only account guards, and owner-scoped autocomplete.
-- `summary-2026-11-03-security-object-permissions-integration.md` - Browser and native SQL Server verification for PR #303 with focused regression coverage.
 - `summary-2026-06-05-security-dynamic-object-links.md` - Hardened dynamic child-row and object-link authorization while preserving create-only public signup behavior.
 - `summary-2026-06-05-stored-rendering-hardening.md` - Made stored markdown and selected raw-rendering surfaces safe by default with explicit trusted opt-ins.
 - `summary-2026-06-06-breaking-changelog.md` - Rebuilt `docs/CHANGELOG.md` into dated breaking-upgrade sections covering commits since 2025-06-01.
