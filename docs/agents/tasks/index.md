@@ -2,8 +2,6 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
-- `summary-2026-11-03-security-reports-modules-feedback.md` - Reviewed PR #305 feedback, simplified the relevant contracts, and reran browser/SQL Server/regression checks.
-
 - `summary-2026-11-01-test-cleanup.md` - Audited all tests, simplified low-value coverage, added automatic isolated test profiles and clarified retained-test guidance.
 - `summary-2026-11-01-strong-passwords.md` - Enforced a shared good-or-better password rating in all four password-setting forms, aligned server/browser scoring, added concise validation hints and asset cache invalidation, and verified legacy compatibility and Chromium feedback.
 - `summary-2026-10-31-settings.md` - Consolidated Settings PR feedback: FwSettings/application model split, fw.settings access, DB-free bootstrap, credential controls, globals, direct shared initialization, application caching, local acceptance, inline-autosave UI, and optional process-cached FwSecretsManager with source-agnostic DB setup.
@@ -148,7 +146,6 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-03-security-user-owned-preferences.md` - Added owner-aware helpers to saved view, filter, and list models.
 - `summary-2026-06-04-custom-reports-review.md` - Created `docs/drafts/custom_reports_review.md` with architecture, code, docs, security, template/UI, simplification, test-gap, and open-question findings for the custom reports ...
 - `summary-2026-11-02-security-reports-modules.md` - Viewer-safe custom-report metadata and active-only virtual-module lifecycle.
-- `summary-2026-11-03-security-reports-modules-integration.md` - Browser and native SQL Server verification for PR #305 with focused regression coverage.
 - `summary-2026-06-04-custom-reports-review-fixes.md` - Renamed the report runtime/base class to `FwReportsBase` and moved the `fwreports` table model to `osafw-app/App_Code/fw/FwReports.cs` as `FwReports`.
 - `summary-2026-06-05-security-attachments.md` - Hardened attachment authorization and browser delivery behavior.
 - `summary-2026-06-05-security-dynamic-object-links.md` - Hardened dynamic child-row and object-link authorization while preserving create-only public signup behavior.
