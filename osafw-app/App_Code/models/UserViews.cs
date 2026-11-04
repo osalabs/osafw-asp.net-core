@@ -38,6 +38,14 @@ public class UserViews : FwModel<UserViews.Row>
         return url + (is_list_edit ? "/edit" : "");
     }
 
+    /// <summary>Applies the same owner visibility to inherited quick-search routes.</summary>
+    protected override string autocompleteWhere(FwDict parameters)
+    {
+        parameters["autocomplete_users_id"] = fw.userId;
+        parameters["autocomplete_is_system"] = 1;
+        return $"({db.qid(field_add_users_id)}=@autocomplete_users_id OR {db.qid("is_system")}=@autocomplete_is_system)";
+    }
+
     public UserViews() : base()
     {
         table_name = "user_views";

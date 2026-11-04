@@ -179,6 +179,7 @@ public class AdminUsersController : FwDynamicController
 
     public override FwDict? SaveAction(int id = 0)
     {
+        checkReadOnly();
         route_onerror = FW.ACTION_SHOW_FORM; //set route to go if error happens
 
         if (this.save_fields == null)
@@ -257,6 +258,7 @@ public class AdminUsersController : FwDynamicController
     public void SimulateAction(int id)
     {
         enforcePost();
+        checkReadOnly();
 
         var user = model.one(id);
         if (user.Count == 0)
@@ -279,6 +281,7 @@ public class AdminUsersController : FwDynamicController
     public FwDict SendPwdAction(int id)
     {
         enforcePost();
+        checkReadOnly();
         model.checkAdminUserMutationAccess(id);
 
         FwDict ps = [];
@@ -296,6 +299,7 @@ public class AdminUsersController : FwDynamicController
     public void HashPasswordsAction()
     {
         enforcePost();
+        checkReadOnly();
         model.checkAccessLevel(Users.ACL_SITEADMIN);
 
         rw("hashing passwords");
@@ -317,6 +321,7 @@ public class AdminUsersController : FwDynamicController
     public void ResetMFAAction(int id)
     {
         enforcePost();
+        checkReadOnly();
         model.checkAdminUserMutationAccess(id);
 
         model.update(id, DB.h("mfa_secret", null));

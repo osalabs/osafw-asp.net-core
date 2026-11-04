@@ -24,6 +24,13 @@ public class UserLists : FwModel<UserLists.Row>
 
     public string table_items = "user_lists_items";
 
+    /// <summary>Applies the same owner visibility to inherited quick-search routes.</summary>
+    protected override string autocompleteWhere(FwDict parameters)
+    {
+        parameters["autocomplete_users_id"] = fw.userId;
+        return $"{db.qid(field_add_users_id)}=@autocomplete_users_id";
+    }
+
     public UserLists() : base()
     {
         table_name = "user_lists";

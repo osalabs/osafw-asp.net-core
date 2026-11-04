@@ -62,6 +62,8 @@ public class SecurityGroup9BTests
 
     private sealed class TestAdminUsersController : AdminUsersController
     {
+        public void SetReadOnly() => is_readonly = true;
+
         public TestAdminUsersController(FW fw, AdminPolicyUsers users)
         {
             this.fw = fw;
@@ -167,6 +169,19 @@ public class SecurityGroup9BTests
             save_fields = "reply_id item_id idate idesc";
             rbac = [];
         }
+    }
+
+    [TestMethod]
+    public void AdminUsers_ReadOnlyCannotSaveOrResetCredentials()
+    {
+        var (fw, users, controller) = buildAdminUsersController(Users.ACL_ADMIN, userRow(20, Users.ACL_MANAGER));
+        fw.FORM["item"] = saveUserForm(Users.ACL_MANAGER);
+        controller.SetReadOnly();
+        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction(20));
+        Assert.ThrowsExactly<AuthException>(() => controller.SendPwdAction(20));
+        Assert.ThrowsExactly<AuthException>(() => controller.ResetMFAAction(20));
+        Assert.IsNull(users.LastUpdated);
+        Assert.AreEqual(0, users.PasswordResetId);
     }
 
     [TestMethod]

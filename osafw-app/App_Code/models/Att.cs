@@ -335,16 +335,7 @@ public class Att : FwModel<Att.Row>
     /// <param name="action">Optional action code for app-specific overrides.</param>
     public override void checkAccess(int id = 0, string action = "")
     {
-        bool result = true;
-        var item = oneActive(id);
-
-        if (item.Count == 0)
-            result = false;
-        else
-            result = isParentAccessAllowed(item, action);
-
-        if (!result)
-            throw new AuthException("Access Denied. You don't have enough rights to get this file");
+        checkAccess(oneActive(id), action);
     }
 
     /// <summary>
@@ -429,6 +420,23 @@ public class Att : FwModel<Att.Row>
         binding["fwentities_id"] = fwentities_id;
         binding["item_id"] = item_id;
         return isParentAccessAllowed(binding, action);
+    }
+
+    /// <summary>Checks the parent policy for a loaded or proposed attachment, including inactive rows managed by administrators.</summary>
+    /// <param name="item">Existing or proposed attachment row; an empty row is denied.</param>
+    /// <param name="action">Action to authorize against the parent business record.</param>
+    public virtual void checkAccess(FwDict item, string action)
+    {
+        if (item.Count == 0 || !isParentAccessAllowed(item, action))
+            throw new AuthException("Access Denied. You don't have enough rights to get this file");
+    }
+
+    /// <summary>Quick search shares the attachment library's unbound-row visibility.</summary>
+    protected override string autocompleteWhere(FwDict parameters)
+    {
+        parameters["autocomplete_unbound"] = 0;
+        var field = db.qid("fwentities_id");
+        return $"({field} IS NULL OR {field}=@autocomplete_unbound)";
     }
 
     private static string filenameForPolicy(FwDict item)
