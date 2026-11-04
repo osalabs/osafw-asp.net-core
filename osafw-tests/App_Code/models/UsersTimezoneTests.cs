@@ -100,6 +100,9 @@ public class UsersTimezoneTests
         login.init(fw);
         login.UseModel(users);
 
+        fw.route.method = "POST";
+        fw.Session("XSS", "token");
+        fw.FORM["XSS"] = "token";
         Assert.ThrowsExactly<RedirectException>(() => login.SaveAction());
         Assert.AreEqual("Europe/Kyiv", fw.Session("mfa_login_timezone"));
 

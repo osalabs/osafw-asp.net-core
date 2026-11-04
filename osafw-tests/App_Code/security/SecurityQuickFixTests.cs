@@ -170,6 +170,7 @@ public class SecurityQuickFixTests
         controller.init(fw);
         controller.UseModel(users);
 
+        setXssTokens(fw);
         Assert.ThrowsExactly<RedirectException>(() => controller.SaveAction());
 
         Assert.AreEqual(302, fw.response.StatusCode);
@@ -218,6 +219,7 @@ public class SecurityQuickFixTests
             controller.init(fw);
             controller.UseModel(users);
 
+            setXssTokens(fw);
             if (expected)
                 Assert.ThrowsExactly<RedirectException>(() => controller.SaveAction());
             else
@@ -283,6 +285,7 @@ public class SecurityQuickFixTests
         var fw = createPasswordFw(users, "known@example.test");
         var controller = createPasswordController(fw, users);
 
+        setXssTokens(fw);
         Assert.ThrowsExactly<RedirectException>(() => controller.SaveAction());
 
         Assert.AreEqual(1, users.ResetDeliveries);
@@ -296,6 +299,7 @@ public class SecurityQuickFixTests
         var fw = createPasswordFw(users, "unknown@example.test");
         var controller = createPasswordController(fw, users);
 
+        setXssTokens(fw);
         Assert.ThrowsExactly<RedirectException>(() => controller.SaveAction());
 
         Assert.AreEqual(0, users.ResetDeliveries);
@@ -435,6 +439,7 @@ public class SecurityQuickFixTests
         var controller = new LoginController();
         controller.init(fw);
 
+        setXssTokens(fw);
         controller.SaveAction();
 
         fw.response.Body.Position = 0;
@@ -456,6 +461,7 @@ public class SecurityQuickFixTests
         fw.Session("mfa_login_users_id", "9");
         fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
         fw.Session("mfa_login_gourl", gourl);
+        fw.Session("mfa_login_remember", "1");
         setXssTokens(fw);
         var users = new LoginUsers();
         users.User["mfa_secret"] = "JBSWY3DPEHPK3PXP";
@@ -500,6 +506,7 @@ public class SecurityQuickFixTests
         TestHelpers.RegisterModel(fw, (Settings)new StubSettings());
         fw.settings.init(fw);
         fw.is_log_events = false;
+        fw.route.method = "POST";
         return fw;
     }
 

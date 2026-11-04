@@ -161,6 +161,7 @@ Search this compact index before opening full historical task summaries. Each en
 - `summary-2026-06-07-s3-att-compat-pdf-inline.md` - Added S3 attachment key compatibility and trusted PDF inline serving while preserving attachment authorization.
 - `summary-2026-06-07-security-group-9a.md` - Hardened routing consistency, virtual-controller cache invalidation, logging defaults, telemetry defaults, and dashboard docs.
 - `summary-2026-06-07-security-group-9b.md` - Added central privileged user-management checks, activity-log comment handling, and Data Protection setup.
+- `summary-2026-11-02-security-signin.md` - Tokened POST sign-in, persistent-cookie revocation/MFA policy, and full Windows identity mapping.
 - `summary-2026-06-07-test-email-priority.md` - Made configured `appSettings.test_email` take priority over the current session login in test mode.
 - `summary-2026-06-08-agent-performance-review.md` - Added concise performance guardrails and reviewer checks for repeated expensive work, unbounded data, blocking I/O, and invasive optimizations.
 - `summary-2026-06-08-agent-testing-balance.md` - Added behavior-level testing guidance and production-code simplicity checks to agent and reviewer instructions.

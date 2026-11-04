@@ -58,6 +58,12 @@ public class LoginController : FwController
     {
         try
         {
+            // Expired sessions and unvisited forms return quietly to the login form.
+            var xss = fw.Session("XSS");
+            if (string.IsNullOrEmpty(xss) || xss != reqs("XSS"))
+                throw new UserException("");
+
+            enforcePost();
             var item = reqh("item");
             var gourl = reqs("gourl");
             string login = item["login"].toStr().Trim();
@@ -88,7 +94,6 @@ public class LoginController : FwController
 
             if (login.Length == 0 || pwd.Length == 0)
             {
-                addFormError("REGISTER", "REQUIRED");
                 throw new UserException("");
             }
 
@@ -105,6 +110,7 @@ public class LoginController : FwController
                 if (!Utils.isEmpty(user["mfa_secret"]))
                 {
                     fw.Session("mfa_login_users_id", user["id"]);
+                    fw.Session("mfa_login_purpose", "challenge");
                     fw.Session("mfa_login_attempts", "0");
                     fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
                     fw.Session("mfa_login_remember", item["remember"].toStr());
@@ -117,6 +123,8 @@ public class LoginController : FwController
                 if (fw.settings.readBool("is_mfa_enforced"))
                 {
                     fw.Session("mfa_login_users_id", user["id"]);
+                    fw.Session("mfa_login_purpose", "setup");
+                    fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
                     fw.Session("mfa_login_timezone", item["timezone"].toStr());
                     fw.redirect("/My/MFA");
                 }
@@ -135,6 +143,7 @@ public class LoginController : FwController
 
     public void DeleteAction()
     {
+        checkXSS();
         fw.logActivity(FwLogTypes.ICODE_USERS_LOGOFF, FwEntities.ICODE_USERS, fw.userId);
         fw.model<Users>().removePermCookie(fw.userId);
         fw.context?.Session?.Clear();
@@ -159,8 +168,8 @@ public class LoginController : FwController
 
     public void SaveMFAAction()
     {
+        enforcePost();
         route_onerror = FW.ACTION_INDEX;
-        checkXSS();
         var users_id = fw.Session("mfa_login_users_id").toInt();
         if (users_id == 0)
             fw.redirect(base_url);
@@ -208,7 +217,11 @@ public class LoginController : FwController
 
         // Check is login need to be remembered
         if (!Utils.isEmpty(remember))
-            model.createPermCookie(users_id);
+        {
+            var user = model.one(users_id);
+            if (Utils.isEmpty(user["mfa_secret"]) && !fw.settings.readBool("is_mfa_enforced"))
+                model.createPermCookie(users_id);
+        }
 
         string url;
         if (Utils.isAppUrl(gourl, fw.config("ROOT_DOMAIN").toStr()))

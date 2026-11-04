@@ -26,6 +26,7 @@ public sealed class FwHooks
         // Keys: resolved controller names without the Controller suffix; values: true placeholders (presence only). Skips the framework XSS/CSRF token check.
         defaults["no_xss"] = new FwDict
         {
+            // Login handles tokens locally so an expired form can be redisplayed quietly.
             ["Login"] = true,
         };
         // Keys: URL prefixes with a leading slash (e.g. /Admin); values: true placeholders (presence only). Selects controller and template namespaces.

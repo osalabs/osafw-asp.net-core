@@ -57,7 +57,7 @@ public class WinLoginController : FwController
         {
             // if we have username - it means it's authenticated
             // try to find such a user
-            var user = fw.model<Users>().oneByLogin(username);
+            var user = fw.model<Users>().oneByLogin(authUser);
             int usersId = 0;
             if (user.Count > 0)
             {
@@ -76,7 +76,7 @@ public class WinLoginController : FwController
                     usersId = fw.model<Users>().add(new FwDict {
                         {"email",  username+"@company.tld"},
                         {"access_level", Users.ACL_MEMBER},
-                        {"login", username},
+                        {"login", authUser},
                         {"fname", username},
                         {"status", FwModel.STATUS_ACTIVE}
                     });
@@ -89,6 +89,8 @@ public class WinLoginController : FwController
                     fw.redirect("/Login");
                 }
             }
+            // Windows SSO relies on the organization's Windows authentication policy.
+            // Applications may explicitly add their own MFA step here if required.
             model.doLogin(usersId);
             fw.redirect(fw.settings.read("LOGGED_DEFAULT_URL"));
         }

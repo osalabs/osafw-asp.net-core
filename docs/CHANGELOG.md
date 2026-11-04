@@ -2,6 +2,10 @@
 
 This changelog records only breaking framework changes and the actions needed to upgrade an existing application. Entries are grouped by the date of the breaking change, not by followup commits. Additive features, internal refactoring, bug fixes, and renames within an unreleased branch belong in the relevant feature documentation or task summary. Coverage starts at 2025-06-01.
 
+## 2026-11-02
+
+- Windows sign-in now matches the complete `DOMAIN\username` principal. Before upgrading an application that stores short Windows logins, migrate `users.login` to the exact trusted full identity. See [sign-in contracts](authentication.md).
+
 ## 2026-11-01
 
 - Development initialization: removed the protected DevConfigureController.initDatabase() forwarding hook. Move any copied-app override into DevCli.initializeDatabase(FW); InitDBAction calls it directly after its existing development/POST/token guards.
