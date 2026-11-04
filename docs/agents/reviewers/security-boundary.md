@@ -5,6 +5,7 @@ Use when authentication, authorization, mutation, rendering, redirects, uploads/
 ## Checks
 
 - Trace identity, access level/roles/resources, tenant/host, owner, and parent-object scope from request entry to the exact row/file/render/serve/write boundary.
+- Preserve the established authentication policy and recovery flow unless the requested fix requires a change. Trusted SSO, application MFA, and remembered-login restoration are distinct entry paths; do not impose another challenge solely because a helper can perform it. Keep eligibility decisions in the login caller and cookie creation in the cookie helper. Missing/expired login forms should recover quietly when no user decision is needed; do not expose technical validation messages for ordinary retries.
 - State-changing custom actions enforce POST before side effects and require the current XSS token unless a documented exemption intentionally applies. GET, preview, retry, and helper paths must not mutate accidentally.
 - Direct-id read/update/delete predicates include authorization. User preferences use owner-or-system scope; dynamic child and attachment operations authorize through the parent business object.
 - Redirect destinations satisfy the local-URL policy unless a Site Admin-managed external allowlist explicitly governs them.

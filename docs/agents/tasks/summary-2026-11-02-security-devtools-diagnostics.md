@@ -1,0 +1,17 @@
+# Developer tool and diagnostic security
+
+Removed web database initialization and its templates. The local CLI supports explicitly selected empty production configurations, rejects existing tables, and returns the generated password directly. Scaffolding remains development-only. The SQL console uses framework Site Admin routing, confirms the current account password once per session, and retains POST/XSS/read-only checks for every execution. Removed the embedded shared password; table links only prefill. Assistant diagnostic payloads are redacted unless log_pii is enabled, and log content is escaped. Canonical setup/docs/help are aligned; no schema change or unreleased-fix changelog entry.
+
+Removed DevtoolsSqlServerTests and its unused optional empty-schema fixture constructor. Retained DevCliTests for production/development CLI bootstrap and repeat-run refusal, DiagnosticSecurityTests for console/diagnostic boundaries, and existing origin/pending-update tests. Moved the useful unlocked-session/relock/POST/token/read-only assertions into the existing SQLite console test rather than duplicating them in a native acceptance class.
+
+Verification:
+- Before test cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile Full -SqlServer localhost`: Default 964 (isolated retry), Fast 1006, Browser 87 and SQL Server 37 passed, zero skipped. Those SQL counts include the subsequently removed acceptance probes.
+- After cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile SqlServer -SqlServer localhost`: the original 35 tests passed, zero skipped; build reported zero warnings/errors.
+- The first concurrent Default run had one shared temporary-folder collision in ParsePage radio coverage; the unchanged assembly passed all 964 Default tests when rerun alone.
+- After cleanup, `pwsh -NoProfile -File scripts/test.ps1 -Profile Fast -Filter 'FullyQualifiedName~DiagnosticSecurityTests|FullyQualifiedName~DevCliTests'`: 27 passed, zero skipped, including the consolidated session assertions.
+- Actual production-mode CLI initialized a new disposable native SQL database; live browser ran two SQL queries after one password confirmation, hid the password field, and produced no web-initialization result.
+- `git diff --check`: passed. Provider/browser verification uses disposable resources; task-owned apps/databases and the temporary bootstrap credential were removed, with evidence kept in ignored artifacts.
+
+Instruction pack 1.13.6 records helper/dispatch inspection, ownership of security checks, established authentication policy, quiet login recovery and actual-breaking-only changelog scope. Follow-up guidance keeps one summary/index entry per PR through feedback and distinguishes running acceptance checks from adding permanent tests. Test-AgentInstructions.ps1 passed through both pwsh and Windows PowerShell; cleanup summary audit completed with no findings.
+
+The three PR-local summaries were consolidated into this single current record at the user's request; unrelated merged history is unchanged. Prior independent runtime/security reviews found no remaining blocking findings. Independent cleanup review and consolidated-summary audit completed with no blocking findings. Framework Site Admin dispatch and retrieval-trace redaction remain source-reviewed; real IIS/domain deployment remains unverified. Instruction baseline/candidate checks used the existing independent-review gates; no permission or review requirements were relaxed. These wording/routing checks make no productivity or future-error-rate claim.

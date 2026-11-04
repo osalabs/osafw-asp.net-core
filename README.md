@@ -41,7 +41,7 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 4. configure and initialize the development database:
   - create an empty `demo` database (or the name configured by `appsettings.Development.json`)
   - or enable `isSQLite` in `osafw-app/osafw-app.csproj`, set the development `appSettings.db.main.type` to `SQLite`, and use `Data Source=App_Data/db/osafw.sqlite;Mode=ReadWriteCreate;Foreign Keys=True;Default Timeout=30;Pooling=True;`
-  - use Initialize DB on `/Dev/Configure`, or run `dotnet run --project osafw-app -- database-init` from the repository root; the CLI requires development mode and refuses a non-empty database
+  - run `dotnet run --project osafw-app -- database-init` from the repository root; the CLI refuses a non-empty database; production initialization is also supported with the target environment selected explicitly
   - retain the generated administrator password; see [configuration and upgrade instructions](docs/deploy.md#runtime-configuration-ownership)
 5. review debug log in `/osafw-app/App_Data/logs/main.log`
 6. edit or create new controllers and models in `/osafw-app/App_Code/controllers` and `/osafw-app/App_Code/models`

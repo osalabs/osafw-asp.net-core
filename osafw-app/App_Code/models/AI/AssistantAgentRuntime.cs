@@ -54,12 +54,12 @@ public sealed class AssistantToolRuntime
     {
         if (HasPersistedRun)
             fw.model<AssistantRunsEvents>().addEvent(runId, AssistantRunsEvents.TYPE_TOOL, "Tool: " + toolName, args == null ? string.Empty : Utils.jsonEncode(args));
-        fw.logger(LogLevel.DEBUG, "Assistant tool call [", toolName, "] args=", args ?? new FwDict());
+        fw.logger(LogLevel.DEBUG, "Assistant tool call [", toolName, "] args=", fw.config("log_pii").toBool() ? args ?? new FwDict() : "[redacted]");
     }
 
     public void LogToolResult(string toolName, string summary)
     {
-        fw.logger(LogLevel.DEBUG, "Assistant tool result [", toolName, "] ", summary ?? string.Empty);
+        fw.logger(LogLevel.DEBUG, "Assistant tool result [", toolName, "] ", fw.config("log_pii").toBool() ? summary ?? string.Empty : "[redacted]");
     }
 
     public void RecordRetrievalEvidence(string toolName, string query, FwList results)

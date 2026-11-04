@@ -257,69 +257,6 @@ public class SecurityGroup1DevConfigureTests
     }
 
     [TestMethod]
-    public void InitDB_RejectsGetEvenWithToken()
-    {
-        using var scope = createInitDbScope();
-        var fw = scope.Fw;
-        fw.route.method = "GET";
-        setXssTokens(fw);
-        var controller = createInitDbController(fw);
-
-        Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-    }
-
-    [TestMethod]
-    public void InitDB_RejectsPostWithMissingToken()
-    {
-        using var scope = createInitDbScope();
-        var fw = scope.Fw;
-        fw.route.method = "POST";
-        fw.Session("XSS", "token");
-        var controller = createInitDbController(fw);
-
-        Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-    }
-
-    [TestMethod]
-    public void InitDB_RejectsPostWithWrongToken()
-    {
-        using var scope = createInitDbScope();
-        var fw = scope.Fw;
-        fw.route.method = "POST";
-        setXssTokens(fw, formToken: "wrong-token");
-        var controller = createInitDbController(fw);
-
-        Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-    }
-
-    [TestMethod]
-    public void InitDB_RejectsPostWhenNotDev()
-    {
-        using var scope = createInitDbScope("app.example.test");
-        var fw = scope.Fw;
-        fw.route.method = "POST";
-        setXssTokens(fw);
-        var controller = createInitDbController(fw);
-
-        Assert.ThrowsExactly<AuthException>(() => controller.InitDBAction());
-    }
-
-    [TestMethod]
-    public void InitDB_AllowsAnonymousDevPostWithToken()
-    {
-        using var scope = createInitDbScope();
-        var fw = scope.Fw;
-        fw.route.method = "POST";
-        setXssTokens(fw);
-        var controller = createInitDbController(fw);
-
-        // The allowed request reaches the actual initializer; this DB rejects every SQL operation.
-        var error = Assert.ThrowsExactly<InvalidOperationException>(() => controller.InitDBAction());
-
-        Assert.AreEqual("Unexpected DB operation: exec", error.Message);
-    }
-
-    [TestMethod]
     public void PendingUpdates_ShowsNoticeWithoutApplyingUpdates()
     {
         var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
@@ -384,20 +321,6 @@ public class SecurityGroup1DevConfigureTests
 
         Assert.IsTrue(updates.ApplyPendingCalled);
         Assert.AreEqual("/Admin/FwUpdates", fw.response.Headers["Location"].ToString());
-    }
-
-    private static FwTestScope createInitDbScope(string host = "localhost")
-    {
-        var settings = configWithRootAndDevelopmentOverride().AsEnumerable()
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
-        return new FwTestScope(_ => new RejectingDb(), settings, createHttpContext(host));
-    }
-
-    private static DevConfigureController createInitDbController(FW fw)
-    {
-        var controller = new DevConfigureController();
-        controller.init(fw);
-        return controller;
     }
 
     private static DevManageController createDevManageController(FW fw)

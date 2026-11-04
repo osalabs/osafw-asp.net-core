@@ -13,7 +13,6 @@ public class AdminDBController : FwController
 {
     public static new int access_level = Users.ACL_SITEADMIN;
 
-    private const string dbpwd = "db321";
 
     public FwDict IndexAction()
     {
@@ -21,6 +20,21 @@ public class AdminDBController : FwController
         var selected_db = reqs("db", "main");
 
         string sql = reqs("sql");
+        if (!string.IsNullOrEmpty(sql))
+        {
+            enforcePost();
+            var users = fw.model<Users>();
+            users.checkReadOnly();
+            if (!fw.SessionBool("admindb_pwd_checked"))
+            {
+                var user = users.one(fw.userId);
+                if (user.Count == 0 || user["status"].toInt() != Users.STATUS_ACTIVE
+                    || user["access_level"].toInt() < Users.ACL_SITEADMIN || !users.checkPwd(reqs("pwd"), user["pwd"]))
+                    throw new AuthException("Enter your current account password to run SQL");
+
+                fw.SessionBool("admindb_pwd_checked", true);
+            }
+        }
         FwList tablehead = [];
         FwList tablerows = [];
         int sql_ctr = 0;
@@ -34,11 +48,7 @@ public class AdminDBController : FwController
                 db = fw.getDB(selected_db);
             }
 
-            if (fw.SessionBool("admindb_pwd_checked") || reqs("pwd") == dbpwd)
-                fw.SessionBool("admindb_pwd_checked", true);
-            else if (sql.Length > 0)
-                fw.setGlobalError("Wrong password");
-            if (sql.Length > 0 && fw.SessionBool("admindb_pwd_checked"))
+            if (sql.Length > 0)
             {
                 if (sql == "show tables")
                     // special case - show tables
@@ -80,7 +90,7 @@ public class AdminDBController : FwController
 
         ps["dbsources"] = dbsources;
         ps["selected_db"] = selected_db;
-        ps["sql"] = sql;
+        ps["sql"] = sql.Length > 0 ? sql : reqs("prefill_sql");
         ps["sql_ctr"] = sql_ctr;
         ps["sql_time"] = (DateTime.Now.Ticks - sql_time) / (double)10 / 1000 / 1000; // 100nano/micro/milliseconds/seconds
         ps["head_fields"] = tablehead;

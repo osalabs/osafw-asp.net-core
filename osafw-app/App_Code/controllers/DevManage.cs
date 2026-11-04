@@ -62,7 +62,7 @@ public class DevManageController : FwController
         fs.Seek(-seek, SeekOrigin.End);
         var sr = new StreamReader(fs);
         rw("<pre>");
-        fw.rw(sr.ReadToEnd());
+        fw.rw(Utils.htmlescape(sr.ReadToEnd()));
         rw("</pre>");
 
         rw("end of dump");

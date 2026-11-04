@@ -127,3 +127,7 @@ During app development, refresh the catalog with `docs/prompts/update_assistant_
 ## Memory
 
 Memory remains optional and disabled by default. When enabled, completed runs compact recent conversation context with the configured LLM into one per-user durable summary, then sanitize likely secrets, credentials, personal contact details, payment numbers, IDs, and long opaque tokens before storing `assistant_memories.summary`. Empty or redaction-only summaries are not stored.
+
+## Diagnostic privacy
+
+Tool-call arguments, tool-result summaries, and retrieval query text are redacted in DEBUG logs unless `log_pii=true`. Source/chunk IDs, scores, counts, and routine progress can still be logged. This diagnostics switch does not remove the user-owned Assistant run/event history needed by the conversation UI.

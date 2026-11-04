@@ -27,6 +27,7 @@ Honor existing task authority: scoped edits and verification need no renewed per
 ## Implement and verify
 
 - Implement requested behavior before ancillary cleanup; follow nearby app/framework patterns and the canonical topic owner.
+- Read the existing helper and dispatch contracts before adding guards, fallback values, wrappers, or repeated checks. Use established empty/not-found behavior (for example, `one(id)` returns an empty row for nonpositive or missing IDs). Put each check at its owning boundary: framework controller authorization, model row/parent authorization, and validation of a proposed binding serve different purposes; reuse their existing hooks rather than copying checks into every action.
 - Use [verification.md](verification.md) for resource isolation and proportional checks. Start with the smallest falsifying check; a broad suite does not replace a missing behavior-level check.
 - When a requirement, source, assumption, or result changes, revisit dependent conclusions/checks and retain evidence whose conditions still hold. Prefer a fresh scoped check over an expensive one-off dependency ledger.
 - For classifiers, defaults, security boundaries, and source-copy/public contracts, inventory established entry paths and baseline consumers. Pair plausible attacker/ordinary negative controls with intended-safe/trusted and preserved-compatibility positives at those paths. A new helper or wrapper alone is insufficient.
@@ -36,7 +37,7 @@ Honor existing task authority: scoped edits and verification need no renewed per
 
 Read-only diagnosis, explanation, audit, review, or planning needs no environment initialization, summary, delegation, or review loop merely to answer; create no repository files unless a saved report is requested. Meaning-neutral corrections use scoped text/link checks and need no summary unless requested. Runtime, schema, runtime configuration, test, script, and behavior-changing shared agent-workflow changes require a summary even when small.
 
-For those changes and other non-trivial or iterative implementation, maintain one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` plus one concise `tasks/index.md` entry. Never reformat historical summaries. Keep only headings needed for:
+For those changes and other non-trivial or iterative implementation, maintain one `docs/agents/tasks/summary-<YYYY-MM-DD>-<task-id>.md` plus one concise `tasks/index.md` entry per PR or continuing task. Update that same summary through verification and review feedback; another run or feedback round does not need another summary. Do not rewrite historical summaries already merged. Keep only headings needed for:
 
 - Outcome/acceptance, material decisions/exclusions, changed contracts, and migration decisions.
 - Reviewed scope, exact final commands/results, manual evidence, prerequisites, and material omissions. Combine reproduction and verification when identical.

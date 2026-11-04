@@ -852,7 +852,7 @@ select d.id,
             keyword_score = item.KeywordScore,
             retrieval_mode = item.RetrievalMode
         }).ToList();
-        fw.logger(LogLevel.DEBUG, "Assistant retrieval trace: query=", query, ", mode=", mode, ", results=", payload);
+        fw.logger(LogLevel.DEBUG, "Assistant retrieval trace: query=", fw.config("log_pii").toBool() ? query : "[redacted]", ", mode=", mode, ", results=", payload);
     }
 
     public void deleteBySource(int sourceId)

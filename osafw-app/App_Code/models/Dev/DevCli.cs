@@ -139,7 +139,7 @@ internal static class DevCli
     }
 
     /// <summary>
-    /// Bootstraps only an empty development database without requiring session tables or durable keys.
+    /// Bootstraps only an empty database without requiring session tables or durable keys.
     /// The generated administrator password is the command's sole successful output.
     /// </summary>
     private static int initializeDatabase(string[] args, IConfiguration configuration, TextWriter output, TextWriter error)
@@ -153,18 +153,8 @@ internal static class DevCli
         FW? fw = null;
         try
         {
-            var settings = FwConfig.settingsForEnvironment(configuration);
-            if (!settings["IS_DEV"].toBool())
-            {
-                error.WriteLine("Error: database-init requires the resolved configuration to have IS_DEV=true.");
-                return EXIT_ENVIRONMENT;
-            }
-
             fw = new FW(null, configuration);
-            if (fw.db.tables().Count != 0)
-                throw new UserException("Database initialization requires an empty database.");
-
-            var password = initializeDatabase(fw)["pwd"].toStr();
+            var password = initializeDatabase(fw);
             if (password.Length == 0)
                 throw new UserException("Database initialization did not create a bootstrap password.");
 
@@ -189,19 +179,21 @@ internal static class DevCli
     }
 
     /// <summary>
-    /// Replays the provider's fresh-install scripts and returns the generated admin password in page data.
-    /// Callers must apply development/access guards first; these scripts replace existing schema/data.
+    /// Initializes an empty database using the provider's fresh-install scripts.
+    /// Rejects every nonempty database; callable only from the local bootstrap CLI.
     /// </summary>
-    internal static FwDict initializeDatabase(FW fw)
+    /// <returns>The generated administrator password, or empty when no statements ran.</returns>
+    internal static string initializeDatabase(FW fw)
     {
         var db = fw.db;
-        FwDict ps = [];
+        if (db.tables().Count != 0)
+            throw new UserException("Database initialization requires an empty database.");
+
         int sql_ctr = 0;
 
         try
         {
             var sql_root = fw.model<FwUpdates>().sqlScriptRoot();
-            dropExistingForeignKeys(db);
 
             string[] files = ["fwdatabase.sql", "database.sql", "settings.sql", "demo.sql", "lookups.sql", "views.sql"];
             foreach (string file in files)
@@ -227,34 +219,10 @@ internal static class DevCli
         {
             var pwd = Utils.getRandStr(8);
             fw.model<Users>().update(1, DB.h("pwd", pwd));
-            ps["pwd"] = pwd;
+            return pwd;
         }
 
-        return ps;
-    }
-
-    /// <summary>
-    /// Drops existing SQL Server foreign-key constraints before replaying full development schema scripts.
-    /// </summary>
-    private static void dropExistingForeignKeys(DB db)
-    {
-        if (db.dbtype != DB.DBTYPE_SQLSRV)
-            return;
-
-        db.exec($@"
-            DECLARE @sql NVARCHAR(MAX) = N'';
-
-            SELECT @sql += N'ALTER TABLE '
-                + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id))
-                + N'.'
-                + QUOTENAME(OBJECT_NAME(parent_object_id))
-                + N' DROP CONSTRAINT '
-                + QUOTENAME(name)
-                + N';'
-            FROM sys.foreign_keys;
-
-            IF LEN(@sql) > 0
-                EXEC sp_executesql @sql");
+        return string.Empty;
     }
 
     internal static bool tryParse(string[] args, out Options options, out string error)
@@ -418,7 +386,7 @@ internal static class DevCli
         writer.WriteLine("  dotnet run --project osafw-app -- scaffold controller <model> [--url </Prefix/Controller>] [--title <title>] [--type dynamic|vue|lookup|api] [--force]");
         writer.WriteLine("  dotnet run --project osafw-app -- scaffold report <code>");
         writer.WriteLine();
-        writer.WriteLine("Development commands use the resolved Development configuration by default and refuse to run unless IS_DEV=true.");
+        writer.WriteLine("CLI commands default to Development configuration; select the intended environment explicitly. Scaffolding requires IS_DEV=true; database-init requires an empty database.");
         writer.WriteLine("Database initialization requires an empty database and prints the generated administrator password.");
         writer.WriteLine("Existing generated model/controller targets are preserved unless --force is explicit.");
         writer.WriteLine("The api controller type is reserved for future support and currently exits without generating output.");

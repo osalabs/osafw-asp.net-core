@@ -53,9 +53,7 @@
             <td><~ok if="is_db_tables"><~fail unless="is_db_tables"></td>
             <td>
                 <~failmsg3 unless="is_db_tables" inline>
-                    The database is reachable, but required tables were not found. Initialize the database from the bundled SQL scripts or run the schema scripts manually.
-                    <~initdb if="GLOBAL[IS_DEV]" inline><br>
-                    <button type="button" class="btn btn-default on-fw-submit" data-url="<~../url>/(InitDB)?XSS=<~SESSION[XSS]>">Initialize DB</button></~initdb>
+                    The database is reachable, but required tables were not found. Initialize the empty database with <code>database-init</code> from the command line.
                 </~failmsg3>
             </td>
         </tr>

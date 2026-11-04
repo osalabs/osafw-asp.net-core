@@ -113,22 +113,6 @@ public class DevConfigureController : FwController
         return result;
     }
 
-    /// <summary>
-    /// Initializes a development database from the bundled SQL scripts so a fresh clone can run the demo app.
-    /// </summary>
-    /// <returns>
-    /// Template data containing the generated admin password when one or more SQL statements executed.
-    /// </returns>
-    public FwDict InitDBAction()
-    {
-        if (!fw.config("IS_DEV").toBool())
-            throw new AuthException("Not in a DEV mode");
-
-        enforcePost();
-
-        return DevCli.initializeDatabase(fw);
-    }
-
     public FwDict? PendingUpdatesAction()
     {
         var pendingRows = fw.model<FwUpdates>().listPending();
