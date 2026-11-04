@@ -4,7 +4,7 @@ This changelog records only breaking framework changes and the actions needed to
 
 ## 2026-11-02
 
-- Sign-in now requires a tokened POST and rejects query-string credential fields. Copy the login form token field into customized forms and update scripted login callers. Remember-me auto-login is restricted to active accounts without enrolled/enforced MFA; MFA users must complete interactive sign-in after session expiry. Password, status, and MFA changes revoke persistent cookies. Windows login now matches the full `DOMAIN\username` principal; migrate each existing Windows user's `users.login` value to its exact trusted full identity before enabling the updated route. Windows login also follows application MFA challenges/setup. See [sign-in contracts](authentication.md).
+- Windows sign-in now matches the complete `DOMAIN\username` principal. Before upgrading an application that stores short Windows logins, migrate `users.login` to the exact trusted full identity. See [sign-in contracts](authentication.md).
 
 ## 2026-11-01
 

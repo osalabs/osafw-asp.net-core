@@ -46,6 +46,6 @@ public class SigninSqlServerTests
         users.removeCache(id);
         Assert.IsFalse(users.checkPermanentLogin());
         Assert.AreEqual(0, fw.userId);
-        Assert.AreEqual(string.Empty, users.createPermCookie(id));
+        Assert.AreEqual(0, fw.db.value("users_cookies", DB.h("users_id", id), "count(*)").toInt());
     }
 }

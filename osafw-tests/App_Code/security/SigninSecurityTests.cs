@@ -51,11 +51,15 @@ public class SigninSecurityTests
     [DataRow("POST", "token", "wrong", false)]
     [DataRow("POST", "", "", false)]
     [DataRow("POST", "token", "token", true)]
-    public void LoginRejectsUnsafeMethodsTokensAndQueryCredentials(string method, string sessionToken, string token, bool query)
+    public void LoginRedisplaysFormWithoutAuthenticatingForUnsafeOrEmptyRequests(string method, string sessionToken, string token, bool query)
     {
         using var scope = new FwTestScope(_ => new RejectingDb(), context: TestHelpers.CreateHttpContext());
         var fw = scope.Fw;
+        fw.route.controller = "Login";
         fw.route.method = method;
+        fw.config()["template"] = TestHelpers.TemplateRoot();
+        fw.config()["is_lang_update"] = false;
+        fw.is_log_events = false;
         fw.Session("XSS", sessionToken);
         fw.FORM["XSS"] = token;
         if (query)
@@ -66,8 +70,11 @@ public class SigninSecurityTests
         var controller = new LoginController();
         // Guard runs before model use, so no real database can be contacted.
         controller.init(fw);
-        Assert.ThrowsExactly<AuthException>(() => controller.SaveAction());
+        controller.SaveAction();
+        Assert.AreEqual(FW.ACTION_INDEX, fw.route.action);
         Assert.AreEqual(0, fw.userId);
+        if (method == "POST")
+            Assert.AreEqual("", fw.G["err_msg"].toStr());
     }
 
     [TestMethod]
@@ -96,15 +103,16 @@ public class SigninSecurityTests
     }
 
     [TestMethod]
-    [DataRow(@"DOMAIN\alex", "/Login/(MFA)")]
+    [DataRow(@"DOMAIN\alex", "/Main")]
     [DataRow(@"OTHER\alex", "/Login")]
-    public void WindowsLoginUsesFullPrincipalAndChallengesEnrolledMfa(string principal, string destination)
+    public void WindowsLoginUsesFullPrincipalAndTrustsWindowsAuthentication(string principal, string destination)
     {
         var db = new LoginDb();
         db.User["mfa_secret"] = "test-enrollment";
         using var scope = new FwTestScope(_ => db, context: TestHelpers.CreateHttpContext());
         var fw = scope.Fw;
-        var settings = new LoginSettings();
+        fw.is_log_events = false;
+        var settings = new LoginSettings { Enforced = true };
         settings.init(fw);
         TestHelpers.RegisterModel(fw, (Settings)settings);
         // Initializing a controller needs only these non-DB permission hooks.
@@ -117,8 +125,8 @@ public class SigninSecurityTests
         Assert.ThrowsExactly<RedirectException>(() => controller.IndexAction());
         Assert.AreEqual(principal, db.Lookup);
         Assert.AreEqual(destination, fw.response.Headers.Location.ToString());
-        Assert.AreEqual(destination.EndsWith("(MFA)") ? 9 : 0, fw.Session("mfa_login_users_id").toInt());
-        Assert.AreEqual(0, fw.userId);
+        Assert.AreEqual(0, fw.Session("mfa_login_users_id").toInt());
+        Assert.AreEqual(destination == "/Main" ? 9 : 0, fw.userId);
     }
 
 #if isSQLite

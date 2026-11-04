@@ -89,27 +89,8 @@ public class WinLoginController : FwController
                     fw.redirect("/Login");
                 }
             }
-            var currentUser = model.one(usersId);
-            if (!Utils.isEmpty(currentUser["mfa_secret"]))
-            {
-                fw.Session("mfa_login_users_id", usersId.toStr());
-                fw.Session("mfa_login_purpose", "challenge");
-                fw.Session("mfa_login_attempts", "0");
-                fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
-                fw.Session("mfa_login_remember", "");
-                fw.Session("mfa_login_gourl", "");
-                fw.Session("mfa_login_timezone", "");
-                fw.redirect("/Login/(MFA)");
-            }
-            if (fw.settings.readBool("is_mfa_enforced"))
-            {
-                fw.Session("mfa_login_users_id", usersId.toStr());
-                fw.Session("mfa_login_purpose", "setup");
-                fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
-                fw.Session("mfa_login_timezone", "");
-                fw.redirect("/My/MFA");
-            }
-
+            // Windows SSO relies on the organization's Windows authentication policy.
+            // Applications may explicitly add their own MFA step here if required.
             model.doLogin(usersId);
             fw.redirect(fw.settings.read("LOGGED_DEFAULT_URL"));
         }

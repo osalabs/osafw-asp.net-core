@@ -461,6 +461,7 @@ public class SecurityQuickFixTests
         fw.Session("mfa_login_users_id", "9");
         fw.Session("mfa_login_time", DateUtils.UnixTimestamp().ToString());
         fw.Session("mfa_login_gourl", gourl);
+        fw.Session("mfa_login_remember", "1");
         setXssTokens(fw);
         var users = new LoginUsers();
         users.User["mfa_secret"] = "JBSWY3DPEHPK3PXP";

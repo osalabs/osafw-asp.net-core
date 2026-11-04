@@ -859,14 +859,6 @@ public class Users : FwModel<Users.Row>
     #region Permanent Login Cookies
     public string createPermCookie(int id)
     {
-        var user = one(id);
-        if (user.Count == 0 || user["status"].toInt() != STATUS_ACTIVE
-            || !Utils.isEmpty(user["mfa_secret"]) || fw.settings.readBool("is_mfa_enforced"))
-        {
-            removePermCookie(id);
-            return string.Empty;
-        }
-
         string cookieId = Utils.getRandStr(64);
         string hashed = Utils.sha256(cookieId);
         var fields = DB.h("cookie_id", hashed, "users_id", id, "add_time", DB.NOW);
