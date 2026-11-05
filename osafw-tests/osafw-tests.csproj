@@ -12,6 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Playwright is used only by the unrelated UI interaction tests. PDF export uses installed Edge. -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.64.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="4.5.1" />
     <PackageReference Include="MSTest.TestFramework" Version="4.5.1" />

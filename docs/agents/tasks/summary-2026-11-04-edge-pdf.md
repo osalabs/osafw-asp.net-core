@@ -1,0 +1,71 @@
+# Edge command-line PDF export
+
+## Outcome and scope
+
+- Branch `codex/edge-pdf`, created from `29d9ec32`. No commit, push or deployment.
+- Replaced production Playwright PDF rendering with installed Edge CLI. Application project no longer references Playwright; the unrelated UI browser tests own their test-only reference.
+- Followed the old wkhtmltopdf flow found in `246a8f74^`: render HTML, invoke an executable, return a PDF. No CDP client, browser service, pool or persistent browser.
+- User initially selected rejection of the restricted asset mode, then explicitly requested removing obsolete option handling on November 5. Runtime guards, the old layout constant/template and header/footer parsing are removed; migration instructions remain in CHANGELOG. Ordinary file URLs are for trusted documents, not a restricted-directory security boundary.
+- Public `html2pdf`/`parsePagePdf` entry points and report/download/file paths remain. The empty `pdf_converter` default lives in `FwConfig` and discovers the standard Windows Edge locations; `FwHooks.configure` or deployment configuration can override the executable path.
+
+## Feature decisions and migration
+
+- Letter orientation/margins use `@page`; scale uses CSS zoom (default 0.8). Verified Bootstrap 5, local SVG and PNG, colors, page breaks, tagged output and portrait/landscape Letter.
+- CSS page-margin boxes repeat text headers/footers and page counters. Tested 80% and 100% scale. Separate HTML header/footer handling was removed at the user's request; fixed HTML placed in negative margins failed the repetition experiment and was not retained.
+- JavaScript is blocked in the report document. This converter accepts trusted static HTML, not arbitrary user HTML. Native browser asset loading does not reproduce the retired missing-asset/decode validation.
+- Removed browser installation helper/action/link/script and old application configuration. Migration is recorded in `docs/CHANGELOG.md` and `docs/reports.md`; existing copied-app headers and restricted assets need the documented migration.
+- Process/output handling is intentionally limited: unique report files, Edge-selected temporary headless profiles, 60-second bounded wait, PDF signature/trailer check, and best-effort cleanup. A detached printing child cannot be guaranteed terminated after the launcher exits. This is an explicit residual limit consistent with the user's instruction to defer process-management infrastructure. No timeout/child-termination guarantee is claimed.
+
+## Initial benchmark (November 4, before cleanup simplification)
+
+Temporary synthetic harness called the actual `ConvUtils.html2pdf`, six sequential conversions per workload. The median excludes the first measurement of each workload. Every conversion starts its own driver/browser or Edge process; timings include helper completion/cleanup. Restore, build and browser installation are excluded. The report workload follows the small workload and is not a cold-machine measurement. This is one Windows workstation, not a server throughput study; observed times varied between runs.
+
+| Workload | Playwright median, ms | Edge November 4 median, ms | Playwright follow-up range, ms | Edge follow-up range, ms |
+| --- | ---: | ---: | ---: | ---: |
+| Small static HTML | 1042.25 | 1923.45 | 812.49-1383.73 | 1828.55-2052.24 |
+| Bootstrap 5, 250 rows | 978.80 | 1601.69 | 890.80-1089.01 | 1394.72-2026.92 |
+
+Both renderers produced 12 landscape Letter pages for the table report, including row 250. The November 4 implementation did not show a speed improvement; its benefit is removing production Playwright/Node/browser-download dependencies.
+
+Baseline used the current package's Chromium 156.0.8078.4, revision 1248. The shared cache lacked that version, so it was downloaded to the ignored task folder before measuring. Installed Edge executable reported 156.0.4314.50 (an additional 156.0.4314.58 version directory was present). Build SDK was 11.0.100-rc.3.26522.148, targeting the repository's net10.0.
+
+## Initial verification (November 4)
+
+- Passed: baseline synthetic probe, 1/1; final Edge benchmark/features plus browser regressions, 6/6. Temporary probe source removed from the test project after measurement.
+- Passed: `pwsh -NoProfile -File scripts/test.ps1 -Profile Browser -Filter 'FullyQualifiedName~PdfEdgeTests'`, final 5/5. Covers the production report entry point, two concurrent conversions, embedded PNG, dimensions/tags/page breaks and blocked script effect, existing-reader compatibility, and both download cleanup variants.
+- Passed: `pwsh -NoProfile -File scripts/test.ps1`, 1034/1034. Includes invalid options, explicit retired-feature rejection, missing executable and preservation of the existing destination on pre-render failure. No shared application database was used.
+- Passed: `dotnet build osafw-app/osafw-app.csproj -p:OutDir=<absolute task artifact app-build directory> --verbosity quiet`, default build, zero warnings/errors. Separate fresh output contains no `.playwright` directory, `Microsoft.Playwright.dll`, or Playwright dependency entry.
+- Passed: pypdf assertions for both 12-page outputs, page dimensions and final row; two-page feature outputs contain local SVG text, company/footer text and correct page numbers on each page, and no script-replacement text. Poppler page renders were visually inspected for local images, colors, margins and page decorations.
+- Passed: `git diff --check`. Final strict UTF-8/no-BOM/CRLF check uses `docs/agents/tools/Normalize-TextFiles.ps1 -Check` on changed/new task files.
+- Not exercised: live IIS service-account rendering, Linux, real copied-app templates, hard termination of a detached child. These remain deployment acceptance checks, not evidence inferred from desktop tests.
+- SQL Server profile and unrelated UI browser suite were not required: this change does not alter providers or those UI flows; their project still compiles in the full Fast build.
+
+Local evidence (ignored): `artifacts/assistant_edge_pdf/` contains benchmark source, input/output samples, timing JSON, verification assertions and PNGs. TRX results: baseline `artifacts/assistant_edge_pdf/baseline.trx`; final feature probe `artifacts/test-runs/624df5e7353c4fb19e7e1cf7fdc141f8/Browser/results.trx`; final browser regressions `artifacts/test-runs/535b7e0f145a4732a7baf419c91aff4e/Browser/results.trx`; Fast `artifacts/test-runs/eca50d6c544e4f07a0b790d897dd22e2/Fast/results.trx`.
+
+## Review and cleanup
+
+Independent `reviewer_high` selected for public compatibility and rendering security, with consumer-contract and security-boundary overlays. Initial timeout concern was resolved by explicit scope adjudication and accurate residual-limit documentation, without adding a process-management subsystem. An unrelated README encoding change was restored byte-for-byte outside the PDF section. Final independent verdict and summary audit: no blocking findings; review loop can stop.
+
+Pre-existing untracked work was preserved. Task temporary probe removed from source; ignored benchmark evidence, PDFs, PNGs, TRX results and the clean app build retained. Removed 44 exact task-created browser/profile/cache/build directories after checking their resolved roots; none remained locked in that cleanup. No user browser profile or shared browser cache was touched.
+
+## November 5 follow-up
+
+- Fixed the actual sample-report stylesheet path: `parsePagePdf` supplies `PDF_ASSETS_URL` for `wwwroot/assets`; the normal print layout selects local Bootstrap/site CSS for PDF, retaining website URLs for normal print views. This removes dependence on configured website reachability/certificate trust. The user's screenshot showed all styles missing, not just table borders.
+- Added DEBUG command logging with quoted executable/arguments (no HTML or report data).
+- Final simplification after user feedback: `Utils.getTmpFilename()` names flat `.html` and `.pdf` files in the existing framework temporary folder. Removed custom profile/TEMP arguments, per-report directories and all Utils changes. Installed Edge selected its own headless temporary profile in an isolated `edge://version` probe; concurrent conversion tests also pass without an explicit profile. Edge-internal temporary folders are outside framework cleanup. `parsePagePdf` calls the unchanged `Utils.cleanupTmpFiles()` in its final cleanup for download/save/error paths; each conversion deletes its own staging files once.
+- Removed obsolete option guards, header/footer template parsing, and the old local print layout/constant. Current usage docs describe only current features; CHANGELOG carries migration details.
+- SampleReport cap raised from 20 to 250 real matching rows. Added local site logo beside the title, repeated table headings and CSS page counters. No synthetic production data, configured database changes or app start/stop operations.
+- Playwright remains only in the existing UI tests' project, explicitly `PrivateAssets=all`; deleting those unrelated regression tests was not requested. Production PDF code/project has no Playwright dependency.
+- Final Browser command: `pwsh -NoProfile -File scripts/test.ps1 -Profile Browser -Filter 'FullyQualifiedName~PdfEdgeTests'`: 8/8 passed after the template refactor and no-head document coverage. Final Fast command: `pwsh -NoProfile -File scripts/test.ps1`: 1034/1034 passed. The test for the removed directory-cleanup extension was removed with that extension. Both builds had zero warnings/errors.
+- The real SampleReport/template fixture supplies 160 synthetic rows through a narrow database stub and uses an unreachable website URL. It verifies the 250-row query cap, multiple pages, embedded logo, styled font and DEBUG command. Output is five portrait Letter pages with visible borders, logo, repeated headings and page counters; first and last pages inspected with Poppler after the print border fix. pypdf verified all five page counters, repeated headings and the final row 160. Download cleanup tests cover locked files, old leftovers and an unavailable temporary root after SendFile completes. All PDF browser tests now isolate TEMP/TMP so framework sweeps do not touch the development app temporary directory. Initial fixture compile/shared-log issues and a temporary-root assertion that included Edge-owned files were corrected before final passing runs.
+- Evidence: `artifacts/test-runs/6e7c2b662fa3461e86e1c3c1c9b8c88e/Browser/results.trx`, `artifacts/test-runs/72c5f0804c5b4c7ab70e9eddc2089095/Fast/results.trx`, retained sample `artifacts/assistant_edge_pdf/sample-activity-updated.pdf` and page PNGs. Evidence is synthetic and ignored. The initial November 4 benchmark does not measure the updated cleanup implementation; it was not rerun.
+- Latest independent reviewer_high review identified an unguarded final stale-file sweep; retained a small IOException/UnauthorizedAccessException guard to preserve successful downloads and original rendering failures. Added a download regression for an unavailable cleanup root. Independent recheck and summary/index audit completed with no blocking or supplemental findings; review loop can stop. Live IIS and downstream customized layouts remain unverified; no claim is inferred from the isolated test fixture.
+
+The configuration default was moved from the sample appsettings file to `FwConfig`; the existing `FwHooks.configure` and deployment override order remains unchanged. Automatic approval review rejected a proposed whole-file restore of Utils; only the inspected task-owned hunks were subsequently removed, preserving unrelated work.
+
+## Template and border follow-up
+
+- Moved converter-generated markup/CSS into `admin/reports/common/pdf_document.html`, `pdf_head.html`, `pdf_policy.html` and `pdf_style.html`. Print defaults (Letter, portrait, 5/10/5/10mm margins, scale 0.8) are template-owned; C# validates supplied values, formats scale invariantly, and inserts rendered fragments. Existing complete HTML is preserved; fragment/no-head inputs use the shared document/head templates. CSP still precedes original head content, and option styles still follow existing styles.
+- Direct `html2pdf` calls use `fw.parsePageInstance().parse_page` so static template composition does not add a Settings/database lookup. Deployment must include the shared templates; this is recorded in canonical docs and the existing migration note. The alternate `common/pdf.html` report layout is unchanged.
+- The reported double outline came from `.fw-card` wrapping a bordered table, with Bootstrap's table bottom margin exposing an empty strip. Shared report print CSS now removes the card border and direct child table bottom margin; cell borders remain. Inspected first/last pages of the updated five-page sample. No additional sample showcase features were added.
+- Browser 8/8 and Fast 1034/1034 pass at the result paths above, zero build warnings/errors. UTF-8/no-BOM/CRLF checks pass for 24 changed/new task text files; `git diff --check` passes. Independent reviewer_high review and summary/index audit completed with no blocking or supplemental findings; review loop can stop.

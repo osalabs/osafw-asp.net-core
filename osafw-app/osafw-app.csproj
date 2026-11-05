@@ -83,7 +83,6 @@
     <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.25.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isRowRegeneration($|;)'))" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isSQLite($|;)'))" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.64.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.13" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.13" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(DefineConstants)', '(^|;)isWindowsAuth($|;)'))" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="3.0.114" />

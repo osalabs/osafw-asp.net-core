@@ -1,13 +1,14 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.Playwright;
 using System;
 using System.IO;
 using System.Linq;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Diagnostics;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -15,66 +16,9 @@ namespace osafw;
 
 public class ConvUtils
 {
-    private static bool isPlaywrightInstalled = false; // to avoid multiple installs in parallel requests
-    private static readonly object playwrightLock = new();
-
-    private const string PDF_ASSET_ORIGIN = "https://pdf-assets.invalid";
-    private const string PDF_DOCUMENT_URL = PDF_ASSET_ORIGIN + "/__document__.html";
-    private const long PDF_MAX_ASSET_BYTES = 10 * 1024 * 1024;
-    private const long PDF_MAX_TOTAL_BYTES = 50 * 1024 * 1024;
-
-    private static readonly Dictionary<string, string> PdfAssetMimeTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [".css"] = "text/css",
-        [".png"] = "image/png",
-        [".jpg"] = "image/jpeg",
-        [".jpeg"] = "image/jpeg",
-        [".gif"] = "image/gif",
-        [".webp"] = "image/webp",
-        [".svg"] = "image/svg+xml",
-        [".woff"] = "font/woff",
-        [".woff2"] = "font/woff2",
-        [".ttf"] = "font/ttf",
-        [".otf"] = "font/otf"
-    };
-
-    public static void ensurePlaywrightInstalled(FW fw)
-    {
-        if (isPlaywrightInstalled) return;
-        lock (playwrightLock)
-        {
-            if (isPlaywrightInstalled) return;
-            // Read PLAYWRIGHT_BROWSERS_PATH from config
-            string browsersPath = fw.config("PLAYWRIGHT_BROWSERS_PATH").toStr();
-            if (!string.IsNullOrEmpty(browsersPath))
-            {
-                Environment.SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", browsersPath);
-            }
-
-            try
-            {
-                Microsoft.Playwright.Program.Main([
-                    "install",
-                    "chromium",
-                    "--with-deps",
-                    "--no-shell"
-                ]);
-                isPlaywrightInstalled = true;
-            }
-            catch (Exception ex)
-            {
-                // Optionally log error
-                fw.logger(LogLevel.ERROR, "Failed to install Playwright: ", ex.Message);
-            }
-        }
-    }
-
-
-
     // parse template and generate pdf
     // bdir - base directory for templates, can contain:
     //    - tpl_name file for layout template
-    //    - "pdf_header.html" and "pdf_footer.html" files for header and footer (note, these fields should contain their own css styles)
     // Note: set IS_PRINT_MODE=True hf var which is become available in templates
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
@@ -82,8 +26,6 @@ public class ConvUtils
     // see html2pdf() method for options
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, FwDict ps, string out_filename = "", FwDict? options = null)
     {
-        ensurePlaywrightInstalled(fw);
-
         options ??= [];
         if (!options.TryGetValue("disposition", out object? value))
         {
@@ -92,19 +34,17 @@ public class ConvUtils
         }
 
         ps["IS_PRINT_MODE"] = true;
+        ps["PDF_ASSETS_URL"] = new Uri(Path.GetFullPath(Path.Combine(fw.config("site_root").toStr(), "wwwroot", "assets")) + Path.DirectorySeparatorChar).AbsoluteUri.TrimEnd('/');
         string html_data = fw.parsePage(bdir, tpl_name, ps);
-        options["header"] = fw.parsePage(bdir, "pdf_header.html", ps);
-        options["footer"] = fw.parsePage(bdir, "pdf_footer.html", ps);
 
         html_data = _replace_specials(html_data);
 
-        string pdf_file = Utils.getTmpFilename() + ".pdf";
-        // fw.logger("INFO", "pdf file = " & pdf_file)
-
-        if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
+        string? pdf_file = null;
+        try
         {
-            try
+            if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
             {
+                pdf_file = Utils.getTmpFilename() + ".pdf";
                 html2pdf(fw, html_data, pdf_file, options).GetAwaiter().GetResult();
                 if (string.IsNullOrEmpty(out_filename))
                     out_filename = "output";
@@ -112,43 +52,29 @@ public class ConvUtils
                 // fileResponse waits for SendFileAsync before returning.
                 fw.fileResponse(pdf_file, out_filename + ".pdf", "application/pdf", value.toStr());
             }
-            finally
+            else
             {
-                Utils.deleteFile(pdf_file);
-
-                try
-                {
-                    // Retry older leftovers from failed deletions or interrupted downloads.
-                    Utils.cleanupTmpFiles();
-                }
-                catch (Exception)
-                {
-                    // Cleanup must not fail a download, even if the temp directory is unavailable.
-                }
+                html2pdf(fw, html_data, out_filename, options).GetAwaiter().GetResult();
             }
         }
-        else
+        finally
         {
-            html2pdf(fw, html_data, out_filename, options).GetAwaiter().GetResult();
+            Utils.deleteFile(pdf_file);
+            try
+            {
+                Utils.cleanupTmpFiles();
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         return html_data;
     }
 
-    // options:
-    // landscape = True - will produce landscape output
-    // header = HTML string to be used as header
-    // footer = HTML string to be used as footer
-    // scale = float value to scale the output (default 0.8)
-    // set margins:
-    // margin_top = "5mm"
-    // margin_right = "10mm"
-    // margin_bottom = "5mm"
-    // margin_left = "10mm"
-    /// <summary>Renders HTML to a PDF. Local asset mode replaces the destination only after successful rendering.</summary>
-    /// <remarks>Set options.local_assets_root to a trusted directory of public CSS, images and fonts to
-    /// enable isolated local asset rendering. In that mode, URLs resolve under a synthetic origin, scripts
-    /// and external requests are blocked, missing assets fail rendering, and linked paths are rejected.</remarks>
+    /// <summary>Prints trusted, static HTML with installed Microsoft Edge. No browser download or driver is used.</summary>
+    /// <remarks>Supports Letter paper, landscape, margins and CSS zoom (default 0.8). Images may use absolute
+    /// file URLs or data URLs. JavaScript is disabled.
+    /// Use CSS @page margin boxes for headers, footers and page numbers.</remarks>
     public static async Task html2pdf(FW fw, string html_data, string filename, FwDict? options = null)
     {
         if (filename.Length < 1)
@@ -157,217 +83,161 @@ public class ConvUtils
         }
 
         options ??= [];
-        var assetRoot = options["local_assets_root"].toStr();
-        var isLocalAssets = !string.IsNullOrWhiteSpace(assetRoot);
-        if (isLocalAssets)
+        var html = preparePdfHtml(fw, html_data, options);
+        var edge = fw.config("pdf_converter").toStr();
+        if (string.IsNullOrWhiteSpace(edge))
         {
-            assetRoot = Path.GetFullPath(assetRoot);
-            if (!Directory.Exists(assetRoot))
-                throw new DirectoryNotFoundException("The PDF asset directory does not exist.");
-
-            rejectPdfAssetLinks(assetRoot);
+            edge = new[] { Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.LocalApplicationData }
+                .Select(folder => Path.Combine(Environment.GetFolderPath(folder), "Microsoft", "Edge", "Application", "msedge.exe"))
+                .FirstOrDefault(File.Exists) ?? "";
         }
 
-        var outputPath = Path.GetFullPath(filename);
-        var temporaryPdf = !isLocalAssets ? null : outputPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-
-        long totalAssetBytes = 0;
-
-        // Keep the shared read budget local to this rendering, including concurrent asset requests.
-        async Task<(byte[] Body, string ContentType)> readLocalAsset(string url)
+        if (!File.Exists(edge))
         {
-            var (path, contentType) = getPdfAssetPath(assetRoot, url);
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            if (stream.Length > PDF_MAX_ASSET_BYTES)
-                throw new InvalidOperationException("PDF asset is too large.");
-
-            using var buffer = new MemoryStream();
-            var chunk = new byte[81920];
-            int read;
-
-            // Bound reads even if a file grows after opening it.
-            while ((read = await stream.ReadAsync(chunk)) > 0)
-            {
-                if (Interlocked.Add(ref totalAssetBytes, read) > PDF_MAX_TOTAL_BYTES || buffer.Length + read > PDF_MAX_ASSET_BYTES)
-                    throw new InvalidOperationException("PDF asset size limit exceeded.");
-
-                buffer.Write(chunk, 0, read);
-            }
-
-            return (buffer.ToArray(), contentType);
+            throw new FileNotFoundException("Microsoft Edge was not found. Install Edge or set pdf_converter to its executable.");
         }
+
+        var tmp = Utils.getTmpFilename();
+        var input = tmp + ".html";
+        var output = tmp + ".pdf";
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var process = new Process();
+        var isStarted = false;
 
         try
         {
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            await File.WriteAllTextAsync(input, html, new UTF8Encoding(false), timeout.Token);
+            process.StartInfo = new ProcessStartInfo(edge) { UseShellExecute = false, CreateNoWindow = true };
+            foreach (var argument in new[]
             {
-                Headless = true,
-                Channel = "chromium"
-            });
-
-            var context = !isLocalAssets ? await browser.NewContextAsync() : await browser.NewContextAsync(new BrowserNewContextOptions
+                "--headless", "--no-pdf-header-footer", "--no-first-run", "--disable-extensions",
+                "--print-to-pdf=" + output,
+                new Uri(input).AbsoluteUri
+            })
             {
-                JavaScriptEnabled = false,
-                Offline = true,
-                ServiceWorkers = ServiceWorkerPolicy.Block,
-                AcceptDownloads = false
-            });
-
-            var failures = new ConcurrentQueue<Exception>();
-            var imageUrls = new ConcurrentDictionary<string, byte>();
-
-            if (isLocalAssets)
-            {
-                context.RequestFailed += (_, request) => failures.Enqueue(new InvalidOperationException("A PDF asset request failed."));
-                var isDocumentServed = false;
-
-                await context.RouteAsync("**/*", async route =>
-                {
-                    try
-                    {
-                        if (!isDocumentServed && route.Request.Url == PDF_DOCUMENT_URL && route.Request.IsNavigationRequest)
-                        {
-                            isDocumentServed = true;
-                            await route.FulfillAsync(new RouteFulfillOptions { ContentType = "text/html", Body = html_data });
-                        }
-                        else
-                        {
-                            if (route.Request.Method != "GET" || route.Request.ResourceType is not ("stylesheet" or "image" or "font"))
-                                throw new InvalidOperationException("PDF resource type is not allowed.");
-
-                            var asset = await readLocalAsset(route.Request.Url);
-                            if (route.Request.ResourceType == "image")
-                                imageUrls.TryAdd(route.Request.Url, 0);
-
-                            await route.FulfillAsync(new RouteFulfillOptions { ContentType = asset.ContentType, BodyBytes = asset.Body });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        failures.Enqueue(ex);
-                        await route.AbortAsync();
-                    }
-                });
+                process.StartInfo.ArgumentList.Add(argument);
             }
 
-            var page = await context.NewPageAsync();
-            if (!isLocalAssets)
-                await page.SetContentAsync(html_data);
-            else
+            fw.logger(LogLevel.DEBUG, "PDF command: \"", edge, "\" ",
+                string.Join(" ", process.StartInfo.ArgumentList.Select(argument => "\"" + argument + "\"")));
+            process.Start();
+            isStarted = true;
+            await process.WaitForExitAsync(timeout.Token);
+            if (process.ExitCode != 0)
             {
-                await page.EmulateMediaAsync(new PageEmulateMediaOptions { Media = Media.Print });
-                await page.GotoAsync(PDF_DOCUMENT_URL, new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 30000 });
-                await page.EvaluateAsync("() => document.querySelectorAll('img[loading=lazy]').forEach(image => image.loading = 'eager')");
-                await page.WaitForFunctionAsync("() => Array.from(document.images).every(image => image.complete) && document.fonts.status === 'loaded'", options: new PageWaitForFunctionOptions { Timeout = 30000 });
+                throw new InvalidOperationException("Edge PDF printing failed with exit code " + process.ExitCode + ".");
+            }
 
-                var isReady = await page.EvaluateAsync<bool>("""
-                    () => Array.from(document.images).every(image => image.naturalWidth > 0)
-                        && Array.from(document.fonts).every(font => font.status !== 'error')
-                        && Array.from(document.querySelectorAll('link[rel~=stylesheet]')).every(link =>
-                            link.disabled || (link.media && !matchMedia(link.media).matches) || link.sheet !== null)
-                    """);
-
-                // CSS images are not in document.images. Decode every requested image before replacing output.
-                await page.EvaluateAsync("""
-                    urls => {
-                        window.pdfAssetImages = urls.map(url => {
-                            const IMAGE = document.createElement('img');
-                            IMAGE.style.display = 'none';
-                            document.body.appendChild(IMAGE);
-                            IMAGE.src = url;
-                            return IMAGE;
-                        });
-                    }
-                    """, imageUrls.Keys.ToArray());
-
+            // Edge can hand off printing and exit before the PDF is written. Only accept a closed,
+            // complete file from this unique invocation; never mistake an old destination for success.
+            while (true)
+            {
+                timeout.Token.ThrowIfCancellationRequested();
+                FileStream? pdf = null;
                 try
                 {
-                    await page.WaitForFunctionAsync("() => window.pdfAssetImages.every(image => image.complete)", options: new PageWaitForFunctionOptions { Timeout = 5000 });
+                    pdf = new FileStream(output, FileMode.Open, FileAccess.Read, FileShare.None);
                 }
-                catch (TimeoutException ex)
+                catch (IOException)
                 {
-                    throw new InvalidOperationException("A PDF image could not be decoded.", ex);
+                    // The printer has not created or finished writing its output yet.
                 }
 
-                var isImagesReady = await page.EvaluateAsync<bool>("() => window.pdfAssetImages.every(image => image.naturalWidth > 0)");
-                await page.EvaluateAsync("""
-                    () => {
-                        window.pdfAssetImages.forEach(image => image.remove());
-                        delete window.pdfAssetImages;
+                if (pdf != null)
+                {
+                    await using (pdf)
+                    {
+                        var signature = new byte[5];
+                        var trailer = new byte[32];
+                        if (pdf.Length >= trailer.Length)
+                        {
+                            pdf.ReadExactly(signature);
+                            pdf.Seek(-trailer.Length, SeekOrigin.End);
+                            pdf.ReadExactly(trailer);
+                            if (Encoding.ASCII.GetString(signature) == "%PDF-" && Encoding.ASCII.GetString(trailer).Contains("%%EOF"))
+                            {
+                                pdf.Position = 0;
+                                // Preserve existing readers that permit writes but not file replacement.
+                                await using var destination = new FileStream(filename, FileMode.Create, FileAccess.Write, FileShare.Read);
+                                await pdf.CopyToAsync(destination, timeout.Token);
+                                return;
+                            }
+                        }
                     }
-                    """);
+                }
 
-                if (!isReady || !isImagesReady || !failures.IsEmpty)
-                    throw new InvalidOperationException("One or more PDF assets could not be loaded under the local asset policy.");
+                await Task.Delay(100, timeout.Token);
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+            if (isStarted && !process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync();
             }
 
-            var pdfOptions = new PagePdfOptions
-            {
-                Path = temporaryPdf ?? outputPath,
-                Format = "Letter",
-                PrintBackground = true,
-                Margin = new Margin
-                {
-                    Top = options.TryGetValue("margin_top", out object? value) ? value.toStr() : "5mm",
-                    Right = options.TryGetValue("margin_right", out object? value1) ? value1.toStr() : "10mm",
-                    Bottom = options.TryGetValue("margin_bottom", out object? value2) ? value2.toStr() : "5mm",
-                    Left = options.TryGetValue("margin_left", out object? value3) ? value3.toStr() : "10mm"
-                },
-                Landscape = options["landscape"].toBool(),
-                Scale = options.TryGetValue("scale", out object? value4) ? value4.toFloat() : 0.8f,
-                DisplayHeaderFooter = !String.IsNullOrEmpty(options["footer"].toStr()) || !String.IsNullOrEmpty(options["header"].toStr()),
-                HeaderTemplate = options["header"].toStr(),
-                FooterTemplate = options["footer"].toStr(),
-                PreferCSSPageSize = false,
-                Tagged = true
-            };
-
-            await page.PdfAsync(pdfOptions);
-            if (!failures.IsEmpty)
-                throw new InvalidOperationException("A PDF resource was rejected.");
-
-            if (temporaryPdf != null)
-                File.Move(temporaryPdf, outputPath, true);
-        }
-        catch (Exception ex)
-        {
-            fw.logger(LogLevel.ERROR, "PDF generation failed: ", ex.Message);
-            throw;
+            throw new TimeoutException("Edge PDF printing did not finish within 60 seconds.", ex);
         }
         finally
         {
-            Utils.deleteFile(temporaryPdf);
+            Utils.deleteFile(input);
+            Utils.deleteFile(output);
         }
     }
 
-    private static (string Path, string ContentType) getPdfAssetPath(string root, string url)
+    private static string preparePdfHtml(FW fw, string html, FwDict options)
     {
-        var uri = new Uri(url, UriKind.Absolute);
-        if (uri.Scheme != "https" || uri.Host != "pdf-assets.invalid" || !uri.IsDefaultPort || uri.UserInfo.Length > 0)
-            throw new InvalidOperationException("PDF assets must use the approved local origin.");
-
-        var relative = Uri.UnescapeDataString(uri.AbsolutePath).TrimStart('/');
-        if (relative.Contains('\\') || relative.Contains(':') || relative.Contains('\0'))
-            throw new InvalidOperationException("Invalid PDF asset path.");
-
-        var path = Path.GetFullPath(Path.Combine(root, relative));
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        var prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
-        if (!path.StartsWith(prefix, comparison) || !PdfAssetMimeTypes.TryGetValue(Path.GetExtension(path), out var contentType))
-            throw new InvalidOperationException("PDF asset is outside the approved file policy.");
-
-        rejectPdfAssetLinks(path);
-        return (path, contentType);
-    }
-
-    private static void rejectPdfAssetLinks(string path)
-    {
-        for (var current = path; !string.IsNullOrEmpty(current); current = Path.GetDirectoryName(current))
+        var ps = new FwDict { ["html"] = html, ["landscape"] = options["landscape"].toBool() };
+        foreach (var name in new[] { "margin_top", "margin_right", "margin_bottom", "margin_left" })
         {
-            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidOperationException("Linked files or directories are not allowed for PDF assets.");
+            if (!options.TryGetValue(name, out var supplied))
+                continue;
+
+            var value = supplied.toStr();
+            if (!Regex.IsMatch(value, @"\A(?:0|\d+(?:\.\d+)?(?:mm|cm|in|px))\z", RegexOptions.IgnoreCase))
+            {
+                throw new ArgumentException("Invalid PDF margin: " + name + ". Use a nonnegative mm, cm, in or px length.");
+            }
+
+            ps[name] = value;
         }
+
+        if (options.TryGetValue("scale", out var suppliedScale))
+        {
+            var scale = suppliedScale.toFloat();
+            if (!float.IsFinite(scale) || scale < 0.1f || scale > 2)
+            {
+                throw new ArgumentOutOfRangeException("scale", "PDF scale must be between 0.1 and 2.");
+            }
+
+            ps["scale"] = scale.ToString(CultureInfo.InvariantCulture);
+        }
+
+        // Rendering these shared fragments needs no Settings/database lookup for direct HTML callers.
+        var parser = fw.parsePageInstance();
+        const string TEMPLATE_DIR = "/admin/reports/common";
+        if (!Regex.IsMatch(html, @"<html\b", RegexOptions.IgnoreCase))
+        {
+            return parser.parse_page(TEMPLATE_DIR, "pdf_document.html", ps);
+        }
+
+        var head = new Regex(@"<head\b[^>]*>", RegexOptions.IgnoreCase);
+        if (head.IsMatch(html))
+        {
+            // Block scripts before the original head; apply supplied print options after its styles.
+            var policy = parser.parse_page(TEMPLATE_DIR, "pdf_policy.html", ps);
+            var style = parser.parse_page(TEMPLATE_DIR, "pdf_style.html", ps);
+            html = head.Replace(html, match => match.Value + policy, 1);
+            html = new Regex(@"</head\s*>", RegexOptions.IgnoreCase).Replace(html, match => style + match.Value, 1);
+        }
+        else
+        {
+            var pdfHead = parser.parse_page(TEMPLATE_DIR, "pdf_head.html", ps);
+            html = new Regex(@"<html\b[^>]*>", RegexOptions.IgnoreCase).Replace(html, match => match.Value + pdfHead, 1);
+        }
+
+        return html;
     }
 
     // TODO - currently it just parse html and save it under .doc extension (Word capable opening it), but need redo with real converter

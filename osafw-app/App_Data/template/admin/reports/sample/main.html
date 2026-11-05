@@ -2,6 +2,13 @@
   <~/admin/reports/common/page_header>
   <~list_filter>
 </~report_ui>
-<~/admin/reports/common/title if="IS_PRINT_MODE">
+<~print_title if="IS_PRINT_MODE" inline>
+  <div class="d-flex align-items-center gap-3 mb-2 sample-report-title">
+    <~pdf_logo if="IS_EXPORT_PDF" inline>
+      <img src="<~PDF_ASSETS_URL>/img/logo.png" alt="Site logo" height="40">
+    </~pdf_logo>
+    <~/admin/reports/common/title>
+  </div>
+</~print_title>
 
 <~report_html if="is_run">

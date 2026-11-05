@@ -32,9 +32,7 @@ public class FwReportsBase
     //template paths
     public const string TPL_BASE_DIR = "/admin/reports";
     //public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html"; //this is simplified template for wkhtmltopdf
-    public const string TPL_EXPORT_PDF = "/layout_print.html"; // normal print template with latest bootstrap styles, good with Playwright
-    // Script-free print layout for reports that opt into local_assets_root.
-    public const string TPL_EXPORT_PDF_LOCAL = "/layout_print_local.html";
+    public const string TPL_EXPORT_PDF = "/layout_print.html"; // normal print template with latest bootstrap styles, printed by installed Microsoft Edge
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 
     public const string TO_BROWSER = "";
@@ -49,7 +47,6 @@ public class FwReportsBase
 
     public FwDict render_options = new()
     {
-        {"cmd", "--page-size Letter --print-media-type"},
         {"landscape", true},
         //{"pdf_filename", "absolute path to save pdf to or just a filename (without extension) for browser output"} //define in report class
     };
@@ -337,8 +334,7 @@ public class FwReportsBase
                     if (isFileRender())
                         out_filename = render_to;
 
-                    var pdfLayout = string.IsNullOrWhiteSpace(render_options["local_assets_root"].toStr()) ? TPL_EXPORT_PDF : TPL_EXPORT_PDF_LOCAL;
-                    ConvUtils.parsePagePdf(fw, base_dir, pdfLayout, ps, out_filename, render_options);
+                    ConvUtils.parsePagePdf(fw, base_dir, TPL_EXPORT_PDF, ps, out_filename, render_options);
                     break;
                 }
 

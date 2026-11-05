@@ -152,19 +152,59 @@ Running a custom report checks:
 
 When a custom report is saved and roles are enabled, the matching resource is created or updated automatically. Role grants are intentionally manual. When a report is deleted, the resource is marked deleted rather than hard-deleted.
 
-## PDFs with approved local assets
+## PDF export with Microsoft Edge
 
-Local rendering is opt-in. In a report class, set `render_options["local_assets_root"] = Path.Combine(fw.config("site_root").toStr(), "wwwroot", "assets")` during initialization. `FwReportsBase` then uses `layout_print_local.html`, which loads the framework Bootstrap and site CSS from that directory without scripts. The ordinary print layout remains the default.
+`ConvUtils.html2pdf` prints trusted static HTML using installed Microsoft Edge's headless command line. `parsePagePdf` and report download/file output keep their existing entry points. The application has no Playwright or Node.js dependency and does not install browsers. Unrelated UI tests retain their own test-only Playwright dependency.
 
-The same option is available on `ConvUtils.html2pdf` and `parsePagePdf`. Supply it only from trusted server code or Site Admin-managed custom report `render_options_json`, never from an ordinary request parameter. Use a dedicated directory containing only public static assets; do not include uploads, secrets or configuration files, and do not allow untrusted processes to replace its files or directories during rendering.
+The `FwConfig` default for `pdf_converter` is empty, which discovers Edge under Program Files (x86), Program Files, or Local AppData on Windows. For an application-specific path, assign `defaults["pdf_converter"]` in `FwHooks.configure`. Deployment configuration can still override it through `appSettings.pdf_converter`. Verify the actual server image has Edge and that the IIS account can execute it, write to its temporary directory, and write the destination. Windows Server 2022 Desktop Experience is the primary deployment target; IIS execution and other operating systems must be checked on the target deployment.
 
-In local mode, `/css/site.css` and relative asset URLs resolve inside the approved directory. CSS imports and image/font URLs follow the same rule. Supported files are CSS, PNG, JPEG, GIF, WebP, SVG, WOFF/WOFF2, TTF and OTF, with a 10 MiB limit per resource and a 50 MiB total read budget per rendering. Linked files/directories, parent-path escapes, unsupported types and other URL origins are rejected. The browser context is offline; scripts, service workers and downloads are disabled. External requests are never forwarded. Inline data images/fonts can be embedded by trusted templates. Print headers and footers must remain self-contained, as required by Chromium.
+Each conversion writes temporary HTML, runs headless Edge, and accepts only a completed PDF from that invocation. A 60-second timeout bounds the application's wait for printing. Edge may finish its launcher before its printing child, so exit code zero alone is not treated as success. HTML and staging PDF files use `Utils.getTmpFilename()` with `.html`/`.pdf` extensions in the existing shared framework temporary folder. Each is deleted once on completion; `parsePagePdf` calls `Utils.cleanupTmpFiles()` in its final cleanup, including saved-file output and conversion failures, to remove older leftovers. No per-report directories or directory-cleanup helpers are needed. Edge chooses its own temporary headless profile when no `--user-data-dir` is supplied; browser-internal temporary folders are outside the framework file sweep. Termination on timeout is best effort while the owned launcher is still alive; if Edge has handed off printing and exited that launcher, this lean implementation cannot guarantee termination of a stalled printing child. There is no persistent browser, pool, service, or debugging port.
 
-The renderer selects print media, loads lazy images eagerly and waits for image/font readiness. A requested asset that fails loading aborts generation. Use root-relative URLs for local images, not app-domain or file URLs. Header/footer resource loading has Chromium's normal limitations; inline their styles and resources.
+### Print options
 
-In local asset mode, PDFs are staged beside the destination and replace it only after successful rendering; failed renders preserve existing files and attempt to delete their own partial output. Browser-download temporary PDFs are deleted after `fileResponse` finishes when possible. `Utils.deleteFile()` ignores deletion errors so cleanup cannot fail a download or replace the original render error. Downloads also call `Utils.cleanupTmpFiles()` to retry framework temporary files older than one hour, including leftovers from interrupted requests; this sweep does not scan arbitrary report destination directories. No temporary HTML file is needed. Existing callers without the option retain normal HTML rendering and write directly to the destination, including existing files.
+| Feature | Edge command-line implementation |
+| --- | --- |
+| Letter paper and `landscape` | CSS `@page { size: Letter portrait/landscape; }` |
+| `margin_top`, `margin_right`, `margin_bottom`, `margin_left` | CSS page margins; defaults remain 5mm, 10mm, 5mm, 10mm; nonnegative mm/cm/in/px lengths or zero |
+| `scale` | CSS `body { zoom: ...; }`; default 0.8, accepted range 0.1 to 2; check copied-app layout because CSS zoom is not the browser PDF scale API |
+| Background colors/images | Print color adjustment plus Edge PDF printing; verified with Bootstrap 5 table stripes |
+| Page breaks and table headings | Normal print CSS, including `break-before: page` and repeating table headers |
+| Tagged output | Current Edge CLI produces tagged PDFs; verified on the installed version |
+| Headers, footers and page numbers | CSS page-margin boxes as below |
+| JavaScript | Disabled for the report document; reports must be fully rendered by the server |
 
-To run local browser checks, install matching Chromium using the generated `playwright.ps1 install chromium --no-shell` script and set `PLAYWRIGHT_BROWSERS_PATH` if using an isolated browser directory. Run `dotnet test osafw-tests/osafw-tests.csproj --filter 'FullyQualifiedName~PdfLocalAssetTests|FullyQualifiedName~ConvUtilsTests'`. Browser tests, including asset-policy and download-cleanup regressions, report inconclusive if matching Chromium is unavailable.
+`parsePagePdf` supplies `PDF_ASSETS_URL`, a file URI for `<site_root>/wwwroot/assets`. The standard print layout loads Bootstrap and site CSS from that directory, without calling the website or relying on its HTTPS certificate. Normal browser print views retain their website asset URLs.
+
+Shared templates under `admin/reports/common` own the converter markup: `pdf_style.html` defines Letter paper, orientation, margin defaults and scale (0.8); `pdf_policy.html` disables scripts, objects and frames; `pdf_head.html` and `pdf_document.html` wrap HTML that needs a head or document shell. C# validates supplied margins/scale and passes them as template parameters (`margin_top`, `margin_right`, `margin_bottom`, `margin_left`, `scale`, `landscape`). Customize the template defaults and print CSS there. Deploy these templates with the converter, including for direct `html2pdf` calls. The existing `pdf.html` remains an alternative report layout; it is not the generic wrapper for already-rendered HTML.
+
+The supplied paper/margin/zoom rules are appended after template styles. Other `@page` rules, such as margin-box content, remain available. More-specific template rules can still affect layout; verify actual copied-app templates.
+
+For trusted local images, use an absolute file URI, for example `new Uri(absoluteImagePath).AbsoluteUri`, then HTML-escape it in the template. CSS and fonts can likewise use absolute file URLs. Data URLs are also supported. Relative URLs resolve beside the temporary HTML, so use absolute URLs instead. Remote assets remain possible in ordinary reports. This is trusted-document rendering, not an isolation boundary: do not pass arbitrary user HTML or user-selected local paths. Missing or undecodable assets are not individually validated by this lean converter and may print blank.
+
+Example print CSS (reserve adequate margins using the corresponding options):
+
+```css
+@page {
+  @top-left {
+    content: "Example company";
+    font: bold 10px Arial;
+  }
+  @bottom-left {
+    content: "Confidential report";
+    font: 10px Arial;
+  }
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font: 10px Arial;
+  }
+}
+```
+
+Use `margin_top = "20mm"` and `margin_bottom = "20mm"` for this example. Page-margin content is CSS generated content, not arbitrary HTML. CSS page-margin boxes require a sufficiently recent Chromium-based Edge (Chromium 131 or newer). See [Chromium's page-margin documentation](https://developer.chrome.com/blog/print-margins).
+
+Rendering failures before the destination copy preserve an existing destination. Successful output is copied into the destination to retain compatibility with existing Windows readers that allow writes but deny replacement. This copy is not atomic. Download PDFs are removed after `fileResponse` completes when possible, with the framework stale-file sweep retrying old locked or interrupted report files. The DEBUG logger records the executable and quoted arguments immediately before launch; it does not log the report HTML or data.
+
+Run focused verification with `pwsh -NoProfile -File scripts/test.ps1 -Profile Browser -Filter 'FullyQualifiedName~PdfEdgeTests'` and `pwsh -NoProfile -File scripts/test.ps1 -Filter 'FullyQualifiedName~ConvUtilsTests'`. Edge tests require installed Edge and do not use Playwright. The Sample Report places the local site logo beside its title and uses repeated table headings and CSS page numbers; it returns up to 250 real matching activity rows, so multiple pages require enough rows in the selected date range. No synthetic rows are inserted into the database.
 
 ## Viewer-safe report metadata
 

@@ -265,22 +265,14 @@ Another debug function that might be helpful is `fw.rw()` - but it output it's p
   - add link to a new report to `\osafw-app\App_Data\template\reports\index\main.html`
 
 **PDF Export for reports setup**
-PDF Reports done by generating report html and then converting it into pdf using Playwright (Chromium).
+PDF reports render trusted static HTML using installed Microsoft Edge in headless mode. No Playwright, Node.js, browser driver, or browser download is required by the application.
 
-To enable PDF export using Playwright (Chromium):
+1. Install Microsoft Edge if it is not already available on the server.
+2. Edge is discovered automatically by default. If needed, set `defaults["pdf_converter"]` in `FwHooks.configure` to the absolute path of `msedge.exe`; deployment configuration may override it through `appSettings.pdf_converter`.
+3. The application account needs permission to run Edge and write to its temporary directory and the PDF destination.
+4. Use absolute `file:///` URLs for trusted local images or embed them as data URLs. JavaScript does not run.
 
-1. **Configure PLAYWRIGHT_BROWSERS_PATH** in `appsettings.json`. By default it's `C:\Program Files\pw-browsers`. (If you set it to empty it will use current user `AppData\Local` folder)
-2. **Run scripts\install_playwright.bat** to setup folder permissions before first PDF export.
-3. **Lazy Initialization**
-   - Playwright browser install will run automatically the first time a PDF report is generated.
-   - If there are issues with Playwright, normal app workflow is not affected.
-4. **Manual Initialization**
-   - Developers can manually trigger Playwright install from `/Dev/Manage` (look for the "Init Playwright" link).
-5. **Troubleshooting**
-   - If PDF export fails, check `/osafw-app/App_Data/logs/main.log` for errors.
-   - Ensure the browser path is writable and accessible by the IIS user.
-
-For more technical details, see comments in `ConvUtils.cs` and `FwReportsBase.cs`.
+Letter paper, landscape, margins, scale, colors and page breaks are supported. Use CSS `@page` margin boxes for headers, footers and page numbers. PDF stylesheets load directly from the local assets folder. See [PDF export options](docs/reports.md#pdf-export-with-microsoft-edge).
 
 ### Background Service for Scheduled Tasks
 

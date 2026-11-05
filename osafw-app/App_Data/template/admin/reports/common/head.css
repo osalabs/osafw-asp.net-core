@@ -13,9 +13,14 @@
   }
 
   .fw-card {
+    border: 0;
     border-radius: 0;
     box-shadow: none;
     padding: 0;
+  }
+
+  .fw-card > .table {
+    margin-bottom: 0;
   }
 }
 

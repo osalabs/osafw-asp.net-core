@@ -14,6 +14,7 @@ public class SampleReport : FwReportsBase
 
         // override report render options if necessary
         render_options["landscape"] = false;
+        render_options["margin_bottom"] = "12mm";
 
         // setup sorting for each column
         list_sortdef = "idate desc";
@@ -103,7 +104,7 @@ public class SampleReport : FwReportsBase
                 where 1=1
                 {where}
                 order by {list_orderby}";
-        sql = db.limit(sql, 20); //limit to first results only
+        sql = db.limit(sql, 250); // Allow multiple printed pages while keeping the sample bounded.
         list_rows = db.arrayp(sql, where_params);
         list_count = list_rows.Count;
 

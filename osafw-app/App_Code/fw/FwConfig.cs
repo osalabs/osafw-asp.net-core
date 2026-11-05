@@ -322,6 +322,7 @@ public static class FwConfig
         st["log"] = st["site_root"] + $@"{path_separator}App_Data{path_separator}logs{path_separator}main.log";
         st["log_max_size"] = 100 * 1024 * 1024; // 100 MB is max log size
         st["tmp"] = Utils.getTmpDir(); // TODO not used? remove?
+        st["pdf_converter"] = ""; // Empty discovers the installed Microsoft Edge executable.
 
         // Operational defaults; Settings rows can inherit or override these values.
         st["SITE_NAME"] = "Site Name";

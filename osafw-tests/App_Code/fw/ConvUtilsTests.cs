@@ -29,6 +29,28 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public async Task Html2Pdf_RejectsInvalidOptionsBeforeChangingOutput()
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb());
+            var output = Path.GetTempFileName();
+            File.WriteAllText(output, "previous report");
+            try
+            {
+                await Assert.ThrowsExactlyAsync<ArgumentException>(() => ConvUtils.html2pdf(scope.Fw, "<p>Report</p>", output,
+                    new FwDict { ["margin_top"] = "5mm; color:red" }));
+                await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() => ConvUtils.html2pdf(scope.Fw, "<p>Report</p>", output,
+                    new FwDict { ["scale"] = 0 }));
+                scope.Fw.config()["pdf_converter"] = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".exe");
+                await Assert.ThrowsExactlyAsync<FileNotFoundException>(() => ConvUtils.html2pdf(scope.Fw, "<p>Report</p>", output));
+                Assert.AreEqual("previous report", File.ReadAllText(output));
+            }
+            finally
+            {
+                File.Delete(output);
+            }
+        }
+
+        [TestMethod]
         public void Html2xls_RequiresConfiguredConverter()
         {
             var fw = TestHelpers.CreateFw();
