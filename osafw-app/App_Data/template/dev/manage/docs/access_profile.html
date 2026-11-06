@@ -1,0 +1,22 @@
+<dl class="handover-facts">
+  <~provider if="db_type" inline><div><dt>Database provider</dt><dd><~/common/sel/db_type.sel selvalue="db_type" default="Other provider"></dd></div></~provider>
+  <~sender if="mail_from" inline><div><dt>Outgoing email sender</dt><dd><~mail_from></dd></div></~sender>
+  <div><dt>MFA policy</dt><dd><~mfa_on if="is_mfa_enforced" inline>Enforced by application policy</~mfa_on><~mfa_off unless="is_mfa_enforced" inline>Individual accounts may use MFA</~mfa_off></dd></div>
+  <div><dt>Role-based grants</dt><dd><~rbac_on if="is_rbac" inline>Enabled</~rbac_on><~rbac_off unless="is_rbac" inline>Disabled</~rbac_off></dd></div>
+  <div><dt>Attachment storage</dt><dd>Include the configured attachment store in the same recovery plan as the database.</dd></div>
+</dl>
+<~level_info if="access_levels" inline>
+  <h3>Access levels</h3>
+  <ul class="handover-levels"><~access_levels repeat inline><li><~iname></li></~access_levels></ul>
+</~level_info>
+<~roles_info if="is_rbac" inline>
+  <h3>Configured role grants</h3>
+  <p>Each entry names a resource and the actions granted to that role. Account assignments and record-level rules also affect what a person can do.</p>
+  <~handover_roles repeat inline>
+    <div class="handover-role"><h4><~iname></h4>
+      <~grants_present if="resources" inline><ul><~resources repeat inline><li><strong><~iname></strong> &mdash; <~permissions repeat inline><~iname><~comma unless="repeat.last" inline>, </~comma></~permissions></li></~resources></ul></~grants_present>
+      <~no_grants unless="resources" inline><p>No active grants.</p></~no_grants>
+    </div>
+  </~handover_roles>
+  <~no_roles unless="handover_roles" inline><p>No active roles are configured.</p></~no_roles>
+</~roles_info>

@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Linq;
 
 namespace osafw;
 
@@ -102,6 +103,59 @@ public class RolesResourcesPermissions : FwModel<RolesResourcesPermissions.Row>
     public DBList listByRolesPermissions(IList roles_ids, IList permissions_ids)
     {
         return db.array(table_name, DB.h("roles_id", db.opIN(roles_ids), "permissions_id", db.opIN(permissions_ids)));
+    }
+
+    /// <summary>Lists active roles, including those without grants. Each role contains its ID, name and resources.
+    /// Each resource contains its ID, name and distinct active permission IDs and names.</summary>
+    public FwList listRolesWithGrants()
+    {
+        var active = new[] { STATUS_ACTIVE };
+        var roles = fw.model<Roles>().list(active);
+        FwList result = [];
+        if (roles.Count == 0)
+            return result;
+
+        var resources = fw.model<Resources>().list(active).ToDictionary(row => row["id"], row => row["iname"]);
+        var permissions = fw.model<Permissions>().list(active).ToDictionary(row => row["id"], row => row["iname"]);
+        DBList grants = [];
+        if (resources.Count > 0 && permissions.Count > 0)
+        {
+            grants = listByRolesResources(roles.Select(row => row["id"].toInt()).ToArray(),
+                resources.Keys.Select(id => id.toInt()).ToArray());
+        }
+
+        var byRole = grants.Where(row => row["status"].toInt() == STATUS_ACTIVE
+            && resources.ContainsKey(row["resources_id"]) && permissions.ContainsKey(row["permissions_id"]))
+            .ToLookup(row => row["roles_id"]);
+        foreach (var role in roles)
+        {
+            FwList resourceRows = [];
+            foreach (var group in byRole[role["id"]].GroupBy(row => row["resources_id"]).OrderBy(g => resources[g.Key]))
+            {
+                FwList actions = [];
+                foreach (var id in group.Select(row => row["permissions_id"]).Distinct().OrderBy(id => permissions[id]))
+                {
+                    actions.Add(new FwDict
+                    {
+                        ["id"] = id,
+                        ["iname"] = permissions[id],
+                    });
+                }
+                resourceRows.Add(new FwDict
+                {
+                    ["id"] = group.Key,
+                    ["iname"] = resources[group.Key],
+                    ["permissions"] = actions,
+                });
+            }
+            result.Add(new FwDict
+            {
+                ["id"] = role["id"],
+                ["iname"] = role["iname"],
+                ["resources"] = resourceRows,
+            });
+        }
+        return result;
     }
 
     /// <summary>

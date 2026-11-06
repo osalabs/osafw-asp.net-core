@@ -280,7 +280,11 @@ public class FwAdminController : FwController
                 if (related_id.Length > 0)
                     url = Utils.addUrlQueryParam(url, "related_id", related_id);
                 url = Utils.addReturnUrlQuery(url, return_url, return_title);
-                return new FwDict { { "_redirect", url }, { "id", id } };
+                return new FwDict
+                {
+                    { "_redirect", url },
+                    { "id", id }
+                };
             }
         }
 

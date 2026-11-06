@@ -1,3 +1,44 @@
-<~main_tabs unless="IS_PRINT_MODE">
-
-<~main_print if="IS_PRINT_MODE">
+<article class="handover">
+  <div class="handover-front">
+    <header class="handover-masthead">
+      <strong><~GLOBAL[SITE_NAME] default="Application"></strong>
+      <span><~GLOBAL[current_time] date="MMMM d, yyyy"></span>
+    </header>
+    <div class="handover-title">
+      <h1><~title></h1>
+      <~release if="GLOBAL[SITE_VERSION]" inline><p>Release <~GLOBAL[SITE_VERSION]></p></~release>
+      <~download unless="IS_PRINT_MODE" inline><a class="btn btn-outline-primary" href="<~../url>/(Docs)?format=pdf" target="_blank" rel="noopener"><~/common/icons/file-earmark-pdf> Download PDF</a></~download>
+    </div>
+    <~main_print if="IS_PRINT_MODE">
+  </div>
+  <~main_tabs unless="IS_PRINT_MODE">
+  <div class="tab-content">
+    <section id="nav-overview" class="tab-pane active" <~panel_attrs unless="IS_PRINT_MODE" inline>role="tabpanel" tabindex="0"</~panel_attrs> aria-labelledby="heading-overview">
+      <h2 id="heading-overview">Application at a glance</h2>
+      <~tab_overview.md markdown="trusted" nolang>
+      <p class="handover-contact"><strong>Support</strong> &nbsp; Contact your application administrator<~contact if="support_contact" inline> at <~support_contact></~contact>.</p>
+    </section>
+    <section id="nav-using" class="tab-pane" <~panel_attrs unless="IS_PRINT_MODE" inline>role="tabpanel" tabindex="0"</~panel_attrs> aria-labelledby="heading-using">
+      <h2 id="heading-using">Using the application</h2>
+      <~tab_using.md markdown="trusted" nolang>
+    </section>
+    <section id="nav-architecture" class="tab-pane" <~panel_attrs unless="IS_PRINT_MODE" inline>role="tabpanel" tabindex="0"</~panel_attrs> aria-labelledby="heading-architecture">
+      <h2 id="heading-architecture">System profile and access</h2>
+      <~tab_architecture.md markdown="trusted" nolang>
+      <~access_profile>
+    </section>
+    <section id="nav-installation" class="tab-pane" <~panel_attrs unless="IS_PRINT_MODE" inline>role="tabpanel" tabindex="0"</~panel_attrs> aria-labelledby="heading-installation">
+      <h2 id="heading-installation">Install or recover</h2>
+      <~tab_installation.md markdown="trusted" nolang>
+    </section>
+    <section id="nav-maintenance" class="tab-pane" <~panel_attrs unless="IS_PRINT_MODE" inline>role="tabpanel" tabindex="0"</~panel_attrs> aria-labelledby="heading-maintenance">
+      <h2 id="heading-maintenance">Deploy and operate</h2>
+      <~tab_maintenance.md markdown="trusted" nolang>
+    </section>
+    <section id="nav-troubleshooting" class="tab-pane" <~panel_attrs unless="IS_PRINT_MODE" inline>role="tabpanel" tabindex="0"</~panel_attrs> aria-labelledby="heading-troubleshooting">
+      <h2 id="heading-troubleshooting">Troubleshooting and further development</h2>
+      <~tab_troubleshooting.md markdown="trusted" nolang>
+      <~tab_resources.md markdown="trusted" nolang>
+    </section>
+  </div>
+</article>

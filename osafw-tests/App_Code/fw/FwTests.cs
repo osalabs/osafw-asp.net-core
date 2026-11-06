@@ -376,7 +376,7 @@ namespace osafw.Tests
         [TestMethod]
         public void DeveloperDocumentationReadsFeatureSettingsIntoPageState()
         {
-            using var scope = new FwTestScope(_ => new RejectingDb(), new Dictionary<string, string?>
+            using var scope = new FwTestScope(_ => new HandoverTests.HandoverDb(), new Dictionary<string, string?>
             {
                 ["appSettings:template"] = TestHelpers.TemplateRoot(),
                 ["appSettings:is_mfa_enforced"] = "false",
@@ -393,11 +393,12 @@ namespace osafw.Tests
             controller.init(fw);
 
             var ps = controller.DocsAction()!;
-            string overview = fw.parsePage("/dev/manage/docs", "tab_overview.md", ps);
+            string handover = fw.parsePage("/dev/manage/docs", "main.html", ps);
 
             Assert.IsTrue(ps["is_mfa_enforced"].toBool());
-            StringAssert.Contains(overview, "sender@stored.test");
-            StringAssert.Contains(overview, "Authentication (MFA) enforced:** Yes");
+            StringAssert.Contains(handover, "sender@stored.test");
+            StringAssert.Contains(handover, "support@stored.test");
+            StringAssert.Contains(handover, "Enforced by application policy");
         }
 
         [TestMethod]

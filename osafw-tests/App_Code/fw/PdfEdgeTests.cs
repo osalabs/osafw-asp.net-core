@@ -241,20 +241,46 @@ public class PdfEdgeTests
     }
 
     [TestMethod]
-    public void DeveloperDocumentationUsesTheSharedPdfPrintLayout()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void DocsActionDownloadsTheHandover(bool usePublisher)
     {
-        using var scope = new FwTestScope(_ => new SampleRowsDb(), context: TestHelpers.CreateHttpContext("unreachable.invalid"));
-        scope.Fw.config()["site_root"] = Path.Combine(TestHelpers.RepoRoot(), "osafw-app");
-        scope.Fw.config()["template"] = TestHelpers.TemplateRoot();
-        scope.Fw.G["ROOT_DOMAIN"] = "https://unreachable.invalid";
-        var output = Path.Combine(TestContext.TestRunDirectory!, "developer-documentation.pdf");
-        var html = ConvUtils.parsePagePdf(scope.Fw, "/dev/manage/docs", "/layout_print.html", [], output);
+        var context = TestHelpers.CreateHttpContext("unreachable.invalid");
+        using var body = new MemoryStream();
+        context.Response.Body = body;
+        using var scope = HandoverTests.createScope(new HandoverTests.HandoverDb(), context);
+        if (usePublisher)
+        {
+            // Exercise the two author-owned footer strings in a copy of the real templates.
+            const string DOCS = "dev/manage/docs";
+            var dest = Path.Combine(root, DOCS);
+            Directory.CreateDirectory(dest);
+            foreach (var file in Directory.GetFiles(Path.Combine(TestHelpers.TemplateRoot(), DOCS)))
+                File.Copy(file, Path.Combine(dest, Path.GetFileName(file)));
+            var selectDir = Directory.CreateDirectory(Path.Combine(root, "common", "sel"));
+            foreach (var name in new[] { "db_type.sel", "access_level.sel" })
+                File.Copy(Path.Combine(TestHelpers.TemplateRoot(), "common", "sel", name), Path.Combine(selectDir.FullName, name));
+            File.Copy(Path.Combine(TestHelpers.TemplateRoot(), "site_name.html"), Path.Combine(root, "site_name.html"));
+            var css = Path.Combine(dest, "head.css");
+            File.WriteAllText(css, File.ReadAllText(css)
+                .Replace("@bottom-left { content: \"User and Administrator Guide\"", "@bottom-left { content: \"Example Studio\"")
+                .Replace("@bottom-center { content: \"\"", "@bottom-center { content: \"studio.example\""));
+            scope.Fw.config()["template"] = root;
+        }
+        scope.Fw.FORM["format"] = "pdf";
+        var controller = new DevManageController();
+        controller.init(scope.Fw);
+        Assert.IsNull(controller.DocsAction());
 
-        StringAssert.Contains(html, "Content-Security-Policy");
-        StringAssert.Contains(html, "<strong>Framework:</strong> OSAFW ASP.NET Core");
-        var pdf = Encoding.Latin1.GetString(File.ReadAllBytes(output));
-        Assert.IsGreaterThan(5, Regex.Matches(pdf, @"/Type\s*/Page\b").Count);
+        Assert.AreEqual("application/pdf", context.Response.ContentType);
+        StringAssert.StartsWith(context.Response.Headers.ContentDisposition.ToString(), "inline;");
+        var bytes = body.ToArray();
+        var pdf = Encoding.Latin1.GetString(bytes);
+        StringAssert.StartsWith(pdf, "%PDF-");
+        Assert.IsGreaterThanOrEqualTo(7, Regex.Matches(pdf, @"/Type\s*/Page\b").Count, "Cover and six sections must each start on a separate page.");
         StringAssert.Contains(pdf, "/MediaBox [0 0 612 792]");
+        var output = Path.Combine(TestContext.TestRunDirectory!, usePublisher ? "handover-branded.pdf" : "handover.pdf");
+        File.WriteAllBytes(output, bytes);
         TestContext.AddResultFile(output);
     }
 

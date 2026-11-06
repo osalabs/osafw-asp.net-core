@@ -413,7 +413,11 @@ public partial class FwDynamicController
                 }
             }
 
-            result.Add(new FwDict { ["id"] = id, ["iname"] = label });
+            result.Add(new FwDict
+            {
+                ["id"] = id,
+                ["iname"] = label
+            });
         }
         return result;
     }

@@ -63,8 +63,16 @@ public class FwKeysXmlRepository : IXmlRepository
             if (string.IsNullOrWhiteSpace(keyId))
                 throw new CryptographicException("A key-store element requires a name.");
 
-            var where = new FwDict { ["itype"] = ITYPE_DATA_PROTECTION_KEY, ["iname"] = keyId };
-            var fields = new FwDict { ["XmlValue"] = element.ToString(SaveOptions.DisableFormatting), ["upd_time"] = DB.NOW };
+            var where = new FwDict
+            {
+                ["itype"] = ITYPE_DATA_PROTECTION_KEY,
+                ["iname"] = keyId
+            };
+            var fields = new FwDict
+            {
+                ["XmlValue"] = element.ToString(SaveOptions.DisableFormatting),
+                ["upd_time"] = DB.NOW
+            };
             if (db.value(TABLE_NAME, where, "1").toBool())
             {
                 if (db.update(TABLE_NAME, fields, where) != 1)

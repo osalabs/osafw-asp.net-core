@@ -34,7 +34,11 @@ public class DevManageController : FwController
         foreach (string table in tables)
         {
             if (!DevEntityBuilder.isFwTableName(table))
-                select_tables.Add(new FwDict() { { "id", table }, { "iname", table } });
+                select_tables.Add(new FwDict()
+                {
+                    { "id", table },
+                    { "iname", table }
+                });
         }
 
         // models list - all clasess inherited from FwModel
@@ -42,12 +46,20 @@ public class DevManageController : FwController
         ps["select_models"] = select_models;
 
         foreach (string model_name in DevEntityBuilder.listModels())
-            select_models.Add(new FwDict() { { "id", model_name }, { "iname", model_name } });
+            select_models.Add(new FwDict()
+            {
+                { "id", model_name },
+                { "iname", model_name }
+            });
 
         var select_controllers = new FwList();
         ps["select_controllers"] = select_controllers;
         foreach (string controller_name in DevEntityBuilder.listControllers())
-            select_controllers.Add(new FwDict() { { "id", controller_name }, { "iname", controller_name } });
+            select_controllers.Add(new FwDict()
+            {
+                { "id", controller_name },
+                { "iname", controller_name }
+            });
 
         return ps;
     }
@@ -109,31 +121,62 @@ public class DevManageController : FwController
         fw.redirect(base_url);
     }
 
-    // generate documentation PDF
+    /// <summary>Renders the client handover page or sends the same guide as an inline PDF.</summary>
     public FwDict? DocsAction()
     {
-        var is_export = reqs("format");
-
-        var ps = new FwDict();
-        ps["is_rbac"] = fw.model<Users>().isRoles();
-        ps["is_mfa_enforced"] = fw.settings.readBool("is_mfa_enforced");
-        ps["mail_from"] = fw.settings.read("mail_from");
-        ps["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel");
-
-        ps["isS3"] = S3.IS_ENABLED;
-        ps["db_type"] = fw.getDB().dbtype;
-
-        if (!Utils.isEmpty(is_export))
+        var isRbac = fw.model<Users>().isRoles();
+        bool isSqlServer = db.dbtype == DB.DBTYPE_SQLSRV;
+        var host = isSqlServer ? getSqlServerHost(db.connect().DataSource) : "";
+        bool isRds = host.EndsWith(".rds.amazonaws.com", StringComparison.Ordinal)
+            || host.EndsWith(".rds.amazonaws.com.cn", StringComparison.Ordinal);
+        bool isAzureSql = host.EndsWith(".database.windows.net", StringComparison.Ordinal)
+            || host.EndsWith(".database.usgovcloudapi.net", StringComparison.Ordinal)
+            || host.EndsWith(".database.chinacloudapi.cn", StringComparison.Ordinal);
+        var ps = new FwDict
         {
-            logger("exporting");
-            var layout = fw.G["PAGE_LAYOUT_PRINT"].toStr();
-            var options = new FwDict();
-            options["disposition"] = "inline";
-            ConvUtils.parsePagePdf(fw, "/dev/manage/docs", layout, ps, "documentation", options);
-            return null;
+            ["is_rbac"] = isRbac,
+            ["is_mfa_enforced"] = fw.settings.readBool("is_mfa_enforced"),
+            ["mail_from"] = fw.settings.read("mail_from"),
+            ["support_contact"] = fw.settings.read("support_email"),
+            ["access_levels"] = FormUtils.selectTplOptions("/common/sel/access_level.sel"),
+            ["isS3"] = S3.IS_ENABLED,
+            ["db_type"] = db.dbtype,
+            ["is_native_sql"] = isSqlServer && !isRds && !isAzureSql,
+            ["is_rds"] = isRds,
+            ["is_azure_sql"] = isAzureSql,
+            ["has_fresh_schema"] = isSqlServer || db.dbtype == DB.DBTYPE_SQLITE,
+        };
+        if (isRbac)
+        {
+            ps["handover_roles"] = fw.model<RolesResourcesPermissions>().listRolesWithGrants();
         }
-        else
+
+        if (Utils.isEmpty(reqs("format")))
             return ps;
+
+        var options = new FwDict
+        {
+            ["disposition"] = "inline",
+            ["scale"] = 1,
+            ["margin_top"] = "15mm",
+            ["margin_right"] = "17mm",
+            ["margin_bottom"] = "16mm",
+            ["margin_left"] = "17mm",
+        };
+        ConvUtils.parsePagePdf(fw, "/dev/manage/docs", fw.G["PAGE_LAYOUT_PRINT"].toStr(), ps, "documentation", options);
+        return null;
+    }
+
+    private static string getSqlServerHost(string dataSource)
+    {
+        var source = dataSource.Trim();
+        if (source.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase))
+            source = source[4..];
+        else if (source.Contains(':'))
+            return "";
+
+        var host = source.Split([',', '\\'], 2)[0];
+        return host.Trim().TrimEnd('.').ToLowerInvariant();
     }
 
     #region Fw Updates

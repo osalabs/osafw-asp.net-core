@@ -1,27 +1,73 @@
-.page-break-after {
-  page-break-after: always;
+.handover {
+  --handover-navy: #132e50;
+  --handover-amber: #e9a622;
+  max-width: 58rem;
+  margin: 1.5rem auto;
+  color: var(--bs-body-color);
+  font-family: var(--bs-body-font-family, "Segoe UI", Arial, sans-serif);
+  line-height: 1.5;
 }
-
-.docs-cover {
+.handover-masthead, .handover-title {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  text-align: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .5rem 1.25rem;
 }
-
-.docs-cover h1 {
-  font-size: 3rem;
-  font-weight: 300;
-  margin-bottom: 1rem;
+.handover-masthead {
+  justify-content: space-between;
+  border-bottom: 4px solid var(--handover-amber);
+  padding-bottom: .4rem;
 }
+.handover-masthead strong { font-size: 1.35rem; }
+.handover-masthead span, .handover-title p { font-size: .9rem; }
+.handover-title { margin: 1.2rem 0 1rem; }
+.handover-title h1 { font-size: 2rem; font-weight: 750; margin: 0; }
+.handover-title p { margin: 0; }
+.handover-title .btn { margin-left: auto; }
+.handover-tabs { margin-bottom: 1.5rem; }
+.handover .tab-pane { margin-top: 0; }
+.handover h2, .handover h3, .handover h4 { font-weight: 700; line-height: 1.2; }
+.handover h2 { font-size: 1.55rem; margin: 1.3rem 0 .65rem; }
+.handover h3 { font-size: 1.14rem; margin: 1rem 0 .4rem; }
+.handover h4 { font-size: 1rem; margin: .75rem 0 .25rem; }
+.handover p, .handover ul, .handover ol { margin-bottom: .65rem; }
+.handover li + li { margin-top: .25rem; }
+.handover code { color: inherit; }
+.handover pre { background: var(--bs-tertiary-bg); padding: .55rem .8rem; border-left: 3px solid var(--handover-amber); white-space: pre-wrap; overflow-wrap: anywhere; }
+.handover mark { color: #132e50; background: #fff0bb; padding: .08em .25em; font-weight: 700; }
+.handover-contact, .handover-contents { border-top: 1px solid var(--bs-border-color); padding-top: .65rem; }
+.handover-contents ol { columns: 2; column-gap: 2rem; }
+.handover-contents li { break-inside: avoid; }
+.handover-facts > div { display: grid; grid-template-columns: minmax(8rem, 1fr) 3fr; gap: .8rem; padding: .35rem 0; border-bottom: 1px solid var(--bs-border-color); }
+.handover-facts dd { margin: 0; }
+.handover-levels { display: flex; flex-wrap: wrap; gap: .3rem 1.25rem; padding: 0; list-style: none; }
+.handover-levels li + li { margin: 0; }
 
-.docs-cover .lead {
-  font-size: 1.25rem;
-  color: var(--bs-secondary-color);
+/* Set the two content strings to the publisher's public name and website in the copied app. */
+@page {
+  @bottom-left-corner { content: ""; background: #132e50; }
+  @bottom-left { content: "User and Administrator Guide"; background: #132e50; color: #ffcf63; font: bold 9pt "Segoe UI", Arial, sans-serif; }
+  @bottom-center { content: ""; background: #132e50; color: #ffcf63; font: 9pt "Segoe UI", Arial, sans-serif; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); background: #132e50; color: #ffcf63; font: bold 9pt "Segoe UI", Arial, sans-serif; }
+  @bottom-right-corner { content: ""; background: #132e50; }
 }
-
-.tab-pane {
-  margin-top: 1rem;
+@media print {
+  .handover { margin: 0; max-width: none; font: 11pt/1.42 "Segoe UI", Arial, sans-serif; color: #202630; }
+  .handover-masthead, .handover h1, .handover h2, .handover h3, .handover h4 { color: #132e50; }
+  .handover-masthead strong { font-size: 16pt; }
+  .handover-title h1 { font-size: 24pt; }
+  .handover h2 { font-size: 17pt; }
+  .handover h3 { font-size: 12.5pt; }
+  .handover h4 { font-size: 11pt; }
+  .handover h1, .handover h2, .handover h3, .handover h4 { break-after: avoid; }
+  .handover p, .handover li { orphans: 2; widows: 2; }
+  .handover-front .handover-title { margin: 30mm 0 4mm; }
+  .handover-front .handover-title h1 { font-size: 31pt; }
+  .handover-readers { max-width: 32em; font-size: 13pt; }
+  .handover-front .handover-contents { margin-top: 15mm; }
+  .handover .tab-content > .tab-pane { display: block; break-before: page; }
+  .handover .handover-tabs, .handover-title .btn { display: none; }
+  .handover pre, .handover-facts > div { break-inside: avoid; }
+  .handover pre { font-size: 9.5pt; background: #f2f4f7; }
+  .handover a { color: #143e68; text-decoration: underline; }
 }

@@ -42,21 +42,25 @@ public class SecurityStoredRenderingTests
     [TestMethod]
     public void ParsePageMarkdown_FileIncludeRendersBodyAndEscapesNestedFields()
     {
-        var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = TestHelpers.TemplateRoot() });
-        var ps = new FwDict
+        var directory = Directory.CreateTempSubdirectory("osafw-markdown-");
+        try
         {
-            ["access_levels"] = new FwList { new FwDict { ["iname"] = "<em>Viewer</em>" } },
-        };
+            File.WriteAllText(Path.Combine(directory.FullName, "section.md"), "**Access**\n\n<ul><li><~label></li></ul>");
+            var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = directory.FullName });
+            const string TEMPLATE = "<~section.md markdown=\"trusted\">";
+            var ps = new FwDict { ["label"] = "<em>Viewer</em>" };
 
-        var html = parser.parse_page("/dev/manage/docs", "main.html", ps);
+            var html = parser.parse_string(TEMPLATE, ps);
+            StringAssert.Contains(html, "<strong>Access</strong>");
+            StringAssert.Contains(html, "<li>&lt;em&gt;Viewer&lt;/em&gt;</li>");
 
-        StringAssert.Contains(html, "<strong>Framework:</strong> OSAFW ASP.NET Core");
-        StringAssert.Contains(html, "<li>&lt;em&gt;Viewer&lt;/em&gt;</li>");
-
-        // An explicitly empty field must still shadow its matching file.
-        ps["tab_overview.md"] = "";
-        var empty = parser.parse_page("/dev/manage/docs", "main.html", ps);
-        Assert.IsFalse(empty.Contains("<strong>Framework:</strong> OSAFW ASP.NET Core"));
+            ps["section.md"] = "";
+            Assert.AreEqual("", parser.parse_string(TEMPLATE, ps));
+        }
+        finally
+        {
+            directory.Delete(true);
+        }
     }
 
     [TestMethod]
@@ -120,16 +124,14 @@ public class SecurityStoredRenderingTests
     public void ServerControlledMarkdownTemplates_UseTrustedOptIn()
     {
         var markdownHelp = readRepoFile("osafw-app", "App_Data", "template", "home", "markdownhelp", "main.html");
-        var devDocsTabs = readRepoFile("osafw-app", "App_Data", "template", "dev", "manage", "docs", "main_tabs.html");
-        var devDocsPrint = readRepoFile("osafw-app", "App_Data", "template", "dev", "manage", "docs", "main_print.html");
+        var devDocs = readRepoFile("osafw-app", "App_Data", "template", "dev", "manage", "docs", "main.html");
         var entityBuilder = readRepoFile("osafw-app", "App_Data", "template", "dev", "manage", "entitybuilder", "main.html");
         var staticPage = readRepoFile("osafw-app", "App_Data", "template", "home", "spage", "one_col.html");
         var activityLog = readRepoFile("osafw-app", "App_Data", "template", "common", "activitylogs", "main.html");
 
         StringAssert.Contains(markdownHelp, "markdown=\"trusted\"");
         Assert.IsFalse(markdownHelp.Contains(" markdown></div>", StringComparison.Ordinal));
-        StringAssert.Contains(devDocsTabs, "markdown=\"trusted\"");
-        StringAssert.Contains(devDocsPrint, "markdown=\"trusted\"");
+        StringAssert.Contains(devDocs, "markdown=\"trusted\" nolang");
         StringAssert.Contains(entityBuilder, "README.md markdown=\"trusted\" nolang");
         Assert.IsFalse(staticPage.Contains("markdown=\"trusted\"", StringComparison.Ordinal));
         Assert.IsFalse(activityLog.Contains("markdown=\"trusted\"", StringComparison.Ordinal));

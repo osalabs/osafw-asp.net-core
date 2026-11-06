@@ -52,7 +52,11 @@ internal static class DevRowRegenerator
                 }
                 catch (UserException ex)
                 {
-                    skipped.Add(new FwDict { ["model"] = name, ["reason"] = ex.Message });
+                    skipped.Add(new FwDict
+                    {
+                        ["model"] = name,
+                        ["reason"] = ex.Message
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -61,7 +65,14 @@ internal static class DevRowRegenerator
                 }
             }
         }
-        return new FwDict { ["success"] = failed.Count == 0, ["updated"] = updated, ["unchanged"] = unchanged, ["skipped"] = skipped, ["failed"] = failed };
+        return new FwDict
+        {
+            ["success"] = failed.Count == 0,
+            ["updated"] = updated,
+            ["unchanged"] = unchanged,
+            ["skipped"] = skipped,
+            ["failed"] = failed
+        };
     }
 
     private static bool regenerateFile(FW fw, string modelName, string path)

@@ -94,6 +94,8 @@ For local variables, clarity in the immediate scope matters more than global uni
 
 ## Source Readability
 
+- In application C#, put each key/value pair of a multi-entry dictionary initializer on its own line, including nested and target-typed dictionaries. Single-entry dictionaries and test fixtures may stay compact.
+
 - Separate logical blocks with blank lines: setup, validation, work, and cleanup should be easy to distinguish.
 - Omit braces around a single simple statement in a conditional or loop; keep the statement on its own indented line. Use braces for multiple statements or when needed to preserve scope or avoid an ambiguous `else`.
 - Expand multi-statement control flow and `try`/`catch`/`finally` blocks onto separate lines. Do not compress code just to reduce its line count.

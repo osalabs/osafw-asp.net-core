@@ -217,7 +217,11 @@ public class FormUtils
 
             // desc = ParsePage.RX_LANG.Replace(desc, "$1")
             desc = selectLanguageMarker.Replace(desc, "$1");
-            result.Add(new FwDict() { { "id", value }, { "iname", desc } });
+            result.Add(new FwDict()
+            {
+                { "id", value },
+                { "iname", desc }
+            });
         }
 
         return result;
@@ -230,7 +234,11 @@ public class FormUtils
     public static FwList normalizeSelectOptions(object? options)
     {
         if (options is FwDict inlineOptions)
-            return new FwList(inlineOptions.Select(entry => new FwDict { ["id"] = entry.Key, ["iname"] = entry.Value }));
+            return new FwList(inlineOptions.Select(entry => new FwDict
+            {
+                ["id"] = entry.Key,
+                ["iname"] = entry.Value
+            }));
 
         if (options is IList optionRows && options is not string)
             return new FwList(optionRows);

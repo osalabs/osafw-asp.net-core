@@ -804,7 +804,11 @@ ORDER BY {lookupDb.qid("iname")}";
     {
         var result = new FwList();
         foreach (var key in options.Keys)
-            result.Add(new FwDict { ["id"] = key, ["iname"] = options[key].toStr() });
+            result.Add(new FwDict
+            {
+                ["id"] = key,
+                ["iname"] = options[key].toStr()
+            });
         return result;
     }
 

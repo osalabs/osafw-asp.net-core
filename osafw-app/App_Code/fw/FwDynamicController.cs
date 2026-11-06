@@ -799,7 +799,11 @@ public partial class FwDynamicController : FwController
         if (id > 0)
         {
             //var item = ac_model.one(id);
-            //items = [new FwRow() { { "id", id }, { "iname", item["iname"] } }];
+            //items = [new FwRow()
+            //{
+            //    { "id", id },
+            //    { "iname", item["iname"] }
+            //}];
             items = [acModel.iname(id)];
         }
         else
@@ -850,7 +854,11 @@ public partial class FwDynamicController : FwController
                 if (related_id.Length > 0)
                     url = Utils.addUrlQueryParam(url, "related_id", related_id);
                 url = Utils.addReturnUrlQuery(url, return_url, return_title);
-                return new FwDict { { "_redirect", url }, { "id", id } };
+                return new FwDict
+                {
+                    { "_redirect", url },
+                    { "id", id }
+                };
             }
         }
 

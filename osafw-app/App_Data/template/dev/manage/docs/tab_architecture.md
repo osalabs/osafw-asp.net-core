@@ -1,15 +1,3 @@
-### High-Level Structure
-The `<~GLOBAL[SITE_NAME]>` application is built on the OSAFW (Open Source Application Framework) for ASP.NET Core. It follows a modular MVC-like architecture consisting of the following key components:
+Users reach the application over HTTPS. IIS sends requests to the ASP.NET Core application, which reads and writes business records in its configured database. Files attached to records have a separate storage lifecycle. A restored database can contain valid attachment references while the corresponding files are still missing.
 
-- **Models:** Manage the business logic and data interactions.
-- **Controllers:** Handle incoming requests and orchestrate responses.
-- **Views:** Render the UI using the ParsePage template engine.
-- **Database:** SQL Server (or another DB as applicable) for data storage.
-
-### Request Flow
-1. **Incoming Request:** The request is processed by the `FW.run()` method.
-2. **Routing:** The `fw.dispatch()` function maps the request to the appropriate controller and action.
-3. **Controller Execution:** The designated action is executed, possibly interacting with models and the database.
-4. **View Rendering:** The view is rendered using the ParsePage engine and returned as the response.
-5. **Response Finalization:** `fw.Finalize()` handles any final tasks before the response is sent to the client.
-
+The application owner approves access and business changes. The IT service owner coordinates the web host, database, attachment storage, certificates and integrations. Report a dependency outage through the IT service owner, who can involve its operator.

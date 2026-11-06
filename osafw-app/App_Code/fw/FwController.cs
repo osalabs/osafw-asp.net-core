@@ -954,7 +954,11 @@ public abstract partial class FwController
 
         var url = buildPrevNextUrl(go_id, is_edit);
 
-        return new FwDict { { "_redirect", url }, { "id", go_id } };
+        return new FwDict
+        {
+            { "_redirect", url },
+            { "id", go_id }
+        };
     }
 
     /// <summary>
