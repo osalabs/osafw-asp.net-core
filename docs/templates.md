@@ -633,7 +633,7 @@ Cherry
   - `<~tag default="none">`
 - `urlencode` - encode value for URLs
 - `json` (was `var2js`) - ouput variable as JSON string
-- `markdown` - convert markdown text to html using the [Markdig](https://github.com/lunet-io/markdig) library on ASP.NET. Raw HTML and markdown-generated attributes are disabled by default; use `markdown="trusted"` only for trusted content. Note: may wrap tag with `<p>`
+- `markdown` - convert markdown text to html using the [Markdig](https://github.com/lunet-io/markdig) library on ASP.NET. Raw HTML and markdown-generated attributes are disabled by default; use `markdown="trusted"` only for trusted content. Output may be wrapped in `<p>`. For example, `<~tab_overview.md markdown="trusted">` expands the server-owned file and its nested tags before formatting the result. Nested values follow the usual template escaping rules.
 - `noparse` - doesn't parse file and just include file by tag path as is, ignores all other attrs except `if`
 
 

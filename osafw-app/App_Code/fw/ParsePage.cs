@@ -435,8 +435,11 @@ public class ParsePage
                         // value found but empty
                         v = "";
                     else
-                        // value not found - looks like subtemplate in file
+                    {
+                        // There is no original field value; apply modifiers to the rendered include.
+                        tag_value = null;
                         v = _parse_page(tag_tplpath(tag, tpl_name), hf, inline_tpl, parent_hf, attrs, recursionDepth);
+                    }
                     tag_replace(ref page, ref tag_full, ref v, attrs, tag_value);
                 }
             }

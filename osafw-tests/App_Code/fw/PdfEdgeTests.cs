@@ -251,6 +251,7 @@ public class PdfEdgeTests
         var html = ConvUtils.parsePagePdf(scope.Fw, "/dev/manage/docs", "/layout_print.html", [], output);
 
         StringAssert.Contains(html, "Content-Security-Policy");
+        StringAssert.Contains(html, "<strong>Framework:</strong> OSAFW ASP.NET Core");
         var pdf = Encoding.Latin1.GetString(File.ReadAllBytes(output));
         Assert.IsGreaterThan(5, Regex.Matches(pdf, @"/Type\s*/Page\b").Count);
         StringAssert.Contains(pdf, "/MediaBox [0 0 612 792]");

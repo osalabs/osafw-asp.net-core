@@ -40,6 +40,26 @@ public class SecurityStoredRenderingTests
     }
 
     [TestMethod]
+    public void ParsePageMarkdown_FileIncludeRendersBodyAndEscapesNestedFields()
+    {
+        var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = TestHelpers.TemplateRoot() });
+        var ps = new FwDict
+        {
+            ["access_levels"] = new FwList { new FwDict { ["iname"] = "<em>Viewer</em>" } },
+        };
+
+        var html = parser.parse_page("/dev/manage/docs", "main.html", ps);
+
+        StringAssert.Contains(html, "<strong>Framework:</strong> OSAFW ASP.NET Core");
+        StringAssert.Contains(html, "<li>&lt;em&gt;Viewer&lt;/em&gt;</li>");
+
+        // An explicitly empty field must still shadow its matching file.
+        ps["tab_overview.md"] = "";
+        var empty = parser.parse_page("/dev/manage/docs", "main.html", ps);
+        Assert.IsFalse(empty.Contains("<strong>Framework:</strong> OSAFW ASP.NET Core"));
+    }
+
+    [TestMethod]
     public void StaticPageMarkdownContent_RendersStoredScriptPayloadInert()
     {
         var template = readRepoFile("osafw-app", "App_Data", "template", "home", "spage", "one_col.html");
