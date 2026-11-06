@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-11-05-fpf-adoption.md` - Adopted the latest FPF on an isolated master checkout and refined partial-result and whole-subject reasoning routes in instruction pack 1.13.7.
 - `summary-2026-11-04-edge-pdf.md` - Replaced production Playwright with Edge CLI; benchmarked, consolidated print rules, verified report pagination and restored Markdown section bodies in Developer Docs.
 - `summary-2026-11-01-test-cleanup.md` - Audited all tests, simplified low-value coverage, added automatic isolated test profiles and clarified retained-test guidance.
 - `summary-2026-11-01-strong-passwords.md` - Enforced a shared good-or-better password rating in all four password-setting forms, aligned server/browser scoring, added concise validation hints and asset cache invalidation, and verified legacy compatibility and Chromium feedback.
