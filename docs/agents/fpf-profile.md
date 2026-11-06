@@ -6,7 +6,7 @@ Routes apply to framework development and copied applications. Preserve delibera
 
 | Unresolved question | Source starting point | Return to repository evidence |
 | --- | --- | --- |
-| What does the receiving action need, and which connection is missing? | FPF Core C.39 | Requested outcome, actual inputs, controller/model/template/test consumer and acceptance; reuse sufficient results. |
+| What does the receiving action need, and do partial findings answer the original question? | FPF Core C.39; C.39.QR for uncertain returns; C.39.WA for whole-subject accounts | Original request, actual controller/model/template/test consumers and acceptance; distinguish what local evidence establishes from whether the request is complete. For whole-subject accounts, explain organizing grounds and relations and their effect on choices about parts; reuse sufficient results. |
 | Would another investigation or check change the result enough to justify its burden? | Core C.11.DUA | Attainable answer, delay and actual decision; binding checks and permissions still govern. |
 | Which source passage can answer this question? | Core F.1 | Available publications, alternative queries, relevant conditions and honest access limits. |
 | Does wording or a public name hide an action-changing meaning? | Core F.19 / F.8 | Actor, object, conditions, [naming.md](../naming.md), actual callers and public contracts; do not invent types or abstractions to imitate source terminology. |
@@ -34,4 +34,4 @@ Recover changed carriers and other methods through the pinned Library Reference,
 
 Human capability methods concern people learning for later work. Fluent agent output is not evidence of improved agent capability or human learning. Physical/embodied methods need their stated domain conditions. FPF terminology does not require new classes, mandatory diagrams, forms, a decision matrix or an ADR for ordinary work. Keep app extensions contributor-safe and preserve them during instruction-pack upgrades.
 
-Navigation adapted from Anatoly Levenchuk's [FPF Library at a5ac87ac15e78517d12bc66155b9da3ca254b643](https://github.com/ailev/FPF/tree/a5ac87ac15e78517d12bc66155b9da3ca254b643), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: selected software questions and .NET framework contract owners; source methods must be read at use.
+Navigation adapted from Anatoly Levenchuk's [FPF Library at 70518df35a8b876c2700e60e847406df4903c4a7](https://github.com/ailev/FPF/tree/70518df35a8b876c2700e60e847406df4903c4a7), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: selected software questions and .NET framework contract owners; source methods must be read at use.
