@@ -270,7 +270,7 @@ PDF reports render trusted static HTML using installed Microsoft Edge in headles
 1. Install Microsoft Edge if it is not already available on the server.
 2. Edge is discovered automatically by default. If needed, set `defaults["pdf_converter"]` in `FwHooks.configure` to the absolute path of `msedge.exe`; deployment configuration may override it through `appSettings.pdf_converter`.
 3. The application account needs permission to run Edge and write to its temporary directory and the PDF destination.
-4. Use absolute `file:///` URLs for trusted local images or embed them as data URLs. JavaScript does not run.
+4. Use absolute `file:///` URLs for trusted local images or embed them as data URLs. The supplied PDF template disables JavaScript.
 
 Letter paper, landscape, margins, scale, colors and page breaks are supported. Use CSS `@page` margin boxes for headers, footers and page numbers. PDF stylesheets load directly from the local assets folder. See [PDF export options](docs/reports.md#pdf-export-with-microsoft-edge).
 

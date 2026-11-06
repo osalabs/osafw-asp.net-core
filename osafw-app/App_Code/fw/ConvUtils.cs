@@ -22,8 +22,7 @@ public class ConvUtils
     // Note: set IS_PRINT_MODE=True hf var which is become available in templates
     // if out_filename ="" or doesn't contain "\" or "/" - output pdf file to browser
     // if out_filename cotains "\" or "/" - save pdf file to this path
-    // options:
-    // see html2pdf() method for options
+    // options: landscape, margin_top/right/bottom/left, scale, disposition; defaults live in common/pdf.html
     public static string parsePagePdf(FW fw, string bdir, string tpl_name, FwDict ps, string out_filename = "", FwDict? options = null)
     {
         options ??= [];
@@ -33,6 +32,7 @@ public class ConvUtils
             options["disposition"] = value;
         }
 
+        ps["PDF_OPTIONS"] = getPdfOptions(options);
         ps["IS_PRINT_MODE"] = true;
         ps["PDF_ASSETS_URL"] = new Uri(Path.GetFullPath(Path.Combine(fw.config("site_root").toStr(), "wwwroot", "assets")) + Path.DirectorySeparatorChar).AbsoluteUri.TrimEnd('/');
         string html_data = fw.parsePage(bdir, tpl_name, ps);
@@ -45,7 +45,7 @@ public class ConvUtils
             if (string.IsNullOrEmpty(out_filename) || !Regex.IsMatch(out_filename, @"[\/\\]"))
             {
                 pdf_file = Utils.getTmpFilename() + ".pdf";
-                html2pdf(fw, html_data, pdf_file, options).GetAwaiter().GetResult();
+                html2pdf(fw, html_data, pdf_file).GetAwaiter().GetResult();
                 if (string.IsNullOrEmpty(out_filename))
                     out_filename = "output";
 
@@ -54,7 +54,7 @@ public class ConvUtils
             }
             else
             {
-                html2pdf(fw, html_data, out_filename, options).GetAwaiter().GetResult();
+                html2pdf(fw, html_data, out_filename).GetAwaiter().GetResult();
             }
         }
         finally
@@ -71,19 +71,16 @@ public class ConvUtils
         return html_data;
     }
 
-    /// <summary>Prints trusted, static HTML with installed Microsoft Edge. No browser download or driver is used.</summary>
-    /// <remarks>Supports Letter paper, landscape, margins and CSS zoom (default 0.8). Images may use absolute
-    /// file URLs or data URLs. JavaScript is disabled.
-    /// Use CSS @page margin boxes for headers, footers and page numbers.</remarks>
-    public static async Task html2pdf(FW fw, string html_data, string filename, FwDict? options = null)
+    /// <summary>Prints completed, trusted HTML unchanged with installed Microsoft Edge.</summary>
+    /// <remarks>The caller's template owns print CSS and script policy. Use parsePagePdf for
+    /// template rendering with PDF options. No browser download or driver is used.</remarks>
+    public static async Task html2pdf(FW fw, string html_data, string filename)
     {
         if (filename.Length < 1)
         {
             throw new ApplicationException("Wrong filename");
         }
 
-        options ??= [];
-        var html = preparePdfHtml(fw, html_data, options);
         var edge = fw.config("pdf_converter").toStr();
         if (string.IsNullOrWhiteSpace(edge))
         {
@@ -106,7 +103,7 @@ public class ConvUtils
 
         try
         {
-            await File.WriteAllTextAsync(input, html, new UTF8Encoding(false), timeout.Token);
+            await File.WriteAllTextAsync(input, html_data, new UTF8Encoding(false), timeout.Token);
             process.StartInfo = new ProcessStartInfo(edge) { UseShellExecute = false, CreateNoWindow = true };
             foreach (var argument in new[]
             {
@@ -186,9 +183,9 @@ public class ConvUtils
         }
     }
 
-    private static string preparePdfHtml(FW fw, string html, FwDict options)
+    private static FwDict getPdfOptions(FwDict options)
     {
-        var ps = new FwDict { ["html"] = html, ["landscape"] = options["landscape"].toBool() };
+        var ps = new FwDict { ["landscape"] = options["landscape"].toBool() };
         foreach (var name in new[] { "margin_top", "margin_right", "margin_bottom", "margin_left" })
         {
             if (!options.TryGetValue(name, out var supplied))
@@ -214,30 +211,7 @@ public class ConvUtils
             ps["scale"] = scale.ToString(CultureInfo.InvariantCulture);
         }
 
-        // Rendering these shared fragments needs no Settings/database lookup for direct HTML callers.
-        var parser = fw.parsePageInstance();
-        const string TEMPLATE_DIR = "/admin/reports/common";
-        if (!Regex.IsMatch(html, @"<html\b", RegexOptions.IgnoreCase))
-        {
-            return parser.parse_page(TEMPLATE_DIR, "pdf_document.html", ps);
-        }
-
-        var head = new Regex(@"<head\b[^>]*>", RegexOptions.IgnoreCase);
-        if (head.IsMatch(html))
-        {
-            // Block scripts before the original head; apply supplied print options after its styles.
-            var policy = parser.parse_page(TEMPLATE_DIR, "pdf_policy.html", ps);
-            var style = parser.parse_page(TEMPLATE_DIR, "pdf_style.html", ps);
-            html = head.Replace(html, match => match.Value + policy, 1);
-            html = new Regex(@"</head\s*>", RegexOptions.IgnoreCase).Replace(html, match => style + match.Value, 1);
-        }
-        else
-        {
-            var pdfHead = parser.parse_page(TEMPLATE_DIR, "pdf_head.html", ps);
-            html = new Regex(@"<html\b[^>]*>", RegexOptions.IgnoreCase).Replace(html, match => match.Value + pdfHead, 1);
-        }
-
-        return html;
+        return ps;
     }
 
     // TODO - currently it just parse html and save it under .doc extension (Word capable opening it), but need redo with real converter

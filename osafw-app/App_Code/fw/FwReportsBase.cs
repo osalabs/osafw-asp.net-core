@@ -31,7 +31,6 @@ public class FwReportsBase
 {
     //template paths
     public const string TPL_BASE_DIR = "/admin/reports";
-    //public const string TPL_EXPORT_PDF = "/admin/reports/common/pdf.html"; //this is simplified template for wkhtmltopdf
     public const string TPL_EXPORT_PDF = "/layout_print.html"; // normal print template with latest bootstrap styles, printed by installed Microsoft Edge
     public const string TPL_EXPORT_XLS = "/admin/reports/common/xls.html";
 

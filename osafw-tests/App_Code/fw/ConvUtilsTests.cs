@@ -19,7 +19,7 @@ namespace osafw.Tests
 
             try
             {
-                await ConvUtils.html2pdf(fw, "<html></html>", string.Empty, new FwDict());
+                await ConvUtils.html2pdf(fw, "<html></html>", string.Empty);
                 Assert.Fail("Expected ApplicationException for empty filename");
             }
             catch (ApplicationException ex)
@@ -29,16 +29,16 @@ namespace osafw.Tests
         }
 
         [TestMethod]
-        public async Task Html2Pdf_RejectsInvalidOptionsBeforeChangingOutput()
+        public async Task PdfExport_RejectsInvalidOptionsAndMissingEdgeBeforeChangingOutput()
         {
             using var scope = new FwTestScope(_ => new RejectingDb());
             var output = Path.GetTempFileName();
             File.WriteAllText(output, "previous report");
             try
             {
-                await Assert.ThrowsExactlyAsync<ArgumentException>(() => ConvUtils.html2pdf(scope.Fw, "<p>Report</p>", output,
+                Assert.ThrowsExactly<ArgumentException>(() => ConvUtils.parsePagePdf(scope.Fw, "", "/layout_print.html", [], output,
                     new FwDict { ["margin_top"] = "5mm; color:red" }));
-                await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(() => ConvUtils.html2pdf(scope.Fw, "<p>Report</p>", output,
+                Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => ConvUtils.parsePagePdf(scope.Fw, "", "/layout_print.html", [], output,
                     new FwDict { ["scale"] = 0 }));
                 scope.Fw.config()["pdf_converter"] = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".exe");
                 await Assert.ThrowsExactlyAsync<FileNotFoundException>(() => ConvUtils.html2pdf(scope.Fw, "<p>Report</p>", output));

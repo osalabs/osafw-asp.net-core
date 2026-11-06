@@ -2,17 +2,17 @@
 
 ## Outcome and scope
 
-- Branch `codex/edge-pdf`, created from `29d9ec32`. No commit, push or deployment.
+- Branch `codex/edge-pdf`, created from `29d9ec32`. At the user's request, the reviewed implementation was committed as `421f4865` before the latest simplification. The simplification remains uncommitted; no push or deployment.
 - Replaced production Playwright PDF rendering with installed Edge CLI. Application project no longer references Playwright; the unrelated UI browser tests own their test-only reference.
 - Followed the old wkhtmltopdf flow found in `246a8f74^`: render HTML, invoke an executable, return a PDF. No CDP client, browser service, pool or persistent browser.
 - User initially selected rejection of the restricted asset mode, then explicitly requested removing obsolete option handling on November 5. Runtime guards, the old layout constant/template and header/footer parsing are removed; migration instructions remain in CHANGELOG. Ordinary file URLs are for trusted documents, not a restricted-directory security boundary.
-- Public `html2pdf`/`parsePagePdf` entry points and report/download/file paths remain. The empty `pdf_converter` default lives in `FwConfig` and discovers the standard Windows Edge locations; `FwHooks.configure` or deployment configuration can override the executable path.
+- Report/download/file paths and `parsePagePdf` options remain. Low-level `html2pdf` now takes only FW, completed HTML and destination; it prints the supplied HTML unchanged. The empty `pdf_converter` default lives in `FwConfig` and discovers the standard Windows Edge locations; `FwHooks.configure` or deployment configuration can override the executable path.
 
 ## Feature decisions and migration
 
 - Letter orientation/margins use `@page`; scale uses CSS zoom (default 0.8). Verified Bootstrap 5, local SVG and PNG, colors, page breaks, tagged output and portrait/landscape Letter.
 - CSS page-margin boxes repeat text headers/footers and page counters. Tested 80% and 100% scale. Separate HTML header/footer handling was removed at the user's request; fixed HTML placed in negative margins failed the repetition experiment and was not retained.
-- JavaScript is blocked in the report document. This converter accepts trusted static HTML, not arbitrary user HTML. Native browser asset loading does not reproduce the retired missing-asset/decode validation.
+- JavaScript is blocked by the supplied PDF template. This converter accepts trusted static HTML, not arbitrary user HTML. Native browser asset loading does not reproduce the retired missing-asset/decode validation.
 - Removed browser installation helper/action/link/script and old application configuration. Migration is recorded in `docs/CHANGELOG.md` and `docs/reports.md`; existing copied-app headers and restricted assets need the documented migration.
 - Process/output handling is intentionally limited: unique report files, Edge-selected temporary headless profiles, 60-second bounded wait, PDF signature/trailer check, and best-effort cleanup. A detached printing child cannot be guaranteed terminated after the launcher exits. This is an explicit residual limit consistent with the user's instruction to defer process-management infrastructure. No timeout/child-termination guarantee is claimed.
 
@@ -48,7 +48,7 @@ Independent `reviewer_high` selected for public compatibility and rendering secu
 
 Pre-existing untracked work was preserved. Task temporary probe removed from source; ignored benchmark evidence, PDFs, PNGs, TRX results and the clean app build retained. Removed 44 exact task-created browser/profile/cache/build directories after checking their resolved roots; none remained locked in that cleanup. No user browser profile or shared browser cache was touched.
 
-## November 5 follow-up
+## November 5 follow-up through checkpoint 421f4865
 
 - Fixed the actual sample-report stylesheet path: `parsePagePdf` supplies `PDF_ASSETS_URL` for `wwwroot/assets`; the normal print layout selects local Bootstrap/site CSS for PDF, retaining website URLs for normal print views. This removes dependence on configured website reachability/certificate trust. The user's screenshot showed all styles missing, not just table borders.
 - Added DEBUG command logging with quoted executable/arguments (no HTML or report data).
@@ -63,9 +63,18 @@ Pre-existing untracked work was preserved. Task temporary probe removed from sou
 
 The configuration default was moved from the sample appsettings file to `FwConfig`; the existing `FwHooks.configure` and deployment override order remains unchanged. Automatic approval review rejected a proposed whole-file restore of Utils; only the inspected task-owned hunks were subsequently removed, preserving unrelated work.
 
-## Template and border follow-up
+## Template and border follow-up at checkpoint 421f4865 (template mechanics superseded below)
 
 - Moved converter-generated markup/CSS into `admin/reports/common/pdf_document.html`, `pdf_head.html`, `pdf_policy.html` and `pdf_style.html`. Print defaults (Letter, portrait, 5/10/5/10mm margins, scale 0.8) are template-owned; C# validates supplied values, formats scale invariantly, and inserts rendered fragments. Existing complete HTML is preserved; fragment/no-head inputs use the shared document/head templates. CSP still precedes original head content, and option styles still follow existing styles.
 - Direct `html2pdf` calls use `fw.parsePageInstance().parse_page` so static template composition does not add a Settings/database lookup. Deployment must include the shared templates; this is recorded in canonical docs and the existing migration note. The alternate `common/pdf.html` report layout is unchanged.
 - The reported double outline came from `.fw-card` wrapping a bordered table, with Bootstrap's table bottom margin exposing an empty strip. Shared report print CSS now removes the card border and direct child table bottom margin; cell borders remain. Inspected first/last pages of the updated five-page sample. No additional sample showcase features were added.
 - Browser 8/8 and Fast 1034/1034 pass at the result paths above, zero build warnings/errors. UTF-8/no-BOM/CRLF checks pass for 24 changed/new task text files; `git diff --check` passes. Independent reviewer_high review and summary/index audit completed with no blocking or supplemental findings; review loop can stop.
+
+## Caller-driven simplification after checkpoint 421f4865
+
+- Checked all current calls: production `html2pdf` is called only by `parsePagePdf`; its consumers are `FwReportsBase.render` and `DevManage.DocsAction`, both using the existing print layout. Arbitrary fragment/no-head inputs were task-added tests, not production consumers.
+- Removed `preparePdfHtml` and all HTML detection, wrapping and injection. `parsePagePdf` validates margins/scale and supplies `PDF_OPTIONS` before rendering. The print head includes a single 11-line `admin/reports/common/pdf.html` with defaults, color rules and script policy. Deleted `pdf_document`, `pdf_head`, `pdf_policy` and `pdf_style`; the old unused full `pdf.html` layout is replaced by this include. No additional sample features.
+- `html2pdf(fw, html, filename)` only writes/prints the supplied document. Copied callers using the former fourth options argument must pass options to `parsePagePdf` or render their own print CSS/policy first. Custom print heads must include `common/pdf`; current in-repo consumers already use `sys_head_print`. CHANGELOG and canonical docs record these changes without compatibility wrappers.
+- Final checks: Browser 8/8 at `artifacts/test-runs/ff924d487e0c4f0e928ba6e5805e12e1/Browser/results.trx`; Fast 1034/1034 at `artifacts/test-runs/59ddadfa70794e3cbc7f0661e4083db9/Fast/results.trx`. Commands remain the Browser PdfEdgeTests filter and default Fast runner above. Both builds had zero warnings/errors. Browser coverage now uses real print-layout composition for options/concurrency, with existing-reader/download cleanup cases, the real SampleReport and Developer Docs layout. Removed artificial fragment/no-head compatibility coverage.
+- Sample PDF remains five pages with logo, borders, repeated headings, all page counters and final row160; rendered first page inspected. Developer Docs produces seven section pages with the expected portrait settings, but its Markdown body text is already missing from rendered HTML before conversion. This pre-existing ParsePage issue (file-tag markdown selects the empty original lookup value at `ParsePage.cs:1226`) is outside the converter change and remains unfixed; the Docs check establishes layout/settings only, not complete documentation content. No app start/stop or configured database mutation.
+- `git diff --check` and strict UTF-8/no-BOM/CRLF checks pass. Independent reviewer_high review and active summary/index audit completed with no blocking or supplemental findings; review loop can stop.
