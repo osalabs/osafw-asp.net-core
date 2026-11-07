@@ -1,0 +1,64 @@
+<~schedule_controls if="is_schedule_available" inline>
+  <~schedule_feedback if="schedule_success" inline>
+    <div class="alert alert-success" role="status">
+      `Schedule saved.`
+      <~schedule_next if="schedule_next_run" inline> `Next scheduled time` <strong><~schedule_next_run></strong>.</~schedule_next>
+      <a class="alert-link ms-2" href="<~schedule_manage_url>">`Manage task`</a>
+    </div>
+  </~schedule_feedback>
+  <~create unless="schedule_id" inline>
+    <form method="post" action="<~schedule_create_url>" class="fw-card" id="report-schedule" data-report-schedule <~hide unless="schedule_error" inline>hidden</~hide>>
+      <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+      <h2 class="h5">`Schedule email`</h2>
+      <~error if="schedule_error" inline><div class="alert alert-danger" role="alert"><~schedule_error></div></~error>
+      <p>`Runs as` <strong><~schedule_run_as></strong>. `All recipients receive the same report.`</p>
+      <div class="mb-3">
+        <label class="form-label" for="report-schedule-name">`Task name`</label>
+        <input id="report-schedule-name" class="form-control" name="item[iname]" value="<~schedule_item[iname]>" maxlength="255" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="report-schedule-recipients">`Recipients`</label>
+        <input id="report-schedule-recipients" class="form-control" name="item[recipients]" value="<~schedule_item[recipients]>" required>
+        <div class="form-text">`Separate addresses with commas or semicolons. Recipients can see the To list. The saved addresses do not track user profiles.`</div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md">
+          <label class="form-label" for="report-schedule-format">`Format`</label>
+          <select id="report-schedule-format" class="form-select" name="item[format]">
+            <option value="pdf" <~/common/attr/selected ifeq="schedule_item[format]" value="pdf">>`PDF attachment`</option>
+            <option value="html" <~/common/attr/selected ifeq="schedule_item[format]" value="html">>`HTML body`</option>
+          </select>
+        </div>
+        <div class="col-md">
+          <label class="form-label" for="report-schedule-status">`Status`</label>
+          <select id="report-schedule-status" class="form-select" name="item[status]">
+            <option value="0">`Active`</option>
+            <option value="10" <~/common/attr/selected ifeq="schedule_item[status]" value="10">>`Paused`</option>
+          </select>
+        </div>
+      </div>
+      <~/common/cron_editor sub="cron_editor">
+      <h3 class="h6">`Filters from the current form`</h3>
+      <ul class="small" data-schedule-summary></ul>
+      <p class="form-text">`The report validates and resolves the current values when you save. Selected dates stay fixed.`</p>
+      <button type="submit" class="btn btn-primary" disabled>`Save schedule`</button>
+      <button type="button" class="btn btn-outline-secondary" data-schedule-cancel>`Cancel`</button>
+    </form>
+  </~create>
+  <~update if="schedule_id" inline>
+    <form method="post" action="<~schedule_update_url>" class="fw-card" data-report-schedule>
+      <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+      <input type="hidden" name="schedule_id" value="<~schedule_id>">
+      <h2 class="h5">`Edit schedule filters`</h2>
+      <~review if="schedule_review_required" inline>
+        <p class="alert alert-warning" role="status">`This report's filters have changed. Review the current values before updating the schedule.`</p>
+      </~review>
+      <~error if="schedule_error" inline><div class="alert alert-danger" role="alert"><~schedule_error></div></~error>
+      <p>`Applying or viewing a report leaves the schedule unchanged. Use Update schedule filters to save the current values.`</p>
+      <ul class="small" data-schedule-summary></ul>
+      <button type="submit" class="btn btn-primary" disabled>`Update schedule filters`</button>
+      <a class="btn btn-outline-secondary" href="<~schedule_manage_url>">`Back to scheduled task`</a>
+    </form>
+  </~update>
+  <~/common/cron_editor_script>
+</~schedule_controls>

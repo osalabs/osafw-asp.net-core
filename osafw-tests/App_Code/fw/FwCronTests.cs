@@ -1,44 +1,47 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
-namespace osafw.Tests
+namespace osafw.Tests;
+
+[TestClass]
+public class FwCronTests
 {
-    [TestClass]
-    public class FwCronTests
+    [TestMethod]
+    public void CalculateNextRun_UsesInclusiveStartAndExclusiveEnd()
     {
-        [TestMethod]
-        public void CalculateNextRun_ReturnsNullForInvalidCron()
-        {
-            var start = DateTime.UtcNow;
-            DateTime? noEndDate = null;
+        var now = new DateTime(2026, 1, 1, 0, 0, 10, DateTimeKind.Utc);
+        var start = now.Date.AddMinutes(2);
+        var end = start.AddMinutes(1);
 
-            var result = FwCron.calculateNextRun("not-a-cron", start, noEndDate);
+        Assert.AreEqual(start, FwCron.calculateNextRun("* * * * *", now, end, TimeZoneInfo.Utc, start));
+        Assert.IsNull(FwCron.calculateNextRun("* * * * *", start, end, TimeZoneInfo.Utc, start));
+        Assert.IsNull(FwCron.calculateNextRun("not-a-cron", now, null));
+        Assert.IsNull(FwCron.calculateNextRun("0 * * * * *", now, null));
+        Assert.AreEqual(now.Date.AddMinutes(1), FwCron.calculateNextRun("* * * * *", now, null));
+    }
 
-            Assert.IsNull(result);
-        }
+    [TestMethod]
+    public void CalculateNextRun_UsesCronosDaylightSavingBehavior()
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var spring = new DateTime(2026, 3, 8, 0, 0, 0, DateTimeKind.Utc);
+        Assert.AreEqual(spring.AddHours(8), FwCron.calculateNextRun("30 2 * * *", spring, null, zone));
 
-        [TestMethod]
-        public void CalculateNextRun_HonorsEndDate()
-        {
-            var start = new DateTime(2026, 1, 1, 0, 0, 10, DateTimeKind.Utc);
-            var endDate = start.AddSeconds(10);
+        var fall = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var fixedTime = FwCron.calculateNextRun("30 1 * * *", fall, null, zone);
+        Assert.AreEqual(fall.AddHours(6.5), fixedTime);
+        Assert.AreEqual(fall.AddDays(1).AddHours(7.5), FwCron.calculateNextRun("30 1 * * *", fixedTime!.Value, null, zone));
 
-            var result = FwCron.calculateNextRun("* * * * *", start, endDate);
+        var firstRepeatedHour = fall.AddHours(6.5);
+        Assert.AreEqual(fall.AddHours(7), FwCron.calculateNextRun("*/30 1 * * *", firstRepeatedHour, null, zone));
+    }
 
-            Assert.IsNull(result, "Next run beyond the window must be null");
-        }
-
-        [TestMethod]
-        public void CalculateNextRun_ComputesNextOccurrence()
-        {
-            var start = DateTime.UtcNow.AddMinutes(-2);
-            DateTime? noEndDate = null;
-
-            var result = FwCron.calculateNextRun("* * * * *", start, noEndDate);
-
-            Assert.IsTrue(result.HasValue, "Cron should provide a future occurrence");
-            Assert.IsTrue(result.Value > start, "Next run must be after the start date");
-            Assert.IsTrue(result.Value < DateTime.UtcNow.AddMinutes(2), "Next run should be near-future for * * * * *");
-        }
+    [TestMethod]
+    public void ParseResult_ReturnsEmptyForUnreadableOrUnrecognizedEnvelope()
+    {
+        Assert.HasCount(0, FwCron.parseResult(null));
+        Assert.HasCount(0, FwCron.parseResult("{\"status\":\"succeeded\",\"message\":\"Completed\"}garbage"));
+        Assert.HasCount(0, FwCron.parseResult("{\"status\":\"future-status\",\"message\":\"Completed\"}"));
+        Assert.AreEqual("Completed", FwCron.parseResult("{\"status\":\"succeeded\",\"message\":\"Completed\"}")["message"]);
     }
 }

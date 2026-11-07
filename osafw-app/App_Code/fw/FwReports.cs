@@ -418,13 +418,18 @@ public class FwReports : FwModel<FwReports.Row>
     /// <exception cref="UserException">Thrown when a required or typed value is invalid.</exception>
     public FwDict buildSqlParams(FwList defs, FwDict f, int userDateFormat, int userTimeFormat = DateUtils.TIME_FORMAT_24)
     {
+        return buildSqlParams(defs, f, userDateFormat, userTimeFormat, false);
+    }
+
+    /// <summary>Frozen snapshots treat empty values as explicit input even if a default now exists.</summary>
+    internal FwDict buildSqlParams(FwList defs, FwDict f, int userDateFormat, int userTimeFormat, bool is_frozen)
+    {
         var result = new FwDict();
         foreach (var def in defs)
         {
             var name = def["name"].toStr();
-            var type = def["type"].toStr();
             var value = f[name].toStr();
-            if (string.IsNullOrEmpty(value))
+            if (!is_frozen && string.IsNullOrEmpty(value))
                 value = resolveParamDefault(def, userDateFormat);
 
             if (string.IsNullOrEmpty(value))

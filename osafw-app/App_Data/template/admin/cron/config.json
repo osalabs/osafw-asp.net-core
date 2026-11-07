@@ -1,0 +1,15 @@
+{
+    "model": "FwCron",
+    "save_fields": ["iname", "idesc", "cron", "timezone", "start_date", "end_date", "status"],
+    "search_fields": "iname idesc icode",
+    "list_sortdef": "iname asc",
+    "list_sortmap": {
+        "iname": "iname",
+        "next_run": "next_run",
+        "status": "status",
+        "last_started_utc": "last_started_utc"
+    },
+    "form_new_defaults": {
+        "status": 0
+    }
+}

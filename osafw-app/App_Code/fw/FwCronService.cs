@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,17 +12,30 @@ public class FwCronService : BackgroundService
 {
     protected virtual TimeSpan PollingInterval => TimeSpan.FromMinutes(1);
     private readonly IConfiguration _configuration;
+    private readonly ILogger<FwCronService> _logger;
 
-    public FwCronService(IConfiguration configuration)
+    public FwCronService(IConfiguration configuration) : this(configuration, NullLogger<FwCronService>.Instance)
+    {
+    }
+
+    public FwCronService(IConfiguration configuration, ILogger<FwCronService> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            ProcessJobs(stoppingToken);
+            try
+            {
+                ProcessJobs(stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Scheduled task polling failed ({ErrorType}).", ex.GetType().Name);
+            }
 
             await Task.Delay(PollingInterval, stoppingToken);
         }
@@ -30,30 +45,31 @@ public class FwCronService : BackgroundService
 
     protected virtual void ProcessJobs(CancellationToken ct)
     {
-        try
+        List<TFwCron> jobs;
+        using (var fw = FW.initOffline(_configuration))
         {
-            using var fw = FW.initOffline(_configuration);
-            var model = fw.model<FwCron>();
-            var jobsToRun = model.listDueJobs();
-
-            foreach (var job in jobsToRun)
-            {
-                try
-                {
-                    model.runJob(job);
-                }
-                catch (Exception ex)
-                {
-                    // Log the error to Sentry (or other error tracking systems) if available
-                    fw.logger(LogLevel.ERROR, "Failed to execute job:", job.id, ", error:", ex.Message);
-
-                    // Uncomment to log the errors in activity log
-                    // fw.logActivity(FwLogTypes.ICODE_EXECUTED, FwEntities.ICODE_CRON, job.id, ex.Message);
-                }
-            }
-
+            jobs = fw.model<FwCron>().listDueJobs();
             fw.endRequest();
         }
-        catch (Exception) { }
+
+        foreach (var job in jobs)
+        {
+            if (ct.IsCancellationRequested)
+                break;
+
+            try
+            {
+                using var fw = FW.initOffline(_configuration);
+                if (ct.IsCancellationRequested)
+                    break;
+
+                fw.model<FwCron>().runJob(job);
+                fw.endRequest();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Scheduled task {TaskId} could not be processed ({ErrorType}).", job.id, ex.GetType().Name);
+            }
+        }
     }
 }

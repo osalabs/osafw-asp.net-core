@@ -19,6 +19,16 @@ public class FwCustomReport : FwReportsBase
 
     internal FwReports ReportModel => reportModel;
 
+    public override bool isSchedulingSupported => true;
+    public override string schedulingCode => report["icode"].toStr();
+    public override string schedulingTitle => report["iname"].toStr(schedulingCode);
+    internal int schedulingRecordId => report["id"].toInt();
+
+    protected override FwList schedulingParameters()
+    {
+        return FwReports.parseParamDefinitions(report["sql_template"].toStr(), report["params_json"].toStr());
+    }
+
     public FwCustomReport(FwDict report)
     {
         this.report = new FwDict(report);
@@ -66,11 +76,11 @@ public class FwCustomReport : FwReportsBase
     {
         base.setFilters();
 
-        paramDefs = FwReports.parseParamDefinitions(report["sql_template"].toStr(), report["params_json"].toStr());
+        paramDefs = schedulingParameters();
         foreach (var def in paramDefs)
         {
             var name = def["name"].toStr();
-            if (string.IsNullOrEmpty(f[name].toStr()))
+            if (!is_scheduled_snapshot && string.IsNullOrEmpty(f[name].toStr()))
                 f[name] = FwReports.resolveParamDefault(def, fw.userDateFormat);
 
             def["value"] = f[name].toStr();
@@ -98,7 +108,7 @@ public class FwCustomReport : FwReportsBase
         if (rowLimit > 0 && Regex.IsMatch(sql, @"^\s*select\b", RegexOptions.IgnoreCase))
             sql = db.limit(sql, rowLimit);
 
-        var sqlParams = reportModel.buildSqlParams(paramDefs, f, fw.userDateFormat, fw.userTimeFormat);
+        var sqlParams = reportModel.buildSqlParams(paramDefs, f, fw.userDateFormat, fw.userTimeFormat, is_scheduled_snapshot);
         var oldTimeout = db.sql_command_timeout;
         db.sql_command_timeout = optionInt("timeout_seconds", FwReports.DEFAULT_TIMEOUT_SECONDS);
         try

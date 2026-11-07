@@ -21,6 +21,50 @@ public class SampleReport : FwReportsBase
         list_sortmap = Utils.qh("id|id idate|idate event_name|event_name entity_name|entity_name item_id|item_id idesc|idesc payload|payload user|fname,lname");
     }
 
+    public override bool isSchedulingSupported => true;
+    public override string schedulingCode => "Sample";
+    public override string schedulingTitle => "Sample Report (Activity Log)";
+
+    protected override FwList schedulingParameters() =>
+    [
+        new()
+        {
+            ["name"] = "from_date",
+            ["label"] = "From date",
+            ["type"] = "date"
+        },
+        new()
+        {
+            ["name"] = "to_date",
+            ["label"] = "To date",
+            ["type"] = "date"
+        },
+        new()
+        {
+            ["name"] = "events_id",
+            ["label"] = "Event",
+            ["type"] = "int"
+        },
+        new()
+        {
+            ["name"] = "fwentities_id",
+            ["label"] = "Entity",
+            ["type"] = "int"
+        },
+        new()
+        {
+            ["name"] = "users_id",
+            ["label"] = "User",
+            ["type"] = "int"
+        },
+        new()
+        {
+            ["name"] = "s",
+            ["label"] = "Search",
+            ["type"] = "text"
+        }
+    ];
+
     // define report filters in Me.f (available in report templates as f[...])
     // filter defaults can be Set here
     public override void setFilters()
@@ -107,6 +151,25 @@ public class SampleReport : FwReportsBase
         sql = db.limit(sql, 250); // Allow multiple printed pages while keeping the sample bounded.
         list_rows = db.arrayp(sql, where_params);
         list_count = list_rows.Count;
+
+        if (is_scheduled_snapshot)
+        {
+            var appliedParams = new FwList();
+            foreach (var def in schedulingParameters())
+            {
+                var name = def["name"].toStr();
+                if (Utils.isEmpty(f[name]))
+                    continue;
+
+                appliedParams.Add(new FwDict
+                {
+                    ["name"] = name,
+                    ["label"] = def["label"],
+                    ["value"] = f[name]
+                });
+            }
+            ps["applied_params"] = appliedParams;
+        }
 
         // perform calculations and add additional info for each result row
         foreach (FwDict row in list_rows)

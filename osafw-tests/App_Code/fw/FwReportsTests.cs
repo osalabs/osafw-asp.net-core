@@ -8,6 +8,55 @@ namespace osafw.Tests;
 public class FwReportsTests
 {
     [TestMethod]
+    public void ScheduledHardcodedReport_AuthorizesTheValidatedFiltersOnCaptureAndReplay()
+    {
+        using var scope = new FwTestScope(_ => new RejectingDb());
+        var report = new ScopedHardcodedReport();
+        report.init(scope.Fw, "ScopedReport", []);
+
+        var captured = report.captureScheduledFilters([], is_frozen: false);
+        Assert.AreEqual("7", report.CheckedDepartment);
+        Assert.AreEqual("7", captured[0]["value"]);
+
+        var payload = new FwDict { ["params"] = captured };
+        report.applyScheduledFilters(payload);
+        Assert.AreEqual("7", report.CheckedDepartment);
+
+        var forbidden = new FwDict { ["department_id"] = "9" };
+        Assert.ThrowsExactly<AuthException>(() => report.captureScheduledFilters(forbidden, is_frozen: false));
+        Assert.AreEqual("9", report.CheckedDepartment);
+        Assert.ThrowsExactly<AuthException>(() => report.captureScheduledFilters(forbidden, is_frozen: true));
+
+        captured[0]["value"] = "9";
+        Assert.ThrowsExactly<AuthException>(() => report.applyScheduledFilters(payload));
+        Assert.AreEqual("9", report.CheckedDepartment);
+    }
+
+    private sealed class ScopedHardcodedReport : FwReportsBase
+    {
+        public override bool isSchedulingSupported => true;
+        public string CheckedDepartment { get; private set; } = string.Empty;
+
+        protected override FwList schedulingParameters() =>
+        [
+            DB.h("name", "department_id", "type", "int", "required", true)
+        ];
+
+        public override void setFilters()
+        {
+            if (!is_scheduled_snapshot && !f.ContainsKey("department_id"))
+                f["department_id"] = "7";
+        }
+
+        public override void checkAccess()
+        {
+            CheckedDepartment = f["department_id"].toStr();
+            if (CheckedDepartment != "7")
+                throw new AuthException("This department is outside the report's scope.");
+        }
+    }
+
+    [TestMethod]
     public void CleanupRepcode_StripsUnsafeCharacters()
     {
         var cleaned = FwReportsBase.cleanupRepcode("Sales Report#1/2025");

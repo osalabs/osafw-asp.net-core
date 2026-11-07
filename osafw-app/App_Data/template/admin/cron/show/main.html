@@ -1,0 +1,49 @@
+<div class="page-header">
+  <div class="page-header-breadcrumbs"><a href="<~../url>">`Scheduled Tasks`</a></div>
+  <h1 class="page-title"><~title></h1>
+  <~/admin/cron/task_actions sub="task">
+</div>
+<~/common/form/msg>
+<~runner_disabled if="is_runner_disabled" inline>
+  <div class="alert alert-warning" role="status">`The task runner is disabled in this build.`</div>
+</~runner_disabled>
+<div class="fw-card">
+  <p><~i[idesc]></p>
+  <dl class="row">
+    <dt class="col-sm-4">`State`</dt><dd class="col-sm-8"><~/admin/cron/task_state sub="task"></dd>
+    <dt class="col-sm-4">`Schedule`</dt><dd class="col-sm-8"><~task[schedule_description]> <small class="text-muted"><~i[timezone]></small></dd>
+    <dt class="col-sm-4">`Next scheduled time`</dt><dd class="col-sm-8"><~task[next_local] default="—"> <small class="text-muted"><~task[next_utc]></small></dd>
+    <dt class="col-sm-4">`Last attempt started`</dt><dd class="col-sm-8"><~task[last_local] default="—"> <small class="text-muted"><~task[last_utc]></small></dd>
+    <dt class="col-sm-4">`Last attempt finished`</dt><dd class="col-sm-8"><~task[finished_local] default="—"> <small class="text-muted"><~task[finished_utc]></small></dd>
+    <dt class="col-sm-4">`Latest result`</dt><dd class="col-sm-8"><~task[result_status]> <~task[result_message]></dd>
+  </dl>
+  <~details if="result_details" inline>
+    <details class="mb-3"><summary>`Result details`</summary><pre class="text-wrap"><~result_details></pre></details>
+  </~details>
+  <~/admin/cron/report_details>
+  <~delivery if="report_recipients" inline>
+    <dl class="row">
+      <dt class="col-sm-4">`Recipients`</dt><dd class="col-sm-8"><~report_recipients></dd>
+      <dt class="col-sm-4">`Format`</dt><dd class="col-sm-8"><~report_format></dd>
+      <dt class="col-sm-4">`Runs as`</dt><dd class="col-sm-8"><~report_run_as></dd>
+    </dl>
+  </~delivery>
+  <~recovery if="run_token" inline>
+    <details>
+      <summary>`Recover an interrupted run`</summary>
+      <form method="post" action="<~/admin/cron/url>/(Recover)/<~id>" class="mt-2">
+        <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+        <input type="hidden" name="run_token" value="<~run_token>">
+        <div class="form-check mb-2">
+          <label class="form-check-label">
+            <input type="checkbox" class="form-check-input" name="confirm_recovery" value="1" required>
+            `I have verified that the worker owning this run has stopped.`
+          </label>
+        </div>
+        <p class="small text-muted">`Recovery records the run as uncertain and pauses the task. Check delivery before requesting another run.`</p>
+        <button type="submit" class="btn btn-outline-danger">`Record interrupted run`</button>
+      </form>
+    </details>
+  </~recovery>
+</div>
+<~/common/activitylogs/main if="is_activity_logs">

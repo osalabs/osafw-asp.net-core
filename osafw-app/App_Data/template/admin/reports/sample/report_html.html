@@ -1,10 +1,21 @@
+<~interactive_context unless="is_scheduled_report" inline>
 <~date1 if="f[is_dates]" inline>
   <div class="d-none d-print-block">
     Dates: <strong><~f[from_date]>-<~f[to_date]></strong>
   </div>
 </~date1>
+</~interactive_context>
+
+<~scheduled_context if="is_scheduled_report" inline>
+  <~applied_params repeat inline>
+    <div><strong><~label></strong> <~value></div>
+  </~applied_params>
+</~scheduled_context>
 
 <div class="fw-card">
+<~empty_rows unless="list_rows" inline>
+  <p class="text-muted">`No rows match the selected filters.`</p>
+</~empty_rows>
 <table class="table table-sm table-bordered table-hover list">
     <thead class="table-light">
         <tr <~/admin/reports/common/tr_sort unless="IS_PRINT_MODE">>

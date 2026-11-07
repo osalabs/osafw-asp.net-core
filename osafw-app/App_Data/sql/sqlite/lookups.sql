@@ -29,8 +29,11 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login_fail', 'Login Fail
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed login/pwd');
 -- user selectable types
 INSERT INTO log_types (itype, icode, iname) VALUES (10, 'comment', 'Comment');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_event', 'Scheduled Task Event');
 
 UPDATE log_types SET prio=id;
+
+INSERT INTO fwentities (icode, iname) VALUES ('fwcron', 'Scheduled Tasks');
 
 -- fwcron tasks
 -- INSERT INTO fwcron(icode, cron) VALUES ('example_sleep', '* * * * *');

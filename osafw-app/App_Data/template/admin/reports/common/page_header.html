@@ -12,6 +12,9 @@
       </h1>
     </div>
     <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+      <~schedule_list if="is_schedule_available" inline>
+        <a href="<~report_schedules_url>" class="btn btn-default d-print-none"><~/common/icons/calendar3>`Report schedules`</a>
+      </~schedule_list>
       <~page_header_meta>
     </div>
   </div>

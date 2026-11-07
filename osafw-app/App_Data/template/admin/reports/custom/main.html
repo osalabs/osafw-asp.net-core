@@ -1,6 +1,9 @@
 <~report_ui unless="IS_PRINT_MODE" inline>
   <~/admin/reports/common/page_header>
-  <~list_filter>
+  <div data-fw-component-scope data-report-schedule-scope>
+    <~list_filter>
+    <~/admin/reports/common/schedule_email>
+  </div>
 </~report_ui>
 <~/admin/reports/common/title if="IS_PRINT_MODE">
 
