@@ -79,7 +79,7 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual(reportCode, FwCron.reportCode(records[0].icode));
         Assert.AreEqual("0 7 * * *", records[0].cron);
         Assert.AreEqual("0 10 * * *", records[1].cron);
-        Assert.IsTrue(records.All(job => job.next_run > DateTime.UtcNow && job.last_result == null));
+        Assert.IsTrue(records.All(job => job.next_run_utc > DateTime.UtcNow && job.last_result == null));
 
         var scheduler = fw.model<FwScheduledReports>();
         var first = scheduler.payload(records[0].icode, records[0].payload!);
@@ -112,7 +112,7 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual(first["run_as_users_id"], updated["run_as_users_id"]);
         Assert.AreEqual(first["format"], updated["format"]);
         Assert.AreEqual(first["recipients"], updated["recipients"]);
-        Assert.AreEqual(records[0].next_run, reviewed[0].next_run);
+        Assert.AreEqual(records[0].next_run_utc, reviewed[0].next_run_utc);
         Assert.AreEqual(records[1].payload, reviewed[1].payload);
     }
 }

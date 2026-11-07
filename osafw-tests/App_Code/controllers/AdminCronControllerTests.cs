@@ -11,11 +11,6 @@ namespace osafw.Tests;
 [TestClass]
 public class AdminCronControllerTests
 {
-    private sealed class UtcDb : RejectingDb
-    {
-        public UtcDb() => conf["timezone"] = "UTC";
-    }
-
     private sealed class TestUsers : Users
     {
         public override bool isReadOnly(int id = -1) => false;
@@ -24,7 +19,7 @@ public class AdminCronControllerTests
 
     private static (FW fw, AdminCronController controller) Setup(string method, int access, string token)
     {
-        var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build(), _ => new UtcDb());
+        var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build(), _ => new RejectingDb());
         fw.config()["template"] = TestHelpers.TemplateRoot();
         fw.Session("access_level", access.ToString());
         fw.G["timezone"] = "UTC";
@@ -125,7 +120,7 @@ public class AdminCronControllerTests
             ["payload"] = "{\"forged\":true}",
             ["run_token"] = "forged",
             ["run_requested_utc"] = DateTime.UtcNow,
-            ["next_run"] = DateTime.UtcNow.AddDays(-1),
+            ["next_run_utc"] = DateTime.UtcNow.AddDays(-1),
             ["last_result"] = "{\"forged\":true}"
         };
         Call("POST", "/Admin/Cron");
@@ -138,7 +133,7 @@ public class AdminCronControllerTests
         Assert.IsNull(task.run_token);
         Assert.IsNull(task.run_requested_utc);
         Assert.IsNull(task.last_result);
-        Assert.IsTrue(task.next_run > DateTime.UtcNow);
+        Assert.IsTrue(task.next_run_utc > DateTime.UtcNow);
 
         fw.FORM.Clear();
         Call("GET", "/Admin/Cron");
@@ -167,11 +162,11 @@ public class AdminCronControllerTests
         var offsets = zone.GetAmbiguousTimeOffsets(wallTime);
         var firstOffset = offsets[0] > offsets[1] ? offsets[0] : offsets[1];
         var start = new DateTimeOffset(wallTime, firstOffset).UtcDateTime.AddMilliseconds(123);
-        fw.db.update("fwcron", DB.h("start_date", start), DB.h("id", id));
+        fw.db.update("fwcron", DB.h("start_date_utc", start), DB.h("id", id));
         fw.FORM.Clear();
         fw.FORM["task_id"] = id.ToString();
         fw.FORM["item"] = DB.h("cron", "*/30 1 * * *", "timezone", zone.Id,
-            "start_date", wallTime.ToString("yyyy-MM-dd'T'HH:mm:ss"));
+            "start_date_utc", wallTime.ToString("yyyy-MM-dd'T'HH:mm:ss"));
         Call("GET", "/Admin/Cron/(Preview)");
         Assert.AreEqual(200, context.Response.StatusCode);
         var expected = FwCron.calculateNextRun("*/30 1 * * *", DateTime.UtcNow, null, zone, start);
@@ -185,20 +180,20 @@ public class AdminCronControllerTests
     [TestMethod]
     public void PreparingUnchangedSchedule_PreservesExistingSlotAndRejectsAutoZone()
     {
-        var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build(), _ => new UtcDb());
+        var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build(), _ => new RejectingDb());
         fw.G["timezone"] = "UTC";
         var nextRun = DateTime.UtcNow.AddDays(2);
-        var existing = new TFwCron { cron = "0 7 * * *", timezone = "UTC", next_run = nextRun };
+        var existing = new TFwCron { cron = "0 7 * * *", timezone = "UTC", next_run_utc = nextRun };
         var item = new FwDict { ["cron"] = existing.cron, ["timezone"] = existing.timezone };
 
         AdminCronController.prepareSchedule(fw, item, existing);
 
-        Assert.AreEqual(nextRun, item["next_run"]);
+        Assert.AreEqual(nextRun, item["next_run_utc"]);
         fw.G["timezone"] = "Central Standard Time";
-        existing.start_date = new DateTime(2026, 11, 1, 6, 30, 0, DateTimeKind.Utc).AddMilliseconds(123);
-        item["start_date"] = "2026-11-01T01:30:00";
+        existing.start_date_utc = new DateTime(2026, 11, 1, 6, 30, 0, DateTimeKind.Utc).AddMilliseconds(123);
+        item["start_date_utc"] = "2026-11-01T01:30:00";
         AdminCronController.prepareSchedule(fw, item, existing);
-        Assert.AreEqual(existing.start_date, item["start_date"], "An unchanged displayed bound retains its original fold and precision.");
+        Assert.AreEqual(existing.start_date_utc, item["start_date_utc"], "An unchanged displayed bound retains its original fold and precision.");
 
         item["timezone"] = "Auto";
         Assert.ThrowsExactly<UserException>(() => AdminCronController.prepareSchedule(fw, item, existing));

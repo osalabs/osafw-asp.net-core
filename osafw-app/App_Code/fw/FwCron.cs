@@ -25,9 +25,9 @@ public class TFwCron
     public string idesc { get; set; } = string.Empty;
 
     public string cron { get; set; } = string.Empty;
-    public DateTime? next_run { get; set; }
-    public DateTime? start_date { get; set; }
-    public DateTime? end_date { get; set; }
+    public DateTime? next_run_utc { get; set; }
+    public DateTime? start_date_utc { get; set; }
+    public DateTime? end_date_utc { get; set; }
     public string timezone { get; set; } = "UTC";
     public string? payload { get; set; }
 
@@ -65,7 +65,6 @@ public class FwCron : FwModel
     private const int REPORT_CODE_INSERT_ATTEMPTS = 3;
     private const int RESULT_MESSAGE_MAX_LENGTH = 2000;
     private const int RESULT_MAX_BYTES = 16 * 1024;
-    private const string STORAGE_FOLD_MESSAGE = "A schedule date falls in a repeated local hour that the database cannot represent precisely. Verify the database timezone and storage with an application developer.";
     private static readonly TimeSpan RUN_GRACE = TimeSpan.FromMinutes(5);
 
     public FwCron() : base()
@@ -97,59 +96,6 @@ public class FwCron : FwModel
     private static bool isReportCode(string code) =>
         code.Length > 0 && REPORT_PREFIX.Length + code.Length + 1 + REPORT_SUFFIX_LENGTH <= REPORT_CODE_MAX_LENGTH
         && Regex.IsMatch(code, @"\A[A-Za-z0-9_-]+\z");
-
-    /// <summary>Rejects a schedule instant whose database-local clock time cannot retain its offset.</summary>
-    public void validateScheduleDates(DateTime? start_date, DateTime? end_date, DateTime? next_run)
-    {
-        if (!start_date.HasValue && !end_date.HasValue && !next_run.HasValue)
-            return;
-
-        if (!db.isTimezoneDetectionOk())
-            db.connect();
-
-        if (hasAmbiguousScheduleDate(storageZone(), start_date, end_date, next_run))
-            throw new UserException(STORAGE_FOLD_MESSAGE);
-    }
-
-    public override int add(FwDict item)
-    {
-        validateWrittenDates(item);
-        return base.add(item);
-    }
-
-    public override bool update(int id, FwDict item)
-    {
-        validateWrittenDates(item);
-        return base.update(id, item);
-    }
-
-    private void validateWrittenDates(FwDict item) =>
-        validateScheduleDates(scheduleDate(item["start_date"]), scheduleDate(item["end_date"]), scheduleDate(item["next_run"]));
-
-    private DateTime? scheduleDate(object? value)
-    {
-        if (ReferenceEquals(value, DB.NOW))
-            return db.Now();
-        return value == null ? null : db.qd(value);
-    }
-
-    private TimeZoneInfo storageZone() => TimeZoneInfo.FindSystemTimeZoneById(db.getTimezoneId());
-
-    private static bool hasAmbiguousScheduleDate(TimeZoneInfo zone, DateTime? start, DateTime? end, DateTime? next) =>
-        isAmbiguousStorageTime(zone, start) || isAmbiguousStorageTime(zone, end) || isAmbiguousStorageTime(zone, next);
-
-    private static bool isAmbiguousStorageTime(TimeZoneInfo zone, DateTime? date)
-    {
-        if (!date.HasValue || zone.Equals(TimeZoneInfo.Utc))
-            return false;
-
-        var local = date.Value;
-        // DB helpers already interpret Unspecified values as database-local wall time.
-        if (local.Kind != DateTimeKind.Unspecified)
-            local = TimeZoneInfo.ConvertTimeFromUtc(local.ToUniversalTime(), zone);
-
-        return zone.IsAmbiguousTime(DateTime.SpecifyKind(local, DateTimeKind.Unspecified));
-    }
 
     /// <summary>Creates a task with a generated report identity. The caller supplies the validated definition.</summary>
     public int addReport(string report_code, FwDict fields)
@@ -269,7 +215,7 @@ public class FwCron : FwModel
         {
             now = DateTime.UtcNow;
             return job.run_token is null && !job.run_requested_utc.HasValue
-                && isRunnableStatus(job.status) && !(job.end_date <= now)
+                && isRunnableStatus(job.status) && !(job.end_date_utc <= now)
                 && writeTask(id, DB.h("run_requested_utc", now));
         });
 
@@ -314,12 +260,11 @@ public class FwCron : FwModel
         if (observed.status is not (STATUS_INACTIVE or STATUS_COMPLETED))
             return false;
 
-        validateScheduleDates(observed.start_date, observed.end_date, null);
         var next = nextOccurrence(observed, DateTime.UtcNow);
         return next.HasValue && saveDefinition(observed.id, observed, new()
         {
             ["status"] = STATUS_ACTIVE,
-            ["next_run"] = next
+            ["next_run_utc"] = next
         }, "Task resumed.");
     }
 
@@ -335,7 +280,7 @@ public class FwCron : FwModel
         var values = new FwDict(fields);
         foreach (var field in values.Keys)
         {
-            if (field is not ("iname" or "idesc" or "cron" or "timezone" or "start_date" or "end_date" or "next_run" or "status" or "payload"))
+            if (field is not ("iname" or "idesc" or "cron" or "timezone" or "start_date_utc" or "end_date_utc" or "next_run_utc" or "status" or "payload"))
                 throw new ArgumentException("Field is not part of the editable task definition.", nameof(fields));
         }
 
@@ -345,10 +290,6 @@ public class FwCron : FwModel
             if (job.status == STATUS_DELETED || job.run_token != null || !isSameDefinition(job, observed))
                 return false;
 
-            validateScheduleDates(
-                values.ContainsKey("start_date") ? scheduleDate(values["start_date"]) : job.start_date,
-                values.ContainsKey("end_date") ? scheduleDate(values["end_date"]) : job.end_date,
-                values.ContainsKey("next_run") ? scheduleDate(values["next_run"]) : job.next_run);
             message += canceledRequest(job);
             return writeDefinition(id, values);
         });
@@ -361,8 +302,8 @@ public class FwCron : FwModel
         current.id == observed.id && current.icode == observed.icode && current.iname == observed.iname
         && current.idesc == observed.idesc && current.payload == observed.payload
         && current.cron == observed.cron && current.timezone == observed.timezone
-        && current.start_date == observed.start_date && current.end_date == observed.end_date
-        && current.next_run == observed.next_run && current.status == observed.status;
+        && current.start_date_utc == observed.start_date_utc && current.end_date_utc == observed.end_date_utc
+        && current.next_run_utc == observed.next_run_utc && current.status == observed.status;
 
     private static string canceledRequest(TFwCron job) =>
         job.run_requested_utc.HasValue ? " Pending manual request canceled." : string.Empty;
@@ -404,9 +345,9 @@ public class FwCron : FwModel
                     (
                         status = @active
                         AND (
-                            next_run IS NULL
-                            OR next_run <= @now
-                            OR end_date <= @now
+                            next_run_utc IS NULL
+                            OR next_run_utc <= @now_utc
+                            OR end_date_utc <= @now_utc
                         )
                     )
                     OR (
@@ -414,12 +355,12 @@ public class FwCron : FwModel
                         AND run_requested_utc IS NOT NULL
                     )
                 )
-            ORDER BY next_run, id",
+            ORDER BY next_run_utc, id",
             new()
             {
                 ["active"] = STATUS_ACTIVE,
                 ["paused"] = STATUS_INACTIVE,
-                ["now"] = DateTime.UtcNow
+                ["now_utc"] = DateTime.UtcNow
             });
     }
 
@@ -492,17 +433,6 @@ public class FwCron : FwModel
                 || (job.status == STATUS_INACTIVE && !job.run_requested_utc.HasValue))
                 return false;
 
-            var storage_zone = storageZone();
-            if (hasAmbiguousScheduleDate(storage_zone, job.start_date, job.end_date, job.next_run))
-            {
-                events.Add("Task paused. " + STORAGE_FOLD_MESSAGE + canceledRequest(job));
-                return writeTask(id, new()
-                {
-                    ["status"] = STATUS_INACTIVE,
-                    ["run_requested_utc"] = null
-                });
-            }
-
             var now = DateTime.UtcNow;
             var is_manual = job.run_requested_utc.HasValue;
             var fields = new FwDict();
@@ -513,12 +443,12 @@ public class FwCron : FwModel
                 is_manual = false;
             }
 
-            if (job.end_date <= now)
+            if (job.end_date_utc <= now)
             {
                 if (job.status == STATUS_ACTIVE)
                 {
                     fields["status"] = STATUS_COMPLETED;
-                    fields["next_run"] = null;
+                    fields["next_run_utc"] = null;
                 }
                 if (is_manual)
                 {
@@ -528,10 +458,10 @@ public class FwCron : FwModel
                 return writeTask(id, fields);
             }
 
-            var is_before_start = job.next_run < job.start_date;
-            var is_due = job.status == STATUS_ACTIVE && job.next_run.HasValue && job.next_run <= now
+            var is_before_start = job.next_run_utc < job.start_date_utc;
+            var is_due = job.status == STATUS_ACTIVE && job.next_run_utc.HasValue && job.next_run_utc <= now
                 && !is_before_start;
-            if (job.status == STATUS_ACTIVE && (!job.next_run.HasValue || is_before_start || is_due))
+            if (job.status == STATUS_ACTIVE && (!job.next_run_utc.HasValue || is_before_start || is_due))
             {
                 if (!trySchedule(job, out var zone))
                 {
@@ -541,22 +471,14 @@ public class FwCron : FwModel
                     return writeTask(id, fields);
                 }
 
-                var next = calculateNextRun(job.cron, now, job.end_date, zone, job.start_date);
-                var is_ambiguous_next = isAmbiguousStorageTime(storage_zone, next);
-                fields["next_run"] = is_ambiguous_next ? null : next;
-                if (is_ambiguous_next)
-                {
-                    fields["status"] = STATUS_INACTIVE;
-                    events.Add("Task paused before scheduling its next occurrence. " + STORAGE_FOLD_MESSAGE);
-                }
+                var next = calculateNextRun(job.cron, now, job.end_date_utc, zone, job.start_date_utc);
+                fields["next_run_utc"] = next;
+                if (!job.next_run_utc.HasValue && !job.start_date_utc.HasValue && !isReport(job))
+                    fields["start_date_utc"] = now;
 
-                if (!job.next_run.HasValue && !job.start_date.HasValue && !isReport(job)
-                    && !isAmbiguousStorageTime(storage_zone, now))
-                    fields["start_date"] = now;
-
-                if (is_due && isReport(job) && job.next_run < now - RUN_GRACE)
+                if (is_due && isReport(job) && job.next_run_utc < now - RUN_GRACE)
                 {
-                    events.Add($"Skipped overdue report occurrences beginning at {eventTime(job.next_run!.Value)}.");
+                    events.Add($"Skipped overdue report occurrences beginning at {eventTime(job.next_run_utc!.Value)}.");
                     is_due = false;
                 }
 
@@ -581,10 +503,10 @@ public class FwCron : FwModel
             if (!writeTask(id, fields))
                 return false;
 
-            if (fields.ContainsKey("next_run"))
-                job.next_run = (DateTime?)fields["next_run"];
-            if (fields.ContainsKey("start_date"))
-                job.start_date = (DateTime?)fields["start_date"];
+            if (fields.ContainsKey("next_run_utc"))
+                job.next_run_utc = (DateTime?)fields["next_run_utc"];
+            if (fields.ContainsKey("start_date_utc"))
+                job.start_date_utc = (DateTime?)fields["start_date_utc"];
             snapshot = job;
             return true;
         });
@@ -601,10 +523,10 @@ public class FwCron : FwModel
     private static string runTrigger(TFwCron job, bool is_manual, bool is_due)
     {
         if (is_manual && is_due)
-            return $"Scheduled occurrence at {eventTime(job.next_run!.Value)} and manual request from {eventTime(job.run_requested_utc!.Value)}.";
+            return $"Scheduled occurrence at {eventTime(job.next_run_utc!.Value)} and manual request from {eventTime(job.run_requested_utc!.Value)}.";
         if (is_manual)
             return $"Manual request from {eventTime(job.run_requested_utc!.Value)}.";
-        return $"Scheduled occurrence at {eventTime(job.next_run!.Value)}.";
+        return $"Scheduled occurrence at {eventTime(job.next_run_utc!.Value)}.";
     }
 
     private void finish(TFwCron snapshot, string trigger, string status, string message, object? data, bool is_pause)
@@ -612,7 +534,6 @@ public class FwCron : FwModel
         var now = DateTime.UtcNow;
         var result = resultJson(status, message, data);
         DateTime? skipped = null;
-        var is_ambiguous_next = false;
         var finished = changeTask(snapshot.id, job =>
         {
             if (job.run_token != snapshot.run_token)
@@ -625,23 +546,22 @@ public class FwCron : FwModel
                 ["last_result"] = result
             };
 
-            var next = job.next_run;
+            var next = job.next_run_utc;
             if (isReport(job) && next <= now && (job.status == STATUS_ACTIVE || next > snapshot.last_started_utc))
             {
                 skipped = next;
                 next = nextOccurrence(job, now);
-                is_ambiguous_next = isAmbiguousStorageTime(storageZone(), next);
-                fields["next_run"] = is_ambiguous_next ? null : next;
+                fields["next_run_utc"] = next;
             }
 
-            if (is_pause || is_ambiguous_next)
+            if (is_pause)
             {
                 fields["status"] = STATUS_INACTIVE;
             }
-            else if (job.status == STATUS_ACTIVE && (!next.HasValue || job.end_date <= now))
+            else if (job.status == STATUS_ACTIVE && (!next.HasValue || job.end_date_utc <= now))
             {
                 fields["status"] = STATUS_COMPLETED;
-                fields["next_run"] = null;
+                fields["next_run_utc"] = null;
             }
 
             return writeClaim(job, fields);
@@ -652,8 +572,6 @@ public class FwCron : FwModel
 
         if (skipped.HasValue)
             logEvent(snapshot.id, $"Skipped report occurrences during execution beginning at {eventTime(skipped.Value)}.");
-        if (is_ambiguous_next)
-            logEvent(snapshot.id, "Task paused before scheduling its next occurrence. " + STORAGE_FOLD_MESSAGE);
         logEvent(snapshot.id, $"Run finished at {eventTime(now)}. {trigger} {status}: {boundMessage(message)}");
     }
 
@@ -765,7 +683,7 @@ public class FwCron : FwModel
     }
 
     private static DateTime? nextOccurrence(TFwCron job, DateTime now) =>
-        trySchedule(job, out var zone) ? calculateNextRun(job.cron, now, job.end_date, zone, job.start_date) : null;
+        trySchedule(job, out var zone) ? calculateNextRun(job.cron, now, job.end_date_utc, zone, job.start_date_utc) : null;
 
     internal static DateTime? calculateNextRun(string cron, DateTime from_date, DateTime? end_date) =>
         calculateNextRun(cron, from_date, end_date, TimeZoneInfo.Utc);

@@ -21,7 +21,7 @@ public class AdminCronController : FwDynamicController
         model = model0 as FwCron ?? throw new FwConfigUndefinedModelException();
         db = model.getDB();
         is_activity_logs = true;
-        list_fields = "id, icode, iname, cron, timezone, status, start_date, end_date, next_run, "
+        list_fields = "id, icode, iname, cron, timezone, status, start_date_utc, end_date_utc, next_run_utc, "
             + "run_requested_utc, run_token, last_started_utc, last_finished_utc, last_result";
     }
 
@@ -105,8 +105,8 @@ public class AdminCronController : FwDynamicController
         }
 
         var posted = isGet() ? new FwDict() : reqh("item");
-        item["start_date"] = posted.ContainsKey("start_date") ? posted["start_date"] : boundInput(fw, task?.start_date);
-        item["end_date"] = posted.ContainsKey("end_date") ? posted["end_date"] : boundInput(fw, task?.end_date);
+        item["start_date_utc"] = posted.ContainsKey("start_date_utc") ? posted["start_date_utc"] : boundInput(fw, task?.start_date_utc);
+        item["end_date_utc"] = posted.ContainsKey("end_date_utc") ? posted["end_date_utc"] : boundInput(fw, task?.end_date_utc);
         ps["is_paused"] = item["status"].toStr() == FwModel.STATUS_INACTIVE.ToString();
         ps["is_completed"] = task?.status == FwCron.STATUS_COMPLETED;
         ps["cron_editor"] = cronEditor(fw, item, "task-cron", taskId: id);
@@ -218,7 +218,6 @@ public class AdminCronController : FwDynamicController
             var taskId = reqi("task_id");
             var observed = taskId > 0 ? taskOrFail(taskId) : null;
             var (cron, zone, start, end) = readSchedule(fw, reqh("item"), observed);
-            model.validateScheduleDates(start, end, null);
             var occurrences = new FwList();
             var next = DateTime.UtcNow;
             var viewerZone = findZone(fw.userTimezone);
@@ -228,7 +227,6 @@ public class AdminCronController : FwDynamicController
                 if (!occurrence.HasValue)
                     break;
 
-                model.validateScheduleDates(null, null, occurrence);
                 next = occurrence.Value;
                 var recurrence = zonedTime(fw, next, zone);
                 var viewer = zone.Id != viewerZone.Id && viewerZone.Id != DateUtils.TZ_UTC
@@ -258,7 +256,7 @@ public class AdminCronController : FwDynamicController
             throw new UserException("The task runner is disabled in this build.");
 
         var task = taskOrFail(id);
-        if (task.status == FwCron.STATUS_COMPLETED || task.end_date <= DateTime.UtcNow)
+        if (task.status == FwCron.STATUS_COMPLETED || task.end_date_utc <= DateTime.UtcNow)
             throw new UserException("Revise or resume this schedule before requesting a run.");
 
         if (model.requestRun(id))
@@ -344,17 +342,17 @@ public class AdminCronController : FwDynamicController
 
         var status = requestedStatus.toInt();
         var is_changed = observed == null || observed.cron != cron || observed.timezone != zone.Id
-            || observed.start_date != start || observed.end_date != end;
+            || observed.start_date_utc != start || observed.end_date_utc != end;
         var is_recalculate = is_changed || (status == FwModel.STATUS_ACTIVE && observed?.status != status);
-        var next = is_recalculate ? FwCron.calculateNextRun(cron, DateTime.UtcNow, end, zone, start) : observed?.next_run;
+        var next = is_recalculate ? FwCron.calculateNextRun(cron, DateTime.UtcNow, end, zone, start) : observed?.next_run_utc;
         if (is_recalculate && status == FwModel.STATUS_ACTIVE && !next.HasValue)
             throw new UserException("No future occurrence fits this schedule and its start/end bounds.");
 
         fields["cron"] = cron;
         fields["timezone"] = zone.Id;
-        fields["start_date"] = start;
-        fields["end_date"] = end;
-        fields["next_run"] = next;
+        fields["start_date_utc"] = start;
+        fields["end_date_utc"] = end;
+        fields["next_run_utc"] = next;
         fields["status"] = status;
     }
 
@@ -367,8 +365,8 @@ public class AdminCronController : FwDynamicController
             throw new UserException("Enter a valid five-field cron expression.");
 
         var zone = findZone(values["timezone"].toStr().Trim());
-        var start = readBound(fw, values["start_date"], observed?.start_date);
-        var end = readBound(fw, values["end_date"], observed?.end_date);
+        var start = readBound(fw, values["start_date_utc"], observed?.start_date_utc);
+        var end = readBound(fw, values["end_date_utc"], observed?.end_date_utc);
         if (start.HasValue && end.HasValue && start >= end)
             throw new UserException("The end must be later than the start.");
 
@@ -412,7 +410,7 @@ public class AdminCronController : FwDynamicController
         var status = row["status"].toInt();
         var is_running = !string.IsNullOrEmpty(row["run_token"].toStr());
         var is_queued = !Utils.isEmpty(row["run_requested_utc"]);
-        var is_expired = !Utils.isEmpty(row["end_date"]) && row["end_date"].toDate() <= DateTime.UtcNow;
+        var is_expired = !Utils.isEmpty(row["end_date_utc"]) && row["end_date_utc"].toDate() <= DateTime.UtcNow;
         task["state"] = status switch
         {
             FwModel.STATUS_ACTIVE => "Active",
@@ -437,7 +435,7 @@ public class AdminCronController : FwDynamicController
         var result = FwCron.parseResult(resultJson);
         task["result_status"] = result["status"];
         task["result_message"] = result.Count > 0 ? result["message"] : resultJson.Length > 0 ? "Result details unavailable" : "";
-        addTimestamp(task, row, "next_run", "next");
+        addTimestamp(task, row, "next_run_utc", "next");
         addTimestamp(task, row, "last_started_utc", "last");
         addTimestamp(task, row, "last_finished_utc", "finished");
         return task;

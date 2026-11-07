@@ -1,4 +1,15 @@
--- Existing jobs retain their codes, recurrence, status and timestamps.
+-- Stop workers first. Developers must migrate legacy schedule dates to UTC before restart.
+-- Old columns and values remain untouched; see docs/CHANGELOG.md (2026-11-07).
+IF COL_LENGTH('fwcron', 'next_run_utc') IS NULL
+BEGIN
+    ALTER TABLE fwcron ADD
+        next_run_utc DATETIME2 NULL,
+        start_date_utc DATETIME2 NULL,
+        end_date_utc DATETIME2 NULL;
+    CREATE INDEX IX_fwcron_next_run_utc ON fwcron (next_run_utc);
+END
+GO
+
 IF COL_LENGTH('fwcron', 'timezone') IS NULL
 BEGIN
     ALTER TABLE fwcron ADD

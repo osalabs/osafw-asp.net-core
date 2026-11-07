@@ -4,7 +4,7 @@ Site Admins manage recurring application jobs and report emails at `/Admin/Cron`
 
 ## Enabling the runner
 
-Apply the active provider's `upd2026-11-07-scheduled-tasks.sql` update before deploying the new runtime. The `isFwCronService` compile symbol registers the existing hosted worker; it remains opt-in. Without it the UI can manage definitions but cannot run tasks. IIS/application availability controls worker availability. Configure the application's hosting lifetime appropriately; this feature does not install a Windows service.
+Apply the active provider's `upd2026-11-07-scheduled-tasks.sql` update and complete any existing-row UTC migration below before using the new runtime. The `isFwCronService` compile symbol registers the existing hosted worker; it remains opt-in. Without it the UI can manage definitions but cannot run tasks. IIS/application availability controls worker availability. Configure the application's hosting lifetime appropriately; this feature does not install a Windows service.
 
 SQL Server is the primary provider. SQLite has matching fresh and additive schemas for embedded deployments and disposable tests. The claiming implementation requires SQL Server or SQLite; other providers are not supported by this runner.
 
@@ -20,7 +20,9 @@ Selected dates stay fixed. The scheduler never infers a relative period from a d
 
 The recurrence uses its saved timezone. New schedules default to the current admin's resolved zone; old schedules retain UTC. List timestamps show the viewing admin's local time alongside UTC. Changing a user's preferences does not change a recurrence. Start is inclusive and end is exclusive.
 
-Task recurrence timezones follow Cronos daylight-saving behavior. Legacy `start_date`, `end_date`, and `next_run` columns store database-local wall times, which cannot distinguish the two occurrences of a repeated clock time. Previews and saves reject those ambiguous database-local instants; a worker pauses an affected existing task before running it and records the reason in activity history. A valid current occurrence can finish while the task pauses because its following occurrence is ambiguous. This restriction also protects manual runs. Ordinary non-UTC storage remains supported. Applications that need uninterrupted scheduling through these database-local folds need UTC or fixed-offset database storage; changing an existing database's timezone setting requires a deliberate data migration, not just a configuration edit.
+All scheduling and execution instants are stored as UTC: `start_date_utc`, `end_date_utc`, `next_run_utc`, `run_requested_utc`, `last_started_utc`, and `last_finished_utc`. The `_utc` names use the framework's existing UTC field handling, independently of the database timezone. Raw SQL datetime parameters must also use `_utc` names (for example, `@now_utc`); see [date/time handling](datetime.md). Standard `add_time`/`upd_time` audit fields retain the shared framework convention.
+
+The saved recurrence timezone still determines what “7 a.m.” means. Cronos handles its daylight-saving transitions; UTC storage preserves distinct instants even when a local clock hour repeats. No database-local DST rejection or pause is needed. Form bounds are entered in the viewing admin's timezone and converted to UTC; nonexistent local clock times remain invalid inputs.
 
 **Run now** queues one request for the existing worker. Repeated requests while queued/running do not enqueue additional work. A paused task can be run manually without resuming its regular schedule. The worker uses the same database claim for timer and manual execution.
 
@@ -42,4 +44,16 @@ Hardcoded reports opt in by overriding `isSchedulingSupported` and `schedulingPa
 
 Use existing PDF/email layouts. HTML email links/images need recipient-accessible application URLs; PDF-only local file URLs are unsuitable for email images. Test mail routing continues through the framework mail API. Do not enable real sends during development verification.
 
-For an upgrade, stop old workers before applying the schema/runtime changes. Old binaries do not understand new report task codes or claims. Before rollback, stop the upgraded worker and disable new report tasks. Restoring a database does not undo emails already sent.
+## Upgrading existing tasks
+
+Stop all old workers and keep task editing disabled until the schema, application code, and data agree. Back up the task definitions. Old binaries do not understand the new claims or report task codes.
+
+The provider update adds nullable UTC columns and their next-run index. It deliberately leaves the old `start_date`, `end_date`, and `next_run` columns and values untouched. The application developer must migrate existing rows before enabling the new UI or worker:
+
+- Convert `start_date` → `start_date_utc`, `end_date` → `end_date_utc`, and `next_run` → `next_run_utc` using the original database timezone and each date's applicable offset. Preserve nulls. If storage was already UTC, copy the instants without shifting them. Do not simply relabel local clock values as UTC or change the global database timezone.
+- Resolve any ambiguous or invalid historical local values explicitly. A repeated local clock time does not contain enough information to infer the original instant. Where appropriate, recalculate the next future occurrence from the saved recurrence and bounds instead of migrating an overdue `next_run`.
+- Update copied handlers, SQL, DTO properties, form fields, and template/config overrides to use the new names. Keep `timezone` as the recurrence zone. Check migrated bounds, next occurrence, local/UTC display, and one controlled run before resuming workers.
+
+There is no automatic data conversion or compatibility reader. Starting before migration treats the new null bounds as unbounded and can initialize a different next occurrence. Remove obsolete columns/indexes only after the developer has verified the migration and rollback requirements. If an earlier version of this PR's update was registered in `fwupdates` (pending, failed, or applied), inspect its stored SQL and the actual schema. `FwUpdates.loadUpdates()` does not refresh an existing filename; applying a pending entry executes the previously stored SQL, not the latest file. Before startup, verify that all three UTC columns and `IX_fwcron_next_run_utc` exist. For a stale entry, use an application-owned upgrade to add any missing columns/index and migrate the rows; do not blindly rerun the SQLite update.
+
+Before rollback, stop the upgraded worker and disable new report tasks. Account for UTC-to-legacy conversion if returning to an old runtime; retained legacy columns do not track later edits. Restoring a database does not undo emails already sent.

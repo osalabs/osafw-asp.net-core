@@ -33,11 +33,11 @@
     <div class="row g-3 mb-3">
       <div class="col-md">
         <label for="task-start" class="form-label">`Start (optional, inclusive)`</label>
-        <input id="task-start" type="datetime-local" step="1" class="form-control" name="item[start_date]" value="<~i[start_date]>" data-cron-bound="start_date">
+        <input id="task-start" type="datetime-local" step="1" class="form-control" name="item[start_date_utc]" value="<~i[start_date_utc]>" data-cron-bound="start_date_utc">
       </div>
       <div class="col-md">
         <label for="task-end" class="form-label">`End (optional, exclusive)`</label>
-        <input id="task-end" type="datetime-local" step="1" class="form-control" name="item[end_date]" value="<~i[end_date]>" data-cron-bound="end_date">
+        <input id="task-end" type="datetime-local" step="1" class="form-control" name="item[end_date_utc]" value="<~i[end_date_utc]>" data-cron-bound="end_date_utc">
       </div>
     </div>
     <p class="form-text">`Start and end use your timezone.` <~cron_editor[viewer_zone]></p>

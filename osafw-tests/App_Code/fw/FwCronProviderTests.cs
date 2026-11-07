@@ -77,9 +77,9 @@ internal static class FwCronProviderChecks
         });
         var reference = DateTime.UtcNow.AddMinutes(-1);
         var due = reference.Date.AddHours(reference.Hour).AddMinutes(reference.Minute);
-        var id = firstCron.add(DB.h("icode", "claim_test", "cron", "0 0 * * *", "next_run", due));
+        var id = firstCron.add(DB.h("icode", "claim_test", "cron", "0 0 * * *", "next_run_utc", due));
         var stale = secondCron.listDueJobs().Single(task => task.id == id);
-        Assert.AreEqual(due, stale.next_run, "Existing datetime fields use the DB timezone on read and write.");
+        Assert.AreEqual(due, stale.next_run_utc, "Schedule instants remain UTC even when the database timezone is Eastern.");
         Assert.IsTrue(firstCron.saveDefinition(id, stale, DB.h("payload", "current payload")));
         Assert.IsTrue(firstCron.requestRun(id));
         var firstRun = Task.Run(() => firstCron.runJob(stale));
@@ -109,7 +109,7 @@ internal static class FwCronProviderChecks
         var finished = secondCron.getTask(id)!;
         Assert.IsNull(finished.run_token);
         Assert.IsNotNull(finished.last_finished_utc);
-        Assert.IsTrue(finished.next_run > DateTime.UtcNow);
+        Assert.IsTrue(finished.next_run_utc > DateTime.UtcNow);
         var result = FwCron.parseResult(finished.last_result);
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, result["status"]);
         Assert.AreEqual(3, ((FwDict)result["data"]!)["processed_count"].toInt());
@@ -135,13 +135,13 @@ internal static class FwCronProviderChecks
         });
 
         var next = DateTime.UtcNow.Date.AddDays(2);
-        var id = cron.add(DB.h("icode", "manual_test", "cron", "0 0 * * *", "next_run", next, "start_date", next));
+        var id = cron.add(DB.h("icode", "manual_test", "cron", "0 0 * * *", "next_run_utc", next, "start_date_utc", next));
         Assert.IsTrue(cron.requestRun(id));
         Assert.IsFalse(admin.requestRun(id));
         cron.runJob(cron.getTask(id)!);
         var paused = cron.getTask(id)!;
         Assert.AreEqual(FwModel.STATUS_INACTIVE, paused.status, "Finishing does not undo a concurrent pause.");
-        Assert.AreEqual(next, paused.next_run, "An early manual run preserves the next occurrence.");
+        Assert.AreEqual(next, paused.next_run_utc, "An early manual run preserves the next occurrence.");
         var result = FwCron.parseResult(paused.last_result);
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, result["status"]);
         Assert.IsFalse(result.ContainsKey("data"));
@@ -160,13 +160,13 @@ internal static class FwCronProviderChecks
         Assert.IsTrue(admin.pause(id), "Pause can cancel a manual request queued on an already-paused task.");
         Assert.IsNull(admin.getTask(id)!.run_requested_utc);
 
-        var failingId = cron.add(DB.h("icode", "failing_test", "cron", "0 0 * * *", "next_run", next.AddDays(-3)));
+        var failingId = cron.add(DB.h("icode", "failing_test", "cron", "0 0 * * *", "next_run_utc", next.AddDays(-3)));
         var failing = cron.getTask(failingId)!;
         cron.runJob(failing);
         cron.runJob(failing);
         Assert.AreEqual(2, calls, "The failed occurrence advances without per-minute retries.");
         var failed = cron.getTask(failingId)!;
-        Assert.IsTrue(failed.next_run > DateTime.UtcNow);
+        Assert.IsTrue(failed.next_run_utc > DateTime.UtcNow);
         Assert.AreEqual(FwCron.RESULT_FAILED, FwCron.parseResult(failed.last_result)["status"]);
         Assert.IsFalse(failed.last_result!.Contains("sensitive test message", StringComparison.Ordinal));
     }
@@ -177,7 +177,7 @@ internal static class FwCronProviderChecks
         using var first = context(connection, provider);
         var cron = first.model<FwCron>();
         var stale = DateTime.UtcNow.AddHours(-1);
-        var fields = DB.h("cron", "0 0 * * *", "next_run", stale, "run_requested_utc", stale);
+        var fields = DB.h("cron", "0 0 * * *", "next_run_utc", stale, "run_requested_utc", stale);
         var id = cron.addReport("Sample_Archive", fields);
         cron.addReport("Sample", fields);
         cron.addReport("SampleXArchive", fields);
@@ -191,7 +191,7 @@ internal static class FwCronProviderChecks
         Assert.AreEqual("Sample_Archive", FwCron.reportCode(candidate.icode));
         cron.runJob(candidate);
         var skipped = cron.getTask(id)!;
-        Assert.IsTrue(skipped.next_run > DateTime.UtcNow);
+        Assert.IsTrue(skipped.next_run_utc > DateTime.UtcNow);
         Assert.IsNull(skipped.run_requested_utc);
         Assert.IsNull(skipped.last_started_utc);
         Assert.IsNull(skipped.last_result);
@@ -200,7 +200,7 @@ internal static class FwCronProviderChecks
         Assert.IsTrue(events.Any(row => row["idesc"].toStr().Contains("Skipped", StringComparison.Ordinal)));
     }
 
-    public static void DatabaseFoldGuard(string connection, string provider)
+    public static void UtcDatesSurviveDatabaseFold(string connection, string provider)
     {
         using var scope = FwConfig.beginScope();
         using var first = context(connection, provider, "Eastern Standard Time");
@@ -211,52 +211,38 @@ internal static class FwCronProviderChecks
             return null;
         });
 
-        // Eastern's clock reads 01:30 twice. The generic DB contract reads the same local value as standard time.
+        // These different instants both display as 01:30 in Eastern, but remain distinct in storage.
         var firstFold = new DateTime(2026, 11, 1, 5, 30, 0, DateTimeKind.Utc);
         var secondFold = firstFold.AddHours(1);
-        var beforeFold = firstFold.AddHours(-1);
-        var afterFold = secondFold.AddHours(1);
-        Assert.ThrowsExactly<UserException>(() => cron.add(DB.h("icode", "fold_rejected", "cron", "0 0 * * *",
-            "next_run", firstFold)));
+        var id = cron.add(DB.h("icode", "fold_utc", "cron", "0 0 * * *", "status", FwModel.STATUS_INACTIVE,
+            "start_date_utc", firstFold, "next_run_utc", secondFold));
+        var observed = cron.getTask(id)!;
+        Assert.AreEqual(firstFold, observed.start_date_utc);
+        Assert.AreEqual(secondFold, observed.next_run_utc);
+        Assert.AreEqual(DateTimeKind.Utc, observed.next_run_utc!.Value.Kind);
+        Assert.AreEqual(1, first.db.valuep($"SELECT COUNT(*) FROM {cron.qTable()} WHERE id = @id AND start_date_utc = '2026-11-01 05:30:00' AND next_run_utc = '2026-11-01 06:30:00'", DB.h("id", id)).toInt(),
+            "Raw storage must contain UTC, without a database-local conversion on either write or read.");
 
-        var safe = cron.add(DB.h("icode", "fold_adjacent", "cron", "0 0 * * *",
-            "start_date", beforeFold, "next_run", afterFold));
-        var observed = cron.getTask(safe)!;
-        Assert.AreEqual(beforeFold, observed.start_date);
-        Assert.AreEqual(afterFold, observed.next_run);
-        Assert.ThrowsExactly<UserException>(() => cron.saveDefinition(safe, observed, DB.h("end_date", secondFold)));
-        Assert.ThrowsExactly<UserException>(() => cron.update(safe, DB.h("next_run", firstFold)));
-        Assert.IsTrue(cron.requestRun(safe));
-        cron.runJob(observed);
-        Assert.AreEqual(1, calls, "Non-ambiguous neighboring instants still support manual execution.");
+        Assert.IsTrue(cron.saveDefinition(id, observed, DB.h("end_date_utc", secondFold)));
+        Assert.AreEqual(secondFold, cron.getTask(id)!.end_date_utc);
+        cron.update(id, DB.h("end_date_utc", null));
+        Assert.IsTrue(cron.resume(cron.getTask(id)!));
+        Assert.IsTrue(cron.requestRun(id));
+        cron.runJob(cron.getTask(id)!);
+        Assert.AreEqual(1, calls, "A bound in a repeated local hour must not pause or block the task.");
+        Assert.AreEqual(FwModel.STATUS_ACTIVE, cron.getTask(id)!.status);
 
-        // Raw insertion simulates a pre-upgrade write whose original UTC offset was lost on storage.
-        var existing = first.db.insert("fwcron", DB.h("icode", "fold_existing", "cron", "0 0 * * *",
-            "start_date", firstFold, "next_run", afterFold));
-        var legacy = cron.getTask(existing)!;
-        Assert.AreEqual(secondFold, legacy.start_date);
-        Assert.IsTrue(cron.requestRun(existing));
-        cron.runJob(legacy);
-        var paused = cron.getTask(existing)!;
-        Assert.AreEqual(1, calls, "The worker must not use an ambiguous legacy bound for delivery.");
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, paused.status);
-        Assert.IsNull(paused.run_token);
-        Assert.IsNull(paused.run_requested_utc);
-        Assert.IsNull(paused.last_started_utc);
-        Assert.IsNull(paused.last_result);
-        Assert.ThrowsExactly<UserException>(() => cron.resume(paused));
-        Assert.IsTrue(first.model<FwActivityLogs>().listByEntity(FwEntities.ICODE_CRON, existing)
-            .Any(row => row["idesc"].toStr().Contains("repeated local hour", StringComparison.Ordinal)));
-
-        // This safe due instant can run. Its next recurrence is always in the repeated Eastern hour.
+        // The next recurrence itself falls in the repeated Eastern hour and must remain scheduled.
         var due = new DateTime(2025, 10, 15, 12, 0, 0, DateTimeKind.Utc);
         var nextFold = cron.add(DB.h("icode", "fold_computed", "cron", "30 1 * 11 SUN#1",
-            "timezone", "Eastern Standard Time", "next_run", due));
-        cron.runJob(cron.getTask(nextFold)!);
+            "timezone", "Eastern Standard Time", "next_run_utc", due));
+        cron.runJob(cron.listDueJobs().Single(task => task.id == nextFold));
         var finished = cron.getTask(nextFold)!;
         Assert.AreEqual(2, calls);
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, finished.status);
-        Assert.IsNull(finished.next_run);
+        Assert.AreEqual(FwModel.STATUS_ACTIVE, finished.status);
+        Assert.IsTrue(finished.next_run_utc > DateTime.UtcNow);
+        var localNext = TimeZoneInfo.ConvertTimeFromUtc(finished.next_run_utc!.Value, TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"));
+        Assert.IsTrue(TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").IsAmbiguousTime(localNext));
         Assert.IsNull(finished.run_token);
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, FwCron.parseResult(finished.last_result)["status"]);
     }
@@ -308,20 +294,20 @@ internal static class FwCronProviderChecks
 
         cron.runJob(cron.listDueJobs().Single(task => task.id == id));
         var initialized = cron.getTask(id)!;
-        Assert.IsTrue(initialized.next_run > DateTime.UtcNow);
+        Assert.IsTrue(initialized.next_run_utc > DateTime.UtcNow);
         Assert.IsNull(initialized.last_result);
 
-        first.db.update("fwcron", DB.h("next_run", DateTime.UtcNow.AddHours(-1), "start_date", DateTime.UtcNow.AddDays(-1)), DB.h("id", id));
+        first.db.update("fwcron", DB.h("next_run_utc", DateTime.UtcNow.AddHours(-1), "start_date_utc", DateTime.UtcNow.AddDays(-1)), DB.h("id", id));
         cron.runJob(cron.listDueJobs().Single(task => task.id == id));
         var finished = cron.getTask(id)!;
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, FwCron.parseResult(finished.last_result)["status"]);
-        Assert.IsTrue(finished.next_run > DateTime.UtcNow);
+        Assert.IsTrue(finished.next_run_utc > DateTime.UtcNow);
     }
 
     public static void ExistingTaskUpgrade(string connection, string provider)
     {
         using var scope = FwConfig.beginScope();
-        using var first = context(connection, provider);
+        using var first = context(connection, provider, "Eastern Standard Time");
         var db = first.db;
         var cron = first.model<FwCron>();
         var updates = first.model<FwUpdates>();
@@ -330,8 +316,13 @@ internal static class FwCronProviderChecks
             db.exec($"ALTER TABLE {cron.qTable()} DROP CONSTRAINT DF_fwcron_timezone");
 
         // Recreate the pre-feature fwcron shape on the disposable provider fixture.
-        foreach (var column in new[] { "timezone", "payload", "run_requested_utc", "run_token", "last_started_utc", "last_finished_utc", "last_result" })
+        db.exec(provider == DB.DBTYPE_SQLSRV
+            ? $"DROP INDEX IX_fwcron_next_run_utc ON {cron.qTable()}"
+            : "DROP INDEX IX_fwcron_next_run_utc");
+        foreach (var column in new[] { "next_run_utc", "start_date_utc", "end_date_utc", "timezone", "payload", "run_requested_utc", "run_token", "last_started_utc", "last_finished_utc", "last_result" })
             db.exec($"ALTER TABLE {cron.qTable()} DROP COLUMN {db.qid(column)}");
+        foreach (var column in new[] { "next_run", "start_date", "end_date" })
+            db.exec($"ALTER TABLE {cron.qTable()} ADD {db.qid(column)} DATETIME NULL");
         db.del("fwentities", DB.h("icode", FwEntities.ICODE_CRON));
         db.del("log_types", DB.h("icode", FwLogTypes.ICODE_CRON_EVENT));
 
@@ -342,13 +333,22 @@ internal static class FwCronProviderChecks
         var update = updates.listPending().Single(row => row["iname"].toStr() == "upd2026-11-07-scheduled-tasks.sql");
         updates.applyOne(update["id"].toInt());
 
+        var unmigrated = cron.getTask(id)!;
+        Assert.IsNull(unmigrated.next_run_utc, "The update must not guess how to convert existing dates.");
+        Assert.IsNull(unmigrated.start_date_utc);
+        Assert.IsNull(unmigrated.end_date_utc);
+
+        // Application-owned migration: the configured original DB zone converts these unambiguous values to UTC.
+        var legacy = db.row("fwcron", DB.h("id", id));
+        Assert.AreEqual(due, legacy["next_run"].toDate());
+        cron.update(id, DB.h("next_run_utc", legacy["next_run"], "start_date_utc", legacy["start_date"], "end_date_utc", legacy["end_date"]));
         var task = cron.getTask(id)!;
         Assert.AreEqual(FwCron.ICODE_EXAMPLE, task.icode);
         Assert.AreEqual("Original task", task.iname);
         Assert.AreEqual("0 0 * * *", task.cron);
-        Assert.AreEqual(due, task.next_run);
-        Assert.AreEqual(due.AddDays(-7), task.start_date);
-        Assert.AreEqual(due.AddDays(7), task.end_date);
+        Assert.AreEqual(due, task.next_run_utc);
+        Assert.AreEqual(due.AddDays(-7), task.start_date_utc);
+        Assert.AreEqual(due.AddDays(7), task.end_date_utc);
         Assert.AreEqual(FwModel.STATUS_INACTIVE, task.status);
         Assert.AreEqual("UTC", task.timezone);
         Assert.IsNull(task.payload);
@@ -413,7 +413,7 @@ public class FwCronSqliteTests
     public void ExistingLegacyHandler() => FwCronProviderChecks.ExistingLegacyHandler(file.ConnectionString, DB.DBTYPE_SQLITE);
 
     [TestMethod]
-    public void DatabaseFoldGuard() => FwCronProviderChecks.DatabaseFoldGuard(file.ConnectionString, DB.DBTYPE_SQLITE);
+    public void UtcDatesSurviveDatabaseFold() => FwCronProviderChecks.UtcDatesSurviveDatabaseFold(file.ConnectionString, DB.DBTYPE_SQLITE);
 
     [TestMethod]
     public void ManualRecoveryAndFailure() => FwCronProviderChecks.ManualRecoveryAndFailure(file.ConnectionString, DB.DBTYPE_SQLITE);
@@ -461,7 +461,7 @@ public class FwCronSqlServerTests
     public void ManualRecoveryAndFailure() => FwCronProviderChecks.ManualRecoveryAndFailure(database!.ConnectionString, DB.DBTYPE_SQLSRV);
 
     [TestMethod]
-    public void DatabaseFoldGuard() => FwCronProviderChecks.DatabaseFoldGuard(database!.ConnectionString, DB.DBTYPE_SQLSRV);
+    public void UtcDatesSurviveDatabaseFold() => FwCronProviderChecks.UtcDatesSurviveDatabaseFold(database!.ConnectionString, DB.DBTYPE_SQLSRV);
 
     [TestMethod]
     public void ReportIdentityAndSkippedWork() => FwCronProviderChecks.ReportIdentityAndSkippedWork(database!.ConnectionString, DB.DBTYPE_SQLSRV);

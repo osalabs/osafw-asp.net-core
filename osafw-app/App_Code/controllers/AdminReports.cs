@@ -380,7 +380,7 @@ public class AdminReportsController : FwController
 
         var report = FwReportsBase.createScheduledInstance(fw, FwReportsBase.cleanupRepcode(id), []);
         var submitted = reqh("item");
-        var item = FormUtils.filter(submitted, "iname cron timezone start_date end_date status");
+        var item = FormUtils.filter(submitted, "iname cron timezone start_date_utc end_date_utc status");
         var name = item["iname"].toStr().Trim();
         if (name.Length == 0 || name.Length > 255)
             throw new UserException("Enter a task name of up to 255 characters.");
@@ -392,7 +392,7 @@ public class AdminReportsController : FwController
 
         var cron = fw.model<FwCron>();
         var taskId = cron.addReport(report.schedulingCode, item);
-        saveScheduleFeedback(report, taskId, item["next_run"]);
+        saveScheduleFeedback(report, taskId, item["next_run_utc"]);
         fw.redirect(base_url + "/" + report.schedulingCode, is_exception: false);
     }
 
@@ -405,7 +405,7 @@ public class AdminReportsController : FwController
         var task = getReportTask(reqi("schedule_id"));
         var scheduler = fw.model<FwScheduledReports>();
         var saved = scheduler.payload(task.icode, task.payload.toStr());
-        var nextRun = fw.formatUserDateTime(task.next_run);
+        var nextRun = fw.formatUserDateTime(task.next_run_utc);
         scheduler.applyInputContext(saved);
         var report = FwReportsBase.createScheduledInstance(fw, FwReportsBase.cleanupRepcode(id), []);
         FwScheduledReports.checkTarget(report, FwCron.reportCode(task.icode), saved);
@@ -487,7 +487,7 @@ public class AdminReportsController : FwController
                 ["status"] = FwModel.STATUS_ACTIVE
             };
             if (!isGet())
-                Utils.mergeHash(item, FormUtils.filter(reqh("item"), "iname recipients format cron timezone start_date end_date status"));
+                Utils.mergeHash(item, FormUtils.filter(reqh("item"), "iname recipients format cron timezone start_date_utc end_date_utc status"));
 
             ps["schedule_item"] = item;
             ps["schedule_run_as"] = fw.Session("user_name");

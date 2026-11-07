@@ -55,10 +55,10 @@ CREATE TABLE fwcron
   idesc                 NVARCHAR(MAX),                          -- Optional full description of the job
 
   cron                  NVARCHAR(255) NOT NULL,                 -- Cron expression string
-  next_run              DATETIME2 NULL,                         -- When the job should run next (database timezone)
+  next_run_utc          DATETIME2 NULL,                         -- When the job should run next (UTC)
 
-  start_date            DATETIME2 NULL,                         -- When job becomes active (inclusive)
-  end_date              DATETIME2 NULL,                         -- Optional: when job expires (exclusive)
+  start_date_utc        DATETIME2 NULL,                         -- When job becomes active (inclusive)
+  end_date_utc          DATETIME2 NULL,                         -- Optional: when job expires (exclusive)
 
   timezone              NVARCHAR(64) NOT NULL CONSTRAINT DF_fwcron_timezone DEFAULT 'UTC',
   payload               NVARCHAR(MAX) NULL,
@@ -77,7 +77,7 @@ CREATE TABLE fwcron
   upd_users_id          INT DEFAULT 0                           -- User ID who last updated the job (0 = system)
 );
 CREATE UNIQUE INDEX UX_fwcron_icode ON fwcron (icode);
-CREATE INDEX IX_fwcron_next_run ON fwcron (next_run);
+CREATE INDEX IX_fwcron_next_run_utc ON fwcron (next_run_utc);
 
 
 -- virtual controllers
