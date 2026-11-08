@@ -38,7 +38,7 @@ public class CronEditorBrowserTests
         {
             ContentType = "application/json",
             Headers = new Dictionary<string, string> { ["Access-Control-Allow-Origin"] = "*" },
-            Body = """{"occurrences":[{"recurrence":"07:00 UTC","local":"","utc":""}]}"""
+            Body = """{"occurrences":[{"recurrence":"11/8/2026 07:00","recurrence_title":"11/8/2026 07:00 America/Chicago (-06:00)","local":"11/8/2026 13:00","local_title":"11/8/2026 13:00 UTC (+00:00)","utc":"2026-11-08 13:00 UTC"}]}"""
         }));
         await page.SetContentAsync("<base href=\"https://scheduler.test/\"><form id=\"task\">" + Editor("task-cron", "0 7 * * 1-5")
             + "</form><form id=\"report\">" + Editor("report-cron", "0 7 L * *") + "</form>");
@@ -55,9 +55,12 @@ public class CronEditorBrowserTests
                 await initialize();
             }
             """);
-        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-cron-preview] li').length === 2");
+        await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-cron-preview] tr').length === 2");
         Assert.AreEqual(2, await page.EvaluateAsync<int>("previewRequests"));
         Assert.AreEqual(1, await page.Locator("#report [data-cron-preview]").CountAsync());
+        Assert.AreEqual(3, await page.Locator("#report [data-cron-preview] td").CountAsync());
+        Assert.AreEqual("11/8/2026 07:00 America/Chicago (-06:00)", await page.Locator("#report [data-cron-preview] td").First.GetAttributeAsync("title"));
+        Assert.AreEqual("11/8/2026 13:00", await page.Locator("#report [data-cron-preview] td").Nth(1).InnerTextAsync());
         Assert.AreEqual(0, await page.Locator("#report [data-cron-editor] [data-cron-preview]").CountAsync());
         Assert.AreEqual("weekdays", await page.Locator("#task-cron-mode").InputValueAsync());
         Assert.AreEqual("true", await page.Locator("#report [data-cron-edit-mode=expression]").GetAttributeAsync("aria-pressed"));

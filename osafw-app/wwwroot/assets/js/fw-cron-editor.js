@@ -41,6 +41,8 @@
     const previewRoot = document.getElementById(root.dataset.previewId) || root;
     const message = previewRoot.querySelector('[data-cron-preview-message]');
     const occurrences = previewRoot.querySelector('[data-cron-preview]');
+    const previewTable = previewRoot.querySelector('[data-cron-preview-table]');
+    const taskZone = previewRoot.querySelector('[data-cron-task-zone]');
     const editors = Array.from(root.querySelectorAll('[data-cron-edit-mode]'));
     let isAdvanced;
     const form = root.closest('form');
@@ -92,6 +94,8 @@
       const request = new AbortController();
       pending = request;
       occurrences.replaceChildren();
+      previewTable.hidden = true;
+      taskZone.title = zone.value;
       if (!expression.value) {
         message.textContent = 'Complete the schedule to see upcoming occurrences.';
         return;
@@ -116,16 +120,16 @@
           return;
         }
 
-        message.textContent = result.occurrences.length ? 'Next occurrences' : 'No future occurrences fit this schedule.';
+        message.textContent = result.occurrences.length ? '' : 'No future occurrences fit this schedule.';
+        previewTable.hidden = result.occurrences.length === 0;
         result.occurrences.forEach(occurrence => {
-          const row = document.createElement('li');
-          row.textContent = occurrence.recurrence;
-          const additional = [occurrence.local, occurrence.utc].filter(Boolean).join(' · ');
-          if (additional) {
-            const otherZones = document.createElement('span');
-            otherZones.className = 'text-muted ms-2';
-            otherZones.textContent = additional;
-            row.append(otherZones);
+          const row = document.createElement('tr');
+          for (const key of ['recurrence', 'local', 'utc']) {
+            const cell = document.createElement('td');
+            cell.textContent = occurrence[key];
+            cell.title = occurrence[key + '_title'] || 'UTC (+00:00)';
+            if (key === 'utc') cell.className = 'text-muted';
+            row.append(cell);
           }
           occurrences.append(row);
         });

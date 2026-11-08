@@ -1,9 +1,11 @@
 <div data-cron-editor data-fw-component-scope data-preview-url="<~preview_url>" data-task-id="<~task_id>" data-preview-id="<~prefix>-preview" class="mb-3">
-  <div class="d-flex align-items-center gap-3 mb-2">
-    <h2 class="h6 mb-0">`Schedule`</h2>
-    <div class="btn-group btn-group-sm" role="group" aria-label="`Schedule editor`" data-cron-editor-modes hidden>
-      <button type="button" class="btn btn-outline-secondary" data-cron-edit-mode="simple" aria-pressed="false">`Simple`</button>
-      <button type="button" class="btn btn-outline-secondary" data-cron-edit-mode="expression" aria-pressed="true">`Cron expression`</button>
+  <div class="row form-row">
+    <div class="col-form-label col-md-3" id="<~prefix>-editor-label">`Schedule`</div>
+    <div class="col">
+      <div class="btn-group btn-group-sm" role="group" aria-labelledby="<~prefix>-editor-label" data-cron-editor-modes hidden>
+        <button type="button" class="btn btn-outline-secondary" data-cron-edit-mode="simple" aria-pressed="false">`Simple`</button>
+        <button type="button" class="btn btn-outline-secondary" data-cron-edit-mode="expression" aria-pressed="true">`Cron expression`</button>
+      </div>
     </div>
   </div>
   <div class="row form-row" data-cron-presets hidden>

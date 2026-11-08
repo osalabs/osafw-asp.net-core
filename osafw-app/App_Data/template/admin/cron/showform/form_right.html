@@ -9,7 +9,7 @@
 
 <div class="row form-row">
   <label for="task-status" class="col-form-label col-md-3">`Status`</label>
-  <div class="col">
+  <div class="col col-md-4">
     <select id="task-status" class="form-select" name="item[status]">
       <option value="0" <~/common/attr/selected ifeq="i[status]" value="0">>`Active`</option>
       <option value="10" <~/common/attr/selected if="is_paused">>`Paused`</option>
@@ -34,16 +34,21 @@
 
 <div class="row form-row">
   <label for="task-start" class="col-form-label col-md-3">`Start`</label>
-  <div class="col">
+  <div class="col col-md-6">
     <input id="task-start" type="datetime-local" step="1" class="form-control" name="item[start_date_utc]" value="<~i[start_date_utc]>" data-cron-bound="start_date_utc">
-    <div class="form-text">`Optional. Runs at or after this time.` `Your time zone:` <~cron_editor[viewer_zone]></div>
+    <div class="form-text">`Optional. Runs at or after this time.`</div>
   </div>
 </div>
 <div class="row form-row">
   <label for="task-end" class="col-form-label col-md-3">`End`</label>
-  <div class="col">
+  <div class="col col-md-6">
     <input id="task-end" type="datetime-local" step="1" class="form-control" name="item[end_date_utc]" value="<~i[end_date_utc]>" data-cron-bound="end_date_utc">
-    <div class="form-text">`Optional. No runs at or after this time.` `Your time zone:` <~cron_editor[viewer_zone]></div>
+    <div class="form-text">`Optional. No runs at or after this time.`</div>
+  </div>
+</div>
+<div class="row form-row">
+  <div class="col-md-9 offset-md-3">
+    <p class="form-text mb-0">`Start/End use your time zone:` <~cron_editor[viewer_zone]></p>
   </div>
 </div>
 <~/common/cron_preview sub="cron_editor">

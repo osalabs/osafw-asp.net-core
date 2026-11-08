@@ -1,4 +1,18 @@
-<div id="<~prefix>-preview" class="mb-3" aria-live="polite">
-  <p class="mb-1" data-cron-preview-message>`Next occurrences`</p>
-  <ol class="mb-0" data-cron-preview></ol>
+<div id="<~prefix>-preview" class="row form-row" aria-live="polite">
+  <div class="col-form-label col-md-3" id="<~prefix>-preview-label">`Next occurrences`</div>
+  <div class="col">
+    <p class="form-text mb-0" data-cron-preview-message></p>
+    <div class="table-responsive" data-cron-preview-table hidden>
+      <table class="table table-sm table-borderless small mb-0" aria-labelledby="<~prefix>-preview-label">
+        <thead>
+          <tr>
+            <th scope="col" data-cron-task-zone title="<~timezone>">`Task time zone`</th>
+            <th scope="col" title="<~viewer_zone>">`Your time zone`</th>
+            <th scope="col" class="text-muted" title="UTC (+00:00)">UTC</th>
+          </tr>
+        </thead>
+        <tbody data-cron-preview></tbody>
+      </table>
+    </div>
+  </div>
 </div>

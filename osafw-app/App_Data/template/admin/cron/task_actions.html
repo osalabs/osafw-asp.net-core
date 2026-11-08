@@ -2,22 +2,22 @@
   <~run if="can_run" inline>
     <form method="post" action="<~/admin/cron/url>/(RunNow)/<~id>" onsubmit="return confirm(this.dataset.message)" data-message="`Run this task now?` <~email_confirm if="report_code" inline>`This sends the report to the saved recipients.`</~email_confirm>">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button type="submit" class="btn btn-warning">`Run now`</button>
+      <button type="submit" class="btn btn-warning"><~/common/icons/play-fill>`Run now`</button>
     </form>
   </~run>
   <~run_disabled if="is_run_disabled" inline>
-    <button type="button" class="btn btn-warning" disabled>`Run now`</button>
+    <button type="button" class="btn btn-warning" disabled><~/common/icons/play-fill>`Run now`</button>
   </~run_disabled>
   <~pause if="can_pause" inline>
     <form method="post" action="<~/admin/cron/url>/(Pause)/<~id>">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button type="submit" class="btn btn-default">`Pause`</button>
+      <button type="submit" class="btn btn-default"><~/common/icons/pause-fill>`Pause`</button>
     </form>
   </~pause>
   <~resume if="can_resume" inline>
     <form method="post" action="<~/admin/cron/url>/(Resume)/<~id>">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button type="submit" class="btn btn-default">`Resume`</button>
+      <button type="submit" class="btn btn-default"><~/common/icons/play-fill>`Resume`</button>
     </form>
   </~resume>
 </div>

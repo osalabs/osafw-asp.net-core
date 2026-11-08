@@ -68,6 +68,19 @@ public class AdminCronControllerTests
         controller.PreviewAction();
         using var response = JsonDocument.Parse(((MemoryStream)fw.response.Body).ToArray());
         Assert.AreEqual(3, response.RootElement.GetProperty("occurrences").GetArrayLength());
+        var utcOccurrence = response.RootElement.GetProperty("occurrences")[0];
+        Assert.AreEqual(utcOccurrence.GetProperty("recurrence").GetString(), utcOccurrence.GetProperty("local").GetString(),
+            "All three columns remain populated even when the task and viewer share UTC.");
+        StringAssert.Contains(utcOccurrence.GetProperty("recurrence_title").GetString()!, "UTC (+00:00)");
+        StringAssert.EndsWith(utcOccurrence.GetProperty("utc").GetString()!, " UTC");
+
+        var (otherViewer, otherController) = Setup("GET", Users.ACL_SITEADMIN, "valid");
+        otherViewer.G["timezone"] = "America/Chicago";
+        otherController.PreviewAction();
+        using var otherResponse = JsonDocument.Parse(((MemoryStream)otherViewer.response.Body).ToArray());
+        var otherOccurrence = otherResponse.RootElement.GetProperty("occurrences")[0];
+        Assert.AreNotEqual(otherOccurrence.GetProperty("recurrence").GetString(), otherOccurrence.GetProperty("local").GetString());
+        StringAssert.Contains(otherOccurrence.GetProperty("local_title").GetString()!, "America/Chicago (");
 
         var (invalid, invalidController) = Setup("GET", Users.ACL_SITEADMIN, "valid");
         ((FwDict)invalid.FORM["item"]!)["cron"] = "0 0 7 * * *";

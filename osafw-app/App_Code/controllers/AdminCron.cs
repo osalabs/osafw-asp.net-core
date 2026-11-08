@@ -264,15 +264,13 @@ public class AdminCronController : FwDynamicController
                     break;
 
                 next = occurrence.Value;
-                var recurrence = zonedTime(fw, next, zone, includeZone: false);
-                var viewer = zone.Id != viewerZone.Id && viewerZone.Id != DateUtils.TZ_UTC
-                    ? zonedTime(fw, next, viewerZone)
-                    : "";
                 occurrences.Add(new FwDict
                 {
-                    ["recurrence"] = recurrence,
-                    ["local"] = viewer,
-                    ["utc"] = zone.Id == DateUtils.TZ_UTC ? "" : utcTime(next)
+                    ["recurrence"] = zonedTime(fw, next, zone, includeZone: false),
+                    ["recurrence_title"] = zonedTime(fw, next, zone),
+                    ["local"] = zonedTime(fw, next, viewerZone, includeZone: false),
+                    ["local_title"] = zonedTime(fw, next, viewerZone),
+                    ["utc"] = utcTime(next)
                 });
             }
 
