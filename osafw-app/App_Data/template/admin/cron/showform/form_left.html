@@ -12,6 +12,7 @@
         <option value="">`Choose a job`</option>
         <~job_codes select="i[icode]">
       </select>
+      <~job_error if="error[details][icode]" inline><p class="invalid-feedback d-block"><~/admin/cron/cron_messages.sel selvalue="error[details][icode]"></p></~job_error>
       <p class="form-text">`Create report email schedules from the report.`</p>
     </div>
   </div>

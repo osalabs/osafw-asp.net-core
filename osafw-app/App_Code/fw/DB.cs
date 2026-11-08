@@ -504,6 +504,22 @@ public class DB : IDisposable
         return value;
     }
 
+    private void addSqlServerParameter(SqlCommand command, string name, object? value)
+    {
+        var normalized = normalizeParamValue(name, value);
+        if (normalized is DateTime && value is DBParamValue { FieldType: "datetime2" })
+        {
+            // Inferred SqlClient DateTime parameters use legacy datetime precision.
+            var parameter = command.Parameters.Add(name, SqlDbType.DateTime2);
+            parameter.Scale = 7;
+            parameter.Value = normalized;
+        }
+        else
+        {
+            command.Parameters.AddWithValue(name, normalized);
+        }
+    }
+
     /// <summary>
     /// Wraps helper-built parameters with the source field metadata needed for UTC and type decisions.
     /// </summary>
@@ -1182,7 +1198,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                sqlCommand.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
+                addSqlServerParameter(sqlCommand, p, @params[p]);
 
             if (tran != null)
                 sqlCommand.Transaction = (SqlTransaction)tran;
@@ -1401,7 +1417,7 @@ public class DB : IDisposable
                 CommandTimeout = sql_command_timeout
             };
             foreach (string p in @params.Keys)
-                dbcomm.Parameters.AddWithValue(p, normalizeParamValue(p, @params[p]));
+                addSqlServerParameter(dbcomm, p, @params[p]);
 
             if (tran != null)
                 dbcomm.Transaction = (SqlTransaction)tran;
@@ -2384,6 +2400,7 @@ public class DB : IDisposable
 
         FwDict @params = new(fields.Keys.Count);
         var reW = new Regex(@"\W"); //pre-compile regex
+        FwList? sql_server_schema = null;
 
         foreach (string fname in fields.Keys)
         {
@@ -2394,6 +2411,14 @@ public class DB : IDisposable
             var fieldNameLc = fname.ToLowerInvariant();
             if (schema.TryGetValue(table, out var schemaTable) && schemaTable.TryGetValue(fieldNameLc, out object? schemaValue))
                 fieldType = schemaValue.toStr();
+
+            if (dbtype == DBTYPE_SQLSRV && fieldType == "datetime" && dbop.is_value)
+            {
+                sql_server_schema ??= loadTableSchemaFull(table);
+                if (sql_server_schema.Any(column => column["fw_subtype"].toStr() == "datetime2"
+                    && column["name"].toStr().Equals(fname, StringComparison.OrdinalIgnoreCase)))
+                    fieldType = "datetime2";
+            }
 
             var delim = $" {dbop.opstr} ";
             var param_name = reW.Replace(fname, "_") + suffix; // replace any non-alphanum in param names and add suffix

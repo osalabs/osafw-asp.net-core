@@ -25,6 +25,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Mail;
 
 namespace osafw;
@@ -70,9 +71,41 @@ public class FwReportsBase
     /// <summary>Opt in only after verifying offline rendering and the report's data-sharing scope.</summary>
     public virtual bool isSchedulingSupported => false;
 
-    public virtual string schedulingCode => report_code;
-    public virtual string schedulingTitle => schedulingCode;
-    protected virtual FwList schedulingParameters() => [];
+    /// <summary>Uses the compiled report's casing for direct routes while preserving legacy dashed codes.</summary>
+    public virtual string schedulingCode
+    {
+        get
+        {
+            var name = GetType().Name;
+            return name.Equals(report_code + "Report", StringComparison.OrdinalIgnoreCase) ? name[..^6] : report_code;
+        }
+    }
+
+    /// <summary>Uses the existing report title template as plain text for schedule names.</summary>
+    public virtual string schedulingTitle
+    {
+        get
+        {
+            var title = fw.parsePageInstance().parse_page(templateBaseDir(), "title.html", ps);
+            var plain = WebUtility.HtmlDecode(Utils.html2text(title)).Trim();
+            return plain.Length > 0 ? plain : schedulingCode;
+        }
+    }
+
+    /// <summary>Reads the optional scheduling filter definitions from the report's template directory.</summary>
+    protected virtual FwList schedulingParameters()
+    {
+        var path = Path.Combine(fw.config("template").toStr(), templateBaseDir().TrimStart('/'), "schedule.json");
+        if (!File.Exists(path))
+            return [];
+
+        var json = Utils.getFileContent(path, out var error);
+        if (error != null || Utils.jsonDecodeList(json) is not { } definitions
+            || definitions.Any(item => item is not FwDict))
+            throw new UserException("REPORT_FILTER_INVALID");
+
+        return new FwList(definitions.Cast<FwDict>());
+    }
 
     // A report-owned relative selector may resolve from this instant and fw.userTimezone during execution.
     protected DateTime? scheduled_run_utc { get; private set; }
@@ -89,9 +122,9 @@ public class FwReportsBase
             if (submitted[name] is string submittedValue)
                 filters[name] = submittedValue;
             else if (submitted.ContainsKey(name))
-                throw new UserException("Invalid report filter: " + name);
+                throw new UserException("REPORT_FILTER_INVALID");
             else if (is_frozen)
-                throw new UserException("A schedule filter is missing: " + name);
+                throw new UserException("REPORT_FILTER_MISSING");
         }
         readScheduledSort(submitted, filters);
 
@@ -124,12 +157,12 @@ public class FwReportsBase
         {
             var name = row["name"].toStr();
             if (filters.ContainsKey(name) || !definitions.Any(def => def["name"].toStr() == name && def["type"].toStr() == row["type"].toStr()))
-                throw new UserException("A saved report filter no longer matches its definition.");
+                throw new UserException("REPORT_FILTER_CHANGED");
 
             filters[name] = row["value"];
         }
         if (filters.Count != definitions.Count)
-            throw new UserException("A saved report filter is missing.");
+            throw new UserException("REPORT_FILTER_MISSING");
 
         readScheduledSort(payload, filters);
         var sort = filters["sortby"].toStr();
@@ -138,7 +171,7 @@ public class FwReportsBase
             || (direction.Length > 0 && direction is not ("asc" or "desc"))
             || (list_sortmap.Count == 0 && (payload.ContainsKey("sortby") || payload.ContainsKey("sortdir"))))
         {
-            throw new UserException("The saved report sort no longer matches its definition.");
+            throw new UserException("REPORT_SORT_CHANGED");
         }
 
         f = filters;
@@ -175,7 +208,7 @@ public class FwReportsBase
             result.Add(new FwDict
             {
                 ["name"] = name,
-                ["label"] = definition?["label"].toStr(name) ?? name,
+                ["label"] = fw.parsePageInstance().langMap(definition?["label"].toStr(name) ?? name),
                 ["value"] = value
             });
         }
@@ -191,7 +224,7 @@ public class FwReportsBase
             if (name is "format" or "sortby" or "sortdir" or "is_preview" or "edit" or "xss"
                 or "email_as" or "to_emails" or "pagenum" or "pagesize" or "send_email" or "is_run")
             {
-                throw new UserException("This report uses a reserved scheduling filter name.");
+                throw new UserException("REPORT_FILTER_INVALID");
             }
         }
 
@@ -278,15 +311,12 @@ public class FwReportsBase
     /// <remarks>Use captureScheduledFilters or applyScheduledFilters before running a scheduled report.</remarks>
     internal static FwReportsBase createScheduledInstance(FW fw, string repcode, FwDict f, bool is_hardcoded_only = false)
     {
-        if (!fw.model<Users>().isSiteAdmin())
-            throw new AuthException("Site Administrator required");
-
         var report = is_hardcoded_only
-            ? initializeHardcodedReport(fw, repcode, f) ?? throw new UserException("The original hardcoded report is unavailable.")
+            ? initializeHardcodedReport(fw, repcode, f) ?? throw new UserException("REPORT_SCHEDULE_UNAVAILABLE")
             : initializeReport(fw, repcode, f);
 
         if (!report.isSchedulingSupported)
-            throw new UserException("This report does not support scheduled email.");
+            throw new UserException("REPORT_SCHEDULE_UNAVAILABLE");
 
         // Stored-report access is independent of filters and protects its SQL-backed filter metadata.
         if (report is FwCustomReport)
@@ -609,30 +639,21 @@ public class FwReportsBase
         return result;
     }
 
-    /// <summary>Validates plain addresses before rendering; scheduled addresses use explicit list delimiters.</summary>
+    /// <summary>Returns valid plain addresses separated by semicolons, or an empty string.</summary>
     internal static string normalizeRecipients(string recipients, bool is_scheduled = false)
     {
-        var emails = is_scheduled
-            ? recipients.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            : Utils.splitEmails(recipients).ToArray();
-        if (emails.Length == 0)
-            throw new UserException("Email recipient is required");
+        if (!is_scheduled)
+            return string.Join(";", Utils.splitEmails(recipients).Where(FormUtils.isEmail));
 
-        foreach (var email in emails)
-        {
-            var is_valid = is_scheduled
-                ? MailAddress.TryCreate(email, out var address) && address.Address == email && address.DisplayName.Length == 0
-                    && Utils.splitEmails(email).SequenceEqual([email])
-                : FormUtils.isEmail(email);
-            if (!is_valid)
-                throw new UserException("Invalid email recipient");
-        }
-
-        return string.Join(";", is_scheduled ? emails.Distinct(StringComparer.OrdinalIgnoreCase) : emails);
+        var emails = recipients.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Where(email => MailAddress.TryCreate(email, out var address) && address.Address == email && address.DisplayName.Length == 0
+                && Utils.splitEmails(email).SequenceEqual([email]))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        return string.Join(";", emails);
     }
 
     /// <summary>Renders an initialized report once and delivers it, deleting only the generated attachment.</summary>
-    internal bool sendReportEmail(string sender, string recipients, string emailFormat, bool is_scheduled = false)
+    internal bool sendReportEmail(string recipients, string emailFormat, bool is_scheduled = false)
     {
         string? pdf = null;
         try
@@ -647,26 +668,32 @@ public class FwReportsBase
                 render_to = pdf;
                 render();
                 if (!File.Exists(pdf) || new FileInfo(pdf).Length == 0)
-                    throw new UserException("The report did not produce a PDF attachment.");
+                    throw new UserException("REPORT_PDF_EMPTY");
 
                 attachments[report_code + ".pdf"] = pdf;
-                body = "Report pdf attached";
+                body = "";
             }
             else
             {
                 render_to = TO_STRING;
                 body = render(new FwDict { ["_layout"] = fw.config("PAGE_LAYOUT_EMAIL") });
                 if (is_scheduled && string.IsNullOrWhiteSpace(body))
-                    throw new UserException("The report did not produce email content.");
+                    throw new UserException("REPORT_BODY_EMPTY");
             }
 
             try
             {
-                return fw.sendEmail(sender, recipients, "Report " + report_code, body, attachments);
+                // The HTML body comes from the server-rendered report, not submitted markup.
+                return fw.sendEmailTpl(recipients, "report.html", new FwDict
+                {
+                    ["report_code"] = report_code,
+                    ["is_pdf"] = emailFormat == "pdf",
+                    ["body"] = body
+                }, attachments);
             }
             catch (Exception) when (is_scheduled)
             {
-                throw new FwCronUncertainException("Report delivery outcome is uncertain. Check the mail server before retrying.");
+                throw new FwCronUncertainException("REPORT_DELIVERY_UNCERTAIN");
             }
         }
         finally

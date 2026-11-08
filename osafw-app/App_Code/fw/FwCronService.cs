@@ -45,7 +45,7 @@ public class FwCronService : BackgroundService
 
     protected virtual void ProcessJobs(CancellationToken ct)
     {
-        List<TFwCron> jobs;
+        List<FwCron.Row> jobs;
         using (var fw = FW.initOffline(_configuration))
         {
             jobs = fw.model<FwCron>().listDueJobs();

@@ -75,7 +75,7 @@
       day.disabled = isAdvanced || kind !== 'monthly';
       day.required = !isAdvanced && kind === 'monthly';
       const days = weekdays.filter(box => box.checked).map(box => box.value);
-      mode.setCustomValidity(!isAdvanced && kind === 'weekly' && !days.length ? 'Select at least one weekday.' : '');
+      mode.setCustomValidity(!isAdvanced && kind === 'weekly' && !days.length ? root.dataset.weekdayRequired : '');
       if (isAdvanced) return;
 
       const [hour, minute] = time.value.split(':').map(Number);
@@ -97,7 +97,7 @@
       previewTable.hidden = true;
       taskZone.title = zone.value;
       if (!expression.value) {
-        message.textContent = 'Complete the schedule to see upcoming occurrences.';
+        message.textContent = message.dataset.incomplete;
         return;
       }
 
@@ -116,11 +116,11 @@
         const result = await response.json();
         if (request.signal.aborted) return;
         if (!response.ok || !Array.isArray(result.occurrences)) {
-          message.textContent = result.error || 'Preview unavailable.';
+          message.textContent = result.error || message.dataset.unavailable;
           return;
         }
 
-        message.textContent = result.occurrences.length ? '' : 'No future occurrences fit this schedule.';
+        message.textContent = result.occurrences.length ? '' : message.dataset.empty;
         previewTable.hidden = result.occurrences.length === 0;
         result.occurrences.forEach(occurrence => {
           const row = document.createElement('tr');
@@ -134,7 +134,7 @@
           occurrences.append(row);
         });
       } catch (error) {
-        if (!request.signal.aborted) message.textContent = 'Preview unavailable.';
+        if (!request.signal.aborted) message.textContent = message.dataset.unavailable;
       }
     }
 
@@ -197,7 +197,7 @@
         if (entry.name === 'sortby' || entry.name === 'sortdir') continue;
         const field = filter.elements.namedItem(entry.key);
         const label = field?.getAttribute('aria-label') || field?.labels?.[0]?.textContent.trim();
-        const value = entry.value ? field?.selectedOptions?.[0]?.textContent.trim() || entry.value : '(blank)';
+        const value = entry.value ? field?.selectedOptions?.[0]?.textContent.trim() || entry.value : panel.dataset.scheduleBlank;
 
         const row = document.createElement('li');
         row.textContent = (label || entry.name) + ': ' + value;
@@ -205,7 +205,7 @@
       }
       if (!summary.childElementCount) {
         const row = document.createElement('li');
-        row.textContent = 'This report has no filter fields.';
+        row.textContent = panel.dataset.scheduleEmpty;
         summary.append(row);
       }
     }

@@ -22,8 +22,6 @@ public class SampleReport : FwReportsBase
     }
 
     public override bool isSchedulingSupported => true;
-    public override string schedulingCode => "Sample";
-    public override string schedulingTitle => "Sample Report (Activity Log)";
 
     public override FwList describeScheduledFilters(FwList saved)
     {
@@ -43,46 +41,6 @@ public class SampleReport : FwReportsBase
         }
         return result;
     }
-
-    protected override FwList schedulingParameters() =>
-    [
-        new()
-        {
-            ["name"] = "from_date",
-            ["label"] = "From date",
-            ["type"] = "date"
-        },
-        new()
-        {
-            ["name"] = "to_date",
-            ["label"] = "To date",
-            ["type"] = "date"
-        },
-        new()
-        {
-            ["name"] = "events_id",
-            ["label"] = "Event",
-            ["type"] = "int"
-        },
-        new()
-        {
-            ["name"] = "fwentities_id",
-            ["label"] = "Entity",
-            ["type"] = "int"
-        },
-        new()
-        {
-            ["name"] = "users_id",
-            ["label"] = "User",
-            ["type"] = "int"
-        },
-        new()
-        {
-            ["name"] = "s",
-            ["label"] = "Search",
-            ["type"] = "text"
-        }
-    ];
 
     // define report filters in Me.f (available in report templates as f[...])
     // filter defaults can be Set here
@@ -183,7 +141,7 @@ public class SampleReport : FwReportsBase
                 appliedParams.Add(new FwDict
                 {
                     ["name"] = name,
-                    ["label"] = def["label"],
+                    ["label"] = fw.parsePageInstance().langMap(def["label"].toStr(name)),
                     ["value"] = f[name]
                 });
             }

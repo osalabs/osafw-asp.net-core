@@ -2,7 +2,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -12,41 +11,20 @@ namespace osafw.Tests;
 
 internal static class FwCronProviderChecks
 {
-    private sealed class TestCron(Func<TFwCron, FwDict?> run) : FwCron
+    private sealed class TestCron(Func<FwCron.Row, FwDict?> run) : FwCron
     {
-        protected override FwDict? runJobAction(TFwCron job) => run(job);
+        protected override FwDict? runJobAction(FwCron.Row job) => run(job);
     }
 
-    private sealed class CollisionDb(string connection, string provider) : DB(connection, provider)
-    {
-        public int Attempts { get; private set; }
-        public bool IsForceOtherError { get; set; }
-
-        public override int insert(string table, FwDict fields)
-        {
-            if (table == "fwcron" && ++Attempts == 1)
-            {
-                if (IsForceOtherError)
-                    return base.insert(table, DB.h("icode", fields["icode"]));
-
-                var code = fields["icode"].toStr();
-                if (dbtype == DBTYPE_SQLSRV && valuep("SELECT CASE WHEN 'Abc' = 'ABC' THEN 1 ELSE 0 END").toInt() == 1)
-                    code = code.ToUpperInvariant();
-                base.insert(table, DB.h("icode", code, "cron", "0 0 * * *"));
-            }
-            return base.insert(table, fields);
-        }
-    }
-
-    private static FW context(string connection, string provider, string timezone = "UTC", DB? db = null) =>
+    private static FW context(string connection, string provider, string timezone = "UTC") =>
         new(null, new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["appSettings:site_root"] = Path.Combine(TestHelpers.RepoRoot(), "osafw-app"),
             ["appSettings:log_level"] = "0"
-        }).Build(), _ => db ?? new DB(DB.h(
+        }).Build(), _ => new DB(DB.h(
             "connection_string", connection, "type", provider, "timezone", timezone), "main"));
 
-    private static TestCron model(FW fw, Func<TFwCron, FwDict?> run)
+    private static TestCron model(FW fw, Func<FwCron.Row, FwDict?> run)
     {
         var model = new TestCron(run);
         model.init(fw);
@@ -77,16 +55,19 @@ internal static class FwCronProviderChecks
         });
         var reference = DateTime.UtcNow.AddMinutes(-1);
         var due = reference.Date.AddHours(reference.Hour).AddMinutes(reference.Minute);
-        var id = firstCron.add(DB.h("icode", "claim_test", "cron", "0 0 * * *", "next_run_utc", due));
+        var id = firstCron.add(DB.h("icode", "claim_test", "cron", "0 0 * * *", "next_run_utc", due,
+            "payload", "Current payload", "upd_time", due.AddDays(-1)));
         var stale = secondCron.listDueJobs().Single(task => task.id == id);
         Assert.AreEqual(due, stale.next_run_utc, "Schedule instants remain UTC even when the database timezone is Eastern.");
         Assert.IsTrue(firstCron.saveDefinition(id, stale, DB.h("payload", "current payload")));
+        Assert.IsFalse(secondCron.saveDefinition(id, stale, DB.h("payload", "stale overwrite")),
+            "A concurrent case-only edit invalidates the observed definition on case-insensitive databases.");
         Assert.IsTrue(firstCron.requestRun(id));
         var firstRun = Task.Run(() => firstCron.runJob(stale));
         try
         {
             Assert.IsTrue(entered.Wait(TimeSpan.FromSeconds(20)), "The worker did not enter the handler.");
-            var held = secondCron.getTask(id)!;
+            var held = secondCron.oneT(id)!;
             Assert.IsNotNull(held.run_token);
             Assert.IsNull(held.run_requested_utc, "Manual and scheduled work coalesce in the same claim.");
             Assert.AreEqual(DateTimeKind.Utc, held.last_started_utc!.Value.Kind);
@@ -106,13 +87,17 @@ internal static class FwCronProviderChecks
         secondCron.runJob(stale);
         Assert.AreEqual(1, firstCalls);
         Assert.AreEqual(0, secondCalls, "The earlier due-row read cannot start a second run after the claim was released.");
-        var finished = secondCron.getTask(id)!;
+        secondCron.removeCache(id); // The worker finished in a separate request context.
+        var finished = secondCron.oneT(id)!;
         Assert.IsNull(finished.run_token);
         Assert.IsNotNull(finished.last_finished_utc);
         Assert.IsTrue(finished.next_run_utc > DateTime.UtcNow);
         var result = FwCron.parseResult(finished.last_result);
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, result["status"]);
         Assert.AreEqual(3, ((FwDict)result["data"]!)["processed_count"].toInt());
+        var events = second.model<FwActivityLogs>().listByEntity(FwEntities.ICODE_CRON, id,
+            new[] { FwLogTypes.ICODE_CRON_EVENT });
+        Assert.HasCount(1, events, "Only the administrator's manual run request enters activity history.");
     }
 
     public static void ManualRecoveryAndFailure(string connection, string provider)
@@ -138,8 +123,8 @@ internal static class FwCronProviderChecks
         var id = cron.add(DB.h("icode", "manual_test", "cron", "0 0 * * *", "next_run_utc", next, "start_date_utc", next));
         Assert.IsTrue(cron.requestRun(id));
         Assert.IsFalse(admin.requestRun(id));
-        cron.runJob(cron.getTask(id)!);
-        var paused = cron.getTask(id)!;
+        cron.runJob(cron.oneT(id)!);
+        var paused = cron.oneT(id)!;
         Assert.AreEqual(FwModel.STATUS_INACTIVE, paused.status, "Finishing does not undo a concurrent pause.");
         Assert.AreEqual(next, paused.next_run_utc, "An early manual run preserves the next occurrence.");
         var result = FwCron.parseResult(paused.last_result);
@@ -147,28 +132,32 @@ internal static class FwCronProviderChecks
         Assert.IsFalse(result.ContainsKey("data"));
 
         first.db.update("fwcron", DB.h("run_token", "AbcHeld"), DB.h("id", id));
-        var held = cron.getTask(id)!;
+        cron.removeCache(id);
+        var held = cron.oneT(id)!;
         cron.runJob(held);
         Assert.AreEqual(1, calls);
         Assert.IsFalse(admin.recover(id, "abcHeld"), "Recovery compares the exact observed token even under SQL Server collation.");
         Assert.IsTrue(admin.recover(id, "AbcHeld"));
-        var recovered = cron.getTask(id)!;
+        cron.removeCache(id); // Recovery used the separate admin context.
+        var recovered = cron.oneT(id)!;
         Assert.AreEqual(FwCron.RESULT_UNCERTAIN, FwCron.parseResult(recovered.last_result)["status"]);
         Assert.AreEqual(FwModel.STATUS_INACTIVE, recovered.status);
         Assert.IsNull(recovered.run_token);
         Assert.IsTrue(admin.requestRun(id));
         Assert.IsTrue(admin.pause(id), "Pause can cancel a manual request queued on an already-paused task.");
-        Assert.IsNull(admin.getTask(id)!.run_requested_utc);
+        Assert.IsNull(admin.oneT(id)!.run_requested_utc);
 
         var failingId = cron.add(DB.h("icode", "failing_test", "cron", "0 0 * * *", "next_run_utc", next.AddDays(-3)));
-        var failing = cron.getTask(failingId)!;
+        var failing = cron.oneT(failingId)!;
         cron.runJob(failing);
         cron.runJob(failing);
         Assert.AreEqual(2, calls, "The failed occurrence advances without per-minute retries.");
-        var failed = cron.getTask(failingId)!;
+        var failed = cron.oneT(failingId)!;
         Assert.IsTrue(failed.next_run_utc > DateTime.UtcNow);
         Assert.AreEqual(FwCron.RESULT_FAILED, FwCron.parseResult(failed.last_result)["status"]);
         Assert.IsFalse(failed.last_result!.Contains("sensitive test message", StringComparison.Ordinal));
+        Assert.HasCount(1, first.model<FwActivityLogs>().listByEntity(FwEntities.ICODE_CRON, failingId,
+            new[] { FwLogTypes.ICODE_CRON_EVENT }), "Failed runs remain in activity history.");
     }
 
     public static void ReportIdentityAndSkippedWork(string connection, string provider)
@@ -182,15 +171,10 @@ internal static class FwCronProviderChecks
         cron.addReport("Sample", fields);
         cron.addReport("SampleXArchive", fields);
 
-        var parameters = new FwDict();
-        var predicate = cron.reportFilterSql("Sample_Archive", parameters);
-        var matched = first.db.arrayp<TFwCron>($"SELECT * FROM {cron.qTable()} WHERE {predicate}", parameters);
-        Assert.AreEqual(id, matched.Single().id);
-
-        var candidate = cron.getTask(id)!;
+        var candidate = cron.oneT(id)!;
         Assert.AreEqual("Sample_Archive", FwCron.reportCode(candidate.icode));
         cron.runJob(candidate);
-        var skipped = cron.getTask(id)!;
+        var skipped = cron.oneT(id)!;
         Assert.IsTrue(skipped.next_run_utc > DateTime.UtcNow);
         Assert.IsNull(skipped.run_requested_utc);
         Assert.IsNull(skipped.last_started_utc);
@@ -216,7 +200,7 @@ internal static class FwCronProviderChecks
         var secondFold = firstFold.AddHours(1);
         var id = cron.add(DB.h("icode", "fold_utc", "cron", "0 0 * * *", "status", FwModel.STATUS_INACTIVE,
             "start_date_utc", firstFold, "next_run_utc", secondFold));
-        var observed = cron.getTask(id)!;
+        var observed = cron.oneT(id)!;
         Assert.AreEqual(firstFold, observed.start_date_utc);
         Assert.AreEqual(secondFold, observed.next_run_utc);
         Assert.AreEqual(DateTimeKind.Utc, observed.next_run_utc!.Value.Kind);
@@ -224,20 +208,20 @@ internal static class FwCronProviderChecks
             "Raw storage must contain UTC, without a database-local conversion on either write or read.");
 
         Assert.IsTrue(cron.saveDefinition(id, observed, DB.h("end_date_utc", secondFold)));
-        Assert.AreEqual(secondFold, cron.getTask(id)!.end_date_utc);
+        Assert.AreEqual(secondFold, cron.oneT(id)!.end_date_utc);
         cron.update(id, DB.h("end_date_utc", null));
-        Assert.IsTrue(cron.resume(cron.getTask(id)!));
+        Assert.IsTrue(cron.resume(cron.oneT(id)!));
         Assert.IsTrue(cron.requestRun(id));
-        cron.runJob(cron.getTask(id)!);
+        cron.runJob(cron.oneT(id)!);
         Assert.AreEqual(1, calls, "A bound in a repeated local hour must not pause or block the task.");
-        Assert.AreEqual(FwModel.STATUS_ACTIVE, cron.getTask(id)!.status);
+        Assert.AreEqual(FwModel.STATUS_ACTIVE, cron.oneT(id)!.status);
 
         // The next recurrence itself falls in the repeated Eastern hour and must remain scheduled.
         var due = new DateTime(2025, 10, 15, 12, 0, 0, DateTimeKind.Utc);
         var nextFold = cron.add(DB.h("icode", "fold_computed", "cron", "30 1 * 11 SUN#1",
             "timezone", "Eastern Standard Time", "next_run_utc", due));
         cron.runJob(cron.listDueJobs().Single(task => task.id == nextFold));
-        var finished = cron.getTask(nextFold)!;
+        var finished = cron.oneT(nextFold)!;
         Assert.AreEqual(2, calls);
         Assert.AreEqual(FwModel.STATUS_ACTIVE, finished.status);
         Assert.IsTrue(finished.next_run_utc > DateTime.UtcNow);
@@ -245,44 +229,6 @@ internal static class FwCronProviderChecks
         Assert.IsTrue(TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").IsAmbiguousTime(localNext));
         Assert.IsNull(finished.run_token);
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, FwCron.parseResult(finished.last_result)["status"]);
-    }
-
-    public static void ReportIdentityUsesProviderCaseRules(string connection, string provider)
-    {
-        using var scope = FwConfig.beginScope();
-        using var first = context(connection, provider);
-        var cron = first.model<FwCron>();
-        var fields = DB.h("cron", "0 0 * * *");
-        var upper = cron.addReport("Case_Report", fields);
-        var lower = cron.addReport("case_report", fields);
-        cron.addReport("Case_Report_Archive", fields);
-        cron.addReport("CaseXReport", fields);
-
-        int[] matchingIds(string code, string source)
-        {
-            var parameters = new FwDict();
-            var predicate = cron.reportFilterSql(code, parameters);
-            return first.db.arrayp<TFwCron>($"SELECT id FROM {source} WHERE {predicate}", parameters)
-                .Select(row => row.id).ToArray();
-        }
-
-        var table = cron.qTable();
-        if (provider == DB.DBTYPE_SQLITE)
-        {
-            CollectionAssert.AreEqual(new[] { upper }, matchingIds("Case_Report", table));
-            CollectionAssert.AreEqual(new[] { lower }, matchingIds("case_report", table));
-            return;
-        }
-
-        // A SQL Server task code inherits the column collation. Exercise both supported case rules
-        // without changing the isolated server/database collation.
-        var caseSensitive = $"(SELECT id, icode COLLATE Latin1_General_100_CS_AS AS icode FROM {table}) AS tasks";
-        CollectionAssert.AreEqual(new[] { upper }, matchingIds("Case_Report", caseSensitive));
-        CollectionAssert.AreEqual(new[] { lower }, matchingIds("case_report", caseSensitive));
-
-        var caseInsensitive = $"(SELECT id, icode COLLATE Latin1_General_100_CI_AS AS icode FROM {table}) AS tasks";
-        CollectionAssert.AreEquivalent(new[] { upper, lower }, matchingIds("Case_Report", caseInsensitive));
-        CollectionAssert.AreEquivalent(new[] { upper, lower }, matchingIds("case_report", caseInsensitive));
     }
 
     public static void ExistingLegacyHandler(string connection, string provider)
@@ -293,13 +239,13 @@ internal static class FwCronProviderChecks
         var id = cron.add(DB.h("icode", FwCron.ICODE_EXAMPLE, "cron", "0 0 * * *"));
 
         cron.runJob(cron.listDueJobs().Single(task => task.id == id));
-        var initialized = cron.getTask(id)!;
+        var initialized = cron.oneT(id)!;
         Assert.IsTrue(initialized.next_run_utc > DateTime.UtcNow);
         Assert.IsNull(initialized.last_result);
 
         first.db.update("fwcron", DB.h("next_run_utc", DateTime.UtcNow.AddHours(-1), "start_date_utc", DateTime.UtcNow.AddDays(-1)), DB.h("id", id));
         cron.runJob(cron.listDueJobs().Single(task => task.id == id));
-        var finished = cron.getTask(id)!;
+        var finished = cron.oneT(id)!;
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, FwCron.parseResult(finished.last_result)["status"]);
         Assert.IsTrue(finished.next_run_utc > DateTime.UtcNow);
     }
@@ -333,7 +279,7 @@ internal static class FwCronProviderChecks
         var update = updates.listPending().Single(row => row["iname"].toStr() == "upd2026-11-07-scheduled-tasks.sql");
         updates.applyOne(update["id"].toInt());
 
-        var unmigrated = cron.getTask(id)!;
+        var unmigrated = cron.oneT(id)!;
         Assert.IsNull(unmigrated.next_run_utc, "The update must not guess how to convert existing dates.");
         Assert.IsNull(unmigrated.start_date_utc);
         Assert.IsNull(unmigrated.end_date_utc);
@@ -342,7 +288,7 @@ internal static class FwCronProviderChecks
         var legacy = db.row("fwcron", DB.h("id", id));
         Assert.AreEqual(due, legacy["next_run"].toDate());
         cron.update(id, DB.h("next_run_utc", legacy["next_run"], "start_date_utc", legacy["start_date"], "end_date_utc", legacy["end_date"]));
-        var task = cron.getTask(id)!;
+        var task = cron.oneT(id)!;
         Assert.AreEqual(FwCron.ICODE_EXAMPLE, task.icode);
         Assert.AreEqual("Original task", task.iname);
         Assert.AreEqual("0 0 * * *", task.cron);
@@ -358,29 +304,6 @@ internal static class FwCronProviderChecks
         Assert.IsTrue(cron.requestRun(id));
         Assert.IsTrue(first.model<FwActivityLogs>().listByEntity(FwEntities.ICODE_CRON, id)
             .Any(row => row["idesc"].toStr().StartsWith("Manual run requested", StringComparison.Ordinal)));
-    }
-
-    public static void GeneratedCodeRetriesOnlyUniqueCodeConflicts(string connection, string provider)
-    {
-        using var scope = FwConfig.beginScope();
-        using var collision = new CollisionDb(connection, provider);
-        using var first = context(connection, provider, db: collision);
-        var cron = first.model<FwCron>();
-        var id = cron.addReport("Collision", DB.h("cron", "0 0 * * *"));
-        Assert.AreEqual(2, collision.Attempts);
-        Assert.AreEqual("Collision", FwCron.reportCode(cron.getTask(id)!.icode));
-
-        using var broken = new CollisionDb(connection, provider) { IsForceOtherError = true };
-        using var second = context(connection, provider, db: broken);
-        try
-        {
-            second.model<FwCron>().addReport("ConstraintFailure", DB.h("cron", "0 0 * * *"));
-            Assert.Fail("An unrelated constraint failure must be surfaced.");
-        }
-        catch (DbException)
-        {
-            Assert.AreEqual(1, broken.Attempts);
-        }
     }
 }
 
@@ -420,14 +343,6 @@ public class FwCronSqliteTests
 
     [TestMethod]
     public void ReportIdentityAndSkippedWork() => FwCronProviderChecks.ReportIdentityAndSkippedWork(file.ConnectionString, DB.DBTYPE_SQLITE);
-
-    [TestMethod]
-    public void ReportIdentityUsesProviderCaseRules() =>
-        FwCronProviderChecks.ReportIdentityUsesProviderCaseRules(file.ConnectionString, DB.DBTYPE_SQLITE);
-
-    [TestMethod]
-    public void GeneratedCodeRetriesOnlyUniqueCodeConflicts() =>
-        FwCronProviderChecks.GeneratedCodeRetriesOnlyUniqueCodeConflicts(file.ConnectionString, DB.DBTYPE_SQLITE);
 }
 #endif
 
@@ -465,12 +380,4 @@ public class FwCronSqlServerTests
 
     [TestMethod]
     public void ReportIdentityAndSkippedWork() => FwCronProviderChecks.ReportIdentityAndSkippedWork(database!.ConnectionString, DB.DBTYPE_SQLSRV);
-
-    [TestMethod]
-    public void ReportIdentityUsesProviderCaseRules() =>
-        FwCronProviderChecks.ReportIdentityUsesProviderCaseRules(database!.ConnectionString, DB.DBTYPE_SQLSRV);
-
-    [TestMethod]
-    public void GeneratedCodeRetriesOnlyUniqueCodeConflicts() =>
-        FwCronProviderChecks.GeneratedCodeRetriesOnlyUniqueCodeConflicts(database!.ConnectionString, DB.DBTYPE_SQLSRV);
 }

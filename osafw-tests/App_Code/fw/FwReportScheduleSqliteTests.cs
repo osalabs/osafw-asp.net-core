@@ -55,9 +55,9 @@ public class FwReportScheduleSqliteTests
                 "pagesize", "5000", "to_emails", "unrelated@example.test", "arbitrary", "ignore");
         }
 
-        TFwCron[] tasks() => db.array<TFwCron>("fwcron", [], "id").ToArray();
+        FwCron.Row[] tasks() => db.array<FwCron.Row>("fwcron", [], "id").ToArray();
 
-        prepare("1/2/2026", "html", "first@example.test", "0 7 * * *");
+        prepare("1/2/2026", "html", "first@example.test, invalid-address", "0 7 * * *");
         Assert.ThrowsExactly<AuthException>(() => call("GET", "ScheduleEmail"));
         fw.FORM["XSS"] = "wrong-token";
         Assert.ThrowsExactly<AuthException>(() => call("POST", "ScheduleEmail"));
@@ -102,6 +102,16 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual("1/2/2026", ((FwList)first["params"]!)[0]["value"]);
         Assert.AreEqual("3/4/2026", ((FwList)second["params"]!)[0]["value"]);
 
+        // Exercise the rendered links and default name from the actual report template.
+        fw.FORM.Clear();
+        using var page = new MemoryStream();
+        fw.response.Body = page;
+        call("GET", "Show");
+        var html = System.Text.Encoding.UTF8.GetString(page.ToArray());
+        StringAssert.Contains(html, $"/Admin/Reports/(ScheduleEmail)/{reportCode}");
+        StringAssert.Contains(html, "/Admin/Cron?dofilter=1&amp;f[s]=report_" + reportCode);
+        StringAssert.Contains(html, "Case Report - email");
+
         db.update("fwreports", DB.h(
             "sql_template", "SELECT @selected_date AS selected_date, @currency AS currency",
             "params_json", """{"selected_date":{"type":"date","required":true},"currency":{"type":"text","required":true}}"""),
@@ -142,7 +152,14 @@ public class FwReportScheduleSqliteTests
         Assert.IsTrue(brokenLookup["is_report_unavailable"].toBool());
         Assert.AreEqual("first@example.test", brokenLookup["recipients"]);
 
-
+        // A failed update may reroute once to Show, which must report an unreadable saved schedule.
+        db.update("fwcron", DB.h("payload", "{}"), DB.h("id", records[0].id));
+        fw.model<FwCron>().removeCache(records[0].id);
+        fw.FORM["XSS"] = "schedule-test-token";
+        fw.FORM["schedule_id"] = records[0].id.ToString();
+        var error = Assert.ThrowsExactly<UserException>(() => call("POST", "UpdateScheduleFilters"));
+        Assert.AreNotEqual("REPORT_SCHEDULE_INVALID", error.Message);
+        Assert.AreEqual("{}", tasks()[0].payload);
     }
 }
 #endif

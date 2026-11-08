@@ -349,6 +349,7 @@ When passing an offset to `limit()`, include an `ORDER BY` in the SQL. SQL Serve
 
 - SQL `date` stays date-only.
 - SQL `datetime`/`datetime2` is converted between the configured DB timezone and internal UTC.
+- SQL Server helper-built queries and writes bind `datetime2` columns with full precision, including equality predicates. Legacy `datetime` columns and raw SQL parameters retain their existing binding behavior.
 - Fields ending in `_utc` skip DB timezone conversion and are treated as UTC instants.
 - SQL Server `datetimeoffset` and SQLite fields declared as `DATETIMEOFFSET` are treated as instants. Dictionary rows/scalars normalize output to UTC-compatible values; typed DTO properties can be `DateTimeOffset`.
 - `DB.NOW` is field-aware in helper-built SQL: normal datetime fields use DB-local current time, `_utc` fields use current UTC time, and SQL Server `datetimeoffset` fields use an offset-aware current time.

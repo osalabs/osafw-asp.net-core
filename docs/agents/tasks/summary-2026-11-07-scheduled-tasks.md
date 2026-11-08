@@ -121,3 +121,48 @@ Verification:
 - JavaScript syntax, diff whitespace and strict UTF-8/no-BOM/CRLF passed. Only form preview values were changed in the browser; nothing was saved or executed, and no email was sent. The runner remains disabled.
 - Independent consumer-contract review found the stale-script rollout case; the targeted revision and normal-include browser check resolved it. The reviewer rechecked the revised code and audited this summary with no blocking findings. Review loop can stop.
 - The card-spacing change is committed as 0995ce4c. The developer subsequently authorized committing and pushing this UI refinement on November 8, 2026.
+
+
+## Lean implementation review follow-up
+
+The developer approved replacing scheduler-specific scaffolding with existing framework conventions. `enforcePost` remains the frequent shortcut; `enforceMethod` checks allowed effective methods, actual transport, legitimate POST overrides and write-token validation. Standard Admin/Dynamic delete and bulk actions use it. Cron inherits the standard delete confirmation and keeps conditional deletion in the model. Read-only users retain personal-list operations. Tests that previously set only the effective route method now supply the actual request method as well.
+
+Scheduler rows use `FwModel<FwCron.Row>` and normal cached `oneT` reads. Claims use a conditional update and token readback; finishing matches the token and preserves an administrator's pause. Provider-specific locks, explicit transactions, NanoID collision retries and the unused report-prefix filter are removed. Successful writes invalidate the normal caches. Creation uses standard model auditing; ordinary starts/successes update only the task row, with commented activity calls available for developer debugging. Administrative actions, failures, recovery and exceptional state changes retain activity. `FW.logActivity` contains logging failures centrally. SMTP error diagnostics are restored as requested.
+
+The controllers use explicit guards and existing required-field validation; long task names are truncated to 255 characters. UI labels, messages, schedule descriptions and URLs live in ParsePage templates or select-message files. Shared schedule/editor preparation belongs to the model. Report parameter definitions live in `schedule.json`; existing report titles supply default schedule names. Recipient normalization drops invalid entries and returns an empty string when none remain; callers handle required validation. Worker run-as authorization remains at the execution boundary.
+
+SQL Server verification exposed an existing parameter precision issue: inferred SQL datetime parameters could fail equality against datetime2 values. The developer explicitly approved a narrow DB correction preserving datetime2 precision and legacy datetime behavior. The correction uses existing cached column subtype metadata for helper-built SQL Server parameters, preserving raw-parameter behavior and other providers.
+
+Implementation was split into disjoint scheduler core/provider tests, Cron UI/templates, and report workflows; the primary owned shared guards/logging, integration and final verification. All changes remain uncommitted; no configured application database or real email recipients were used.
+
+
+Verification for this follow-up:
+
+- `./scripts/test.ps1`: 1,092/1,092 passed, zero skipped, after the DB correction and final templates, before the last bounded review fixes. Earlier failures were corrected: fixtures needed actual HTTP methods, the title parser needed the `.html` suffix, and SQL Server needed precise datetime2 parameters.
+- `./scripts/test.ps1 -Profile SqlServer -SqlServer localhost -Filter 'FullyQualifiedName~FwCron|FullyQualifiedName~DBTests'`: 41/41 passed, zero skipped, on disposable databases. Includes one-claim behavior, pause preservation, recovery, quiet successful history and exact timestamp predicates while preserving legacy datetime matching.
+- `./scripts/test.ps1 -Profile Browser -Filter 'FullyQualifiedName~CronEditorBrowserTests|FullyQualifiedName~ScheduledReport'`: 3/3 passed. An additional focused report Browser run passed 2/2; these use a loopback mail server and disposable PDF outputs, not real recipients.
+- Focused report/mail selection passed 74/74; final controller selection passed 5/5 including standard delete confirmation and method overrides. These were followed by the full passing Fast run.
+- App build with `isFwCronService` and `isRoles` enabled passed with zero warnings/errors in task-owned output. All test builds also passed without warnings/errors.
+- JavaScript syntax, config parsing, `git diff --check`, and strict UTF-8/no-BOM/CRLF validation of 55 changed files passed. The unused custom delete templates were removed. No application database changes, live worker activation or real SMTP delivery were performed.
+
+Independent reviewer_high reviewed the change with consumer-contract and state-integrity overlays. Review fixes preserve native PATCH and POST/PATCH bulk routes, reject negative creation IDs before job validation, and include the existing nullable update timestamp in conditional definition saves to detect case-only competing edits on case-insensitive databases. Final scoped verification: controller/security selection 72/72 passed; SQL Server scheduler selection 5/5 passed; SQLite scheduler selection 6/6 passed, all with zero warnings/errors/skips. Earlier full Fast, broader DB/SQL Server, and browser results above precede these bounded fixes; only affected checks were repeated.
+
+The normal audit timestamp is not a strict revision counter: two case-only edits sharing the same stored timestamp remain a narrow limit. This follows the developer's explicit preference for pragmatic atomic updates and ordinary request caching rather than extra concurrency machinery. Claim ownership remains protected by the unique token. The reviewer confirmed the summary's evidence and absence of private values; final review closure is recorded below.
+
+
+Final independent verdict: no blocking findings. The reviewer rechecked the fixes and audited the updated summary against the diff and test results. Review loop can stop.
+
+
+## Template and sender follow-up
+
+Moved the cron message selector from common to admin/cron and updated its controller/template consumers. SQL Server parameter binding remains separate from scalar normalization: datetime2 type/scale belongs to the SqlParameter, while normalizeParamValue is shared across providers. No DB behavior changed in this follow-up.
+
+The developer clarified that all report mail should use the configured sender, including interactive Email To. The proposed optional sender argument was declined; FW.sendEmailTpl stays unchanged. Interactive and scheduled report delivery now use emails/report.html, with the subject on its first line and either the PDF attachment message or trusted server-rendered HTML after it. The split report email templates were removed. Canonical cron documentation and the upgrade changelog record the sender change and required template.
+
+Verification:
+- ./scripts/test.ps1 -Filter 'FullyQualifiedName~FwEmailTests|FullyQualifiedName~AdminCronControllerTests|FullyQualifiedName~FwReportScheduleSqliteTests': 42/42 passed, zero skipped.
+- ./scripts/test.ps1 -Profile Browser -Filter 'FullyQualifiedName~ScheduledReportPdf_AttachesRealPdf': 2/2 passed, zero skipped. Covers Sample and custom PDF delivery, subject/body/configured sender, attachment content and cleanup.
+- Both builds passed with zero warnings/errors. Delivery checks use a loopback SMTP fixture; no real email was sent.
+- Scoped references contain no old common/cron_messages or split email template paths. Diff whitespace validation passed.
+
+Strict UTF-8/no-BOM/CRLF checks passed for all 13 follow-up files. Independent consumer-contract review and supplemental summary audit found no blocking findings or evidence discrepancies. Review loop can stop.

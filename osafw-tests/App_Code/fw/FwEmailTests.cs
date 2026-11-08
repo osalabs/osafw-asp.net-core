@@ -248,7 +248,7 @@ public class FwEmailTests
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public void SendEmail_LogsSmtpDetailsOnlyWhenPiiLoggingIsEnabled(bool isLogPii)
+    public void SendEmail_LogsSmtpErrorsAndRespectsPiiSettingForMessageDetails(bool isLogPii)
     {
         using var server = new FakeSmtpServer(rejectRecipient: "<safe@example.test>");
         var logPath = Path.Combine(Path.GetTempPath(), "fw-mail-log-" + Guid.NewGuid().ToString("N") + ".log");
@@ -274,10 +274,11 @@ public class FwEmailTests
             var log = File.ReadAllText(logPath);
             StringAssert.Contains(log, "Sending email.");
             StringAssert.Contains(log, "send_email error:");
+            StringAssert.Contains(log, "recipient rejected");
             foreach (var detail in new[]
             {
                 "private-sender@example.test", "private-to@example.test", "private-cc@example.test",
-                "private-reply@example.test", "safe@example.test", "private subject", "private body", "recipient rejected"
+                "private-reply@example.test", "private subject", "private body"
             })
             {
                 Assert.AreEqual(isLogPii, log.Contains(detail, StringComparison.Ordinal), detail);
@@ -453,7 +454,7 @@ public class FwEmailTests
 
         var result = scope.Fw.model<FwScheduledReports>().run(job);
 
-        Assert.AreEqual("Mail server accepted the report", result["message"]);
+        Assert.AreEqual("REPORT_SENT", result["message"]);
         Assert.AreEqual(1, db.RenderQueryCount);
         Assert.AreEqual(new DateTime(2026, 2, 1), db.LastBindings["@from_date"]);
         Assert.AreEqual(DBNull.Value, db.LastBindings["@blank_date"]);
@@ -500,6 +501,9 @@ public class FwEmailTests
 
         Assert.AreEqual(1, db.RenderQueryCount);
         StringAssert.Contains(server.MessageData, "Content-Type: application/pdf");
+        StringAssert.Contains(server.MessageData, "Subject: Report " + (isSample ? "Sample" : "scheduled_sales"));
+        StringAssert.Contains(server.MessageData, "Report PDF attached");
+        StringAssert.Contains(server.MessageData, "From: sender@example.test");
         StringAssert.Contains(server.MessageData, isSample ? "Sample.pdf" : "scheduled_sales.pdf");
         StringAssert.Contains(server.MessageData, "JVBERi0", "The attachment body starts with the base64 PDF signature.");
         CollectionAssert.AreEquivalent(before, Directory.GetFiles(tmp, "*.pdf"));
@@ -572,7 +576,7 @@ public class FwEmailTests
     }
 
     [TestMethod]
-    public void ReportEmailTo_RetainsInteractiveSender()
+    public void ReportEmailTo_UsesConfiguredSender()
     {
         using var server = new FakeSmtpServer();
         using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb(), isOffline: false);
@@ -581,6 +585,7 @@ public class FwEmailTests
         fw.Session("XSS", "form-token");
         fw.FORM["XSS"] = "form-token";
         fw.FORM["f"] = DB.h("to_emails", "alpha@example.test");
+        fw.request.Method = "POST";
         fw.setRoute(new FwRoute
         {
             controller = "AdminReports",
@@ -593,7 +598,9 @@ public class FwEmailTests
 
         Assert.AreEqual(302, fw.response.StatusCode);
         Assert.AreEqual("/Admin/Reports/scheduled_sales", fw.response.Headers.Location.ToString());
-        StringAssert.Contains(server.MessageData, "From: creator@example.test");
+        StringAssert.Contains(server.MessageData, "From: sender@example.test");
+        StringAssert.Contains(server.MessageData, "Subject: Report scheduled_sales");
+        StringAssert.Contains(server.MessageData, "Report marker");
         StringAssert.Contains(server.MessageData, "Content-Type: text/html");
     }
 
@@ -628,7 +635,7 @@ public class FwEmailTests
         }
     }
 
-    private static TFwCron ScheduledJob(string format, bool isSample = false)
+    private static FwCron.Row ScheduledJob(string format, bool isSample = false)
     {
         var payload = new FwDict
         {
@@ -657,7 +664,7 @@ public class FwEmailTests
         if (!isSample)
             payload["fwreports_id"] = 42;
 
-        return new TFwCron
+        return new FwCron.Row
         {
             icode = isSample ? "report_Sample:V7mQ2x9KaB" : "report_scheduled_sales:V7mQ2x9KaB",
             timezone = "UTC",
@@ -784,6 +791,7 @@ public class FwEmailTests
         fw.route.controller = "AdminSendEmail";
         fw.route.action = FW.ACTION_SAVE;
         fw.route.method = method;
+        fw.request.Method = method;
         fw.FORM["XSS"] = formToken;
         fw.FORM["item"] = new FwDict
         {

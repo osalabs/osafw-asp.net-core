@@ -21,7 +21,7 @@ public class FwScheduledReports : FwModel
     public FwDict payload(string icode, string json)
     {
         if (FwCron.reportCode(icode).Length == 0 || Encoding.UTF8.GetByteCount(json) > MAX_PAYLOAD_BYTES)
-            throw new UserException("The saved report schedule identity or size is invalid.");
+            throw new UserException("REPORT_SCHEDULE_INVALID");
 
         FwDict? value;
         try
@@ -31,7 +31,7 @@ public class FwScheduledReports : FwModel
         }
         catch (Exception ex) when (ex is JsonException or FormatException or OverflowException)
         {
-            throw new UserException("The saved report schedule is unreadable.");
+            throw new UserException("REPORT_SCHEDULE_INVALID");
         }
 
         if (value == null
@@ -47,7 +47,7 @@ public class FwScheduledReports : FwModel
             || (value.ContainsKey("sortby") && value["sortby"] is not string)
             || (value.ContainsKey("sortdir") && value["sortdir"] is not string))
         {
-            throw new UserException("The saved report schedule has invalid fields.");
+            throw new UserException("REPORT_SCHEDULE_INVALID");
         }
 
         if (context.Count != 3
@@ -57,7 +57,7 @@ public class FwScheduledReports : FwModel
             || timeFormat is not (DateUtils.TIME_FORMAT_12 or DateUtils.TIME_FORMAT_24)
             || context["lang"] is not string language || !isValidLanguage(language))
         {
-            throw new UserException("The saved report input format is invalid.");
+            throw new UserException("REPORT_SCHEDULE_INVALID");
         }
 
         var parameters = new FwList();
@@ -68,7 +68,7 @@ public class FwScheduledReports : FwModel
                 || row["type"] is not string type || type.Length == 0
                 || row["value"] is not string)
             {
-                throw new UserException("The saved report has an invalid filter snapshot.");
+                throw new UserException("REPORT_SCHEDULE_INVALID");
             }
 
             parameters.Add(row);
@@ -83,7 +83,7 @@ public class FwScheduledReports : FwModel
     public FwDict validateDelivery(FwDict payload, string recipients, string format, int run_as_users_id)
     {
         if (!isActiveSiteAdmin(fw.model<Users>().one(run_as_users_id)))
-            throw new UserException("Select an active Site Administrator to run the report.");
+            throw new UserException("REPORT_RUN_AS");
 
         var result = new FwDict(payload);
         setDeliveryFields(result, recipients, format);
@@ -95,9 +95,13 @@ public class FwScheduledReports : FwModel
     private static void setDeliveryFields(FwDict fields, string recipients, string format)
     {
         if (format is not ("pdf" or "html"))
-            throw new UserException("Choose PDF or HTML for the report email.");
+            throw new UserException("REPORT_FORMAT");
 
-        fields["recipients"] = FwReportsBase.normalizeRecipients(recipients, true);
+        var normalized = FwReportsBase.normalizeRecipients(recipients, true);
+        if (normalized.Length == 0)
+            throw new UserException("REPORT_RECIPIENTS");
+
+        fields["recipients"] = normalized;
         fields["format"] = format;
     }
 
@@ -111,7 +115,7 @@ public class FwScheduledReports : FwModel
     private static void checkPayloadSize(string json)
     {
         if (Encoding.UTF8.GetByteCount(json) > MAX_PAYLOAD_BYTES)
-            throw new UserException("The saved report filters and delivery options are too large.");
+            throw new UserException("REPORT_SCHEDULE_SIZE");
     }
 
     internal static string encodePayload(FwDict payload)
@@ -131,7 +135,7 @@ public class FwScheduledReports : FwModel
     {
         var language = fw.G["lang"].toStr("en");
         if (!isValidLanguage(language))
-            throw new UserException("The report input language is invalid.");
+            throw new UserException("REPORT_SCHEDULE_INVALID");
 
         var result = new FwDict
         {
@@ -166,24 +170,24 @@ public class FwScheduledReports : FwModel
     internal static void checkTarget(FwReportsBase report, string code, FwDict payload)
     {
         if (!report.isSchedulingSupported || report.schedulingCode != code)
-            throw new UserException("The scheduled report has changed or no longer supports scheduling.");
+            throw new UserException("REPORT_SCHEDULE_UNAVAILABLE");
 
         if (report is FwCustomReport custom)
         {
             if (payload["source"].toStr() != SOURCE_CUSTOM || custom.schedulingRecordId != payload["fwreports_id"].toInt())
-                throw new UserException("The original custom report no longer matches this schedule.");
+                throw new UserException("REPORT_SCHEDULE_UNAVAILABLE");
         }
         else if (payload["source"].toStr() != SOURCE_HARDCODED)
         {
-            throw new UserException("The original custom report no longer matches this schedule.");
+            throw new UserException("REPORT_SCHEDULE_UNAVAILABLE");
         }
     }
 
     /// <summary>Runs one claimed report job in its own fresh offline FW context.</summary>
-    internal FwDict run(TFwCron job)
+    internal FwDict run(FwCron.Row job)
     {
         if (!fw.isOffline)
-            throw new FwCronPauseException("A scheduled report requires an offline worker context.");
+            throw new FwCronPauseException("REPORT_OFFLINE_REQUIRED");
 
         FwReportsBase report;
         FwDict saved;
@@ -193,11 +197,11 @@ public class FwScheduledReports : FwModel
             var users = fw.model<Users>();
             var ownerId = saved["run_as_users_id"].toInt();
             if (!isActiveSiteAdmin(users.one(ownerId)))
-                throw new FwCronPauseException("The rendering user is no longer an active Site Administrator. Reassign the task.");
+                throw new FwCronPauseException("REPORT_RUN_AS");
 
             users.reloadSession(ownerId);
             if (!users.isSiteAdmin())
-                throw new FwCronPauseException("The rendering user is no longer a Site Administrator. Reassign the task.");
+                throw new FwCronPauseException("REPORT_RUN_AS");
 
             applyInputContext(saved);
             fw.G["timezone"] = job.timezone;
@@ -215,7 +219,7 @@ public class FwScheduledReports : FwModel
             var filters = new FwDict { ["format"] = format };
             var is_hardcoded = saved["source"].toStr() == SOURCE_HARDCODED;
             if (!is_hardcoded && FwReportsBase.isHardcodedReport(code))
-                throw new UserException("A hardcoded report replaced the original custom report.");
+                throw new UserException("REPORT_SCHEDULE_UNAVAILABLE");
 
             report = FwReportsBase.createScheduledInstance(fw, code, filters, is_hardcoded);
             checkTarget(report, code, saved);
@@ -223,12 +227,12 @@ public class FwScheduledReports : FwModel
         }
         catch (AuthException)
         {
-            throw new FwCronPauseException("The rendering user is no longer authorized to run this report.");
+            throw new FwCronPauseException("REPORT_UNAUTHORIZED");
         }
         catch (UserException)
         {
             // User exceptions may include underlying SQL, submitted values, or paths.
-            throw new FwCronPauseException("The saved report, delivery options, or filters are invalid. Review the task.");
+            throw new FwCronPauseException("REPORT_SCHEDULE_INVALID");
         }
 
         report.ps["is_scheduled_report"] = true;
@@ -236,12 +240,12 @@ public class FwScheduledReports : FwModel
 
         var recipients = saved["recipients"].toStr();
         var emailFormat = saved["format"].toStr();
-        if (!report.sendReportEmail("", recipients, emailFormat, true))
-            throw new FwCronUncertainException("Report delivery outcome is uncertain. Check the mail server before retrying.");
+        if (!report.sendReportEmail(recipients, emailFormat, true))
+            throw new FwCronUncertainException("REPORT_DELIVERY_UNCERTAIN");
 
         return new FwDict
         {
-            ["message"] = "Mail server accepted the report",
+            ["message"] = "REPORT_SENT",
             ["data"] = new FwDict
             {
                 ["row_count"] = report.list_count,

@@ -32,8 +32,10 @@ public class DiagnosticSecurityTests
         var controller = new AdminDBController();
         controller.init(fw);
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
         users.IsReadOnly = true;
         fw.FORM["pwd"] = "Console regression12!";
@@ -58,6 +60,7 @@ public class DiagnosticSecurityTests
         fw.FORM["prefill_sql"] = "select top 50 * from [sample_table]";
         fw.FORM["db"] = "";
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         var users = new DiagnosticUsers();
         users.init(fw);
         TestHelpers.RegisterModel(fw, (Users)users);
@@ -116,6 +119,7 @@ public class DiagnosticSecurityTests
         fw.FORM["sql"] = "select 42 as answer";
         fw.FORM["db"] = "";
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.FORM["pwd"] = "Console regression12!";
         var users = new DiagnosticUsers();
         users.init(fw);
@@ -134,8 +138,10 @@ public class DiagnosticSecurityTests
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
         users.IsReadOnly = false;
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.FORM["XSS"] = "wrong-token";
         Assert.ThrowsExactly<AuthException>(() => controller.IndexAction());
         fw.FORM["XSS"] = "token";

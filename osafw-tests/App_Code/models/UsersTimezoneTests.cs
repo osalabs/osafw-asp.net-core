@@ -101,6 +101,8 @@ public class UsersTimezoneTests
         login.UseModel(users);
 
         fw.route.method = "POST";
+
+        fw.request.Method = "POST";
         fw.Session("XSS", "token");
         fw.FORM["XSS"] = "token";
         Assert.ThrowsExactly<RedirectException>(() => login.SaveAction());

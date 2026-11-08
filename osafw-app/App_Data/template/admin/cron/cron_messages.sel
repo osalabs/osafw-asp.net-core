@@ -1,0 +1,33 @@
+CRON_JOB|`Choose a supported application job code.`
+CRON_JOB_EXISTS|`A task already uses this job code.`
+CRON_EDIT_RUNNING|`Wait for the current run before editing this task.`
+CRON_CHANGED|`The task changed or started running. Reload and try again.`
+CRON_BULK_CHANGED|`Running or changed tasks were not deleted. Reload and try again.`
+CRON_RUNNER_DISABLED|`The task runner is disabled in this build.`
+CRON_RESUME_BEFORE_RUN|`Revise or resume this schedule before requesting a run.`
+CRON_PAUSE_FAILED|`The task could not be paused. Reload and try again.`
+CRON_RESUME_FAILED|`The task could not be resumed. Check its schedule and current state.`
+CRON_RECOVER_FAILED|`Confirm the worker has stopped and reload the task if its state changed.`
+CRON_QUEUED|`Queued`
+CRON_ALREADY_QUEUED|`Already queued/running`
+CRON_PAUSED|`Paused`
+CRON_RESUMED|`Resumed`
+CRON_RECOVERED|`Interrupted run recorded as uncertain. The task is paused.`
+CRON_STATUS|`Choose a valid schedule status.`
+CRON_NO_FUTURE|`No future occurrence fits this schedule and its start/end bounds.`
+CRON_INVALID|`Enter a valid five-field cron expression.`
+CRON_END|`The end must be later than the start.`
+CRON_ZONE|`Choose a valid recurrence timezone.`
+CRON_BOUND|`Enter a valid start/end date and time in your timezone.`
+CRON_RUNNING|`Running`
+CRON_COMPLETED|`Completed`
+CRON_INTERRUPTED|`Execution interrupted. Verify the external outcome before requesting another run.`
+CRON_OUTCOME_UNAVAILABLE|`Execution outcome unavailable.`
+CRON_REPORT_GENERATION_FAILED|`Report generation failed before sending.`
+CRON_HANDLER_FAILED|`Task handler failed.`
+CRON_BAD_REPORT_IDENTITY|`The task's report identity is invalid.`
+CRON_UNKNOWN_HANDLER|`Unknown task handler code.`
+running|`Running`
+succeeded|`Succeeded`
+failed|`Failed`
+uncertain|`Uncertain`

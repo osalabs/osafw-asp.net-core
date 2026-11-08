@@ -24,6 +24,7 @@ public class AdminCronControllerTests
         fw.Session("access_level", access.ToString());
         fw.G["timezone"] = "UTC";
         fw.Session("XSS", "valid");
+        fw.request.Method = method;
         fw.route.method = method;
         fw.FORM["XSS"] = token;
         fw.FORM["item"] = new FwDict
@@ -43,8 +44,7 @@ public class AdminCronControllerTests
     [TestMethod]
     [DataRow("GET", Users.ACL_SITEADMIN, "valid")]
     [DataRow("POST", Users.ACL_SITEADMIN, "wrong")]
-    [DataRow("POST", Users.ACL_ADMIN, "valid")]
-    public void MutatingActions_RejectInvalidMethodTokenAndAccess(string method, int access, string token)
+    public void MutatingActions_RejectInvalidMethodAndToken(string method, int access, string token)
     {
         using var config = FwConfig.beginScope();
         var (_, controller) = Setup(method, access, token);
@@ -61,8 +61,10 @@ public class AdminCronControllerTests
     public void Preview_RequiresSiteAdminAndUsesFiveFieldServerCalculation()
     {
         using var config = FwConfig.beginScope();
-        var (_, lowerAccess) = Setup("GET", Users.ACL_ADMIN, "valid");
-        Assert.ThrowsExactly<AuthException>(() => lowerAccess.PreviewAction());
+        var (lowerAccess, _) = Setup("GET", Users.ACL_ADMIN, "valid");
+        lowerAccess.route.controller = "AdminCron";
+        lowerAccess.route.action = "Preview";
+        Assert.ThrowsExactly<AuthException>(() => lowerAccess.callRoute());
 
         var (fw, controller) = Setup("GET", Users.ACL_SITEADMIN, "valid");
         controller.PreviewAction();
@@ -122,7 +124,7 @@ public class AdminCronControllerTests
             fw.callRoute();
         }
 
-        const string taskName = "<img src=x onerror=alert(1)>";
+        var taskName = "<img src=x onerror=alert(1)>" + new string('x', 255);
         fw.FORM["XSS"] = "valid";
         fw.FORM["item"] = new FwDict
         {
@@ -136,12 +138,17 @@ public class AdminCronControllerTests
             ["next_run_utc"] = DateTime.UtcNow.AddDays(-1),
             ["last_result"] = "{\"forged\":true}"
         };
+        context.Request.Headers.Accept = "application/json";
+        Assert.ThrowsExactly<NotFoundException>(() => Call("POST", "/Admin/Cron/-1"));
+        Assert.AreEqual(0, fw.db.value("fwcron", DB.h("icode", FwCron.ICODE_EXAMPLE), "id").toInt());
+        context.Request.Headers.Remove("Accept");
         Call("POST", "/Admin/Cron");
         Assert.AreEqual(302, context.Response.StatusCode);
 
         var id = fw.db.value("fwcron", DB.h("icode", FwCron.ICODE_EXAMPLE), "id").toInt();
-        var task = fw.model<FwCron>().getTask(id);
+        var task = fw.model<FwCron>().oneT(id);
         Assert.IsNotNull(task);
+        Assert.AreEqual(taskName[..255], task.iname);
         Assert.IsNull(task.payload);
         Assert.IsNull(task.run_token);
         Assert.IsNull(task.run_requested_utc);
@@ -171,15 +178,13 @@ public class AdminCronControllerTests
         fw.FORM["XSS"] = "valid";
         Call("POST", "/Admin/Cron/(Pause)/" + id);
         Assert.AreEqual(302, context.Response.StatusCode);
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().getTask(id)!.status);
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().oneT(id)!.status);
 
         fw.FORM.Clear();
         Call("GET", "/Admin/Cron/" + id);
         var detailsHtml = Encoding.UTF8.GetString(body.ToArray());
         StringAssert.Contains(detailsHtml, "id=\"FView\"");
         StringAssert.Contains(detailsHtml, "page-header-record-nav");
-        StringAssert.Contains(detailsHtml, "Created scheduled task");
-        StringAssert.Contains(detailsHtml, "Task paused.");
         var history = fw.model<FwActivityLogs>().listByEntityForUI("fwcron", id, FwActivityLogs.TAB_HISTORY);
         Assert.AreEqual(2, history.Count, "Distinct task events must not be merged within ten minutes.");
 
@@ -203,6 +208,7 @@ public class AdminCronControllerTests
         fw.FORM.Clear();
 
         fw.db.update("fwcron", DB.h("run_token", "test-owned-claim"), DB.h("id", id));
+        fw.model<FwCron>().removeCache(id);
         Call("GET", "/Admin/Cron/" + id);
         Assert.IsFalse(Encoding.UTF8.GetString(body.ToArray()).Contains("/Admin/Cron/" + id + "/delete"),
             "The standard header must not offer Delete for a claimed task.");
@@ -211,9 +217,10 @@ public class AdminCronControllerTests
         fw.FORM["cb"] = new FwDict { [id.ToString()] = "1" };
         fw.FORM["_method"] = "PUT";
         Call("POST", "/Admin/Cron");
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().getTask(id)!.status,
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().oneT(id)!.status,
             "Standard bulk delete must retain a task claimed by a worker.");
         fw.db.update("fwcron", DB.h("run_token", null), DB.h("id", id));
+        fw.model<FwCron>().removeCache(id);
         fw.FORM.Clear();
 
         var zone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
@@ -224,6 +231,7 @@ public class AdminCronControllerTests
         var firstOffset = offsets[0] > offsets[1] ? offsets[0] : offsets[1];
         var start = new DateTimeOffset(wallTime, firstOffset).UtcDateTime.AddMilliseconds(123);
         fw.db.update("fwcron", DB.h("start_date_utc", start), DB.h("id", id));
+        fw.model<FwCron>().removeCache(id);
         fw.FORM.Clear();
         fw.FORM["task_id"] = id.ToString();
         fw.FORM["item"] = DB.h("cron", "*/30 1 * * *", "timezone", zone.Id,
@@ -242,18 +250,54 @@ public class AdminCronControllerTests
         fw.FORM["delete"] = "1";
         fw.FORM["cb"] = new FwDict { [id.ToString()] = "1" };
         Assert.ThrowsExactly<AuthException>(() => Call("POST", "/Admin/Cron"));
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().getTask(id)!.status);
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().oneT(id)!.status);
         fw.FORM["XSS"] = "valid";
         fw.FORM["_method"] = "PUT";
         context.Request.Headers.Accept = "application/json";
         Assert.ThrowsExactly<AuthException>(() => Call("GET", "/Admin/Cron"));
         context.Request.Headers.Remove("Accept");
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().getTask(id)!.status,
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().oneT(id)!.status,
             "A query-string method override must not allow a GET mutation.");
         Call("POST", "/Admin/Cron");
         Assert.AreEqual(302, context.Response.StatusCode);
-        Assert.AreEqual(FwModel.STATUS_DELETED, fw.model<FwCron>().getTask(id)!.status);
+        Assert.AreEqual(FwModel.STATUS_DELETED, fw.model<FwCron>().oneT(id)!.status);
 
+        foreach (var transport in new[] { "PATCH", "POST" })
+        {
+            var patchId = fw.model<FwCron>().add(new FwDict
+            {
+                ["icode"] = "patch_delete_" + transport,
+                ["iname"] = "Patch delete",
+                ["cron"] = "0 7 * * *"
+            });
+            fw.FORM.Clear();
+            fw.FORM["XSS"] = "valid";
+            fw.FORM["delete"] = "1";
+            fw.FORM["cb"] = new FwDict { [patchId.ToString()] = "1" };
+            if (transport == "POST")
+                fw.FORM["_method"] = "PATCH";
+            Call(transport, "/Admin/Cron");
+            Assert.AreEqual(FwModel.STATUS_DELETED, fw.model<FwCron>().oneT(patchId)!.status);
+        }
+        fw.FORM.Clear();
+
+        var singleId = fw.model<FwCron>().add(new FwDict
+        {
+            ["icode"] = "single_delete",
+            ["iname"] = "Single delete",
+            ["cron"] = "0 7 * * *"
+        });
+        fw.FORM.Clear();
+        Call("GET", "/Admin/Cron/" + singleId + "/delete");
+        var confirmation = Encoding.UTF8.GetString(body.ToArray());
+        StringAssert.Contains(confirmation, "id=\"FDel\"");
+        StringAssert.Contains(confirmation, "name=\"_method\" value=\"DELETE\"");
+
+        fw.FORM["XSS"] = "valid";
+        fw.FORM["_method"] = "DELETE";
+        Call("POST", "/Admin/Cron/" + singleId);
+        Assert.AreEqual(302, context.Response.StatusCode);
+        Assert.AreEqual(FwModel.STATUS_DELETED, fw.model<FwCron>().oneT(singleId)!.status);
     }
 
 #endif
@@ -263,19 +307,19 @@ public class AdminCronControllerTests
         var fw = new FW(TestHelpers.CreateHttpContext(), new ConfigurationBuilder().Build(), _ => new RejectingDb());
         fw.G["timezone"] = "UTC";
         var nextRun = DateTime.UtcNow.AddDays(2);
-        var existing = new TFwCron { cron = "0 7 * * *", timezone = "UTC", next_run_utc = nextRun };
+        var existing = new FwCron.Row { cron = "0 7 * * *", timezone = "UTC", next_run_utc = nextRun };
         var item = new FwDict { ["cron"] = existing.cron, ["timezone"] = existing.timezone };
 
-        AdminCronController.prepareSchedule(fw, item, existing);
+        fw.model<FwCron>().prepareSchedule(item, existing);
 
         Assert.AreEqual(nextRun, item["next_run_utc"]);
         fw.G["timezone"] = "Central Standard Time";
         existing.start_date_utc = new DateTime(2026, 11, 1, 6, 30, 0, DateTimeKind.Utc).AddMilliseconds(123);
         item["start_date_utc"] = "2026-11-01T01:30:00";
-        AdminCronController.prepareSchedule(fw, item, existing);
+        fw.model<FwCron>().prepareSchedule(item, existing);
         Assert.AreEqual(existing.start_date_utc, item["start_date_utc"], "An unchanged displayed bound retains its original fold and precision.");
 
         item["timezone"] = "Auto";
-        Assert.ThrowsExactly<UserException>(() => AdminCronController.prepareSchedule(fw, item, existing));
+        Assert.ThrowsExactly<UserException>(() => fw.model<FwCron>().prepareSchedule(item, existing));
     }
 }

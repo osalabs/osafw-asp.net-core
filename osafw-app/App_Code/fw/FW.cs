@@ -1711,7 +1711,7 @@ public class FW : IDisposable
             last_error_send_email = ex.Message;
             if (ex.InnerException != null)
                 last_error_send_email += " " + ex.InnerException.Message;
-            logger(LogLevel.ERROR, "send_email error:", is_log_pii ? last_error_send_email : ex.GetType().Name);
+            logger(LogLevel.ERROR, "send_email error:", last_error_send_email);
         }
         finally
         {
@@ -2008,13 +2008,26 @@ public class FW : IDisposable
         if (!is_log_events)
             return;
 
-        FwDict? payload = null;
-        if (changed_fields != null)
-            payload = new FwDict()
+        try
+        {
+            FwDict? payload = null;
+            if (changed_fields != null)
+                payload = new FwDict { ["fields"] = changed_fields };
+
+            model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
+        }
+        catch (Exception ex)
+        {
+            // Activity history is best effort; it must not fail an already completed operation.
+            try
             {
-                {"fields", changed_fields}
-            };
-        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
+                logger(LogLevel.WARN, "Activity could not be recorded:", log_types_icode, entity_icode, item_id, ex.GetType().Name);
+            }
+            catch (Exception)
+            {
+                // A logging failure must not escape this boundary either.
+            }
+        }
     }
 
     public void rw(string str)

@@ -1,0 +1,5 @@
+<~daily ifeq="schedule_kind" value="daily" inline>`Daily at` <~schedule_time></~daily>
+<~weekdays ifeq="schedule_kind" value="weekdays" inline>`Weekdays at` <~schedule_time></~weekdays>
+<~weekly ifeq="schedule_kind" value="weekly" inline><~schedule_days repeat inline><~/admin/cron/weekdays.sel selvalue="day"><~/common/comma unless="repeat.last"></~schedule_days> `at` <~schedule_time></~weekly>
+<~monthly ifeq="schedule_kind" value="monthly" inline>`Day` <~schedule_day> `at` <~schedule_time> `each month`</~monthly>
+<~expression unless="schedule_kind" inline><~cron></~expression>

@@ -2,21 +2,26 @@
   <~schedule_feedback if="schedule_success" inline>
     <div class="alert alert-success" role="status">
       `Schedule saved.`
-      <~schedule_next if="schedule_next_run" inline> `Next scheduled time` <strong><~schedule_next_run></strong>.</~schedule_next>
-      <a class="alert-link ms-2" href="<~schedule_manage_url>">`Manage task`</a>
+      <~schedule_next if="schedule_next_run" inline> `Next scheduled time` <strong><~schedule_next_run date="short"></strong>.</~schedule_next>
+      <a class="alert-link ms-2" href="<~/admin/cron/url>/<~schedule_saved_id>">`Manage task`</a>
     </div>
   </~schedule_feedback>
   <~create unless="schedule_id" inline>
-    <form method="post" action="<~schedule_create_url>" class="fw-card" id="report-schedule" data-report-schedule <~hide unless="schedule_error" inline>hidden</~hide>>
+    <form method="post" action="<~/admin/reports/url>/(ScheduleEmail)/<~schedule_report_code urlencode>" class="fw-card" id="report-schedule" data-report-schedule data-schedule-blank="`(blank)`" data-schedule-empty="`This report has no filter fields.`" <~hide unless="is_schedule_error" inline>hidden</~hide>>
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
       <h2 class="h5">`Schedule email`</h2>
-      <~error if="schedule_error" inline><div class="alert alert-danger" role="alert"><~schedule_error></div></~error>
+      <~error if="is_schedule_error" inline>
+        <div class="alert alert-danger" role="alert">
+          <~/admin/cron/cron_messages.sel if="schedule_cron_error" selvalue="schedule_cron_error">
+          <~./schedule_messages.sel if="schedule_error" selvalue="schedule_error" default="`Review the report filters and delivery options.`">
+        </div>
+      </~error>
       <div class="row">
         <div class="col-lg-6">
           <div class="row form-row">
             <label class="col-form-label col-md-3 required" for="report-schedule-name">`Task name`</label>
             <div class="col">
-              <input id="report-schedule-name" class="form-control" name="item[iname]" value="<~schedule_item[iname]>" maxlength="255" required>
+              <input id="report-schedule-name" class="form-control" name="item[iname]" value="<~schedule_item[iname]><~initial_suffix if="is_schedule_initial" inline> - `email`</~initial_suffix>" maxlength="255" required>
             </div>
           </div>
           <div class="row form-row">
@@ -67,18 +72,23 @@
     </form>
   </~create>
   <~update if="schedule_id" inline>
-    <form method="post" action="<~schedule_update_url>" class="fw-card" data-report-schedule>
+    <form method="post" action="<~/admin/reports/url>/(UpdateScheduleFilters)/<~schedule_report_code urlencode>" class="fw-card" data-report-schedule data-schedule-blank="`(blank)`" data-schedule-empty="`This report has no filter fields.`">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
       <input type="hidden" name="schedule_id" value="<~schedule_id>">
       <h2 class="h5">`Edit schedule filters`</h2>
       <~review if="schedule_review_required" inline>
         <p class="alert alert-warning" role="status">`This report's filters have changed. Review the current values before updating the schedule.`</p>
       </~review>
-      <~error if="schedule_error" inline><div class="alert alert-danger" role="alert"><~schedule_error></div></~error>
+      <~error if="is_schedule_error" inline>
+        <div class="alert alert-danger" role="alert">
+          <~/admin/cron/cron_messages.sel if="schedule_cron_error" selvalue="schedule_cron_error">
+          <~./schedule_messages.sel if="schedule_error" selvalue="schedule_error" default="`Review the report filters and delivery options.`">
+        </div>
+      </~error>
       <p>`Applying or viewing a report leaves the schedule unchanged. Use Update schedule filters to save the current values.`</p>
       <ul class="small" data-schedule-summary></ul>
       <button type="submit" class="btn btn-primary" disabled>`Update schedule filters`</button>
-      <a class="btn btn-outline-secondary" href="<~schedule_manage_url>">`Back to scheduled task`</a>
+      <a class="btn btn-outline-secondary" href="<~/admin/cron/url>/<~schedule_id>">`Back to scheduled task`</a>
     </form>
   </~update>
   <~/common/cron_editor_script>

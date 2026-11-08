@@ -53,6 +53,31 @@ public class FwActivityLogsTests
         return logs;
     }
 
+    private sealed class FailingActivityLogs : FwActivityLogs
+    {
+        public bool WasCalled { get; private set; }
+
+        public override int add(FwDict item)
+        {
+            WasCalled = true;
+            throw new InvalidOperationException("Unavailable activity store");
+        }
+    }
+
+    [TestMethod]
+    public void LogActivity_DoesNotFailCallerWhenActivityStoreFails()
+    {
+        using var fw = TestHelpers.CreateFw();
+        fw.is_log_events = true;
+        TestHelpers.RegisterModel(fw, (FwLogTypes)new StubLogTypes());
+        TestHelpers.RegisterModel(fw, (FwEntities)new StubEntities());
+        var logs = new FailingActivityLogs();
+        logs.init(fw);
+        TestHelpers.RegisterModel(fw, (FwActivityLogs)logs);
+        fw.logActivity(FwLogTypes.ICODE_ADDED, "demo", 10);
+        Assert.IsTrue(logs.WasCalled);
+    }
+
     [TestMethod]
     public void AddSimple_PopulatesFieldsAndPayload()
     {

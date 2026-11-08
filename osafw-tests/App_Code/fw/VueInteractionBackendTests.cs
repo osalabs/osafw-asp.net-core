@@ -175,10 +175,14 @@ public class VueInteractionBackendTests
         };
 
         fw.route.method = "GET";
+
+        fw.request.Method = "GET";
         Assert.ThrowsExactly<AuthException>(() => controller.SaveUserViewsAction());
         Assert.AreEqual(0, views.LastUpdate.Count);
 
         fw.route.method = "POST";
+
+        fw.request.Method = "POST";
         controller.SaveUserViewsAction();
         var stored = Utils.jsonDecode(views.LastUpdate["widths"].toStr()) as FwDict ?? [];
         Assert.AreEqual(60, stored["title"].toInt());
@@ -587,6 +591,7 @@ public class VueInteractionBackendTests
         FwConfig.GetCurrentSettings()["template"] = Path.Combine(repoRoot(), "osafw-app", "App_Data", "template");
         fw.request.Headers.Accept = "application/json";
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         TestHelpers.RegisterModel(fw, (Users)new StubUsers(permissions ?? new FwDict
         {
             [Permissions.PERMISSION_ADD] = true,

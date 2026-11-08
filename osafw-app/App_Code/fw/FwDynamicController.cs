@@ -690,6 +690,7 @@ public partial class FwDynamicController : FwController
 
     public virtual FwDict? DeleteAction(int id)
     {
+        enforceMethod("POST", "DELETE");
         checkReadOnly();
 
         try
@@ -732,6 +733,7 @@ public partial class FwDynamicController : FwController
     #region Bulk Actions
     public virtual FwDict? SaveMultiAction()
     {
+        enforceMethod("POST", "PUT", "PATCH");
         route_onerror = FW.ACTION_INDEX;
 
         FwDict cbses = reqh("cb");

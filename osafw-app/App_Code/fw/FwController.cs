@@ -398,12 +398,22 @@ public abstract partial class FwController
     /// Custom action routes can otherwise be reached with GET, so callers should use this before performing side effects.
     /// </remarks>
     /// <exception cref="AuthException">Thrown when the request method is not POST or the XSS token is invalid.</exception>
-    public virtual void enforcePost()
-    {
-        if (!string.Equals(fw.route.method, "POST", StringComparison.OrdinalIgnoreCase))
-            throw new AuthException("POST required");
+    public virtual void enforcePost() => enforceMethod("POST");
 
-        checkXSS();
+    /// <summary>Enforces an allowed route method and validates the XSS token for write methods.</summary>
+    /// <remarks>POST forms may override their method to PUT, PATCH or DELETE. Safe HTTP requests cannot use a write override.</remarks>
+    public virtual void enforceMethod(params string[] methods)
+    {
+        var method = fw.route.method.ToUpperInvariant();
+        var transport = fw.request.Method.ToUpperInvariant();
+        var is_allowed = methods.Any(value => string.Equals(value, method, StringComparison.OrdinalIgnoreCase));
+        var is_write = method is "POST" or "PUT" or "PATCH" or "DELETE";
+        var is_override = transport == "POST" && (method == "PUT" || method == "PATCH" || method == "DELETE");
+        if (!is_allowed || (transport != method && !is_override))
+            throw new AuthException();
+
+        if (is_write)
+            checkXSS();
     }
 
     // return hashtable of filter values

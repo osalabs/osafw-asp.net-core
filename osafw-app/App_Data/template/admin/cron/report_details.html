@@ -1,8 +1,8 @@
 <~report_context if="report_code" inline>
   <h2 class="h5">`Report`</h2>
-  <p><a href="<~/admin/reports/url>/<~report_path>"><~report_code></a>
+  <p><a href="<~/admin/reports/url>/<~report_code urlencode>"><~report_code></a>
     <~filter_link if="can_edit_report_filters" inline>
-      <a class="ms-2" href="<~/admin/reports/url>/<~report_path>?schedule_id=<~id>">`Edit schedule filters`</a>
+      <a class="ms-2" href="<~/admin/reports/url>/<~report_code urlencode>?schedule_id=<~id>">`Edit schedule filters`</a>
     </~filter_link>
   </p>
   <~report_unavailable if="is_report_payload_unavailable" inline>
@@ -15,8 +15,8 @@
     <h3 class="h6">`Saved filters`</h3>
     <~report_params repeat inline>
       <div class="row form-row">
-        <label class="col-form-label col-md-3"><~label></label>
-        <div class="col"><p class="form-control-plaintext"><~value default="(blank)"></p></div>
+        <label class="col-form-label col-md-3">`<~label>`</label>
+        <div class="col"><p class="form-control-plaintext"><~value default="`(blank)`"></p></div>
       </div>
     </~report_params>
   </~params>

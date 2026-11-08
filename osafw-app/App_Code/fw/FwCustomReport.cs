@@ -21,7 +21,6 @@ public class FwCustomReport : FwReportsBase
 
     public override bool isSchedulingSupported => true;
     public override string schedulingCode => report["icode"].toStr();
-    public override string schedulingTitle => report["iname"].toStr(schedulingCode);
     internal int schedulingRecordId => report["id"].toInt();
 
     protected override FwList schedulingParameters()

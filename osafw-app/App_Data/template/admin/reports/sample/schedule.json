@@ -1,0 +1,8 @@
+[
+    { "name": "from_date", "label": "From date", "type": "date" },
+    { "name": "to_date", "label": "To date", "type": "date" },
+    { "name": "events_id", "label": "Event", "type": "int" },
+    { "name": "fwentities_id", "label": "Entity", "type": "int" },
+    { "name": "users_id", "label": "User", "type": "int" },
+    { "name": "s", "label": "Search", "type": "text" }
+]

@@ -42,6 +42,7 @@ namespace osafw.Tests
                             iname           NVARCHAR(64) NOT NULL default '',
                             idatetime       DATETIME2,
                             idatetime_utc   DATETIME2,
+                            ilegacy_utc     DATETIME,
                             ioffset         DATETIMEOFFSET,
                             ioffset_utc     DATETIMEOFFSET,
                             fdate           DATE
@@ -354,6 +355,27 @@ namespace osafw.Tests
             Assert.AreEqual("2024-06-01 12:00:00", stored["idatetime_utc"]);
             Assert.AreEqual("2024-06-01 12:00:00", stored["ioffset_utc"]);
             Assert.AreEqual("0", stored["ioffset_offset"]);
+        }
+
+        [TestMethod]
+        public void HelperPredicatesPreserveDateTime2Precision()
+        {
+            using var tzDb = dbWithTimezone("Pacific Standard Time");
+            var utc = new DateTime(2024, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+            var precise = utc.AddTicks(1234567);
+            var legacy = utc.AddMilliseconds(3);
+            tzDb.update(table_name, DB.h("idatetime_utc", precise, "ilegacy_utc", legacy), DB.h("id", 1));
+
+            var where = DB.h("id", 1, "idatetime_utc", precise, "ilegacy_utc", legacy);
+            var row = tzDb.row<TimezoneRow>(table_name, where);
+            Assert.IsNotNull(row, "Helper reads must preserve both exact datetime2 and legacy datetime comparisons.");
+            Assert.AreEqual(precise, row.idatetime_utc);
+
+            where["idatetime_utc"] = precise.AddTicks(1);
+            Assert.AreEqual(0, tzDb.update(table_name, DB.h("iname", "wrong timestamp"), where));
+
+            where["idatetime_utc"] = precise;
+            Assert.AreEqual(1, tzDb.update(table_name, DB.h("iname", "matching timestamp"), where));
         }
 
         [TestMethod()]
