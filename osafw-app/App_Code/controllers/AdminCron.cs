@@ -59,8 +59,8 @@ public class AdminCronController : FwDynamicController
         var is_idle_writable = !is_readonly && task.run_token == null;
         ps["is_readonly"] = !is_idle_writable || is_deleted;
         ps["is_hide_delete"] = ps["is_readonly"];
-        ps["can_restore"] = is_idle_writable && is_deleted && !FwCron.isReport(task);
-        ps["can_purge_report"] = is_idle_writable && is_deleted && FwCron.isReport(task);
+        ps["can_restore"] = is_idle_writable && is_deleted && !FwReports.isReportTaskCode(task.icode);
+        ps["can_purge_report"] = is_idle_writable && is_deleted && FwReports.isReportTaskCode(task.icode);
         ps["is_runner_disabled"] = !FwCron.isRunnerEnabled();
         if (!is_readonly && !is_deleted)
             ps["run_token"] = task.run_token;
@@ -83,7 +83,7 @@ public class AdminCronController : FwDynamicController
         if (task == null)
         {
             ps["job_codes"] = new FwList(model.legacyCodes()
-                .Where(code => !code.StartsWith(FwCron.REPORT_PREFIX, StringComparison.OrdinalIgnoreCase))
+                .Where(code => !code.StartsWith(FwReports.REPORT_PREFIX, StringComparison.OrdinalIgnoreCase))
                 .Select(code => new FwDict
                 {
                     ["id"] = code,
@@ -100,7 +100,7 @@ public class AdminCronController : FwDynamicController
         item["start_date_utc"] = posted.ContainsKey("start_date_utc") ? posted["start_date_utc"] : model.boundInput(task?.start_date_utc);
         item["end_date_utc"] = posted.ContainsKey("end_date_utc") ? posted["end_date_utc"] : model.boundInput(task?.end_date_utc);
         ps["is_completed"] = task?.status == FwCron.STATUS_COMPLETED;
-        ps["cron_editor"] = model.cronEditor(item, "task-cron", taskId: id, isExternalPreview: true);
+        ps["cron_editor"] = model.cronEditor(item, "task-cron", fwcron_id: id, is_external_preview: true);
         if (task != null)
         {
             var payload = addReportDisplay(ps, task);
@@ -128,7 +128,7 @@ public class AdminCronController : FwDynamicController
         if (id == 0)
         {
             var code = item["icode"].toStr();
-            if (code.StartsWith(FwCron.REPORT_PREFIX, StringComparison.OrdinalIgnoreCase)
+            if (code.StartsWith(FwReports.REPORT_PREFIX, StringComparison.OrdinalIgnoreCase)
                 || !model.legacyCodes().Contains(code, StringComparer.Ordinal))
                 addFormError("icode", "CRON_JOB", cronMessage("CRON_JOB"));
             else if (model.isExistsByField(code, 0, "icode"))
@@ -151,22 +151,22 @@ public class AdminCronController : FwDynamicController
         if (!string.IsNullOrEmpty(observed?.run_token))
             throw new UserException(cronMessage("CRON_EDIT_RUNNING"));
 
-        var submitted = reqh("item");
-        submitted["iname"] = submitted["iname"].toStr().Trim();
-        var fields = prepareSaveFields(id, submitted);
-        var name = fields["iname"].toStr();
-        fields["iname"] = name.Length > 255 ? name[..255] : name;
+        var item = reqh("item");
+        item["iname"] = item["iname"].toStr().Trim();
+        var itemdb = prepareSaveFields(id, item);
+        var name = itemdb["iname"].toStr();
+        itemdb["iname"] = name.Length > 255 ? name[..255] : name;
 
         try
         {
-            model.prepareSchedule(fields, observed);
-            if (observed != null && FwCron.reportCode(observed.icode).Length > 0)
+            model.prepareSchedule(itemdb, observed);
+            if (observed != null && FwReports.reportCode(observed.icode).Length > 0)
             {
-                var reports = fw.model<FwScheduledReports>();
-                var payload = reports.payload(observed.icode, observed.payload ?? "");
-                var updated = reports.validateDelivery(payload, submitted["recipients"].toStr(),
-                    submitted["format"].toStr(), submitted["run_as_users_id"].toInt());
-                fields["payload"] = FwScheduledReports.encodePayload(updated);
+                var reports = fw.model<FwReports>();
+                var payload = reports.parseSchedulePayload(observed.icode, observed.payload ?? "");
+                var updated = reports.validateScheduleDelivery(payload, item["recipients"].toStr(),
+                    item["format"].toStr(), item["run_as_users_id"].toInt());
+                itemdb["payload"] = FwReports.encodeSchedulePayload(updated);
             }
         }
         catch (UserException ex)
@@ -176,22 +176,32 @@ public class AdminCronController : FwDynamicController
 
         if (observed == null)
         {
-            fields["icode"] = submitted["icode"];
-            id = model.add(fields);
+            itemdb["icode"] = item["icode"];
+            id = model.add(itemdb);
+            fw.flash("record_added", 1);
             return afterSave(true, id, is_new: true);
         }
 
-        if (!model.saveDefinition(id, observed, fields))
-            throw new UserException(cronMessage("CRON_CHANGED"));
+        var is_updated = model.updateDefinition(id, observed, itemdb);
+        if (is_updated)
+        {
+            fw.flash("record_updated", 1);
+        }
+        else
+        {
+            fw.setGlobalError(cronMessage("CRON_CHANGED"));
+            if (fw.isJsonExpected())
+                fw.response.StatusCode = 400;
+        }
 
-        return afterSave(true, id);
+        return afterSave(is_updated, id);
     }
 
     public override void ShowDeleteAction(int id)
     {
         checkReadOnly();
         var task = taskOrFail(id, is_include_deleted: true);
-        if (task.status == FwModel.STATUS_DELETED && !FwCron.isReport(task))
+        if (task.status == FwModel.STATUS_DELETED && !FwReports.isReportTaskCode(task.icode))
             throw new NotFoundException();
         if (task.run_token != null)
             throw new UserException(cronMessage("CRON_CHANGED"));
@@ -207,10 +217,13 @@ public class AdminCronController : FwDynamicController
         route_onerror = FW.ACTION_SHOW;
 
         if (!model.deleteTask(id))
-            throw new UserException(cronMessage("CRON_CHANGED"));
+        {
+            finishAction(id, "CRON_CHANGED", "error");
+            return null;
+        }
 
         fw.flash("onedelete", 1);
-        return afterSave(true, location: FwCron.isReport(task) ? base_url : "");
+        return afterSave(true, location: FwReports.isReportTaskCode(task.icode) ? base_url : "");
     }
 
     protected override int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
@@ -240,9 +253,12 @@ public class AdminCronController : FwDynamicController
         route_onerror = FW.ACTION_SHOW;
 
         if (!model.restoreTask(id))
-            throw new UserException(cronMessage("CRON_RESTORE_FAILED"));
+        {
+            finishAction(id, "CRON_CHANGED", "error");
+            return null;
+        }
 
-        fw.flash("success", cronMessage("CRON_RESTORED"));
+        fw.flash("record_updated", 1);
         return afterSave(true, id, location: base_url + "/" + id);
     }
 
@@ -252,12 +268,12 @@ public class AdminCronController : FwDynamicController
     {
         try
         {
-            var taskId = reqi("task_id");
-            var observed = taskId > 0 ? taskOrFail(taskId) : null;
+            var fwcron_id = reqi("fwcron_id");
+            var observed = fwcron_id > 0 ? taskOrFail(fwcron_id) : null;
             var (cron, zone, start, end) = model.readSchedule(reqh("item"), observed);
             var occurrences = new FwList();
             var next = DateTime.UtcNow;
-            var viewerZone = FwCron.findZone(fw.userTimezone);
+            var viewer_zone = FwCron.findZone(fw.userTimezone);
             for (var i = 0; i < 3; i++)
             {
                 var occurrence = FwCron.calculateNextRun(cron, next, end, zone, start);
@@ -267,10 +283,10 @@ public class AdminCronController : FwDynamicController
                 next = occurrence.Value;
                 occurrences.Add(new FwDict
                 {
-                    ["recurrence"] = zonedTime(next, zone, includeZone: false),
+                    ["recurrence"] = zonedTime(next, zone, is_include_zone: false),
                     ["recurrence_title"] = zonedTime(next, zone),
-                    ["local"] = zonedTime(next, viewerZone, includeZone: false),
-                    ["local_title"] = zonedTime(next, viewerZone),
+                    ["local"] = zonedTime(next, viewer_zone, is_include_zone: false),
+                    ["local_title"] = zonedTime(next, viewer_zone),
                     ["utc"] = utcTime(next)
                 });
             }
@@ -302,10 +318,10 @@ public class AdminCronController : FwDynamicController
             // The request may have lost to another request or the worker after its cached read.
             model.removeCache(id);
             task = taskOrFail(id);
-            if (!task.run_requested_utc.HasValue && string.IsNullOrEmpty(task.run_token))
-                throw new UserException(cronMessage("CRON_CHANGED"));
-
-            finishAction(id, "CRON_ALREADY_QUEUED");
+            if (task.run_requested_utc.HasValue || !string.IsNullOrEmpty(task.run_token))
+                finishAction(id, "CRON_ALREADY_QUEUED", "info");
+            else
+                finishAction(id, "CRON_CHANGED", "error");
         }
     }
 
@@ -314,20 +330,20 @@ public class AdminCronController : FwDynamicController
         enforcePost();
         checkReadOnly();
         taskOrFail(id);
-        if (!model.pause(id))
-            throw new UserException(cronMessage("CRON_PAUSE_FAILED"));
-
-        finishAction(id, "CRON_PAUSED");
+        if (model.pause(id))
+            finishAction(id, "CRON_PAUSED");
+        else
+            finishAction(id, "CRON_CHANGED", "error");
     }
 
     public void ResumeAction(int id)
     {
         enforcePost();
         checkReadOnly();
-        if (!model.resume(taskOrFail(id)))
-            throw new UserException(cronMessage("CRON_RESUME_FAILED"));
-
-        finishAction(id, "CRON_RESUMED");
+        if (model.resume(taskOrFail(id)))
+            finishAction(id, "CRON_RESUMED");
+        else
+            finishAction(id, "CRON_RESUME_FAILED", "error");
     }
 
     public void RecoverAction(int id)
@@ -336,10 +352,13 @@ public class AdminCronController : FwDynamicController
         checkReadOnly();
         taskOrFail(id);
         var token = reqs("run_token");
-        if (!reqb("confirm_recovery") || token.Length == 0 || !model.recover(id, token))
+        if (!reqb("confirm_recovery") || token.Length == 0)
             throw new UserException(cronMessage("CRON_RECOVER_FAILED"));
 
-        finishAction(id, "CRON_RECOVERED");
+        if (model.recover(id, token))
+            finishAction(id, "CRON_RECOVERED");
+        else
+            finishAction(id, "CRON_RECOVER_FAILED", "error");
     }
 
     private FwDict taskDisplay(FwDict row)
@@ -359,21 +378,21 @@ public class AdminCronController : FwDynamicController
         task["can_pause"] = !is_readonly && !is_deleted && (status == FwModel.STATUS_ACTIVE || is_queued);
         task["can_resume"] = !is_readonly && !is_running && status is FwModel.STATUS_INACTIVE or FwCron.STATUS_COMPLETED;
         task["can_edit"] = !is_readonly && !is_running && !is_deleted;
-        task["report_code"] = FwCron.reportCode(row["icode"].toStr());
+        task["report_code"] = FwReports.reportCode(row["icode"].toStr());
         setScheduleDescription(task);
 
-        var resultJson = row["last_result"].toStr();
-        var result = FwCron.parseResult(resultJson);
+        var result_json = row["last_result"].toStr();
+        var result = FwCron.parseResult(result_json);
         task["result_status"] = result["status"];
         task["result_message"] = cronMessage(result["message"].toStr());
-        task["is_result_unavailable"] = result.Count == 0 && resultJson.Length > 0;
+        task["is_result_unavailable"] = result.Count == 0 && result_json.Length > 0;
         if (!Utils.isEmpty(row["next_run_utc"]))
         {
             var next = row["next_run_utc"].toDate();
-            var scheduleZone = FwCron.findZoneOrNull(row["timezone"].toStr());
-            task["next_zone"] = scheduleZone?.Id ?? DateUtils.TZ_UTC;
-            task["next_time"] = scheduleZone == null ? utcTime(next) : zonedTime(next, scheduleZone, includeZone: false);
-            task["next_utc"] = scheduleZone != null && scheduleZone.Id != DateUtils.TZ_UTC ? utcTime(next) : "";
+            var schedule_zone = FwCron.findZoneOrNull(row["timezone"].toStr());
+            task["next_zone"] = schedule_zone?.Id ?? DateUtils.TZ_UTC;
+            task["next_time"] = schedule_zone == null ? utcTime(next) : zonedTime(next, schedule_zone, is_include_zone: false);
+            task["next_utc"] = schedule_zone != null && schedule_zone.Id != DateUtils.TZ_UTC ? utcTime(next) : "";
         }
         addTimestamp(task, row, "start_date_utc", "start");
         addTimestamp(task, row, "end_date_utc", "end");
@@ -384,14 +403,14 @@ public class AdminCronController : FwDynamicController
 
     private FwDict? addReportDisplay(FwDict ps, FwCron.Row task)
     {
-        var report = FwCron.reportCode(task.icode);
+        var report = FwReports.reportCode(task.icode);
         if (report.Length == 0)
             return null;
 
         ps["report_code"] = report;
         try
         {
-            var payload = fw.model<FwScheduledReports>().payload(task.icode, task.payload ?? "");
+            var payload = fw.model<FwReports>().parseSchedulePayload(task.icode, task.payload ?? "");
             var user = fw.model<Users>().iname(payload["run_as_users_id"]);
             var parameters = (FwList)payload["params"]!;
             ps["report_params"] = new FwList(parameters.Select(parameter => new FwDict
@@ -405,7 +424,7 @@ public class AdminCronController : FwDynamicController
                 foreach (var parameter in parameters)
                     filters[parameter["name"].toStr()] = parameter["value"];
                 var instance = FwReportsBase.createInstance(fw, report, filters);
-                FwScheduledReports.checkTarget(instance, report, payload);
+                FwReports.checkScheduleTarget(instance, report, payload);
                 ps["report_params"] = instance.describeScheduledFilters(parameters);
                 ps["can_edit_report_filters"] = task.status != FwModel.STATUS_DELETED;
             }
@@ -439,12 +458,12 @@ public class AdminCronController : FwDynamicController
             task[prefix + "_utc"] = utcTime(value);
     }
 
-    private string zonedTime(DateTime value, TimeZoneInfo zone, bool includeZone = true)
+    private string zonedTime(DateTime value, TimeZoneInfo zone, bool is_include_zone = true)
     {
         var local = TimeZoneInfo.ConvertTime(new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)), zone);
         var format = DateUtils.mapDateFormat(fw.userDateFormat) + " " + DateUtils.mapTimeFormat(fw.userTimeFormat);
         return local.ToString(format, CultureInfo.InvariantCulture)
-            + (includeZone ? " " + zone.Id + " (" + local.ToString("zzz") + ")" : "");
+            + (is_include_zone ? " " + zone.Id + " (" + local.ToString("zzz") + ")" : "");
     }
 
     private static string utcTime(DateTime value) =>
@@ -490,9 +509,18 @@ public class AdminCronController : FwDynamicController
         return message.Length > 0 ? fw.parsePageInstance().langMap(message) : code;
     }
 
-    private void finishAction(int id, string message)
+    private void finishAction(int id, string message, string flash_type = "success")
     {
-        fw.flash("success", cronMessage(message));
+        var text = cronMessage(message);
+        if (flash_type == "error" && fw.isJsonExpected())
+        {
+            fw.setGlobalError(text);
+            fw.response.StatusCode = 400;
+            fw.parserJson((FwDict)afterSave(false, id)!["_json"]!);
+            return;
+        }
+
+        fw.flash(flash_type, text);
         fw.redirect(base_url + "/" + id, is_exception: false);
     }
 

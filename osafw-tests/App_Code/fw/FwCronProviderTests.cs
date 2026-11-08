@@ -59,8 +59,8 @@ internal static class FwCronProviderChecks
             "payload", "Current payload", "upd_time", due.AddDays(-1)));
         var stale = secondCron.listDueJobs().Single(task => task.id == id);
         Assert.AreEqual(due, stale.next_run_utc, "Schedule instants remain UTC even when the database timezone is Eastern.");
-        Assert.IsTrue(firstCron.saveDefinition(id, stale, DB.h("payload", "current payload")));
-        Assert.IsFalse(secondCron.saveDefinition(id, stale, DB.h("payload", "stale overwrite")),
+        Assert.IsTrue(firstCron.updateDefinition(id, stale, DB.h("payload", "current payload")));
+        Assert.IsFalse(secondCron.updateDefinition(id, stale, DB.h("payload", "stale overwrite")),
             "A concurrent case-only edit invalidates the observed definition on case-insensitive databases.");
         Assert.IsTrue(firstCron.requestRun(id));
         var firstRun = Task.Run(() => firstCron.runJob(stale));
@@ -73,7 +73,7 @@ internal static class FwCronProviderChecks
             Assert.AreEqual(DateTimeKind.Utc, held.last_started_utc!.Value.Kind);
             Assert.IsTrue((DateTime.UtcNow - held.last_started_utc.Value).Duration() < TimeSpan.FromSeconds(30));
             Assert.IsFalse(secondCron.requestRun(id));
-            Assert.IsFalse(secondCron.saveDefinition(id, held, DB.h("payload", "obsolete payload")));
+            Assert.IsFalse(secondCron.updateDefinition(id, held, DB.h("payload", "obsolete payload")));
             Assert.IsFalse(secondCron.deleteTask(id));
             secondCron.runJob(stale);
             Assert.AreEqual(0, secondCalls);
@@ -129,7 +129,7 @@ internal static class FwCronProviderChecks
         Assert.AreEqual(next, paused.next_run_utc, "An early manual run preserves the next occurrence.");
         var result = FwCron.parseResult(paused.last_result);
         Assert.AreEqual(FwCron.RESULT_SUCCEEDED, result["status"]);
-        Assert.IsFalse(result.ContainsKey("data"));
+        Assert.AreEqual(new string('a', 18000), result["data"]);
 
         first.db.update("fwcron", DB.h("run_token", "AbcHeld"), DB.h("id", id));
         cron.removeCache(id);
@@ -167,12 +167,12 @@ internal static class FwCronProviderChecks
         var cron = first.model<FwCron>();
         var stale = DateTime.UtcNow.AddHours(-1);
         var fields = DB.h("cron", "0 0 * * *", "next_run_utc", stale, "run_requested_utc", stale);
-        var id = cron.addReport("Sample_Archive", fields);
-        cron.addReport("Sample", fields);
-        cron.addReport("SampleXArchive", fields);
+        var id = first.model<FwReports>().addSchedule("Sample_Archive", fields);
+        first.model<FwReports>().addSchedule("Sample", fields);
+        first.model<FwReports>().addSchedule("SampleXArchive", fields);
 
         var candidate = cron.oneT(id)!;
-        Assert.AreEqual("Sample_Archive", FwCron.reportCode(candidate.icode));
+        Assert.AreEqual("Sample_Archive", FwReports.reportCode(candidate.icode));
         cron.runJob(candidate);
         var skipped = cron.oneT(id)!;
         Assert.IsTrue(skipped.next_run_utc > DateTime.UtcNow);
@@ -190,7 +190,7 @@ internal static class FwCronProviderChecks
         using var fw = context(connection, provider);
         var cron = fw.model<FwCron>();
         var now = DateTime.UtcNow;
-        var reportId = cron.addReport("Sample", DB.h("cron", "@daily", "run_requested_utc", now));
+        var reportId = fw.model<FwReports>().addSchedule("Sample", DB.h("cron", "@daily", "run_requested_utc", now));
         var report = cron.oneT(reportId)!;
         cron.oneByIcode(report.icode);
 
@@ -203,7 +203,7 @@ internal static class FwCronProviderChecks
         Assert.IsEmpty(cron.oneByIcode(report.icode));
         Assert.IsFalse(cron.restoreTask(reportId));
         Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", reportId, new[] { FwLogTypes.ICODE_DELETED }));
-        var oldReportId = cron.addReport("Sample", DB.h("cron", "@daily", "status", FwModel.STATUS_DELETED));
+        var oldReportId = fw.model<FwReports>().addSchedule("Sample", DB.h("cron", "@daily", "status", FwModel.STATUS_DELETED));
         Assert.IsFalse(cron.restoreTask(oldReportId), "Previously soft-deleted report schedules cannot be restored.");
         Assert.IsTrue(cron.deleteTask(oldReportId), "Previously soft-deleted report schedules can be purged.");
 
@@ -250,7 +250,7 @@ internal static class FwCronProviderChecks
         Assert.AreEqual(1, first.db.valuep($"SELECT COUNT(*) FROM {cron.qTable()} WHERE id = @id AND start_date_utc = '2026-11-01 05:30:00' AND next_run_utc = '2026-11-01 06:30:00'", DB.h("id", id)).toInt(),
             "Raw storage must contain UTC, without a database-local conversion on either write or read.");
 
-        Assert.IsTrue(cron.saveDefinition(id, observed, DB.h("end_date_utc", secondFold)));
+        Assert.IsTrue(cron.updateDefinition(id, observed, DB.h("end_date_utc", secondFold)));
         Assert.AreEqual(secondFold, cron.oneT(id)!.end_date_utc);
         cron.update(id, DB.h("end_date_utc", null));
         Assert.IsTrue(cron.resume(cron.oneT(id)!));

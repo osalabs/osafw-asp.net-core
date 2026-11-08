@@ -2,10 +2,6 @@
 
 This changelog records only breaking framework changes and the actions needed to upgrade an existing application. Entries are grouped by the date of the breaking change, not by followup commits. Additive features, internal refactoring, bug fixes, and renames within an unreleased branch belong in the relevant feature documentation or task summary. Coverage starts at 2025-06-01.
 
-## 2026-11-08
-
-- Interactive report Email To now uses the configured mail sender, matching scheduled report delivery. Verify Site Settings mail_from when upgrading applications that previously sent reports from the signed-in user's email. Report emails use the subject-first `emails/report.html` template; copy that template with the report email code.
-
 ## 2026-11-07
 
 - Scheduled tasks now require the active provider's `upd2026-11-07-scheduled-tasks.sql` update before the new runner or `/Admin/Cron` UI is used. Stop old workers before rollout; claims and report task codes are not understood by old binaries. Claims use conditional DB updates; SQL Server and SQLite are verified providers. Migrate `TFwCron` references to `FwCron.Row` and preserve copied-app handlers in `FwCron.runJobAction(FwCron.Row)`, now returning optional result details, and expose their codes through `legacyCodes()`. Failed handlers advance the recurrence instead of retrying every minute; uncertain external effects require explicit review. Schedule end bounds are now exclusive. See [Scheduled Tasks](cron.md) for activation, report contracts, and interruption recovery.

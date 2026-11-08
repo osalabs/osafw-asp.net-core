@@ -1,18 +1,15 @@
 CRON_JOB|`Choose a supported application job code.`
 CRON_JOB_EXISTS|`A task already uses this job code.`
 CRON_EDIT_RUNNING|`Wait for the current run before editing this task.`
-CRON_CHANGED|`The task changed or started running. Reload and try again.`
+CRON_CHANGED|`No changes were made. Reload the task and check its current state.`
 CRON_BULK_CHANGED|`Some tasks were kept. Reload to check for running or changed tasks. Permanent deletion is unavailable for application tasks. Restore them from the Deleted view.`
 CRON_RUNNER_DISABLED|`The task runner is disabled in this build.`
 CRON_RESUME_BEFORE_RUN|`Revise or resume this schedule before requesting a run.`
-CRON_PAUSE_FAILED|`The task could not be paused. Reload and try again.`
 CRON_RESUME_FAILED|`The task could not be resumed. Check its schedule and current state.`
 CRON_RECOVER_FAILED|`Confirm the worker has stopped and reload the task if its state changed.`
 CRON_QUEUED|`Queued`
 CRON_ALREADY_QUEUED|`Already queued/running`
 CRON_PAUSED|`Paused`
-CRON_RESTORE_FAILED|`Only idle, deleted application tasks can be restored.`
-CRON_RESTORED|`Task restored as paused.`
 CRON_RESUMED|`Resumed`
 CRON_RECOVERED|`Interrupted run recorded as uncertain. The task is paused.`
 CRON_STATUS|`Choose a valid schedule status.`

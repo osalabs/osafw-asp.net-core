@@ -217,6 +217,18 @@ public class AdminCronControllerTests
         Call("POST", "/Admin/Cron/(Pause)/" + id);
         Assert.AreEqual(302, context.Response.StatusCode);
         Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().oneT(id)!.status);
+        Call("POST", "/Admin/Cron/(Pause)/" + id);
+        Assert.AreEqual(302, context.Response.StatusCode, "An already paused task uses normal feedback rather than an exception.");
+        context.Request.Headers.Accept = "application/json";
+        Call("POST", "/Admin/Cron/(Pause)/" + id);
+        Assert.AreEqual(400, context.Response.StatusCode);
+        var rejected = Utils.jsonDecodeDict(Encoding.UTF8.GetString(body.ToArray()))!;
+        Assert.IsFalse(rejected["success"].toBool());
+        Assert.IsTrue(((FwDict)rejected["error"]!)["message"].toStr().Length > 0);
+        context.Request.Headers.Remove("Accept");
+
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, fw.model<FwCron>().oneT(id)!.status);
+
 
         fw.FORM.Clear();
         Call("GET", "/Admin/Cron/" + id);
@@ -271,7 +283,7 @@ public class AdminCronControllerTests
         fw.db.update("fwcron", DB.h("start_date_utc", start), DB.h("id", id));
         fw.model<FwCron>().removeCache(id);
         fw.FORM.Clear();
-        fw.FORM["task_id"] = id.ToString();
+        fw.FORM["fwcron_id"] = id.ToString();
         fw.FORM["item"] = DB.h("cron", "*/30 1 * * *", "timezone", zone.Id,
             "start_date_utc", wallTime.ToString("yyyy-MM-dd'T'HH:mm:ss"));
         Call("GET", "/Admin/Cron/(Preview)");
@@ -363,7 +375,7 @@ public class AdminCronControllerTests
         }
         fw.FORM.Clear();
 
-        var singleId = fw.model<FwCron>().addReport("Sample", DB.h("iname", "Single report delete", "cron", "0 7 * * *"));
+        var singleId = fw.model<FwReports>().addSchedule("Sample", DB.h("iname", "Single report delete", "cron", "0 7 * * *"));
         var reportUrl = "/Admin/Cron/" + singleId;
         fw.FORM["return_url"] = reportUrl;
         Call("GET", reportUrl + "/delete");
@@ -380,7 +392,7 @@ public class AdminCronControllerTests
         Assert.IsNull(fw.model<FwCron>().oneT(singleId));
 
         fw.FORM.Remove("return_url");
-        var bulkReportId = fw.model<FwCron>().addReport("Sample", DB.h("iname", "Bulk report delete", "cron", "@daily"));
+        var bulkReportId = fw.model<FwReports>().addSchedule("Sample", DB.h("iname", "Bulk report delete", "cron", "@daily"));
         fw.FORM["_method"] = "PUT";
         fw.FORM["delete"] = "1";
         fw.FORM["cb"] = new FwDict { [bulkReportId.ToString()] = "1" };

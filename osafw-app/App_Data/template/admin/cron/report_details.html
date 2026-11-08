@@ -2,7 +2,7 @@
   <h2 class="h5">`Report`</h2>
   <p><a href="<~/admin/reports/url>/<~report_code urlencode>"><~report_code></a>
     <~filter_link if="can_edit_report_filters" inline>
-      <a class="ms-2" href="<~/admin/reports/url>/<~report_code urlencode>?schedule_id=<~id>">`Edit schedule filters`</a>
+      <a class="ms-2" href="<~/admin/reports/url>/<~report_code urlencode>?fwcron_id=<~id>">`Edit schedule filters`</a>
     </~filter_link>
   </p>
   <~report_unavailable if="is_report_payload_unavailable" inline>

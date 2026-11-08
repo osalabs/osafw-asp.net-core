@@ -50,7 +50,7 @@ public class CronEditorBrowserTests
 
         string Editor(string prefix, string cron)
         {
-            var state = fw.model<FwCron>().cronEditor(new FwDict { ["cron"] = cron, ["timezone"] = "UTC" }, prefix, isExternalPreview: prefix == "report-cron");
+            var state = fw.model<FwCron>().cronEditor(new FwDict { ["cron"] = cron, ["timezone"] = "UTC" }, prefix, is_external_preview: prefix == "report-cron");
             var html = parser.parse_page("", "common/cron_editor.html", state);
             if (prefix == "report-cron")
                 html += parser.parse_page("", "common/cron_preview.html", state);

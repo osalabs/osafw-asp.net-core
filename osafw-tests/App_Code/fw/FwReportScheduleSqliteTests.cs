@@ -76,14 +76,14 @@ public class FwReportScheduleSqliteTests
         var records = tasks();
         Assert.HasCount(2, records);
         Assert.AreNotEqual(records[0].icode, records[1].icode);
-        Assert.AreEqual(reportCode, FwCron.reportCode(records[0].icode));
+        Assert.AreEqual(reportCode, FwReports.reportCode(records[0].icode));
         Assert.AreEqual("0 7 * * *", records[0].cron);
         Assert.AreEqual("0 10 * * *", records[1].cron);
         Assert.IsTrue(records.All(job => job.next_run_utc > DateTime.UtcNow && job.last_result == null));
 
-        var scheduler = fw.model<FwScheduledReports>();
-        var first = scheduler.payload(records[0].icode, records[0].payload!);
-        var second = scheduler.payload(records[1].icode, records[1].payload!);
+        var scheduler = fw.model<FwReports>();
+        var first = scheduler.parseSchedulePayload(records[0].icode, records[0].payload!);
+        var second = scheduler.parseSchedulePayload(records[1].icode, records[1].payload!);
         Assert.AreEqual("first@example.test", first["recipients"]);
         Assert.AreEqual("html", first["format"]);
         Assert.AreEqual("second@example.test", second["recipients"]);
@@ -118,14 +118,14 @@ public class FwReportScheduleSqliteTests
             DB.h("id", reportId));
         fw.FORM.Clear();
         fw.FORM["XSS"] = "schedule-test-token";
-        fw.FORM["schedule_id"] = records[0].id.ToString();
+        fw.FORM["fwcron_id"] = records[0].id.ToString();
         fw.FORM["f"] = DB.h("selected_date", "7/8/2026", "currency", "EUR");
         call("POST", "UpdateScheduleFilters");
         Assert.AreEqual(302, fw.response.StatusCode);
-        Assert.AreEqual($"/Admin/Reports/{reportCode}?schedule_id={records[0].id}", fw.response.Headers.Location.ToString());
+        Assert.AreEqual($"/Admin/Reports/{reportCode}?fwcron_id={records[0].id}", fw.response.Headers.Location.ToString());
 
         var reviewed = tasks();
-        var updated = scheduler.payload(reviewed[0].icode, reviewed[0].payload!);
+        var updated = scheduler.parseSchedulePayload(reviewed[0].icode, reviewed[0].payload!);
         var filters = (FwList)updated["params"]!;
         Assert.AreEqual("7/8/2026", filters.Single(row => row["name"].toStr() == "selected_date")["value"]);
         Assert.AreEqual("EUR", filters.Single(row => row["name"].toStr() == "currency")["value"]);
@@ -156,7 +156,7 @@ public class FwReportScheduleSqliteTests
         db.update("fwcron", DB.h("payload", "{}"), DB.h("id", records[0].id));
         fw.model<FwCron>().removeCache(records[0].id);
         fw.FORM["XSS"] = "schedule-test-token";
-        fw.FORM["schedule_id"] = records[0].id.ToString();
+        fw.FORM["fwcron_id"] = records[0].id.ToString();
         var error = Assert.ThrowsExactly<UserException>(() => call("POST", "UpdateScheduleFilters"));
         Assert.AreNotEqual("REPORT_SCHEDULE_INVALID", error.Message);
         Assert.AreEqual("{}", tasks()[0].payload);

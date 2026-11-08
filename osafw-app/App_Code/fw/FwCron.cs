@@ -8,9 +8,6 @@ using Cronos;
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 /// <summary>Stops future runs when a task's configuration requires administrator review. Supply a safe plain-text message.</summary>
@@ -50,7 +47,6 @@ public class FwCron : FwModel<FwCron.Row>
     }
 
     public const string ICODE_EXAMPLE = "example_sleep";
-    public const string REPORT_PREFIX = "report_";
     public const int STATUS_COMPLETED = 20;
     public const string RESULT_RUNNING = "running";
     public const string RESULT_SUCCEEDED = "succeeded";
@@ -59,10 +55,6 @@ public class FwCron : FwModel<FwCron.Row>
 
     private const string DEFAULT_CRON = "0 7 * * *";
     private const string BOUND_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    private const int REPORT_SUFFIX_LENGTH = 10;
-    private const int REPORT_CODE_MAX_LENGTH = 128;
-    private const int RESULT_MESSAGE_MAX_LENGTH = 2000;
-    private const int RESULT_MAX_BYTES = 16 * 1024;
     private static readonly TimeSpan RUN_GRACE = TimeSpan.FromMinutes(5);
 
     public FwCron() : base()
@@ -74,40 +66,9 @@ public class FwCron : FwModel<FwCron.Row>
     /// <summary>Returns legacy handler codes that Site Admins can use when creating a task.</summary>
     public virtual IReadOnlyList<string> legacyCodes() => [ICODE_EXAMPLE];
 
-    /// <summary>Gets the exact report code from a generated task code, or an empty string for an invalid identity.</summary>
-    public static string reportCode(string icode)
-    {
-        if (!icode.StartsWith(REPORT_PREFIX, StringComparison.OrdinalIgnoreCase))
-            return string.Empty;
-
-        var colon = icode.IndexOf(':');
-        if (colon <= REPORT_PREFIX.Length || icode.Length - colon - 1 != REPORT_SUFFIX_LENGTH)
-            return string.Empty;
-
-        var code = icode[REPORT_PREFIX.Length..colon];
-        return isReportCode(code) && isReportCode(icode[(colon + 1)..]) ? code : string.Empty;
-    }
-
-    private static bool isReportCode(string code) =>
-        code.Length > 0 && REPORT_PREFIX.Length + code.Length + 1 + REPORT_SUFFIX_LENGTH <= REPORT_CODE_MAX_LENGTH
-        && Regex.IsMatch(code, @"\A[A-Za-z0-9_-]+\z");
-
-    /// <summary>Creates a task with a generated report identity. The caller supplies the validated definition.</summary>
-    public int addReport(string report_code, FwDict fields)
-    {
-        if (!isReportCode(report_code))
-            throw new ArgumentException("Invalid report code for a scheduled task.", nameof(report_code));
-
-        var item = new FwDict(fields)
-        {
-            ["icode"] = $"{REPORT_PREFIX}{report_code}:{Utils.nanoid(REPORT_SUFFIX_LENGTH)}"
-        };
-        return add(item);
-    }
-
     /// <summary>Builds template data for the shared editor. The caller supplies a unique prefix for each instance.</summary>
     internal FwDict cronEditor(FwDict values, string prefix,
-        string cronField = "item[cron]", string timezoneField = "item[timezone]", int taskId = 0, bool isExternalPreview = false)
+        string cron_field = "item[cron]", string timezone_field = "item[timezone]", int fwcron_id = 0, bool is_external_preview = false)
     {
         var timezone = values["timezone"].toStr(fw.userTimezone);
         var choices = TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id)
@@ -124,10 +85,10 @@ public class FwCron : FwModel<FwCron.Row>
         return new FwDict
         {
             ["prefix"] = prefix,
-            ["is_external_preview"] = isExternalPreview,
-            ["task_id"] = taskId,
-            ["cron_field"] = cronField,
-            ["timezone_field"] = timezoneField,
+            ["is_external_preview"] = is_external_preview,
+            ["fwcron_id"] = fwcron_id,
+            ["cron_field"] = cron_field,
+            ["timezone_field"] = timezone_field,
             ["cron"] = values["cron"].toStr(DEFAULT_CRON),
             ["timezone"] = timezone,
             ["zones"] = zones,
@@ -139,12 +100,12 @@ public class FwCron : FwModel<FwCron.Row>
     internal void prepareSchedule(FwDict fields, Row? observed = null)
     {
         var (cron, zone, start, end) = readSchedule(fields, observed);
-        var requestedStatus = fields["status"].toStr("0");
-        if (requestedStatus != "0" && requestedStatus != "10" &&
-            !(requestedStatus == "20" && observed?.status == FwCron.STATUS_COMPLETED))
+        var requested_status = fields["status"].toStr("0");
+        if (requested_status != "0" && requested_status != "10" &&
+            !(requested_status == "20" && observed?.status == FwCron.STATUS_COMPLETED))
             throw new UserException("CRON_STATUS");
 
-        var status = requestedStatus.toInt();
+        var status = requested_status.toInt();
         var is_changed = observed == null || observed.cron != cron || observed.timezone != zone.Id
             || observed.start_date_utc != start || observed.end_date_utc != end;
         var is_recalculate = is_changed || (status == FwModel.STATUS_ACTIVE && observed?.status != status);
@@ -208,28 +169,16 @@ public class FwCron : FwModel<FwCron.Row>
     /// <summary>Returns a recognized latest-result envelope, or an empty dictionary if it is unavailable.</summary>
     public static FwDict parseResult(string? json)
     {
-        if (string.IsNullOrEmpty(json) || Encoding.UTF8.GetByteCount(json) > RESULT_MAX_BYTES)
-            return [];
-
-        var result = Utils.jsonDecodeDict(json);
+        var result = Utils.jsonDecodeDict(json ?? "");
         if (result is null || result["message"] is not string
             || result["status"] is not (RESULT_RUNNING or RESULT_SUCCEEDED or RESULT_FAILED or RESULT_UNCERTAIN))
             return [];
 
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return result;
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
+        return result;
     }
 
     private static string resultJson(string status, string message, object? data = null)
     {
-        message = boundMessage(message);
         var result = new FwDict
         {
             ["status"] = status,
@@ -240,9 +189,7 @@ public class FwCron : FwModel<FwCron.Row>
             result["data"] = data;
             try
             {
-                var json = Utils.jsonEncode(result);
-                if (Encoding.UTF8.GetByteCount(json) <= RESULT_MAX_BYTES)
-                    return json;
+                return Utils.jsonEncode(result);
             }
             catch (Exception)
             {
@@ -254,9 +201,6 @@ public class FwCron : FwModel<FwCron.Row>
 
         return Utils.jsonEncode(result);
     }
-
-    private static string boundMessage(string message) =>
-        message.Length <= RESULT_MESSAGE_MAX_LENGTH ? message : message[..RESULT_MESSAGE_MAX_LENGTH];
 
     private static bool isRunnableStatus(int status) => status is STATUS_ACTIVE or STATUS_INACTIVE;
 
@@ -278,7 +222,7 @@ public class FwCron : FwModel<FwCron.Row>
         if (job == null || !isRunnableStatus(job.status) || job.end_date_utc <= now)
             return false;
 
-        var requested = writeTask(new FwDict { ["run_requested_utc"] = now }, new()
+        var requested = updateTask(new FwDict { ["run_requested_utc"] = now }, new()
         {
             ["id"] = id,
             ["status"] = job.status,
@@ -307,7 +251,7 @@ public class FwCron : FwModel<FwCron.Row>
         if (job.status == STATUS_INACTIVE)
             where["run_requested_utc"] = db.opISNOTNULL();
 
-        var changed = writeDefinition(new()
+        var changed = updateDefinition(new()
         {
             ["status"] = STATUS_INACTIVE,
             ["run_requested_utc"] = null
@@ -332,14 +276,14 @@ public class FwCron : FwModel<FwCron.Row>
             ["status"] = task.status,
             ["run_token"] = null
         };
-        if (isReport(task))
+        if (FwReports.isReportTaskCode(task.icode))
         {
             if (db.del(table_name, where) != 1)
                 return false;
 
             removeCache(id);
         }
-        else if (task.status == STATUS_DELETED || !writeDefinition(new()
+        else if (task.status == STATUS_DELETED || !updateDefinition(new()
         {
             ["status"] = STATUS_DELETED,
             ["run_requested_utc"] = null
@@ -356,10 +300,10 @@ public class FwCron : FwModel<FwCron.Row>
     public bool restoreTask(int id)
     {
         var task = oneT(id);
-        if (task?.status != STATUS_DELETED || isReport(task))
+        if (task?.status != STATUS_DELETED || FwReports.isReportTaskCode(task.icode))
             return false;
 
-        var changed = writeDefinition(new()
+        var changed = updateDefinition(new()
         {
             ["status"] = STATUS_INACTIVE,
             ["run_requested_utc"] = null
@@ -383,7 +327,7 @@ public class FwCron : FwModel<FwCron.Row>
             return false;
 
         var next = nextOccurrence(observed, DateTime.UtcNow);
-        return next.HasValue && saveDefinition(observed.id, observed, new()
+        return next.HasValue && updateDefinition(observed.id, observed, new()
         {
             ["status"] = STATUS_ACTIVE,
             ["next_run_utc"] = next
@@ -394,10 +338,10 @@ public class FwCron : FwModel<FwCron.Row>
     /// Updates validated editable fields if the task is idle and its definition and schedule still match the observed row.
     /// The caller supplies a recalculated next run for recurrence changes.
     /// </summary>
-    public bool saveDefinition(int id, Row observed, FwDict fields) =>
-        saveDefinition(id, observed, fields, "Task definition updated.");
+    public bool updateDefinition(int id, Row observed, FwDict fields) =>
+        updateDefinition(id, observed, fields, "Task definition updated.");
 
-    private bool saveDefinition(int id, Row observed, FwDict fields, string message)
+    private bool updateDefinition(int id, Row observed, FwDict fields, string message)
     {
         if (id != observed.id || observed.status == STATUS_DELETED)
             return false;
@@ -415,7 +359,7 @@ public class FwCron : FwModel<FwCron.Row>
         where["idesc"] = observed.idesc;
         where["payload"] = observed.payload;
         where["upd_time"] = observed.upd_time;
-        var changed = writeDefinition(values, where);
+        var changed = updateDefinition(values, where);
         if (changed)
             fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, message);
         return changed;
@@ -428,7 +372,7 @@ public class FwCron : FwModel<FwCron.Row>
             return false;
 
         const string message = "Execution interrupted. Verify the external outcome before requesting another run.";
-        var recovered = writeDefinition(new()
+        var recovered = updateDefinition(new()
         {
             ["status"] = STATUS_INACTIVE,
             ["run_token"] = null,
@@ -491,18 +435,21 @@ public class FwCron : FwModel<FwCron.Row>
         var message = "CRON_OUTCOME_UNAVAILABLE";
         object? data = null;
         var is_pause = true;
+        var is_report_task = false;
 
         try
         {
+            is_report_task = FwReports.isReportTaskCode(snapshot.icode);
+
             // Uncomment to record each run during development.
             // fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, job.id, "Task run started.");
             FwDict? details;
-            if (isReport(snapshot))
+            if (is_report_task)
             {
-                if (reportCode(snapshot.icode).Length == 0)
+                if (FwReports.reportCode(snapshot.icode).Length == 0)
                     throw new FwCronPauseException("CRON_BAD_REPORT_IDENTITY");
 
-                details = fw.model<FwScheduledReports>().run(snapshot);
+                details = fw.model<FwReports>().runScheduledReport(snapshot);
             }
             else
             {
@@ -526,7 +473,7 @@ public class FwCron : FwModel<FwCron.Row>
         catch (Exception)
         {
             status = RESULT_FAILED;
-            message = isReport(snapshot) ? "CRON_REPORT_GENERATION_FAILED" : "CRON_HANDLER_FAILED";
+            message = is_report_task ? "CRON_REPORT_GENERATION_FAILED" : "CRON_HANDLER_FAILED";
             is_pause = false;
         }
         finally
@@ -587,10 +534,10 @@ public class FwCron : FwModel<FwCron.Row>
                 {
                     var next = calculateNextRun(job.cron, now, job.end_date_utc, zone, job.start_date_utc);
                     fields["next_run_utc"] = next;
-                    if (!job.next_run_utc.HasValue && !job.start_date_utc.HasValue && !isReport(job))
+                    if (!job.next_run_utc.HasValue && !job.start_date_utc.HasValue && !FwReports.isReportTaskCode(job.icode))
                         fields["start_date_utc"] = now;
 
-                    if (is_due && isReport(job) && job.next_run_utc < now - RUN_GRACE)
+                    if (is_due && FwReports.isReportTaskCode(job.icode) && job.next_run_utc < now - RUN_GRACE)
                     {
                         events.Add($"Skipped overdue report occurrences beginning at {eventTime(job.next_run_utc!.Value)}.");
                         is_due = false;
@@ -615,7 +562,7 @@ public class FwCron : FwModel<FwCron.Row>
 
         var where = scheduleWhere(job);
         where["run_requested_utc"] = job.run_requested_utc;
-        if (!writeTask(fields, where))
+        if (!updateTask(fields, where))
             return null;
 
         foreach (var message in events)
@@ -644,7 +591,7 @@ public class FwCron : FwModel<FwCron.Row>
         };
 
         var next = snapshot.next_run_utc;
-        var is_skipped = isReport(snapshot) && next <= now && next > snapshot.last_started_utc;
+        var is_skipped = FwReports.isReportTaskCode(snapshot.icode) && next <= now && next > snapshot.last_started_utc;
         if (is_skipped)
         {
             next = nextOccurrence(snapshot, now);
@@ -664,19 +611,19 @@ public class FwCron : FwModel<FwCron.Row>
                 ["next_run_utc"] = null
             };
             where["status"] = STATUS_ACTIVE;
-            is_finished = writeTask(completed, where);
+            is_finished = updateTask(completed, where);
 
             // An administrator can pause a held run. Preserve that status when releasing the claim.
             where.Remove("status");
         }
 
-        if (!is_finished && !writeTask(fields, where))
+        if (!is_finished && !updateTask(fields, where))
             return;
 
         if (is_skipped)
             fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, snapshot.id, "Skipped report occurrences during execution.");
         if (status != RESULT_SUCCEEDED)
-            fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, snapshot.id, boundMessage(message));
+            fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, snapshot.id, message);
         // Uncomment to record successful runs during development.
         // if (status == RESULT_SUCCEEDED)
         //     fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, snapshot.id, "Task run succeeded.");
@@ -696,7 +643,7 @@ public class FwCron : FwModel<FwCron.Row>
         ["run_token"] = null
     };
 
-    private bool writeTask(FwDict fields, FwDict where)
+    private bool updateTask(FwDict fields, FwDict where)
     {
         if (fields.Count == 0 || db.update(table_name, fields, where) != 1)
             return false;
@@ -705,18 +652,16 @@ public class FwCron : FwModel<FwCron.Row>
         return true;
     }
 
-    private bool writeDefinition(FwDict fields, FwDict where)
+    private bool updateDefinition(FwDict fields, FwDict where)
     {
         fields["upd_time"] = DB.NOW;
         if (fw.isLogged)
             fields["upd_users_id"] = fw.userId;
 
-        return writeTask(fields, where);
+        return updateTask(fields, where);
     }
 
     private static string eventTime(DateTime date) => date.ToString("u", CultureInfo.InvariantCulture);
-
-    internal static bool isReport(Row job) => job.icode.StartsWith(REPORT_PREFIX, StringComparison.OrdinalIgnoreCase);
 
     private static bool trySchedule(Row job, out TimeZoneInfo zone)
     {

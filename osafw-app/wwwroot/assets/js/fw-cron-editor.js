@@ -102,7 +102,7 @@
       }
 
       const url = new URL(root.dataset.previewUrl, document.baseURI);
-      if (Number(root.dataset.taskId) > 0) url.searchParams.set('task_id', root.dataset.taskId);
+      if (Number(root.dataset.fwcronId) > 0) url.searchParams.set('fwcron_id', root.dataset.fwcronId);
       url.searchParams.set('item[cron]', expression.value);
       url.searchParams.set('item[timezone]', zone.value);
       if (form) {

@@ -453,7 +453,7 @@ public class FwEmailTests
         using var scope = CreateScheduledScope(server, db, isTest);
         var job = ScheduledJob("html");
 
-        var result = scope.Fw.model<FwScheduledReports>().run(job);
+        var result = scope.Fw.model<FwReports>().runScheduledReport(job);
 
         Assert.AreEqual("REPORT_SENT", result["message"]);
         Assert.AreEqual(1, db.RenderQueryCount);
@@ -478,7 +478,7 @@ public class FwEmailTests
         TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings { Host = "", Port = server.Port });
         scope.Fw.settings.init(scope.Fw);
 
-        var error = Assert.ThrowsExactly<FwCronPauseException>(() => scope.Fw.model<FwScheduledReports>().run(ScheduledJob("html")));
+        var error = Assert.ThrowsExactly<FwCronPauseException>(() => scope.Fw.model<FwReports>().runScheduledReport(ScheduledJob("html")));
 
         Assert.AreEqual("REPORT_SEND_FAILED", error.Message);
         Assert.IsFalse(scope.Fw.is_email_send_attempted);
@@ -503,7 +503,7 @@ public class FwEmailTests
         using var server = new FakeSmtpServer(rejectRecipient: "<beta@example.test>");
         using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb());
 
-        Assert.ThrowsExactly<FwCronUncertainException>(() => scope.Fw.model<FwScheduledReports>().run(ScheduledJob("html")));
+        Assert.ThrowsExactly<FwCronUncertainException>(() => scope.Fw.model<FwReports>().runScheduledReport(ScheduledJob("html")));
         CollectionAssert.AreEqual(new[] { "<alpha@example.test>", "<beta@example.test>" }, server.Recipients);
         StringAssert.Contains(server.MessageData, "Report marker", "The sink accepted a message for at least one recipient.");
         Assert.IsTrue(scope.Fw.is_email_send_attempted);
@@ -526,7 +526,7 @@ public class FwEmailTests
         var tmp = Utils.getTmpDir();
         var before = Directory.GetFiles(tmp, "*.pdf");
 
-        scope.Fw.model<FwScheduledReports>().run(job);
+        scope.Fw.model<FwReports>().runScheduledReport(job);
 
         Assert.AreEqual(1, db.RenderQueryCount);
         StringAssert.Contains(server.MessageData, "Content-Type: application/pdf");
@@ -546,7 +546,7 @@ public class FwEmailTests
         using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb());
         scope.Fw.config()["pdf_converter"] = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".exe");
 
-        Assert.ThrowsExactly<FileNotFoundException>(() => scope.Fw.model<FwScheduledReports>().run(ScheduledJob("pdf")));
+        Assert.ThrowsExactly<FileNotFoundException>(() => scope.Fw.model<FwReports>().runScheduledReport(ScheduledJob("pdf")));
         Assert.IsFalse(server.ConnectionAccepted);
     }
 
@@ -571,8 +571,8 @@ public class FwEmailTests
         if (invalidity == "shadowed")
             job.icode = "report_Sample:V7mQ2x9KaB";
 
-        var reports = scope.Fw.model<FwScheduledReports>();
-        var payload = reports.payload(job.icode, job.payload!);
+        var reports = scope.Fw.model<FwReports>();
+        var payload = reports.parseSchedulePayload(job.icode, job.payload!);
         var parameters = (FwList)payload["params"]!;
         if (invalidity == "missing")
             parameters.RemoveAt(0);
@@ -584,9 +584,9 @@ public class FwEmailTests
             ((FwDict)payload["input_context"]!)["lang"] = "../unsafe";
         else if (invalidity == "unsplittable_recipient")
             payload["recipients"] = "\"mary jane\"@example.test";
-        job.payload = FwScheduledReports.encodePayload(payload);
+        job.payload = FwReports.encodeSchedulePayload(payload);
 
-        Assert.ThrowsExactly<FwCronPauseException>(() => reports.run(job));
+        Assert.ThrowsExactly<FwCronPauseException>(() => reports.runScheduledReport(job));
         Assert.AreEqual(0, db.RenderQueryCount);
         Assert.IsFalse(server.ConnectionAccepted);
     }
@@ -598,7 +598,7 @@ public class FwEmailTests
         using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb(), isOffline: false);
         scope.Fw.Session("user_id", "12");
 
-        Assert.ThrowsExactly<FwCronPauseException>(() => scope.Fw.model<FwScheduledReports>().run(ScheduledJob("html")));
+        Assert.ThrowsExactly<FwCronPauseException>(() => scope.Fw.model<FwReports>().runScheduledReport(ScheduledJob("html")));
 
         Assert.AreEqual(12, scope.Fw.userId);
         Assert.IsFalse(server.ConnectionAccepted);
@@ -633,6 +633,35 @@ public class FwEmailTests
         StringAssert.Contains(server.MessageData, "Content-Type: text/html");
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    [TestCategory("Browser"), TestCategory("PdfBrowser")]
+    public void ReportEmailTo_PdfSendsAttachmentFromCurrentFilters(bool is_sample)
+    {
+        using var tmp_scope = new ReportTempScope();
+        using var server = new FakeSmtpServer();
+        var db = new ScheduledDeliveryDb();
+        using var scope = CreateScheduledScope(server, db, isOffline: false);
+        var fw = scope.Fw;
+        fw.model<Users>().reloadSession(7);
+        fw.Session("XSS", "form-token");
+        fw.FORM["XSS"] = "form-token";
+        fw.FORM["f"] = DB.h("to_emails", "alpha@example.test", "email_as", "pdf");
+        fw.request.Method = "POST";
+        fw.setRoute(new FwRoute { controller = "AdminReports", action = "SendEmail", method = "POST", id = is_sample ? "Sample" : "scheduled_sales" });
+        var before = Directory.GetFiles(Utils.getTmpDir(), "*.pdf");
+
+        fw.callRoute();
+
+        Assert.AreEqual(302, fw.response.StatusCode);
+        Assert.AreEqual(1, db.RenderQueryCount);
+        StringAssert.Contains(server.MessageData, "Content-Type: application/pdf");
+        StringAssert.Contains(server.MessageData, "JVBERi0");
+        StringAssert.Contains(server.MessageData, "Report PDF attached");
+        CollectionAssert.AreEquivalent(before, Directory.GetFiles(Utils.getTmpDir(), "*.pdf"));
+    }
+
     private sealed class SavedReportTask(FwCron.Row task) : FwCron
     {
         public override Row? oneT(int id) => id == 12 ? task : null;
@@ -653,7 +682,7 @@ public class FwEmailTests
         TestHelpers.RegisterModel(fw, (FwCron)cron);
         fw.Session("XSS", "form-token");
         fw.FORM["XSS"] = "form-token";
-        fw.FORM["schedule_id"] = "12";
+        fw.FORM["fwcron_id"] = "12";
         fw.FORM["f"] = DB.h("to_emails", "alpha@example.test", "from_date", "7/8/2026", "blank_date", "", "account_id", "0");
         fw.request.Method = "POST";
         fw.setRoute(new FwRoute { controller = "AdminReports", action = "SendEmail", method = "POST", id = "scheduled_sales" });
@@ -662,7 +691,7 @@ public class FwEmailTests
 
         Assert.AreEqual(new DateTime(2026, 8, 7), db.LastBindings["@from_date"]);
         Assert.AreEqual(DBNull.Value, db.LastBindings["@blank_date"]);
-        Assert.AreEqual("/Admin/Reports/scheduled_sales?schedule_id=12", fw.response.Headers.Location.ToString());
+        Assert.AreEqual("/Admin/Reports/scheduled_sales?fwcron_id=12", fw.response.Headers.Location.ToString());
         StringAssert.Contains(server.MessageData, "Report marker");
 
         var controller = new AdminReportsController();
@@ -670,9 +699,9 @@ public class FwEmailTests
         fw.Session("access_level", Users.ACL_ADMIN.ToString());
         Assert.ThrowsExactly<AuthException>(() => controller.SendEmailAction("scheduled_sales"));
         fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
-        var saved = fw.model<FwScheduledReports>().payload(task.icode, task.payload!);
+        var saved = fw.model<FwReports>().parseSchedulePayload(task.icode, task.payload!);
         saved["fwreports_id"] = 43;
-        task.payload = FwScheduledReports.encodePayload(saved);
+        task.payload = FwReports.encodeSchedulePayload(saved);
         Assert.ThrowsExactly<UserException>(() => controller.SendEmailAction("scheduled_sales"));
         Assert.AreEqual(1, db.RenderQueryCount, "Unauthorized and replaced-report schedules must not render or send.");
     }
@@ -742,7 +771,7 @@ public class FwEmailTests
             icode = isSample ? "report_Sample:V7mQ2x9KaB" : "report_scheduled_sales:V7mQ2x9KaB",
             timezone = "UTC",
             last_started_utc = new DateTime(2026, 11, 7, 7, 0, 0, DateTimeKind.Utc),
-            payload = FwScheduledReports.encodePayload(payload),
+            payload = FwReports.encodeSchedulePayload(payload),
         };
     }
 

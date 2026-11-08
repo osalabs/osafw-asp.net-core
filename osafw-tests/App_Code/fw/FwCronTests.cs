@@ -40,7 +40,7 @@ public class FwCronTests
     public void ParseResult_ReturnsEmptyForUnreadableOrUnrecognizedEnvelope()
     {
         Assert.HasCount(0, FwCron.parseResult(null));
-        Assert.HasCount(0, FwCron.parseResult("{\"status\":\"succeeded\",\"message\":\"Completed\"}garbage"));
+        Assert.HasCount(0, FwCron.parseResult("{not-json"));
         Assert.HasCount(0, FwCron.parseResult("{\"status\":\"future-status\",\"message\":\"Completed\"}"));
         Assert.AreEqual("Completed", FwCron.parseResult("{\"status\":\"succeeded\",\"message\":\"Completed\"}")["message"]);
     }

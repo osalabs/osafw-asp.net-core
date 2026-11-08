@@ -58,13 +58,13 @@ public class AdminReportsController : FwController
         var is_send_email = reqb("send_email");
         var is_run = (reqb("dofilter") || reqb("is_run")) && !is_send_email;
 
-        var scheduleId = reqi("schedule_id");
+        var fwcron_id = reqi("fwcron_id");
         FwCron.Row? task = null;
         FwDict? saved = null;
-        if (scheduleId > 0)
+        if (fwcron_id > 0)
         {
             checkSiteAdmin();
-            task = getReportTask(scheduleId);
+            task = getReportTask(fwcron_id);
             list_filter = new FwDict(reqh("f"));
         }
         else
@@ -379,20 +379,20 @@ public class AdminReportsController : FwController
         route_onerror = FW.ACTION_SHOW;
 
         var report = FwReportsBase.createScheduledInstance(fw, FwReportsBase.cleanupRepcode(id), []);
-        var submitted = reqh("item");
-        var item = FormUtils.filter(submitted, "iname cron timezone start_date_utc end_date_utc status");
-        validateRequired(0, item, "iname");
+        var item = reqh("item");
+        var itemdb = FormUtils.filter(item, "iname cron timezone start_date_utc end_date_utc status");
+        validateRequired(0, itemdb, "iname");
         validateCheckResult();
-        var name = item["iname"].toStr().Trim();
-        item["iname"] = name.Length > 255 ? name[..255] : name;
+        var name = itemdb["iname"].toStr().Trim();
+        itemdb["iname"] = name.Length > 255 ? name[..255] : name;
 
-        var cron = fw.model<FwCron>();
-        cron.prepareSchedule(item);
-        var payload = fw.model<FwScheduledReports>().capture(report, reqh("f"), submitted);
-        item["payload"] = FwScheduledReports.encodePayload(payload);
+        fw.model<FwCron>().prepareSchedule(itemdb);
+        var reports = fw.model<FwReports>();
+        var payload = reports.captureSchedulePayload(report, reqh("f"), item);
+        itemdb["payload"] = FwReports.encodeSchedulePayload(payload);
 
-        var taskId = cron.addReport(report.schedulingCode, item);
-        saveScheduleFeedback(report, taskId, (DateTime?)item["next_run_utc"]);
+        var fwcron_id = reports.addSchedule(report.schedulingCode, itemdb);
+        saveScheduleFeedback(report, fwcron_id, (DateTime?)itemdb["next_run_utc"]);
         fw.redirect(base_url + "/" + report.schedulingCode, is_exception: false);
     }
 
@@ -404,7 +404,7 @@ public class AdminReportsController : FwController
         checkReadOnly();
         route_onerror = FW.ACTION_SHOW;
 
-        var task = getReportTask(reqi("schedule_id"));
+        var task = getReportTask(reqi("fwcron_id"));
         var report = loadScheduledReport(task, FwReportsBase.cleanupRepcode(id), [], out var saved);
 
         saved["params"] = report.captureScheduledFilters(reqh("f"), true);
@@ -412,11 +412,11 @@ public class AdminReportsController : FwController
         saved.Remove("sortdir");
         report.saveScheduledSort(saved);
 
-        if (!fw.model<FwCron>().saveDefinition(task.id, task, new FwDict { ["payload"] = FwScheduledReports.encodePayload(saved) }))
+        if (!fw.model<FwCron>().updateDefinition(task.id, task, new FwDict { ["payload"] = FwReports.encodeSchedulePayload(saved) }))
             throw new UserException("REPORT_SCHEDULE_CHANGED");
 
         saveScheduleFeedback(report, task.id, task.next_run_utc);
-        fw.redirect(base_url + "/" + report.schedulingCode + "?schedule_id=" + task.id, is_exception: false);
+        fw.redirect(base_url + "/" + report.schedulingCode + "?fwcron_id=" + task.id, is_exception: false);
     }
 
     /// <summary>Preserves the submitted schedule form across the normal report error reroute.</summary>
@@ -450,30 +450,30 @@ public class AdminReportsController : FwController
     /// <summary>Restores a schedule's input conventions and verifies its original report before interpreting filters.</summary>
     private FwReportsBase loadScheduledReport(FwCron.Row task, string code, FwDict filters, out FwDict saved)
     {
-        var scheduler = fw.model<FwScheduledReports>();
-        saved = scheduler.payload(task.icode, task.payload.toStr());
-        scheduler.applyInputContext(saved);
+        var reports = fw.model<FwReports>();
+        saved = reports.parseSchedulePayload(task.icode, task.payload.toStr());
+        reports.applyScheduleInputContext(saved);
         var report = FwReportsBase.createScheduledInstance(fw, code, filters);
-        FwScheduledReports.checkTarget(report, FwCron.reportCode(task.icode), saved);
+        FwReports.checkScheduleTarget(report, FwReports.reportCode(task.icode), saved);
         return report;
     }
 
     private FwCron.Row getReportTask(int id)
     {
         var task = fw.model<FwCron>().oneT(id);
-        if (task == null || task.status == FwModel.STATUS_DELETED || FwCron.reportCode(task.icode).Length == 0)
+        if (task == null || task.status == FwModel.STATUS_DELETED || FwReports.reportCode(task.icode).Length == 0)
             throw new NotFoundException();
 
         return task;
     }
 
-    private void saveScheduleFeedback(FwReportsBase report, int id, DateTime? nextRun)
+    private void saveScheduleFeedback(FwReportsBase report, int fwcron_id, DateTime? next_run)
     {
         fw.flash("report_schedule", new FwDict
         {
             ["code"] = report.schedulingCode,
-            ["task_id"] = id,
-            ["next_run"] = nextRun.HasValue ? DateUtils.Date2SQL(nextRun.Value, is_include_time: true) : null
+            ["fwcron_id"] = fwcron_id,
+            ["next_run"] = next_run.HasValue ? DateUtils.Date2SQL(next_run.Value, is_include_time: true) : null
         });
     }
 
@@ -481,7 +481,7 @@ public class AdminReportsController : FwController
     {
         ps["is_schedule_available"] = true;
         ps["schedule_report_code"] = report.schedulingCode;
-        ps["schedule_search"] = FwCron.REPORT_PREFIX + report.schedulingCode + ":";
+        ps["schedule_search"] = FwReports.REPORT_PREFIX + report.schedulingCode + ":";
         var error = fw.G["report_schedule_error"].toStr();
         var is_cron_error = error.StartsWith("CRON_", StringComparison.Ordinal);
         ps["is_schedule_error"] = error.Length > 0;
@@ -490,7 +490,7 @@ public class AdminReportsController : FwController
 
         if (task != null)
         {
-            ps["schedule_id"] = task.id;
+            ps["fwcron_id"] = task.id;
             ps["schedule_review_required"] = is_review_required;
         }
         else
@@ -508,13 +508,13 @@ public class AdminReportsController : FwController
             ps["is_schedule_initial"] = isGet();
             ps["schedule_item"] = item;
             ps["schedule_run_as"] = fw.Session("user_name");
-            ps["cron_editor"] = fw.model<FwCron>().cronEditor(item, "report-cron", isExternalPreview: true);
+            ps["cron_editor"] = fw.model<FwCron>().cronEditor(item, "report-cron", is_external_preview: true);
         }
 
         if (fw.flash("report_schedule") is FwDict saved && saved["code"].toStr() == report.schedulingCode)
         {
             ps["schedule_success"] = true;
-            ps["schedule_saved_id"] = saved["task_id"];
+            ps["saved_fwcron_id"] = saved["fwcron_id"];
             ps["schedule_next_run"] = saved["next_run"];
         }
     }
@@ -538,12 +538,12 @@ public class AdminReportsController : FwController
         if (email_as == "pdf")
             f["format"] = "pdf";
 
-        var scheduleId = reqi("schedule_id");
+        var fwcron_id = reqi("fwcron_id");
         FwReportsBase report;
-        if (scheduleId > 0)
+        if (fwcron_id > 0)
         {
             checkSiteAdmin();
-            report = loadScheduledReport(getReportTask(scheduleId), repcode, f, out _);
+            report = loadScheduledReport(getReportTask(fwcron_id), repcode, f, out _);
             report.captureScheduledFilters(f, is_frozen: true);
         }
         else
@@ -556,7 +556,7 @@ public class AdminReportsController : FwController
         var res = report.sendReportEmail(to_emails, email_as);
         fw.flash("report_email_status", res ? "REPORT_SENT" : "REPORT_SEND_FAILED");
 
-        fw.redirect(base_url + "/" + repcode + (scheduleId > 0 ? "?schedule_id=" + scheduleId : ""));
+        fw.redirect(base_url + "/" + repcode + (fwcron_id > 0 ? "?fwcron_id=" + fwcron_id : ""));
     }
 
     /// <summary>
