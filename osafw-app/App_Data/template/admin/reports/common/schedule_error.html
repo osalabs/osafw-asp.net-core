@@ -1,0 +1,6 @@
+      <~error if="is_schedule_error" inline>
+        <div class="alert alert-danger" role="alert">
+          <~/admin/cron/cron_messages.sel if="schedule_cron_error" selvalue="schedule_cron_error">
+          <~./schedule_messages.sel if="schedule_error" selvalue="schedule_error" default="`Review the report filters and delivery options.`">
+        </div>
+      </~error>

@@ -133,7 +133,7 @@ The controllers use explicit guards and existing required-field validation; long
 
 SQL Server verification exposed an existing parameter precision issue: inferred SQL datetime parameters could fail equality against datetime2 values. The developer explicitly approved a narrow DB correction preserving datetime2 precision and legacy datetime behavior. The correction uses existing cached column subtype metadata for helper-built SQL Server parameters, preserving raw-parameter behavior and other providers.
 
-Implementation was split into disjoint scheduler core/provider tests, Cron UI/templates, and report workflows; the primary owned shared guards/logging, integration and final verification. All changes remain uncommitted; no configured application database or real email recipients were used.
+Implementation was split into disjoint scheduler core/provider tests, Cron UI/templates, and report workflows; the primary owned shared guards/logging, integration and final verification. That follow-up was subsequently committed and pushed in 0323d735; no configured application database or real email recipients were used.
 
 
 Verification for this follow-up:
@@ -166,3 +166,26 @@ Verification:
 - Scoped references contain no old common/cron_messages or split email template paths. Diff whitespace validation passed.
 
 Strict UTF-8/no-BOM/CRLF checks passed for all 13 follow-up files. Independent consumer-contract review and supplemental summary audit found no blocking findings or evidence discrepancies. Review loop can stop.
+
+
+## Whole-PR review fixes (November 8)
+
+The developer approved the review findings with two explicit decisions: scheduled report tasks should be permanently deleted because they can be recreated from their report, and the broad existing email validation should remain unchanged. This batch does not tighten FormUtils.isEmail or recipient normalization.
+
+Report deletion now conditionally removes only an idle row, including previously soft-deleted report tasks. Application tasks retain their fixed handler code and history; the Deleted list links to their details with a POST/XSS-protected Restore as Paused action. Restore clears pending requests and does not start execution. Running tasks remain protected, and successful writes invalidate request caches. Deleted details withhold edit/run controls. Invalid stored task timezones display the next occurrence in UTC while save/preview validation remains strict. Default Cronos parsing accepts aliases such as @daily and continues rejecting seconds.
+
+Email To on a saved schedule filter page now shares its saved date conventions, explicit blank handling and original report identity check with preview and filter updates. A small internal FW mail-attempt flag distinguishes failures before SMTP submission starts from failures during an attempted submission, when some recipients may already have received the message; public mail signatures and configured sender behavior stay unchanged. Possible delivery remains uncertain and paused. Delivery validation no longer serializes a payload twice; encodePayload remains the persistence size boundary. The duplicated schedule-error block is a shared report partial, and scheduling metadata is cached per initialized report instance.
+
+A bounded implementation agent owned scheduler/controller/template/provider changes; the primary integrated the report/mail fixes, docs and verification. Separate existing reviewers were reused for the affected scheduler and report contracts. These review fixes remain uncommitted. No configured application database, real mail recipient or live worker was used; SMTP checks use loopback fixtures and provider checks use disposable databases.
+
+Verification:
+- ./scripts/test.ps1: 1,096/1,096 passed, zero skipped, build zero warnings/errors. This includes the report fixes and scheduler lifecycle changes; a later one-line guard hides filter editing on old deleted report details and was followed by a focused AdminCronControllerTests rerun: 5/5 passed, zero warnings/errors/skips.
+- ./scripts/test.ps1 -Filter 'FullyQualifiedName~AdminCronControllerTests|FullyQualifiedName~FwCronSqliteTests|FullyQualifiedName~FwCronTests': 15/15 passed. Public routes cover trash/detail/POST restore, forbidden method and token cases, alias preservation and seconds rejection, invalid-zone display and strict saves; provider coverage includes claim-protected permanent deletion, old report tombstones, paused restore and cache invalidation.
+- ./scripts/test.ps1 -Profile SqlServer -SqlServer localhost -Filter 'FullyQualifiedName~FwCronSqlServerTests': 6/6 passed, clean build. The initial default LocalDB run failed at fixture initialization because LocalDB was unavailable; no scenarios ran there. The disposable SQL Server rerun passed all scenarios.
+- ./scripts/test.ps1 -Filter 'FullyQualifiedName~FwEmailTests|FullyQualifiedName~FwReportScheduleSqliteTests|FullyQualifiedName~FwReportsTests': 75/75 passed. After adding saved-context authorization and replaced-report negative controls, the focused FwEmailTests selection passed 39/39, then the full Fast run passed.
+- ./scripts/test.ps1 -Profile Browser -Filter 'FullyQualifiedName~CronEditorBrowserTests|FullyQualifiedName~ScheduledReport': 3/3 passed, zero skipped, clean build. Covers editor behavior and real PDF rendering/delivery through loopback SMTP. It precedes the final deletion UI guard, which was reviewed in code and followed by the scoped controller rerun; the absence of the filter link on an old report tombstone was not directly asserted.
+- No additional framework abstraction was introduced for cron parsing or JSON conversion; those optional broader suggestions are deferred to keep this fix scoped.
+
+Follow-up review caught a report deletion redirect to the removed detail when the normal confirmation carried return_url. A failing route regression reproduced it; report deletion now supplies the task list explicitly, while the application soft-delete control keeps its return URL. The final ./scripts/test.ps1 -Filter 'FullyQualifiedName~AdminCronControllerTests' run passed 5/5 with zero warnings/errors/skips. Bulk-delete feedback also explains that deleted application tasks can be restored rather than purged. Full Fast and SQL Server evidence above precede this controller-only redirect fix; the affected route check was repeated.
+
+Independent report/mail and scheduler reviewers rechecked their bounded fixes and audited this summary. The scheduler audit corrected an overstatement of coverage for an old report tombstone's hidden filter link. No blocking findings remain. Diff whitespace and strict UTF-8/no-BOM/CRLF checks passed for all 18 changed task files, including the extracted partial. Review loop can stop.

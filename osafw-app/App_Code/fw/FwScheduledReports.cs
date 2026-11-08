@@ -79,7 +79,7 @@ public class FwScheduledReports : FwModel
         return value;
     }
 
-    /// <summary>Updates delivery options without changing the report source or saved filters.</summary>
+    /// <summary>Updates delivery options without changing saved filters. Encode with encodePayload before persistence to enforce the payload size limit.</summary>
     public FwDict validateDelivery(FwDict payload, string recipients, string format, int run_as_users_id)
     {
         if (!isActiveSiteAdmin(fw.model<Users>().one(run_as_users_id)))
@@ -88,7 +88,6 @@ public class FwScheduledReports : FwModel
         var result = new FwDict(payload);
         setDeliveryFields(result, recipients, format);
         result["run_as_users_id"] = run_as_users_id;
-        checkPayloadSize(Utils.jsonEncode(result));
         return result;
     }
 
@@ -241,7 +240,12 @@ public class FwScheduledReports : FwModel
         var recipients = saved["recipients"].toStr();
         var emailFormat = saved["format"].toStr();
         if (!report.sendReportEmail(recipients, emailFormat, true))
-            throw new FwCronUncertainException("REPORT_DELIVERY_UNCERTAIN");
+        {
+            if (fw.is_email_send_attempted)
+                throw new FwCronUncertainException("REPORT_DELIVERY_UNCERTAIN");
+
+            throw new FwCronPauseException("REPORT_SEND_FAILED");
+        }
 
         return new FwDict
         {

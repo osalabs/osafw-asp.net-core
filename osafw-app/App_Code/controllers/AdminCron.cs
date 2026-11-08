@@ -48,17 +48,21 @@ public class AdminCronController : FwDynamicController
 
     public override FwDict? ShowAction(int id = 0)
     {
-        var task = taskOrFail(id);
+        var task = taskOrFail(id, is_include_deleted: true);
         var ps = base.ShowAction(id);
         if (ps == null)
             return null;
 
         var row = (FwDict)ps["i"]!;
         ps["task"] = taskDisplay(row);
-        ps["is_readonly"] = is_readonly || !string.IsNullOrEmpty(task.run_token);
+        var is_deleted = task.status == FwModel.STATUS_DELETED;
+        var is_idle_writable = !is_readonly && task.run_token == null;
+        ps["is_readonly"] = !is_idle_writable || is_deleted;
         ps["is_hide_delete"] = ps["is_readonly"];
+        ps["can_restore"] = is_idle_writable && is_deleted && !FwCron.isReport(task);
+        ps["can_purge_report"] = is_idle_writable && is_deleted && FwCron.isReport(task);
         ps["is_runner_disabled"] = !FwCron.isRunnerEnabled();
-        if (!is_readonly)
+        if (!is_readonly && !is_deleted)
             ps["run_token"] = task.run_token;
         var result = FwCron.parseResult(task.last_result ?? "");
         if (result["data"] is { } details)
@@ -183,24 +187,36 @@ public class AdminCronController : FwDynamicController
         return afterSave(true, id);
     }
 
+    public override void ShowDeleteAction(int id)
+    {
+        checkReadOnly();
+        var task = taskOrFail(id, is_include_deleted: true);
+        if (task.status == FwModel.STATUS_DELETED && !FwCron.isReport(task))
+            throw new NotFoundException();
+        if (task.run_token != null)
+            throw new UserException(cronMessage("CRON_CHANGED"));
+
+        base.ShowDeleteAction(id);
+    }
+
     public override FwDict? DeleteAction(int id)
     {
         enforceMethod("POST", "DELETE");
         checkReadOnly();
-        taskOrFail(id);
+        var task = taskOrFail(id, is_include_deleted: true);
         route_onerror = FW.ACTION_SHOW;
 
         if (!model.deleteTask(id))
             throw new UserException(cronMessage("CRON_CHANGED"));
 
         fw.flash("onedelete", 1);
-        return afterSave(true);
+        return afterSave(true, location: FwCron.isReport(task) ? base_url : "");
     }
 
     protected override int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
     {
         foreach (string key in keys)
-            taskOrFail(key.toInt());
+            taskOrFail(key.toInt(), is_include_deleted: is_delete);
 
         if (!is_delete)
             return base.saveMultiRows(keys, false, user_lists_id, remove_user_lists_id);
@@ -216,7 +232,20 @@ public class AdminCronController : FwDynamicController
         return deleted;
     }
 
-    public override FwDict? RestoreDeletedAction(int id) => throw new NotFoundException();
+    public override FwDict? RestoreDeletedAction(int id)
+    {
+        enforcePost();
+        checkReadOnly();
+        taskOrFail(id, is_include_deleted: true);
+        route_onerror = FW.ACTION_SHOW;
+
+        if (!model.restoreTask(id))
+            throw new UserException(cronMessage("CRON_RESTORE_FAILED"));
+
+        fw.flash("success", cronMessage("CRON_RESTORED"));
+        return afterSave(true, id, location: base_url + "/" + id);
+    }
+
     public override FwDict SaveAttFilesAction(int id) => throw new NotFoundException();
 
     public void PreviewAction()
@@ -317,6 +346,7 @@ public class AdminCronController : FwDynamicController
     {
         var task = new FwDict(row);
         var status = row["status"].toInt();
+        var is_deleted = status == FwModel.STATUS_DELETED;
         var is_running = !string.IsNullOrEmpty(row["run_token"].toStr());
         var is_queued = !Utils.isEmpty(row["run_requested_utc"]);
         var is_expired = !Utils.isEmpty(row["end_date_utc"]) && row["end_date_utc"].toDate() <= DateTime.UtcNow;
@@ -326,9 +356,9 @@ public class AdminCronController : FwDynamicController
             && (status == FwModel.STATUS_ACTIVE || status == FwModel.STATUS_INACTIVE);
         task["can_run"] = !is_readonly && FwCron.isRunnerEnabled() && is_runnable;
         task["is_run_disabled"] = !FwCron.isRunnerEnabled() && is_runnable;
-        task["can_pause"] = !is_readonly && (status == FwModel.STATUS_ACTIVE || is_queued);
-        task["can_resume"] = !is_readonly && !is_running && status != FwModel.STATUS_ACTIVE;
-        task["can_edit"] = !is_readonly && !is_running;
+        task["can_pause"] = !is_readonly && !is_deleted && (status == FwModel.STATUS_ACTIVE || is_queued);
+        task["can_resume"] = !is_readonly && !is_running && status is FwModel.STATUS_INACTIVE or FwCron.STATUS_COMPLETED;
+        task["can_edit"] = !is_readonly && !is_running && !is_deleted;
         task["report_code"] = FwCron.reportCode(row["icode"].toStr());
         setScheduleDescription(task);
 
@@ -340,9 +370,10 @@ public class AdminCronController : FwDynamicController
         if (!Utils.isEmpty(row["next_run_utc"]))
         {
             var next = row["next_run_utc"].toDate();
-            var scheduleZone = FwCron.findZone(row["timezone"].toStr());
-            task["next_time"] = zonedTime(next, scheduleZone, includeZone: false);
-            task["next_utc"] = scheduleZone.Id == DateUtils.TZ_UTC ? "" : utcTime(next);
+            var scheduleZone = FwCron.findZoneOrNull(row["timezone"].toStr());
+            task["next_zone"] = scheduleZone?.Id ?? DateUtils.TZ_UTC;
+            task["next_time"] = scheduleZone == null ? utcTime(next) : zonedTime(next, scheduleZone, includeZone: false);
+            task["next_utc"] = scheduleZone != null && scheduleZone.Id != DateUtils.TZ_UTC ? utcTime(next) : "";
         }
         addTimestamp(task, row, "start_date_utc", "start");
         addTimestamp(task, row, "end_date_utc", "end");
@@ -376,7 +407,7 @@ public class AdminCronController : FwDynamicController
                 var instance = FwReportsBase.createInstance(fw, report, filters);
                 FwScheduledReports.checkTarget(instance, report, payload);
                 ps["report_params"] = instance.describeScheduledFilters(parameters);
-                ps["can_edit_report_filters"] = true;
+                ps["can_edit_report_filters"] = task.status != FwModel.STATUS_DELETED;
             }
             catch (Exception ex) when (ex is UserException or AuthException or DbException or ApplicationException)
             {
@@ -465,10 +496,10 @@ public class AdminCronController : FwDynamicController
         fw.redirect(base_url + "/" + id, is_exception: false);
     }
 
-    private FwCron.Row taskOrFail(int id)
+    private FwCron.Row taskOrFail(int id, bool is_include_deleted = false)
     {
         var task = model.oneT(id);
-        if (task == null || task.status == FwModel.STATUS_DELETED)
+        if (task == null || (!is_include_deleted && task.status == FwModel.STATUS_DELETED))
             throw new NotFoundException();
 
         return task;

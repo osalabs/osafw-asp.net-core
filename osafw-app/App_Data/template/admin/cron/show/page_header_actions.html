@@ -1,1 +1,10 @@
 <~/admin/cron/task_actions sub="task">
+<~restore if="can_restore" inline>
+  <form method="post" action="<~/admin/cron/url>/(RestoreDeleted)/<~id>">
+    <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+    <button type="submit" class="btn btn-default"><~/common/icons/check-circle-fill>`Restore as Paused`</button>
+  </form>
+</~restore>
+<~purge_report if="can_purge_report" inline>
+  <a class="btn btn-danger" href="<~/admin/cron/url>/<~id>/delete"><~/common/icons/x-square-fill>`Permanent Delete`</a>
+</~purge_report>

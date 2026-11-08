@@ -164,8 +164,7 @@ public class FwCron : FwModel<FwCron.Row>
         FwDict values, Row? observed = null)
     {
         var cron = values["cron"].toStr().Trim();
-        if (cron.Length > 255 || cron.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length != 5
-            || !CronExpression.TryParse(cron, out _))
+        if (cron.Length > 255 || !CronExpression.TryParse(cron, out _))
             throw new UserException("CRON_INVALID");
 
         var zone = findZone(values["timezone"].toStr().Trim());
@@ -177,14 +176,12 @@ public class FwCron : FwModel<FwCron.Row>
         return (cron, zone, start, end);
     }
 
-    internal static TimeZoneInfo findZone(string id)
-    {
-        if (id.Length > 0 && id.Length <= 64 && !id.Equals("Auto", StringComparison.OrdinalIgnoreCase)
-            && TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone))
-            return zone;
+    internal static TimeZoneInfo findZone(string id) =>
+        findZoneOrNull(id) ?? throw new UserException("CRON_ZONE");
 
-        throw new UserException("CRON_ZONE");
-    }
+    internal static TimeZoneInfo? findZoneOrNull(string id) =>
+        id.Length > 0 && id.Length <= 64 && !id.Equals("Auto", StringComparison.OrdinalIgnoreCase)
+            && TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zone) ? zone : null;
 
     private DateTime? readBound(object? value, DateTime? observed)
     {
@@ -321,22 +318,61 @@ public class FwCron : FwModel<FwCron.Row>
         return changed;
     }
 
-    /// <summary>Soft-deletes an idle task and cancels any pending manual request.</summary>
+    /// <summary>Deletes an idle task, retaining application tasks so their fixed job codes can be restored.</summary>
     public bool deleteTask(int id)
     {
-        var changed = writeDefinition(new()
+        var task = oneT(id);
+        if (task == null)
+            return false;
+
+        var where = new FwDict
+        {
+            ["id"] = id,
+            ["icode"] = task.icode,
+            ["status"] = task.status,
+            ["run_token"] = null
+        };
+        if (isReport(task))
+        {
+            if (db.del(table_name, where) != 1)
+                return false;
+
+            removeCache(id);
+        }
+        else if (task.status == STATUS_DELETED || !writeDefinition(new()
         {
             ["status"] = STATUS_DELETED,
+            ["run_requested_utc"] = null
+        }, where))
+        {
+            return false;
+        }
+
+        fw.logActivity(FwLogTypes.ICODE_DELETED, table_name, id);
+        return true;
+    }
+
+    /// <summary>Restores an idle, deleted application task as Paused without requesting execution.</summary>
+    public bool restoreTask(int id)
+    {
+        var task = oneT(id);
+        if (task?.status != STATUS_DELETED || isReport(task))
+            return false;
+
+        var changed = writeDefinition(new()
+        {
+            ["status"] = STATUS_INACTIVE,
             ["run_requested_utc"] = null
         }, new()
         {
             ["id"] = id,
-            ["status"] = db.opNOT(STATUS_DELETED),
+            ["icode"] = task.icode,
+            ["status"] = STATUS_DELETED,
             ["run_token"] = null
         });
 
         if (changed)
-            fw.logActivity(FwLogTypes.ICODE_DELETED, table_name, id);
+            fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, "Task restored as paused.");
         return changed;
     }
 
@@ -680,7 +716,7 @@ public class FwCron : FwModel<FwCron.Row>
 
     private static string eventTime(DateTime date) => date.ToString("u", CultureInfo.InvariantCulture);
 
-    private static bool isReport(Row job) => job.icode.StartsWith(REPORT_PREFIX, StringComparison.OrdinalIgnoreCase);
+    internal static bool isReport(Row job) => job.icode.StartsWith(REPORT_PREFIX, StringComparison.OrdinalIgnoreCase);
 
     private static bool trySchedule(Row job, out TimeZoneInfo zone)
     {

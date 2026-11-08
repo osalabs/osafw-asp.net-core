@@ -114,6 +114,9 @@ public class FW : IDisposable
     public bool is_log_events = true; // can be set temporarly to false to prevent event logging (for batch process for ex)
 
     public string last_error_send_email = "";
+
+    /// <summary>True once the latest mail call entered SMTP submission; a failure may then have delivered to some recipients.</summary>
+    internal bool is_email_send_attempted { get; private set; }
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
     private readonly DateTime start_time = DateTime.Now; //to track request time
@@ -1555,6 +1558,7 @@ public class FW : IDisposable
         MailMessage? message = null;
         options ??= [];
         last_error_send_email = "";
+        is_email_send_attempted = false;
 
         try
         {
@@ -1703,6 +1707,7 @@ public class FW : IDisposable
                 EnableSsl = mailSettings["is_ssl"].toBool(),
                 Credentials = new System.Net.NetworkCredential(mailSettings["username"].toStr(), mailSettings["password"].toStr())
             };
+            is_email_send_attempted = true;
             client.Send(message);
         }
         catch (Exception ex)
@@ -1738,6 +1743,7 @@ public class FW : IDisposable
     // shortcut for send_email from template from the /emails template dir
     public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
+        is_email_send_attempted = false;
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
         if (subj_body.Length == 0)

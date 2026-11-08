@@ -92,19 +92,24 @@ public class FwReportsBase
         }
     }
 
-    /// <summary>Reads the optional scheduling filter definitions from the report's template directory.</summary>
+    private FwList? scheduling_parameters;
+
+    /// <summary>Reads the optional scheduling filter definitions once per initialized report instance.</summary>
     protected virtual FwList schedulingParameters()
     {
+        if (scheduling_parameters != null)
+            return scheduling_parameters;
+
         var path = Path.Combine(fw.config("template").toStr(), templateBaseDir().TrimStart('/'), "schedule.json");
         if (!File.Exists(path))
-            return [];
+            return scheduling_parameters = [];
 
         var json = Utils.getFileContent(path, out var error);
         if (error != null || Utils.jsonDecodeList(json) is not { } definitions
             || definitions.Any(item => item is not FwDict))
             throw new UserException("REPORT_FILTER_INVALID");
 
-        return new FwList(definitions.Cast<FwDict>());
+        return scheduling_parameters = new FwList(definitions.Cast<FwDict>());
     }
 
     // A report-owned relative selector may resolve from this instant and fw.userTimezone during execution.
@@ -441,6 +446,7 @@ public class FwReportsBase
 
     public virtual void init(FW fw, string report_code, FwDict f)
     {
+        scheduling_parameters = null;
         this.fw = fw;
         if (!string.IsNullOrEmpty(this.db_config))
         {
@@ -691,7 +697,7 @@ public class FwReportsBase
                     ["body"] = body
                 }, attachments);
             }
-            catch (Exception) when (is_scheduled)
+            catch (Exception) when (is_scheduled && fw.is_email_send_attempted)
             {
                 throw new FwCronUncertainException("REPORT_DELIVERY_UNCERTAIN");
             }

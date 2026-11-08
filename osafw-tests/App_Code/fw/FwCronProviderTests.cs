@@ -184,6 +184,49 @@ internal static class FwCronProviderChecks
         Assert.IsTrue(events.Any(row => row["idesc"].toStr().Contains("Skipped", StringComparison.Ordinal)));
     }
 
+    public static void DeleteAndRestoreRespectTaskTypeAndClaim(string connection, string provider)
+    {
+        using var scope = FwConfig.beginScope();
+        using var fw = context(connection, provider);
+        var cron = fw.model<FwCron>();
+        var now = DateTime.UtcNow;
+        var reportId = cron.addReport("Sample", DB.h("cron", "@daily", "run_requested_utc", now));
+        var report = cron.oneT(reportId)!;
+        cron.oneByIcode(report.icode);
+
+        fw.db.update("fwcron", DB.h("run_token", "report-claim"), DB.h("id", reportId));
+        Assert.IsFalse(cron.deleteTask(reportId), "A claim obtained after the observed read must block permanent deletion.");
+        fw.db.update("fwcron", DB.h("run_token", null), DB.h("id", reportId));
+
+        Assert.IsTrue(cron.deleteTask(reportId));
+        Assert.IsNull(cron.oneT(reportId));
+        Assert.IsEmpty(cron.oneByIcode(report.icode));
+        Assert.IsFalse(cron.restoreTask(reportId));
+        Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", reportId, new[] { FwLogTypes.ICODE_DELETED }));
+        var oldReportId = cron.addReport("Sample", DB.h("cron", "@daily", "status", FwModel.STATUS_DELETED));
+        Assert.IsFalse(cron.restoreTask(oldReportId), "Previously soft-deleted report schedules cannot be restored.");
+        Assert.IsTrue(cron.deleteTask(oldReportId), "Previously soft-deleted report schedules can be purged.");
+
+        var taskId = cron.add(DB.h("icode", "fixed_code", "cron", "@weekly", "run_requested_utc", now));
+        Assert.IsFalse(cron.restoreTask(taskId));
+        Assert.IsTrue(cron.deleteTask(taskId));
+        Assert.IsFalse(cron.deleteTask(taskId), "A fixed job code remains reserved while deleted.");
+        Assert.AreEqual(FwModel.STATUS_DELETED, cron.oneT(taskId)!.status);
+        Assert.AreEqual(FwModel.STATUS_DELETED, cron.oneTByIcode("fixed_code")!.status);
+        Assert.IsNull(cron.oneT(taskId)!.run_requested_utc);
+
+        fw.db.update("fwcron", DB.h("run_token", "application-claim", "run_requested_utc", now), DB.h("id", taskId));
+        Assert.IsFalse(cron.restoreTask(taskId), "A held claim must block restoration even after an idle cached read.");
+        fw.db.update("fwcron", DB.h("run_token", null), DB.h("id", taskId));
+        Assert.IsTrue(cron.restoreTask(taskId));
+        Assert.IsFalse(cron.restoreTask(taskId));
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, cron.oneT(taskId)!.status);
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, cron.oneTByIcode("fixed_code")!.status);
+        Assert.IsNull(cron.oneT(taskId)!.run_requested_utc);
+        Assert.IsFalse(cron.listDueJobs().Any(row => row.id == taskId));
+        Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", taskId, new[] { FwLogTypes.ICODE_UPDATED }));
+    }
+
     public static void UtcDatesSurviveDatabaseFold(string connection, string provider)
     {
         using var scope = FwConfig.beginScope();
@@ -343,6 +386,9 @@ public class FwCronSqliteTests
 
     [TestMethod]
     public void ReportIdentityAndSkippedWork() => FwCronProviderChecks.ReportIdentityAndSkippedWork(file.ConnectionString, DB.DBTYPE_SQLITE);
+
+    [TestMethod]
+    public void DeleteAndRestoreRespectTaskTypeAndClaim() => FwCronProviderChecks.DeleteAndRestoreRespectTaskTypeAndClaim(file.ConnectionString, DB.DBTYPE_SQLITE);
 }
 #endif
 
@@ -380,4 +426,7 @@ public class FwCronSqlServerTests
 
     [TestMethod]
     public void ReportIdentityAndSkippedWork() => FwCronProviderChecks.ReportIdentityAndSkippedWork(database!.ConnectionString, DB.DBTYPE_SQLSRV);
+
+    [TestMethod]
+    public void DeleteAndRestoreRespectTaskTypeAndClaim() => FwCronProviderChecks.DeleteAndRestoreRespectTaskTypeAndClaim(database!.ConnectionString, DB.DBTYPE_SQLSRV);
 }

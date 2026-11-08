@@ -190,6 +190,7 @@ public class FwEmailTests
 
         Assert.IsFalse(scope.Fw.sendEmail("", "recipient@example.test", "subject", "body"));
         Assert.AreEqual("SMTP host is required.", scope.Fw.last_error_send_email);
+        Assert.IsFalse(scope.Fw.is_email_send_attempted);
     }
 
     [TestMethod]
@@ -470,6 +471,33 @@ public class FwEmailTests
     }
 
     [TestMethod]
+    public void ScheduledReportHtml_InvalidSmtpConfigurationIsKnownFailure()
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb());
+        TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings { Host = "", Port = server.Port });
+        scope.Fw.settings.init(scope.Fw);
+
+        var error = Assert.ThrowsExactly<FwCronPauseException>(() => scope.Fw.model<FwScheduledReports>().run(ScheduledJob("html")));
+
+        Assert.AreEqual("REPORT_SEND_FAILED", error.Message);
+        Assert.IsFalse(scope.Fw.is_email_send_attempted);
+        Assert.IsFalse(server.ConnectionAccepted);
+    }
+
+    [TestMethod]
+    public void SendEmailTpl_MissingTemplateResetsPreviousAttemptState()
+    {
+        using var server = new FakeSmtpServer();
+        using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb());
+        Assert.IsTrue(scope.Fw.sendEmail("", "recipient@example.test", "subject", "body"));
+        Assert.IsTrue(scope.Fw.is_email_send_attempted);
+
+        Assert.ThrowsExactly<ApplicationException>(() => scope.Fw.sendEmailTpl("recipient@example.test", "missing-report-template.html", []));
+        Assert.IsFalse(scope.Fw.is_email_send_attempted);
+    }
+
+    [TestMethod]
     public void ScheduledReportHtml_PartialRecipientRejectionLeavesDeliveryUncertain()
     {
         using var server = new FakeSmtpServer(rejectRecipient: "<beta@example.test>");
@@ -478,6 +506,7 @@ public class FwEmailTests
         Assert.ThrowsExactly<FwCronUncertainException>(() => scope.Fw.model<FwScheduledReports>().run(ScheduledJob("html")));
         CollectionAssert.AreEqual(new[] { "<alpha@example.test>", "<beta@example.test>" }, server.Recipients);
         StringAssert.Contains(server.MessageData, "Report marker", "The sink accepted a message for at least one recipient.");
+        Assert.IsTrue(scope.Fw.is_email_send_attempted);
     }
 
     [TestMethod]
@@ -602,6 +631,50 @@ public class FwEmailTests
         StringAssert.Contains(server.MessageData, "Subject: Report scheduled_sales");
         StringAssert.Contains(server.MessageData, "Report marker");
         StringAssert.Contains(server.MessageData, "Content-Type: text/html");
+    }
+
+    private sealed class SavedReportTask(FwCron.Row task) : FwCron
+    {
+        public override Row? oneT(int id) => id == 12 ? task : null;
+    }
+
+    [TestMethod]
+    public void ReportEmailTo_ScheduleUsesFrozenDatesAndBlankFilters()
+    {
+        using var server = new FakeSmtpServer();
+        var db = new ScheduledDeliveryDb();
+        using var scope = CreateScheduledScope(server, db, isOffline: false);
+        var fw = scope.Fw;
+        fw.model<Users>().reloadSession(7);
+        Assert.AreEqual(DateUtils.DATE_FORMAT_MDY, fw.userDateFormat);
+        var task = ScheduledJob("html");
+        var cron = new SavedReportTask(task);
+        cron.init(fw);
+        TestHelpers.RegisterModel(fw, (FwCron)cron);
+        fw.Session("XSS", "form-token");
+        fw.FORM["XSS"] = "form-token";
+        fw.FORM["schedule_id"] = "12";
+        fw.FORM["f"] = DB.h("to_emails", "alpha@example.test", "from_date", "7/8/2026", "blank_date", "", "account_id", "0");
+        fw.request.Method = "POST";
+        fw.setRoute(new FwRoute { controller = "AdminReports", action = "SendEmail", method = "POST", id = "scheduled_sales" });
+
+        fw.callRoute();
+
+        Assert.AreEqual(new DateTime(2026, 8, 7), db.LastBindings["@from_date"]);
+        Assert.AreEqual(DBNull.Value, db.LastBindings["@blank_date"]);
+        Assert.AreEqual("/Admin/Reports/scheduled_sales?schedule_id=12", fw.response.Headers.Location.ToString());
+        StringAssert.Contains(server.MessageData, "Report marker");
+
+        var controller = new AdminReportsController();
+        controller.init(fw);
+        fw.Session("access_level", Users.ACL_ADMIN.ToString());
+        Assert.ThrowsExactly<AuthException>(() => controller.SendEmailAction("scheduled_sales"));
+        fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
+        var saved = fw.model<FwScheduledReports>().payload(task.icode, task.payload!);
+        saved["fwreports_id"] = 43;
+        task.payload = FwScheduledReports.encodePayload(saved);
+        Assert.ThrowsExactly<UserException>(() => controller.SendEmailAction("scheduled_sales"));
+        Assert.AreEqual(1, db.RenderQueryCount, "Unauthorized and replaced-report schedules must not render or send.");
     }
 
     private sealed class ReportTempScope : IDisposable

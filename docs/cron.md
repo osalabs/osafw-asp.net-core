@@ -2,7 +2,7 @@
 
 Site Admins manage recurring application jobs and report emails at `/Admin/Cron`. Reports that support scheduling offer **Schedule email** after **Email To**, and **Report schedules** opens the standard task list with `report_REPORTCODE:` in its search box. This uses normal search across task name, description and job code, not an authorization boundary.
 
-The list uses the Dynamic controller's status filter, My List, export/print, column filters, column customization and density controls. Bulk deletion uses the same guarded task deletion as the detail screen; running tasks are retained. Activity defaults to All, and History includes separate task lifecycle events.
+The list uses the Dynamic controller's status filter, My List, export/print, column filters, column customization and density controls. Bulk deletion uses the same guarded task deletion as the detail screen; running tasks are retained. Report tasks are deleted permanently and can be recreated from the report. Application tasks keep their fixed job codes and history in Deleted status; restore them as Paused before revising or resuming the schedule. Activity defaults to All, and History includes separate task lifecycle events.
 
 ## Enabling the runner
 
@@ -18,7 +18,7 @@ Site Admins authorize distribution of one shared report. Recipients do not need 
 
 Selected dates stay fixed. The scheduler never infers a relative period from a date range. Reports needing previous week/month should expose an explicit period selector and resolve it in their own filter logic. Saved parameters use the custom-report `name`, `type`, `value` shape; definitions/defaults remain with the report. Changing a parameter contract requires reviewing affected schedules. Sample preserves its declared sort fields. Custom reports use their report-defined SQL order; interactive column sorting is not part of their saved schedule.
 
-The compact editor separates **Simple** (repeat, time and optional weekday/month day) from **Cron expression**. Existing expressions outside the simple presets open in expression mode and are preserved. Switching to Simple deliberately replaces a non-representable expression with the visible simple settings. Both modes use the same **Time zone** and preview. Saved filter labels and lookup values come from current report definitions; copied reports can override `describeScheduledFilters()` for their own display.
+The compact editor separates **Simple** (repeat, time and optional weekday/month day) from **Cron expression**. Existing expressions outside the simple presets open in expression mode and are preserved. Switching to Simple deliberately replaces a non-representable expression with the visible simple settings. Cronos aliases such as `@daily` remain valid in expression mode; six-field expressions with seconds are not supported. Both modes use the same **Time zone** and preview. Email To from the schedule filter page uses the saved input conventions and preserves explicit blank filters, just like its preview. Saved filter labels and lookup values come from current report definitions; copied reports can override `describeScheduledFilters()` for their own display.
 
 ## Time and execution
 
@@ -36,7 +36,7 @@ Report occurrences delayed more than five minutes are skipped, and the next futu
 
 The latest attempt has start/end timestamps and a small JSON result with common `status`, `message`, and optional task-specific `data`. Activity history retains administrative events, failures, uncertain outcomes and exceptional scheduling events. Normal run starts and successful completions only update the task row; commented activity calls in the runner can be enabled temporarily for debugging. Results are diagnostic summaries; do not store report bodies, secrets, large datasets, or temporary paths in them.
 
-A successful mail submission means the mail server accepted the message, not that every inbox received it. A failed or interrupted send may already have reached recipients. Such outcomes require review rather than automatic resend.
+A successful mail submission means the mail server accepted the message, not that every inbox received it. Once SMTP submission begins, a failed or interrupted send may already have reached recipients. Such outcomes require review rather than automatic resend. Failures before submission, such as invalid SMTP configuration, are recorded as known failures instead of uncertain delivery.
 
 An interrupted worker leaves its claim held. First establish that the original execution has stopped on all workers. Then use the Site Admin recovery action, which clears the observed claim and leaves the task paused. Check mail/provider logs before deliberately resending. No startup lock reset or automatic timeout takeover occurs.
 

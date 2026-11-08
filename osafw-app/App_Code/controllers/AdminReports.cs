@@ -65,9 +65,6 @@ public class AdminReportsController : FwController
         {
             checkSiteAdmin();
             task = getReportTask(scheduleId);
-            var scheduledReports = fw.model<FwScheduledReports>();
-            saved = scheduledReports.payload(task.icode, task.payload.toStr());
-            scheduledReports.applyInputContext(saved);
             list_filter = new FwDict(reqh("f"));
         }
         else
@@ -84,11 +81,9 @@ public class AdminReportsController : FwController
         if (requested_format == "json" && !is_send_email)
             is_run = true;
 
-        var report = saved == null
+        var report = task == null
             ? FwReportsBase.createInstance(fw, repcode, list_filter)
-            : FwReportsBase.createScheduledInstance(fw, repcode, list_filter);
-        if (task != null && saved != null)
-            FwScheduledReports.checkTarget(report, FwCron.reportCode(task.icode), saved);
+            : loadScheduledReport(task, repcode, list_filter, out saved);
 
         var customReport = report as FwCustomReport;
         var is_review_required = false;
@@ -410,11 +405,7 @@ public class AdminReportsController : FwController
         route_onerror = FW.ACTION_SHOW;
 
         var task = getReportTask(reqi("schedule_id"));
-        var scheduler = fw.model<FwScheduledReports>();
-        var saved = scheduler.payload(task.icode, task.payload.toStr());
-        scheduler.applyInputContext(saved);
-        var report = FwReportsBase.createScheduledInstance(fw, FwReportsBase.cleanupRepcode(id), []);
-        FwScheduledReports.checkTarget(report, FwCron.reportCode(task.icode), saved);
+        var report = loadScheduledReport(task, FwReportsBase.cleanupRepcode(id), [], out var saved);
 
         saved["params"] = report.captureScheduledFilters(reqh("f"), true);
         saved.Remove("sortby");
@@ -454,6 +445,17 @@ public class AdminReportsController : FwController
         }
 
         return base.actionError(ex, args);
+    }
+
+    /// <summary>Restores a schedule's input conventions and verifies its original report before interpreting filters.</summary>
+    private FwReportsBase loadScheduledReport(FwCron.Row task, string code, FwDict filters, out FwDict saved)
+    {
+        var scheduler = fw.model<FwScheduledReports>();
+        saved = scheduler.payload(task.icode, task.payload.toStr());
+        scheduler.applyInputContext(saved);
+        var report = FwReportsBase.createScheduledInstance(fw, code, filters);
+        FwScheduledReports.checkTarget(report, FwCron.reportCode(task.icode), saved);
+        return report;
     }
 
     private FwCron.Row getReportTask(int id)
@@ -536,14 +538,25 @@ public class AdminReportsController : FwController
         if (email_as == "pdf")
             f["format"] = "pdf";
 
-        var report = FwReportsBase.createInstance(fw, repcode, f);
-        report.setFilters();
+        var scheduleId = reqi("schedule_id");
+        FwReportsBase report;
+        if (scheduleId > 0)
+        {
+            checkSiteAdmin();
+            report = loadScheduledReport(getReportTask(scheduleId), repcode, f, out _);
+            report.captureScheduledFilters(f, is_frozen: true);
+        }
+        else
+        {
+            report = FwReportsBase.createInstance(fw, repcode, f);
+            report.setFilters();
+        }
         report.getData();
 
         var res = report.sendReportEmail(to_emails, email_as);
         fw.flash("report_email_status", res ? "REPORT_SENT" : "REPORT_SEND_FAILED");
 
-        fw.redirect(base_url + "/" + repcode);
+        fw.redirect(base_url + "/" + repcode + (scheduleId > 0 ? "?schedule_id=" + scheduleId : ""));
     }
 
     /// <summary>
