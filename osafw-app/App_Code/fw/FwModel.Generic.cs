@@ -59,12 +59,12 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
             return db.row<TRow>(table_name, where);
 
         var cacheKey = typedCachePrefix + id;
-        if (fw.cache.getRequestValue(cacheKey) is TRow cached)
+        if (fw.cache.getRequestRow<TRow>(cacheKey) is { } cached)
             return cached;
 
         var row = db.row<TRow>(table_name, where);
         if (!isRowEmpty(row))
-            fw.cache.setRequestValue(cacheKey, row);
+            fw.cache.setRequestRow(cacheKey, row);
 
         return row;
     }
@@ -108,19 +108,19 @@ public abstract class FwModel<TRow> : FwModel where TRow : class, new()
             return db.row<TRow>(table_name, where);
 
         var cacheKey = typedCacheByIcodePrefix + icode;
-        if (fw.cache.getRequestValue(cacheKey) is TRow cached)
+        if (fw.cache.getRequestRow<TRow>(cacheKey) is { } cached)
             return cached;
 
         var row = db.row<TRow>(table_name, where);
         if (!isRowEmpty(row))
         {
-            fw.cache.setRequestValue(cacheKey, row);
+            fw.cache.setRequestRow(cacheKey, row);
             if (!string.IsNullOrEmpty(field_id))
             {
                 var idValue = row.valueByMemberName(field_id);
                 var iid = idValue.toInt();
                 if (iid > 0)
-                    fw.cache.setRequestValue(typedCachePrefix + iid, row);
+                    fw.cache.setRequestRow(typedCachePrefix + iid, row);
             }
         }
 

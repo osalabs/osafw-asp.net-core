@@ -543,6 +543,52 @@ namespace osafw.Tests
         }
 
         [TestMethod]
+        public void ChangesOnly_DistinguishesTimestampEditsFromDateOnlyFormValues()
+        {
+            var stored = new DateTime(2024, 1, 1, 13, 45, 0, DateTimeKind.Utc);
+            var offset = new DateTimeOffset(stored.AddMilliseconds(125));
+            var oldItem = new FwDict
+            {
+                ["date_only"] = stored,
+                ["date_only_typed"] = stored,
+                ["different_day"] = stored,
+                ["same_timestamp"] = "2024-01-01 13:45:00",
+                ["changed_timestamp"] = "2024-01-01 13:45:00",
+                ["midnight_timestamp"] = stored,
+                ["midnight_utc"] = stored,
+                ["same_instant"] = offset,
+                ["changed_instant"] = offset,
+                ["same_text"] = "keep this",
+                ["changed_text"] = "before",
+                ["same_empty"] = null,
+                ["cleared"] = stored
+            };
+            var newItem = new FwDict
+            {
+                ["date_only"] = "2024-01-01",
+                ["date_only_typed"] = new DateTime(2024, 1, 1),
+                ["different_day"] = "2024-01-02",
+                ["same_timestamp"] = stored,
+                ["changed_timestamp"] = stored.AddMinutes(15),
+                ["midnight_timestamp"] = "2024-01-01T00:00",
+                ["midnight_utc"] = stored.Date,
+                ["same_instant"] = offset.ToOffset(TimeSpan.FromHours(-5)),
+                ["changed_instant"] = offset.AddMilliseconds(125),
+                ["same_text"] = "keep this",
+                ["changed_text"] = "after",
+                ["same_empty"] = "",
+                ["cleared"] = null,
+                ["new_empty"] = null
+            };
+
+            var changes = FormUtils.changesOnly(newItem, oldItem);
+
+            CollectionAssert.AreEquivalent(
+                new[] { "different_day", "changed_timestamp", "midnight_timestamp", "midnight_utc", "changed_instant", "changed_text", "cleared", "new_empty" },
+                changes.Keys.ToArray());
+        }
+
+        [TestMethod]
         public void SqlOrderByQuotesAndInverts()
         {
             var db = new DB("conn", DB.DBTYPE_SQLSRV);

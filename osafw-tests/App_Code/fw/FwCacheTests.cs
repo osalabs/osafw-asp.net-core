@@ -6,6 +6,59 @@ namespace osafw.Tests
     [TestClass()]
     public class FwCacheTests
     {
+        public sealed class CachedRow
+        {
+            public int id { get; set; }
+            public System.DateTime? run_utc { get; set; }
+            public decimal amount { get; set; }
+            public string? note { get; set; }
+            [System.Text.Json.Serialization.JsonIgnore]
+            [DBName("stored_name")]
+            public string ignored { get; private set; } = "";
+            public object scalar { get; set; } = 12;
+            public byte[] binary { get; set; } = [1, 2];
+        }
+
+        public sealed class IndexedRow
+        {
+            public int id { get; set; }
+            public string this[int index] { get => "value"; set { } }
+        }
+
+        [TestMethod]
+        public void TypedRequestRow_UnsupportedDtoFallsBackToDatabaseReads()
+        {
+            var cache = new FwCache();
+            cache.setRequestRow("row", new IndexedRow { id = 7 });
+            Assert.IsNull(cache.getRequestRow<IndexedRow>("row"));
+        }
+
+        [TestMethod]
+        public void TypedRequestRow_PreservesMappingAndReturnsIndependentCopies()
+        {
+            var cache = new FwCache();
+            var instant = new System.DateTime(2026, 11, 8, 6, 30, 0, System.DateTimeKind.Utc).AddTicks(1234);
+            var source = new CachedRow { id = 7, run_utc = instant, amount = 1.23456789m };
+            DB.h("stored_name", "mapped").applyTo(source);
+            cache.setRequestRow("row", source);
+            source.binary[1] = 8;
+            var row = cache.getRequestRow<CachedRow>("row")!;
+            Assert.AreEqual(instant, row.run_utc);
+            Assert.AreEqual(System.DateTimeKind.Utc, row.run_utc!.Value.Kind);
+            Assert.AreEqual(1.23456789m, row.amount);
+            Assert.IsNull(row.note);
+            Assert.AreEqual("mapped", row.ignored);
+            Assert.AreEqual((byte)2, row.binary[1]);
+            Assert.IsInstanceOfType<int>(row.scalar);
+            row.binary[0] = 9;
+            Assert.AreEqual((byte)1, cache.getRequestRow<CachedRow>("row")!.binary[0]);
+            row.id = 99;
+            Assert.AreEqual(7, cache.getRequestRow<CachedRow>("row")!.id);
+            Assert.IsNull(cache.getRequestRow<CachedRow>("missing"));
+            cache.requestRemove("row");
+            Assert.IsNull(cache.getRequestRow<CachedRow>("row"));
+        }
+
         [TestMethod()]
         public void getValueTest()
         {

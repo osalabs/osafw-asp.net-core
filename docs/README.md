@@ -4,6 +4,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 ## Framework Docs
 
+- [architecture.md](architecture.md): framework intent, request lifecycle, responsibility boundaries and application extension choices.
+
 - [authentication.md](authentication.md): login POST/token, persistent-cookie policy, and Windows identity migration.
 
 - [templates.md](templates.md): ParsePage syntax, template composition, shared fragments, parser rules, and frontend component conventions.

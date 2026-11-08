@@ -3,6 +3,7 @@
 // (c) 2009-2021 Oleg Savchuk www.osalabs.com
 
 using System;
+using System.Linq;
 
 namespace osafw;
 
@@ -31,13 +32,15 @@ public class SampleReport : FwReportsBase
             var id = parameter["value"].toInt();
             if (id <= 0)
                 continue;
-            parameter["value"] = parameter["name"].toStr() switch
+            var displayValue = parameter["name"].toStr() switch
             {
                 "events_id" => fw.model<FwLogTypes>().iname(id),
                 "fwentities_id" => fw.model<FwEntities>().iname(id),
                 "users_id" => fw.model<Users>().iname(id),
-                _ => parameter["value"]
+                _ => null
             };
+            if (!Utils.isEmpty(displayValue))
+                parameter["value"] = displayValue;
         }
         return result;
     }
@@ -131,21 +134,13 @@ public class SampleReport : FwReportsBase
 
         if (is_scheduled_snapshot)
         {
-            var appliedParams = new FwList();
-            foreach (var def in schedulingParameters())
+            var names = schedulingParameters().Select(def => def["name"].toStr());
+            var appliedParams = new FwList(names.Where(name => !Utils.isEmpty(f[name])).Select(name => new FwDict
             {
-                var name = def["name"].toStr();
-                if (Utils.isEmpty(f[name]))
-                    continue;
-
-                appliedParams.Add(new FwDict
-                {
-                    ["name"] = name,
-                    ["label"] = fw.parsePageInstance().langMap(def["label"].toStr(name)),
-                    ["value"] = f[name]
-                });
-            }
-            ps["applied_params"] = appliedParams;
+                ["name"] = name,
+                ["value"] = f[name]
+            }));
+            ps["applied_params"] = describeScheduledFilters(appliedParams);
         }
 
         // perform calculations and add additional info for each result row

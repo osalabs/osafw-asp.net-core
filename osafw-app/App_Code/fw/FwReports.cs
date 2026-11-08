@@ -27,6 +27,7 @@ public class FwReports : FwModel<FwReports.Row>
     private const string SOURCE_CUSTOM = "custom";
     private const string SOURCE_HARDCODED = "hardcoded";
 
+    private static readonly Regex ReportTaskCodeRegex = new(@$"\A(?i:{REPORT_PREFIX})[A-Za-z0-9_-]+:[A-Za-z0-9_-]{{{REPORT_SUFFIX_LENGTH}}}\z");
     private static readonly Regex ParamRegex = new(@"(?<!@)@([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
     private static readonly Regex ForbiddenSqlRegex = new(@"\b(insert|update|delete|merge|drop|alter|create|truncate|exec|execute|grant|revoke|backup|restore|into)\b|\b(?:sp_|xp_)\w*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -646,10 +647,9 @@ ORDER BY {lookupDb.qid("iname")}";
     /// Normalizes parameter metadata so the renderer and SQL binder can use one stable shape.
     /// </summary>
     /// <param name="meta">Mutable parameter metadata row.</param>
-    private static void normalizeParamDefinition(FwDict meta)
+    internal static void normalizeParamDefinition(FwDict meta)
     {
-        var name = cleanupParamName(meta["name"].toStr());
-        meta["name"] = name;
+        var name = meta["name"].toStr();
         if (string.IsNullOrEmpty(meta["label"].toStr()))
             meta["label"] = Utils.name2human(name);
 
@@ -867,36 +867,24 @@ ORDER BY {lookupDb.qid("iname")}";
         return result;
     }
 
-    /// <summary>Identifies the reserved report task prefix, including malformed report task identities.</summary>
-    internal static bool isReportTaskCode(string icode) => icode.StartsWith(REPORT_PREFIX, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Identifies a complete generated report task code.</summary>
+    internal static bool isReportTaskCode(string icode) =>
+        icode.Length <= REPORT_CODE_MAX_LENGTH && ReportTaskCodeRegex.IsMatch(icode);
 
     /// <summary>Gets the exact report code from a generated task code, or an empty string for an invalid identity.</summary>
-    public static string reportCode(string icode)
-    {
-        if (!isReportTaskCode(icode))
-            return string.Empty;
-
-        var colon = icode.IndexOf(':');
-        if (colon <= REPORT_PREFIX.Length || icode.Length - colon - 1 != REPORT_SUFFIX_LENGTH)
-            return string.Empty;
-
-        var code = icode[REPORT_PREFIX.Length..colon];
-        return isReportCode(code) && isReportCode(icode[(colon + 1)..]) ? code : string.Empty;
-    }
-
-    private static bool isReportCode(string code) =>
-        code.Length > 0 && REPORT_PREFIX.Length + code.Length + 1 + REPORT_SUFFIX_LENGTH <= REPORT_CODE_MAX_LENGTH
-        && Regex.IsMatch(code, @"\A[A-Za-z0-9_-]+\z");
+    public static string reportCode(string icode) =>
+        isReportTaskCode(icode) ? icode[REPORT_PREFIX.Length..icode.IndexOf(':')] : string.Empty;
 
     /// <summary>Creates a task with a generated report identity. The caller supplies the validated definition.</summary>
     public int addSchedule(string report_code, FwDict fields)
     {
-        if (!isReportCode(report_code))
+        var icode = $"{REPORT_PREFIX}{report_code}:{Utils.nanoid(REPORT_SUFFIX_LENGTH)}";
+        if (!isReportTaskCode(icode))
             throw new ArgumentException("Invalid report code for a scheduled task.", nameof(report_code));
 
         var item = new FwDict(fields)
         {
-            ["icode"] = $"{REPORT_PREFIX}{report_code}:{Utils.nanoid(REPORT_SUFFIX_LENGTH)}"
+            ["icode"] = icode
         };
         return fw.model<FwCron>().add(item);
     }
@@ -904,7 +892,7 @@ ORDER BY {lookupDb.qid("iname")}";
     /// <summary>Reads and validates persisted report delivery and input metadata.</summary>
     public FwDict parseSchedulePayload(string icode, string json)
     {
-        if (reportCode(icode).Length == 0 || Encoding.UTF8.GetByteCount(json) > MAX_PAYLOAD_BYTES)
+        if (!isReportTaskCode(icode) || Encoding.UTF8.GetByteCount(json) > MAX_PAYLOAD_BYTES)
             throw new UserException("REPORT_SCHEDULE_INVALID");
 
         FwDict? value;

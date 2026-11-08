@@ -251,15 +251,11 @@ public class FwCron : FwModel<FwCron.Row>
         if (job.status == STATUS_INACTIVE)
             where["run_requested_utc"] = db.opISNOTNULL();
 
-        var changed = updateDefinition(new()
+        return update(id, new()
         {
             ["status"] = STATUS_INACTIVE,
             ["run_requested_utc"] = null
         }, where);
-
-        if (changed)
-            fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, id, "Task paused.");
-        return changed;
     }
 
     /// <summary>Deletes an idle task, retaining application tasks so their fixed job codes can be restored.</summary>
@@ -283,11 +279,11 @@ public class FwCron : FwModel<FwCron.Row>
 
             removeCache(id);
         }
-        else if (task.status == STATUS_DELETED || !updateDefinition(new()
+        else if (task.status == STATUS_DELETED || !updateTask(new()
         {
             ["status"] = STATUS_DELETED,
             ["run_requested_utc"] = null
-        }, where))
+        }, where, is_definition_change: true))
         {
             return false;
         }
@@ -303,21 +299,16 @@ public class FwCron : FwModel<FwCron.Row>
         if (task?.status != STATUS_DELETED || FwReports.isReportTaskCode(task.icode))
             return false;
 
-        var changed = updateDefinition(new()
+        return update(id, new()
         {
             ["status"] = STATUS_INACTIVE,
             ["run_requested_utc"] = null
         }, new()
         {
-            ["id"] = id,
             ["icode"] = task.icode,
             ["status"] = STATUS_DELETED,
             ["run_token"] = null
         });
-
-        if (changed)
-            fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, "Task restored as paused.");
-        return changed;
     }
 
     /// <summary>Resumes an unchanged, idle paused or completed task at its first future occurrence.</summary>
@@ -331,17 +322,14 @@ public class FwCron : FwModel<FwCron.Row>
         {
             ["status"] = STATUS_ACTIVE,
             ["next_run_utc"] = next
-        }, "Task resumed.");
+        });
     }
 
     /// <summary>
     /// Updates validated editable fields if the task is idle and its definition and schedule still match the observed row.
     /// The caller supplies a recalculated next run for recurrence changes.
     /// </summary>
-    public bool updateDefinition(int id, Row observed, FwDict fields) =>
-        updateDefinition(id, observed, fields, "Task definition updated.");
-
-    private bool updateDefinition(int id, Row observed, FwDict fields, string message)
+    public bool updateDefinition(int id, Row observed, FwDict fields)
     {
         if (id != observed.id || observed.status == STATUS_DELETED)
             return false;
@@ -359,10 +347,7 @@ public class FwCron : FwModel<FwCron.Row>
         where["idesc"] = observed.idesc;
         where["payload"] = observed.payload;
         where["upd_time"] = observed.upd_time;
-        var changed = updateDefinition(values, where);
-        if (changed)
-            fw.logActivity(FwLogTypes.ICODE_UPDATED, table_name, id, message);
-        return changed;
+        return update(id, values, where);
     }
 
     /// <summary>Releases the observed claim as uncertain and paused after an administrator has verified the worker stopped.</summary>
@@ -372,7 +357,7 @@ public class FwCron : FwModel<FwCron.Row>
             return false;
 
         const string message = "Execution interrupted. Verify the external outcome before requesting another run.";
-        var recovered = updateDefinition(new()
+        var recovered = updateTask(new()
         {
             ["status"] = STATUS_INACTIVE,
             ["run_token"] = null,
@@ -383,7 +368,7 @@ public class FwCron : FwModel<FwCron.Row>
         {
             ["id"] = id,
             ["run_token"] = token
-        });
+        }, is_definition_change: true);
 
         if (recovered)
             fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, id, message);
@@ -446,9 +431,6 @@ public class FwCron : FwModel<FwCron.Row>
             FwDict? details;
             if (is_report_task)
             {
-                if (FwReports.reportCode(snapshot.icode).Length == 0)
-                    throw new FwCronPauseException("CRON_BAD_REPORT_IDENTITY");
-
                 details = fw.model<FwReports>().runScheduledReport(snapshot);
             }
             else
@@ -470,8 +452,10 @@ public class FwCron : FwModel<FwCron.Row>
             status = RESULT_FAILED;
             message = ex.Message;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            fw.logger(LogLevel.ERROR, "Scheduled task failed. Task ID:", snapshot.id,
+                fw.config("log_pii").toBool() ? ex.ToString() : ex.GetType().Name);
             status = RESULT_FAILED;
             message = is_report_task ? "CRON_REPORT_GENERATION_FAILED" : "CRON_HANDLER_FAILED";
             is_pause = false;
@@ -643,22 +627,24 @@ public class FwCron : FwModel<FwCron.Row>
         ["run_token"] = null
     };
 
-    private bool updateTask(FwDict fields, FwDict where)
+    // Operational writes stay quiet; definition changes supply their own activity event.
+    private bool updateTask(FwDict fields, FwDict where, bool is_definition_change = false)
     {
-        if (fields.Count == 0 || db.update(table_name, fields, where) != 1)
+        if (fields.Count == 0)
+            return false;
+
+        if (is_definition_change)
+        {
+            fields["upd_time"] = DB.NOW;
+            if (fw.isLogged)
+                fields["upd_users_id"] = fw.userId;
+        }
+
+        if (db.update(table_name, fields, where) != 1)
             return false;
 
         removeCache(where["id"].toInt());
         return true;
-    }
-
-    private bool updateDefinition(FwDict fields, FwDict where)
-    {
-        fields["upd_time"] = DB.NOW;
-        if (fw.isLogged)
-            fields["upd_users_id"] = fw.userId;
-
-        return updateTask(fields, where);
     }
 
     private static string eventTime(DateTime date) => date.ToString("u", CultureInfo.InvariantCulture);

@@ -68,6 +68,15 @@ public class AdminCronController : FwDynamicController
         if (result["data"] is { } details)
             ps["result_details"] = Utils.jsonEncode(details, true);
 
+        if (ps["activity_rows"] is FwList activityRows)
+        {
+            foreach (var activity in activityRows)
+            {
+                if (activity["log_type"] is DBRow logType && logType["icode"].toStr() == FwLogTypes.ICODE_CRON_EVENT)
+                    activity["idesc"] = cronMessage(activity["idesc"].toStr());
+            }
+        }
+
         addReportDisplay(ps, task);
         return ps;
     }
@@ -83,7 +92,7 @@ public class AdminCronController : FwDynamicController
         if (task == null)
         {
             ps["job_codes"] = new FwList(model.legacyCodes()
-                .Where(code => !code.StartsWith(FwReports.REPORT_PREFIX, StringComparison.OrdinalIgnoreCase))
+                .Where(code => !FwReports.isReportTaskCode(code))
                 .Select(code => new FwDict
                 {
                     ["id"] = code,
@@ -128,7 +137,7 @@ public class AdminCronController : FwDynamicController
         if (id == 0)
         {
             var code = item["icode"].toStr();
-            if (code.StartsWith(FwReports.REPORT_PREFIX, StringComparison.OrdinalIgnoreCase)
+            if (FwReports.isReportTaskCode(code)
                 || !model.legacyCodes().Contains(code, StringComparer.Ordinal))
                 addFormError("icode", "CRON_JOB", cronMessage("CRON_JOB"));
             else if (model.isExistsByField(code, 0, "icode"))

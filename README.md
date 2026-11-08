@@ -30,6 +30,8 @@ http://demo.engineeredit.com/ - this is how it looks in action right after insta
 
 ## Documentation
 
+- [Framework architecture and conventions](docs/architecture.md) - understand the behavior applications inherit and where to add business logic.
+
 - [CRUD workflows with `FwModel`](docs/crud.md) - compare `FwDict`/`FwList` and typed DTO approaches for standard operations.
 - [Feature modules](docs/feature_modules.md) - generate or scaffold modules from database tables.
 

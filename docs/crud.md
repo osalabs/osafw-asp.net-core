@@ -73,6 +73,10 @@ users.delete(id, true);                       // pass true to delete permanently
 
 > `DB.h()` remains a handy helper when you only need one or two keys, but `new FwDict { ... }` keeps examples explicit.
 
+Audit change detection compares full timestamps for submitted `DateTime`/`DateTimeOffset` values and colon-bearing timestamp text, normalizing Local/offset values to UTC. Date-only form strings and unspecified-midnight `DateTime` values retain calendar-date comparison, including against a stored timestamp. An unspecified timestamp is compared as its stored clock value. Database dictionary rows currently expose timestamps to second precision; fractional input may therefore be conservatively logged as changed.
+
+Models that need a conditional administrative update can call the protected `update(id, item, conditions)` overload. The conditions are combined with the model's ID predicate in one database update. It retains the normal audit fields, activity logging and cache invalidation, and returns `false` if no row matches. Existing public `update(id, item)` overrides remain unchanged; use the protected overload from the model method that owns the conditional operation. Quiet worker bookkeeping can continue to use `DB.update` with explicit cache invalidation.
+
 ### Controllers
 ```csharp
 public override int SaveAction(int id = 0)
@@ -125,6 +129,8 @@ List<Users.Row> active = users.listT();           // list with typed rows
 List<Users.Row> page = users.listTByWhere(offset: 20, limit: 10, orderby: "id");
 Users.Row required = users.oneTOrFail(5);         // throws if missing
 ```
+
+Typed lookups reuse request-cache snapshots and return detached copies; editing a returned DTO does not change the cached row. Standard model writes invalidate both typed and dictionary caches.
 
 Typed single-row methods use `null` for "not found" because a default DTO can look like a real record with `0` and empty-string values. Use `oneTOrFail` when the route or workflow requires the record to exist.
 

@@ -14,6 +14,8 @@ internal static class FwCronProviderChecks
     private sealed class TestCron(Func<FwCron.Row, FwDict?> run) : FwCron
     {
         protected override FwDict? runJobAction(FwCron.Row job) => run(job);
+
+        public bool updateIf(int id, FwDict fields, FwDict conditions) => update(id, fields, conditions);
     }
 
     private static FW context(string connection, string provider, string timezone = "UTC") =>
@@ -100,6 +102,84 @@ internal static class FwCronProviderChecks
         Assert.HasCount(1, events, "Only the administrator's manual run request enters activity history.");
     }
 
+    public static void ConditionalModelUpdate(string connection, string provider)
+    {
+        using var scope = FwConfig.beginScope();
+        using var fw = context(connection, provider);
+        var cron = model(fw, _ => null);
+        var before = DateTime.UtcNow.AddDays(-1);
+        var id = cron.add(DB.h("icode", "conditional_update", "iname", "Before", "cron", "@daily", "upd_time", before));
+        var cached = cron.oneT(id)!;
+        cron.one(id);
+        cron.oneTByIcode(cached.icode);
+
+        Assert.IsFalse(cron.updateIf(id, DB.h("iname", "Missed"), DB.h("run_token", "held")));
+        Assert.AreEqual("Before", fw.db.value("fwcron", DB.h("id", id), "iname"));
+        fw.db.update("fwcron", DB.h("iname", "External change"), DB.h("id", id));
+        Assert.AreEqual("Before", cron.one(id)["iname"], "A rejected update leaves the request cache intact.");
+        Assert.AreEqual("Before", cron.oneT(id)!.iname);
+        Assert.AreEqual("Before", cron.oneTByIcode(cached.icode)!.iname);
+        cron.oneT(id)!.iname = "Unsaved edit";
+        Assert.AreEqual("Before", cron.oneT(id)!.iname, "Returned rows must not mutate the cached snapshot.");
+        cron.removeCache(id);
+        Assert.AreEqual("External change", cron.oneTByIcode(cached.icode)!.iname);
+        Assert.AreEqual("External change", cron.oneT(id)!.iname);
+        Assert.IsEmpty(fw.model<FwActivityLogs>().listByEntity("fwcron", id, new[] { FwLogTypes.ICODE_UPDATED }));
+
+        var conditions = DB.h("id", id + 1, "run_token", null);
+        Assert.IsTrue(cron.updateIf(id, DB.h("iname", "After"), conditions));
+        Assert.AreEqual(id + 1, conditions["id"], "The supplied conditions are not mutated.");
+        Assert.AreEqual("After", cron.oneT(id)!.iname);
+        Assert.AreEqual("After", cron.one(id)["iname"]);
+        Assert.AreEqual("After", cron.oneTByIcode(cached.icode)!.iname);
+        Assert.IsTrue(cron.oneT(id)!.upd_time > before);
+        Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", id, new[] { FwLogTypes.ICODE_UPDATED }));
+
+        var day = DateTime.UtcNow.Date.AddDays(1);
+        var clockId = cron.add(DB.h("icode", "clock_update", "cron", "0 7 * * *",
+            "start_date_utc", day.AddHours(6), "next_run_utc", day.AddHours(7)));
+        var observed = cron.oneT(clockId)!;
+        Assert.IsTrue(cron.updateDefinition(clockId, observed, DB.h("start_date_utc", day.AddHours(6.5))));
+        Assert.AreEqual(day.AddHours(6.5), cron.oneT(clockId)!.start_date_utc);
+        Assert.AreEqual(observed.next_run_utc, cron.oneT(clockId)!.next_run_utc);
+        Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", clockId, new[] { FwLogTypes.ICODE_UPDATED }),
+            "A time-only definition change must be audited even if the next recurrence is unchanged.");
+        Assert.IsFalse(cron.updateDefinition(clockId, observed, DB.h("start_date_utc", day.AddHours(6.75))));
+        Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", clockId, new[] { FwLogTypes.ICODE_UPDATED }));
+    }
+
+    public static void FailureDiagnostics(string connection, string provider)
+    {
+        using var scope = FwConfig.beginScope();
+        foreach (var isLogPii in new[] { false, true })
+        {
+            var logPath = Path.GetTempFileName();
+            try
+            {
+                using var fw = context(connection, provider);
+                fw.config()["log_pii"] = isLogPii;
+                fw.flogger.log_level = LogLevel.ERROR;
+                fw.flogger.log_file = logPath;
+                var cron = model(fw, _ => throw new InvalidOperationException("private failure detail"));
+                var id = cron.add(DB.h("icode", "diagnostics_" + isLogPii, "cron", "@daily", "next_run_utc", DateTime.UtcNow.AddMinutes(-1)));
+                cron.runJob(cron.oneT(id)!);
+
+                fw.flogger.Dispose();
+                var log = File.ReadAllText(logPath);
+                StringAssert.Contains(log, "Scheduled task failed. Task ID:");
+                StringAssert.Contains(log, id.ToString());
+                StringAssert.Contains(log, nameof(InvalidOperationException));
+                Assert.AreEqual(isLogPii, log.Contains("private failure detail", StringComparison.Ordinal));
+                Assert.AreEqual("CRON_HANDLER_FAILED", FwCron.parseResult(cron.oneT(id)!.last_result)["message"]);
+                Assert.IsNull(cron.oneT(id)!.run_token);
+            }
+            finally
+            {
+                File.Delete(logPath);
+            }
+        }
+    }
+
     public static void ManualRecoveryAndFailure(string connection, string provider)
     {
         using var scope = FwConfig.beginScope();
@@ -164,7 +244,12 @@ internal static class FwCronProviderChecks
     {
         using var scope = FwConfig.beginScope();
         using var first = context(connection, provider);
-        var cron = first.model<FwCron>();
+        var legacyCalls = 0;
+        var cron = model(first, _ =>
+        {
+            legacyCalls++;
+            return null;
+        });
         var stale = DateTime.UtcNow.AddHours(-1);
         var fields = DB.h("cron", "0 0 * * *", "next_run_utc", stale, "run_requested_utc", stale);
         var id = first.model<FwReports>().addSchedule("Sample_Archive", fields);
@@ -182,6 +267,12 @@ internal static class FwCronProviderChecks
         var events = first.model<FwActivityLogs>().listByEntity(FwEntities.ICODE_CRON, id);
         Assert.IsTrue(events.Any(row => row["idesc"].toStr().Contains("expired", StringComparison.Ordinal)));
         Assert.IsTrue(events.Any(row => row["idesc"].toStr().Contains("Skipped", StringComparison.Ordinal)));
+        Assert.AreEqual(0, legacyCalls, "Generated report schedules retain their report-specific overdue policy.");
+
+        var legacyId = cron.add(DB.h("icode", "report_weekly_dispatch", "cron", "@daily", "next_run_utc", stale));
+        cron.runJob(cron.oneT(legacyId)!);
+        Assert.AreEqual(1, legacyCalls, "A prefix alone must not redirect a fixed application handler to the report runner.");
+        Assert.AreEqual(FwCron.RESULT_SUCCEEDED, FwCron.parseResult(cron.oneT(legacyId)!.last_result)["status"]);
     }
 
     public static void DeleteAndRestoreRespectTaskTypeAndClaim(string connection, string provider)
@@ -207,12 +298,12 @@ internal static class FwCronProviderChecks
         Assert.IsFalse(cron.restoreTask(oldReportId), "Previously soft-deleted report schedules cannot be restored.");
         Assert.IsTrue(cron.deleteTask(oldReportId), "Previously soft-deleted report schedules can be purged.");
 
-        var taskId = cron.add(DB.h("icode", "fixed_code", "cron", "@weekly", "run_requested_utc", now));
+        var taskId = cron.add(DB.h("icode", "report_weekly", "cron", "@weekly", "run_requested_utc", now));
         Assert.IsFalse(cron.restoreTask(taskId));
         Assert.IsTrue(cron.deleteTask(taskId));
         Assert.IsFalse(cron.deleteTask(taskId), "A fixed job code remains reserved while deleted.");
         Assert.AreEqual(FwModel.STATUS_DELETED, cron.oneT(taskId)!.status);
-        Assert.AreEqual(FwModel.STATUS_DELETED, cron.oneTByIcode("fixed_code")!.status);
+        Assert.AreEqual(FwModel.STATUS_DELETED, cron.oneTByIcode("report_weekly")!.status);
         Assert.IsNull(cron.oneT(taskId)!.run_requested_utc);
 
         fw.db.update("fwcron", DB.h("run_token", "application-claim", "run_requested_utc", now), DB.h("id", taskId));
@@ -221,7 +312,7 @@ internal static class FwCronProviderChecks
         Assert.IsTrue(cron.restoreTask(taskId));
         Assert.IsFalse(cron.restoreTask(taskId));
         Assert.AreEqual(FwModel.STATUS_INACTIVE, cron.oneT(taskId)!.status);
-        Assert.AreEqual(FwModel.STATUS_INACTIVE, cron.oneTByIcode("fixed_code")!.status);
+        Assert.AreEqual(FwModel.STATUS_INACTIVE, cron.oneTByIcode("report_weekly")!.status);
         Assert.IsNull(cron.oneT(taskId)!.run_requested_utc);
         Assert.IsFalse(cron.listDueJobs().Any(row => row.id == taskId));
         Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", taskId, new[] { FwLogTypes.ICODE_UPDATED }));
@@ -382,6 +473,12 @@ public class FwCronSqliteTests
     public void UtcDatesSurviveDatabaseFold() => FwCronProviderChecks.UtcDatesSurviveDatabaseFold(file.ConnectionString, DB.DBTYPE_SQLITE);
 
     [TestMethod]
+    public void ConditionalModelUpdate() => FwCronProviderChecks.ConditionalModelUpdate(file.ConnectionString, DB.DBTYPE_SQLITE);
+
+    [TestMethod]
+    public void FailureDiagnostics() => FwCronProviderChecks.FailureDiagnostics(file.ConnectionString, DB.DBTYPE_SQLITE);
+
+    [TestMethod]
     public void ManualRecoveryAndFailure() => FwCronProviderChecks.ManualRecoveryAndFailure(file.ConnectionString, DB.DBTYPE_SQLITE);
 
     [TestMethod]
@@ -417,6 +514,12 @@ public class FwCronSqlServerTests
         using var legacy = new SqlServerTestDatabase();
         FwCronProviderChecks.ExistingTaskUpgrade(legacy.ConnectionString, DB.DBTYPE_SQLSRV);
     }
+
+    [TestMethod]
+    public void ConditionalModelUpdate() => FwCronProviderChecks.ConditionalModelUpdate(database!.ConnectionString, DB.DBTYPE_SQLSRV);
+
+    [TestMethod]
+    public void FailureDiagnostics() => FwCronProviderChecks.FailureDiagnostics(database!.ConnectionString, DB.DBTYPE_SQLSRV);
 
     [TestMethod]
     public void ManualRecoveryAndFailure() => FwCronProviderChecks.ManualRecoveryAndFailure(database!.ConnectionString, DB.DBTYPE_SQLSRV);

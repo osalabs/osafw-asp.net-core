@@ -238,6 +238,17 @@ public class AdminCronControllerTests
         var history = fw.model<FwActivityLogs>().listByEntityForUI("fwcron", id, FwActivityLogs.TAB_HISTORY);
         Assert.AreEqual(2, history.Count, "Distinct task events must not be merged within ten minutes.");
 
+        fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, "fwcron", id, "CRON_HANDLER_FAILED");
+        fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, "fwcron", id, "Application handler detail");
+        fw.FORM["dofilter"] = "1";
+        fw.FORM["f"] = new FwDict { ["tab_activity"] = FwActivityLogs.TAB_ALL };
+        Call("GET", "/Admin/Cron/" + id);
+        var activityHtml = Encoding.UTF8.GetString(body.ToArray());
+        StringAssert.Contains(activityHtml, "Task handler failed.");
+        StringAssert.Contains(activityHtml, "Application handler detail");
+        Assert.IsFalse(activityHtml.Contains("CRON_HANDLER_FAILED", StringComparison.Ordinal), "History must resolve message keys after the latest result is replaced.");
+        fw.FORM.Clear();
+
         fw.FORM["dofilter"] = "1";
         fw.FORM["f"] = new FwDict { ["s"] = "example_sleep", ["status"] = "10" };
         var listController = new AdminCronController();

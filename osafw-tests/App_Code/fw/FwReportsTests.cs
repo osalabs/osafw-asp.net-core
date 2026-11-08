@@ -32,6 +32,77 @@ public class FwReportsTests
         Assert.AreEqual("9", report.CheckedDepartment);
     }
 
+    [TestMethod]
+    [DataRow("""[{"name":"department_id","type":" INT "}]""", "int")]
+    [DataRow("""[{"name":"department_id"}]""", "int")]
+    [DataRow("""[{"name":"department_id","type":"unsupported"}]""", null)]
+    [DataRow("""[{"name":"department_id","type":true}]""", null)]
+    [DataRow("""[{"name":" ","type":"int"}]""", null)]
+    [DataRow("""[{"name":"department_id"},{"name":"DEPARTMENT_ID"}]""", null)]
+    public void ScheduledHardcodedReport_ValidatesTemplateMetadataDuringCapture(string metadata, string? expectedType)
+    {
+        var directory = Directory.CreateTempSubdirectory("osafw-schedule-metadata-");
+        try
+        {
+            using var scope = new FwTestScope(_ => new RejectingDb());
+            var fw = scope.Fw;
+            fw.config()["template"] = directory.FullName;
+            fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
+            var reportDirectory = Directory.CreateDirectory(Path.Combine(directory.FullName, "admin", "reports", "test"));
+            File.WriteAllText(Path.Combine(reportDirectory.FullName, "schedule.json"), metadata);
+
+            var report = new FwReportsBase();
+            var filters = new FwDict { ["department_id"] = "7" };
+            report.init(fw, "Test", filters);
+            if (expectedType == null)
+            {
+                var error = Assert.ThrowsExactly<UserException>(() => report.captureScheduledFilters(filters, is_frozen: false));
+                Assert.AreEqual("REPORT_FILTER_INVALID", error.Message);
+                return;
+            }
+
+            var captured = report.captureScheduledFilters(filters, is_frozen: false);
+            Assert.HasCount(1, captured);
+            Assert.AreEqual(expectedType, captured[0]["type"]);
+            Assert.AreEqual("7", captured[0]["value"]);
+
+            // Replay loads the definition again as a fresh worker instance would.
+            var replay = new FwReportsBase();
+            replay.init(fw, "Test", []);
+            replay.applyScheduledFilters(new FwDict { ["params"] = captured });
+            Assert.AreEqual("7", replay.f["department_id"]);
+
+            captured[0]["type"] = " INT "; // Previously saved metadata can contain noncanonical type spelling.
+            replay.applyScheduledFilters(new FwDict { ["params"] = captured });
+            Assert.AreEqual("7", replay.f["department_id"]);
+        }
+        finally
+        {
+            directory.Delete(true);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("REPORT_Month-End_2:a0Z9_-kQ7m", "Month-End_2")]
+    [DataRow("report_weekly", "")]
+    [DataRow("report_weekly:a0Z9_-kQ7", "")]
+    [DataRow("report_weekly:a0Z9_-kQ7!", "")]
+    [DataRow("report_weekly:a0Z9_-kQ7m\n", "")]
+    [DataRow("report_:a0Z9_-kQ7m", "")]
+    [DataRow("report_month.end:a0Z9_-kQ7m", "")]
+    public void ReportCode_RecognizesOnlyCompleteGeneratedTaskCodes(string icode, string expectedCode)
+    {
+        Assert.AreEqual(expectedCode, FwReports.reportCode(icode));
+    }
+
+    [TestMethod]
+    public void ReportCode_EnforcesTheFullTaskCodeLengthLimit()
+    {
+        var reportCode = new string('a', 110);
+        Assert.AreEqual(reportCode, FwReports.reportCode($"report_{reportCode}:a0Z9_-kQ7m"));
+        Assert.AreEqual("", FwReports.reportCode($"report_{reportCode}a:a0Z9_-kQ7m"));
+    }
+
     private sealed class ScopedHardcodedReport : FwReportsBase
     {
         public override bool isSchedulingSupported => true;

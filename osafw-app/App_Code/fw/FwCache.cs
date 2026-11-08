@@ -94,6 +94,48 @@ public class FwCache
         var result = request_cache[key];
         return deserialize(result);
     }
+    private sealed record CachedRow(FwDict Values);
+
+    // Database row values are scalar, except binary columns, which need a separate buffer.
+    private static FwDict copyRowValues(FwDict values)
+    {
+        var copy = new FwDict(values);
+        foreach (var key in copy.Keys.ToArray())
+        {
+            if (copy[key] is byte[] bytes)
+                copy[key] = bytes.Clone();
+        }
+        return copy;
+    }
+
+    /// <summary>Caches a detached database-row snapshot without applying JSON attributes or changing scalar types.</summary>
+    public void setRequestRow(string key, object row)
+    {
+        try
+        {
+            request_cache[key] = new CachedRow(copyRowValues(row.toFwDict()));
+        }
+        catch (Exception)
+        {
+            // A DTO with an indexer, unreadable property or throwing getter can still be read from the DB.
+            request_cache.Remove(key);
+        }
+    }
+
+    /// <summary>Materializes a fresh DTO using the same property mapping as database reads, or null on a cache miss.</summary>
+    public T? getRequestRow<T>(string key) where T : class, new()
+    {
+        try
+        {
+            return request_cache[key] is CachedRow row ? copyRowValues(row.Values).to<T>() : null;
+        }
+        catch (Exception)
+        {
+            request_cache.Remove(key);
+            return null;
+        }
+    }
+
     public void setRequestValue(string key, object? value)
     {
         request_cache[key] = serialize(value);

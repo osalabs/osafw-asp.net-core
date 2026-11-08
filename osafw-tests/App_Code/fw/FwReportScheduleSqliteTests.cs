@@ -93,9 +93,14 @@ public class FwReportScheduleSqliteTests
         var descriptions = report.describeScheduledFilters((FwList)first["params"]!);
         Assert.AreEqual("Account <number>", descriptions.Single(row => row["name"].toStr() == "account_id")["label"]);
         Assert.AreEqual("0", descriptions.Single(row => row["name"].toStr() == "account_id")["value"]);
-        var sample = FwReportsBase.createInstance(fw, "Sample", new FwDict());
+        var sample = FwReportsBase.createScheduledInstance(fw, "Sample", []);
         var loginType = fw.model<FwLogTypes>().oneByIcode(FwLogTypes.ICODE_USERS_LOGIN);
-        var labels = sample.describeScheduledFilters(new FwList { new FwDict { ["name"] = "events_id", ["type"] = "int", ["value"] = loginType["id"].toStr() } });
+        var sampleInputs = DB.h("from_date", "", "events_id", loginType["id"].toStr());
+        var sampleSnapshot = sample.captureScheduledFilters(sampleInputs, is_frozen: false);
+        sample.applyScheduledFilters(new FwDict { ["params"] = sampleSnapshot });
+        sample.getData();
+        var labels = (FwList)sample.ps["applied_params"]!;
+        Assert.HasCount(1, labels);
         Assert.AreEqual("Event", labels[0]["label"]);
         Assert.AreEqual(loginType["iname"], labels[0]["value"]);
 

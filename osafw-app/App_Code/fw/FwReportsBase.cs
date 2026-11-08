@@ -23,6 +23,7 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -105,11 +106,32 @@ public class FwReportsBase
             return scheduling_parameters = [];
 
         var json = Utils.getFileContent(path, out var error);
-        if (error != null || Utils.jsonDecodeList(json) is not { } definitions
-            || definitions.Any(item => item is not FwDict))
+        if (error != null || Utils.jsonDecodeList(json) is not { } definitions)
             throw new UserException("REPORT_FILTER_INVALID");
 
-        return scheduling_parameters = new FwList(definitions.Cast<FwDict>());
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new FwList(definitions.Count);
+        foreach (var item in definitions)
+        {
+            if (item is not FwDict def || def["name"] is not string name
+                || string.IsNullOrWhiteSpace(name) || !names.Add(name)
+                || def["type"] is not (null or string))
+            {
+                throw new UserException("REPORT_FILTER_INVALID");
+            }
+
+            try
+            {
+                FwReports.normalizeParamDefinition(def);
+            }
+            catch (UserException)
+            {
+                throw new UserException("REPORT_FILTER_INVALID");
+            }
+            result.Add(def);
+        }
+
+        return scheduling_parameters = result;
     }
 
     // A report-owned relative selector may resolve from this instant and fw.userTimezone during execution.
@@ -161,7 +183,7 @@ public class FwReportsBase
         foreach (var row in saved)
         {
             var name = row["name"].toStr();
-            if (filters.ContainsKey(name) || !definitions.Any(def => def["name"].toStr() == name && def["type"].toStr() == row["type"].toStr()))
+            if (filters.ContainsKey(name) || !definitions.Any(def => def["name"].toStr() == name && def["type"].toStr() == row["type"].toStr().Trim().ToLowerInvariant()))
                 throw new UserException("REPORT_FILTER_CHANGED");
 
             filters[name] = row["value"];
