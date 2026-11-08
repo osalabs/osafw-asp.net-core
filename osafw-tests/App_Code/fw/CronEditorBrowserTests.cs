@@ -12,6 +12,34 @@ namespace osafw.Tests;
 public class CronEditorBrowserTests
 {
     [TestMethod]
+    public async Task ReportEmailControls_OpenAndCancelForBothReportTemplates()
+    {
+        var assets = Environment.GetEnvironmentVariable("FW_BROWSER_ASSETS_ROOT") ?? Path.Combine(TestHelpers.RepoRoot(), "osafw-app/wwwroot/assets");
+        var parser = new ParsePage(new ParsePageOptions { TemplatesRoot = TestHelpers.TemplateRoot() });
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        foreach (var report in new[] { "custom", "sample" })
+        {
+            var page = await browser.NewPageAsync();
+            var html = parser.parse_page("", "admin/reports/" + report + "/list_filter.html", new FwDict { ["report_code"] = "Sample" });
+            await page.SetContentAsync("<base href=\"https://reports.test/\">" + html);
+            await page.AddScriptTagAsync(new() { Path = Path.Combine(assets, "lib/jquery/jquery.min.js") });
+            await page.AddScriptTagAsync(new() { Content = parser.parse_page("", "admin/reports/" + report + "/onload.js", new FwDict()) });
+            Assert.IsFalse(await page.Locator("#emailto").IsVisibleAsync());
+            await page.Locator(".on-email").ClickAsync();
+            Assert.IsTrue(await page.Locator("#emailto").IsVisibleAsync());
+            Assert.AreEqual("post", await page.Locator("#FFilter").GetAttributeAsync("method"));
+            StringAssert.Contains(await page.Locator("#FFilter").GetAttributeAsync("action"), "/(SendEmail)/Sample");
+            Assert.IsTrue(await page.Locator("#to_emails").EvaluateAsync<bool>("e => e.required"));
+            await page.Locator(".on-email-cancel").ClickAsync();
+            Assert.IsFalse(await page.Locator("#emailto").IsVisibleAsync());
+            Assert.AreEqual("get", await page.Locator("#FFilter").GetAttributeAsync("method"));
+            Assert.IsFalse(await page.Locator("#to_emails").EvaluateAsync<bool>("e => e.required"));
+            await page.CloseAsync();
+        }
+    }
+
+    [TestMethod]
     public async Task SharedEditor_RendersPresetsAndPreservesAnAdvancedExpressionAcrossInstances()
     {
         var root = TestHelpers.RepoRoot();

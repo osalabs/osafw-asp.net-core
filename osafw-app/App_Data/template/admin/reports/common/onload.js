@@ -24,4 +24,5 @@ $(document).on('click', '.on-email', function(e){
 
 $(document).on('click', '.on-email-cancel', function(e){
   $('#emailto').hide();
+  refresh_emailto();
 });

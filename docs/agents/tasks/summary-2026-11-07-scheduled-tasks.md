@@ -189,3 +189,10 @@ Verification:
 Follow-up review caught a report deletion redirect to the removed detail when the normal confirmation carried return_url. A failing route regression reproduced it; report deletion now supplies the task list explicitly, while the application soft-delete control keeps its return URL. The final ./scripts/test.ps1 -Filter 'FullyQualifiedName~AdminCronControllerTests' run passed 5/5 with zero warnings/errors/skips. Bulk-delete feedback also explains that deleted application tasks can be restored rather than purged. Full Fast and SQL Server evidence above precede this controller-only redirect fix; the affected route check was repeated.
 
 Independent report/mail and scheduler reviewers rechecked their bounded fixes and audited this summary. The scheduler audit corrected an overstatement of coverage for an old report tombstone's hidden filter link. No blocking findings remain. Diff whitespace and strict UTF-8/no-BOM/CRLF checks passed for all 18 changed task files, including the extracted partial. Review loop can stop.
+
+
+## Custom report Email To button
+
+The custom report template lacked the shared onload.js include used by Sample, leaving Email To without its click handler. Added the same include. The shared Cancel handler now also restores GET mode and removes the recipient requirement, so cancellation does not leave the report form configured for email submission.
+
+Verification: scripts/test.ps1 -Profile Browser -Filter FullyQualifiedName~ReportEmailControls passed 1/1 with zero skipped and a clean build. The browser test renders each actual custom/Sample filter template and its onload include, opens Email To, verifies POST/action/required recipient, and cancels back to hidden/GET/nonrequired state. No email was sent. Local second-pass review was sufficient for this bounded UI wiring fix; no server authorization or delivery contracts changed. These changes remain uncommitted.
