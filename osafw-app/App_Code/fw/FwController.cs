@@ -1749,6 +1749,21 @@ public abstract partial class FwController
         }
     }
 
+    /// <summary>Preserves model-specific delete behavior and removes My List links when the record is physically removed.</summary>
+    protected void modelDelete(int id)
+    {
+        model0.deleteWithPermanentCheck(id);
+        cleanupDeletedUserListItem(id);
+    }
+
+    /// <summary>Removes links for a deleted record under this controller's My Lists entity key.</summary>
+    protected void cleanupDeletedUserListItem(int id)
+    {
+        // The uncached primary key distinguishes a physical delete from a soft delete or a guarded no-op.
+        if (is_userlists && !string.IsNullOrEmpty(base_url) && id > 0 && model0.oneField(id, model0.field_id) == null)
+            fw.model<UserLists>().deleteLinksForEntityItem(base_url, id);
+    }
+
     protected virtual int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
     {
         int ctr = 0;
@@ -1760,7 +1775,7 @@ public abstract partial class FwController
             var id = id1.toInt();
             if (is_delete)
             {
-                model0.deleteWithPermanentCheck(id);
+                modelDelete(id);
                 ctr += 1;
             }
             else if (user_lists_id > 0)

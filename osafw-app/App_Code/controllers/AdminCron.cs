@@ -231,6 +231,7 @@ public class AdminCronController : FwDynamicController
             return null;
         }
 
+        cleanupDeletedUserListItem(id);
         fw.flash("onedelete", 1);
         return afterSave(true, location: FwReports.isReportTaskCode(task.icode) ? base_url : "");
     }
@@ -247,7 +248,10 @@ public class AdminCronController : FwDynamicController
         foreach (string key in keys)
         {
             if (model.deleteTask(key.toInt()))
+            {
+                cleanupDeletedUserListItem(key.toInt());
                 deleted++;
+            }
         }
         if (deleted != keys.Count)
             fw.flash("error", cronMessage("CRON_BULK_CHANGED"));

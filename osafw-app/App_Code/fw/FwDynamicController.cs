@@ -695,7 +695,7 @@ public partial class FwDynamicController : FwController
 
         try
         {
-            model0.deleteWithPermanentCheck(id);
+            modelDelete(id);
             fw.flash("onedelete", 1);
         }
         catch (Exception ex)

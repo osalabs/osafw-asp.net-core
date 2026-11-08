@@ -146,6 +146,18 @@ internal static class FwCronProviderChecks
             "A time-only definition change must be audited even if the next recurrence is unchanged.");
         Assert.IsFalse(cron.updateDefinition(clockId, observed, DB.h("start_date_utc", day.AddHours(6.75))));
         Assert.HasCount(1, fw.model<FwActivityLogs>().listByEntity("fwcron", clockId, new[] { FwLogTypes.ICODE_UPDATED }));
+
+        var idle = cron.oneT(clockId)!;
+        Assert.IsTrue(cron.requestRun(clockId));
+        var queued = cron.oneT(clockId)!;
+        Assert.IsFalse(cron.updateDefinition(clockId, idle, DB.h("iname", "Stale edit")),
+            "An edit must not cancel a request queued after its observed read.");
+        Assert.AreEqual(queued.run_requested_utc, cron.oneT(clockId)!.run_requested_utc);
+        Assert.IsTrue(cron.updateDefinition(clockId, queued, DB.h("iname", "Reviewed edit")));
+        Assert.IsNull(cron.oneT(clockId)!.run_requested_utc);
+        var cancellations = fw.model<FwActivityLogs>().listByEntity("fwcron", clockId, new[] { FwLogTypes.ICODE_CRON_EVENT })
+            .Where(row => row["idesc"].toStr() == "CRON_REQUEST_CANCELED").ToList();
+        Assert.HasCount(1, cancellations, "Only the successful cancellation adds its explanation to history.");
     }
 
     public static void FailureDiagnostics(string connection, string provider)

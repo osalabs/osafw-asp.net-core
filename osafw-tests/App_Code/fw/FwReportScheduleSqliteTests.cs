@@ -1,4 +1,5 @@
 #if isSQLite
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -16,12 +17,13 @@ public class FwReportScheduleSqliteTests
         using var file = new SqliteFile();
         var request = TestHelpers.CreateHttpContext("");
         var appPath = Path.Combine(TestHelpers.RepoRoot(), "osafw-app");
-        using var scope = new FwTestScope(file.CreateDb, new Dictionary<string, string?>
+        var settings = new Dictionary<string, string?>
         {
             ["appSettings:site_root"] = appPath,
             ["appSettings:template"] = TestHelpers.TemplateRoot(),
             ["appSettings:route_prefixes:/Admin"] = "true",
-        }, request);
+        };
+        using var scope = new FwTestScope(file.CreateDb, settings, request);
         var fw = scope.Fw;
         var db = fw.db;
         var sqlPath = Path.Combine(appPath, "App_Data", "sql", "sqlite");
@@ -31,8 +33,8 @@ public class FwReportScheduleSqliteTests
         const string reportCode = "Case_Report";
         var reportId = db.insert("fwreports", DB.h(
             "icode", reportCode, "iname", "Case Report", "access_level", Users.ACL_SITEADMIN,
-            "sql_template", "SELECT @selected_date AS selected_date, @account_id AS account_id",
-            "params_json", """{"selected_date":{"type":"date","required":true},"account_id":{"type":"int","label":"Account <number>"}}"""));
+            "sql_template", "SELECT @selected_date, @account_id, @notes, @old_filter",
+            "params_json", """{"selected_date":{"type":"date","required":true},"account_id":{"type":"int","label":"Account <number>"},"notes":{"type":"text"},"old_filter":{"type":"text"}}"""));
         fw.model<Users>().reloadSession(1);
         fw.Session("XSS", "schedule-test-token");
         fw.G["date_format"] = DateUtils.DATE_FORMAT_DMY;
@@ -51,7 +53,7 @@ public class FwReportScheduleSqliteTests
             fw.FORM["XSS"] = "schedule-test-token";
             fw.FORM["item"] = DB.h("iname", "Independent schedule", "format", format, "recipients", recipient,
                 "cron", cron, "timezone", "UTC", "status", "0");
-            fw.FORM["f"] = DB.h("selected_date", date, "account_id", "0",
+            fw.FORM["f"] = DB.h("selected_date", date, "account_id", "0", "notes", "", "old_filter", "retired-value",
                 "pagesize", "5000", "to_emails", "unrelated@example.test", "arbitrary", "ignore");
         }
 
@@ -88,7 +90,7 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual("html", first["format"]);
         Assert.AreEqual("second@example.test", second["recipients"]);
         Assert.AreEqual("pdf", second["format"]);
-        Assert.HasCount(2, (FwList)first["params"]!);
+        Assert.HasCount(4, (FwList)first["params"]!);
         var report = FwReportsBase.createInstance(fw, reportCode, new FwDict());
         var descriptions = report.describeScheduledFilters((FwList)first["params"]!);
         Assert.AreEqual("Account <number>", descriptions.Single(row => row["name"].toStr() == "account_id")["label"]);
@@ -118,13 +120,38 @@ public class FwReportScheduleSqliteTests
         StringAssert.Contains(html, "Case Report - email");
 
         db.update("fwreports", DB.h(
-            "sql_template", "SELECT @selected_date AS selected_date, @currency AS currency",
-            "params_json", """{"selected_date":{"type":"date","required":true},"currency":{"type":"text","required":true}}"""),
+            "sql_template", "SELECT @selected_date, @account_id, @notes, @currency, @region",
+            "params_json", """{"selected_date":{"type":"date","required":true},"account_id":{"type":"text","default":"new account"},"notes":{"type":"text","default":"new notes"},"currency":{"type":"text","default":"USD"},"region":{"type":"text","required":true}}"""),
             DB.h("id", reportId));
+
+        var reviewRequest = TestHelpers.CreateHttpContext("");
+        reviewRequest.Request.Method = "GET";
+        reviewRequest.Request.Path = $"/Admin/Reports/{reportCode}";
+        reviewRequest.Request.QueryString = new QueryString($"?fwcron_id={records[0].id}");
+        using var reviewPage = new MemoryStream();
+        reviewRequest.Response.Body = reviewPage;
+        using (var reviewScope = new FwTestScope(file.CreateDb, settings, reviewRequest))
+        {
+            var reviewFw = reviewScope.Fw;
+            reviewFw.model<Users>().reloadSession(1);
+            reviewFw.setRoute(reviewFw.getRoute());
+            reviewFw.callRoute();
+        }
+
+        Assert.AreEqual(200, reviewRequest.Response.StatusCode);
+        var reviewHtml = System.Text.Encoding.UTF8.GetString(reviewPage.ToArray());
+        StringAssert.Contains(reviewHtml, "Review the current values before updating the schedule.");
+        StringAssert.Contains(reviewHtml, """id="fselected_date" name="f[selected_date]" maxlength="10" value="1/2/2026" """);
+        StringAssert.Contains(reviewHtml, """id="fnotes" name="f[notes]" value="" """);
+        StringAssert.Contains(reviewHtml, """id="faccount_id" name="f[account_id]" value="new account" """);
+        StringAssert.Contains(reviewHtml, """id="fcurrency" name="f[currency]" value="USD" """);
+        StringAssert.Contains(reviewHtml, """id="fregion" name="f[region]" value="" type="text" class="form-control" required""");
+        Assert.IsFalse(reviewHtml.Contains("retired-value"));
+        Assert.AreEqual(records[0].payload, tasks()[0].payload);
         fw.FORM.Clear();
         fw.FORM["XSS"] = "schedule-test-token";
         fw.FORM["fwcron_id"] = records[0].id.ToString();
-        fw.FORM["f"] = DB.h("selected_date", "7/8/2026", "currency", "EUR");
+        fw.FORM["f"] = DB.h("selected_date", "7/8/2026", "account_id", "reviewed account", "notes", "", "currency", "EUR", "region", "EMEA");
         call("POST", "UpdateScheduleFilters");
         Assert.AreEqual(302, fw.response.StatusCode);
         Assert.AreEqual($"/Admin/Reports/{reportCode}?fwcron_id={records[0].id}", fw.response.Headers.Location.ToString());
@@ -150,7 +177,7 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual("first@example.test", edit["recipients"]);
         Assert.AreEqual("html", edit["delivery_format"]);
         Assert.IsNotNull(edit["run_as_users"]);
-        Assert.HasCount(2, (FwList)edit["report_params"]!);
+        Assert.HasCount(5, (FwList)edit["report_params"]!);
         db.update("fwreports", DB.h("status", FwModel.STATUS_ACTIVE, "params_json",
             """{"selected_date":{"type":"date"},"currency":{"type":"lookup_sql","source":"SELECT id, iname FROM missing_lookup_table"}}"""), DB.h("id", reportId));
         var brokenLookup = cron.ShowFormAction(records[0].id)!;

@@ -183,7 +183,7 @@ public class FwReportsBase
         foreach (var row in saved)
         {
             var name = row["name"].toStr();
-            if (filters.ContainsKey(name) || !definitions.Any(def => def["name"].toStr() == name && def["type"].toStr() == row["type"].toStr().Trim().ToLowerInvariant()))
+            if (filters.ContainsKey(name) || !definitions.Any(def => matchesScheduledFilter(def, row)))
                 throw new UserException("REPORT_FILTER_CHANGED");
 
             filters[name] = row["value"];
@@ -191,15 +191,10 @@ public class FwReportsBase
         if (filters.Count != definitions.Count)
             throw new UserException("REPORT_FILTER_MISSING");
 
-        readScheduledSort(payload, filters);
-        var sort = filters["sortby"].toStr();
-        var direction = filters["sortdir"].toStr();
-        if ((sort.Length > 0 && list_sortmap[sort].toStr().Length == 0)
-            || (direction.Length > 0 && direction is not ("asc" or "desc"))
-            || (list_sortmap.Count == 0 && (payload.ContainsKey("sortby") || payload.ContainsKey("sortdir"))))
-        {
+        if (!isScheduledSortValid(payload))
             throw new UserException("REPORT_SORT_CHANGED");
-        }
+
+        readScheduledSort(payload, filters);
 
         f = filters;
         f["format"] = format;
@@ -208,11 +203,37 @@ public class FwReportsBase
         prepareScheduledFilters(definitions);
     }
 
+    /// <summary>Seeds the schedule review form from compatible saved inputs and defaults for new definitions.</summary>
+    internal void showScheduledFilterReview(FwDict payload)
+    {
+        var saved = (FwList)payload["params"]!;
+        var filters = new FwDict { ["format"] = format };
+        foreach (var def in checkedSchedulingParameters())
+        {
+            var name = def["name"].toStr();
+            var row = saved.FirstOrDefault(row => matchesScheduledFilter(def, row));
+            if (row != null)
+            {
+                filters[name] = row["value"];
+                continue;
+            }
+
+            var default_value = FwReports.resolveParamDefault(def, fw.userDateFormat);
+            if (default_value.Length > 0)
+                filters[name] = default_value;
+        }
+
+        if (isScheduledSortValid(payload))
+            readScheduledSort(payload, filters);
+
+        showScheduledFormFilters(filters);
+    }
+
     /// <summary>Redisplays attempted values after a rejected filter update without applying changed defaults.</summary>
-    internal void showScheduledFormFilters(FwDict submitted, bool is_frozen = true)
+    internal void showScheduledFormFilters(FwDict submitted)
     {
         f = submitted;
-        is_scheduled_snapshot = is_frozen;
+        is_scheduled_snapshot = true;
         setFilters();
         checkAccess();
     }
@@ -271,6 +292,23 @@ public class FwReportsBase
             setListSorting();
 
         checkAccess();
+    }
+
+    private static bool matchesScheduledFilter(FwDict definition, FwDict row)
+    {
+        return definition["name"].toStr() == row["name"].toStr()
+            && definition["type"].toStr() == row["type"].toStr().Trim().ToLowerInvariant();
+    }
+
+    private bool isScheduledSortValid(FwDict source)
+    {
+        if (list_sortmap.Count == 0)
+            return !source.ContainsKey("sortby") && !source.ContainsKey("sortdir");
+
+        var sort = source["sortby"].toStr();
+        var direction = source["sortdir"].toStr();
+        return (sort.Length == 0 || list_sortmap[sort].toStr().Length > 0)
+            && direction is ("" or "asc" or "desc");
     }
 
     private void readScheduledSort(FwDict source, FwDict filters)

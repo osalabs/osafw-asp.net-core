@@ -7,6 +7,7 @@ CRON_RUNNER_DISABLED|`The task runner is disabled in this build.`
 CRON_RESUME_BEFORE_RUN|`Revise or resume this schedule before requesting a run.`
 CRON_RESUME_FAILED|`The task could not be resumed. Check its schedule and current state.`
 CRON_RECOVER_FAILED|`Confirm the worker has stopped and reload the task if its state changed.`
+CRON_REQUEST_CANCELED|`Pending manual run canceled because the task definition changed.`
 CRON_QUEUED|`Queued`
 CRON_ALREADY_QUEUED|`Already queued/running`
 CRON_PAUSED|`Paused`

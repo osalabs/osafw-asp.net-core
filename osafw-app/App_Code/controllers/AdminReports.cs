@@ -111,7 +111,7 @@ public class AdminReportsController : FwController
                 {
                     // A changed filter contract needs explicit review and a new submitted snapshot.
                     is_review_required = true;
-                    report.showScheduledFormFilters(list_filter, is_frozen: false);
+                    report.showScheduledFilterReview(saved);
                 }
             }
 

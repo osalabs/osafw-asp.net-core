@@ -347,7 +347,11 @@ public class FwCron : FwModel<FwCron.Row>
         where["idesc"] = observed.idesc;
         where["payload"] = observed.payload;
         where["upd_time"] = observed.upd_time;
-        return update(id, values, where);
+        where["run_requested_utc"] = observed.run_requested_utc;
+        var is_updated = update(id, values, where);
+        if (is_updated && observed.run_requested_utc.HasValue)
+            fw.logActivity(FwLogTypes.ICODE_CRON_EVENT, table_name, id, "CRON_REQUEST_CANCELED");
+        return is_updated;
     }
 
     /// <summary>Releases the observed claim as uncertain and paused after an administrator has verified the worker stopped.</summary>

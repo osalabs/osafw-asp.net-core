@@ -3,26 +3,28 @@ $(document).on('click', '.on-print', function(e){
 });
 
 // Send to Email
-function refresh_emailto(){
-  var $emailto = $('#emailto');
-  var $f = $emailto.closest('form');
-  if ($('#emailto').is(':visible')){
-    $('#to_emails').prop('required', true).focus();
-    $f[0].action=$f.data('url-email');
-    $f[0].method='post';
-  }else{
-    $('#to_emails').prop('required', false);
-    $f[0].action='';
-    $f[0].method='get';
-  }
-}
-//
 $(document).on('click', '.on-email', function(e){
-  $('#emailto').toggle();
-  refresh_emailto();
+  if ($('#emailto').toggle().is(':visible'))
+    $('#to_emails').trigger('focus');
 });
 
 $(document).on('click', '.on-email-cancel', function(e){
   $('#emailto').hide();
-  refresh_emailto();
 });
+
+$(document).on('click', '.on-email-send', function(e){
+  const recipient = this.form.querySelector('#to_emails');
+  recipient.required = true;
+  const is_valid = recipient.reportValidity();
+  recipient.required = false;
+  if (!is_valid)
+    e.preventDefault();
+});
+
+// Keep draft email fields out of filter and download URLs.
+document.addEventListener('formdata', function(e){
+  if (e.target.querySelector('#emailto') && !e.formData.has('send_email')){
+    e.formData.delete('f[to_emails]');
+    e.formData.delete('f[email_as]');
+  }
+}, true);

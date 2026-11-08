@@ -201,7 +201,7 @@ public class FwAdminController : FwController
         enforceMethod("POST", "DELETE");
         checkReadOnly();
 
-        model0.deleteWithPermanentCheck(id);
+        modelDelete(id);
         fw.flash("onedelete", 1);
         return this.afterSave(true);
     }
