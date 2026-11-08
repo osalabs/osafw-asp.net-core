@@ -6,73 +6,10 @@
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
   <~/common/list/return_inputs if="return_url">
   <fieldset <~/common/attr/disabled if="is_readonly">>
-    <div class="mb-3">
-      <label for="task-name" class="form-label">`Task name`</label>
-      <input id="task-name" class="form-control" name="item[iname]" maxlength="255" value="<~i[iname]>" required>
+    <div class="row">
+      <div class="col-lg-6"><~form_left></div>
+      <div class="col-lg-6"><~form_right></div>
     </div>
-    <div class="mb-3">
-      <label for="task-desc" class="form-label">`Description`</label>
-      <textarea id="task-desc" class="form-control" name="item[idesc]" rows="2"><~i[idesc]></textarea>
-    </div>
-    <~job_new unless="id" inline>
-      <div class="mb-3">
-        <label for="job-code" class="form-label">`Application job`</label>
-        <select id="job-code" class="form-select" name="item[icode]" required>
-          <option value="">`Choose a job`</option>
-          <~job_codes select="i[icode]">
-        </select>
-        <p class="form-text">`Create report email schedules from the report.`</p>
-      </div>
-    </~job_new>
-    <~job_edit if="id" inline>
-      <p><strong>`Job code`</strong> <code><~i[icode]></code></p>
-    </~job_edit>
-
-    <~/common/cron_editor sub="cron_editor">
-
-    <div class="row g-3 mb-3">
-      <div class="col-md">
-        <label for="task-start" class="form-label">`Start (optional, inclusive)`</label>
-        <input id="task-start" type="datetime-local" step="1" class="form-control" name="item[start_date_utc]" value="<~i[start_date_utc]>" data-cron-bound="start_date_utc">
-      </div>
-      <div class="col-md">
-        <label for="task-end" class="form-label">`End (optional, exclusive)`</label>
-        <input id="task-end" type="datetime-local" step="1" class="form-control" name="item[end_date_utc]" value="<~i[end_date_utc]>" data-cron-bound="end_date_utc">
-      </div>
-    </div>
-    <p class="form-text">`Start and end use your timezone.` <~cron_editor[viewer_zone]></p>
-    <div class="mb-3">
-      <label for="task-status" class="form-label">`Status`</label>
-      <select id="task-status" class="form-select" name="item[status]">
-        <option value="0" <~/common/attr/selected ifeq="i[status]" value="0">>`Active`</option>
-        <option value="10" <~/common/attr/selected if="is_paused">>`Paused`</option>
-        <~completed if="is_completed" inline>
-          <option value="20" <~/common/attr/selected ifeq="i[status]" value="20">>`Completed`</option>
-        </~completed>
-      </select>
-    </div>
-    <~/admin/cron/report_details>
-    <~delivery if="run_as_users" inline>
-      <div class="mb-3">
-        <label for="task-recipients" class="form-label">`Recipients`</label>
-        <input id="task-recipients" class="form-control" name="item[recipients]" value="<~recipients>" required>
-        <div class="form-text">`Separate addresses with commas or semicolons. Recipients see the To list and receive the same report. The saved addresses do not track user profiles.`</div>
-      </div>
-      <div class="mb-3">
-        <label for="task-format" class="form-label">`Format`</label>
-        <select id="task-format" class="form-select" name="item[format]">
-          <option value="pdf" <~/common/attr/selected ifeq="delivery_format" value="pdf">>`PDF attachment`</option>
-          <option value="html" <~/common/attr/selected ifeq="delivery_format" value="html">>`HTML body`</option>
-        </select>
-      </div>
-      <div class="mb-3">
-        <label for="task-run-as" class="form-label">`Runs as`</label>
-        <select id="task-run-as" class="form-select" name="item[run_as_users_id]" required>
-          <option value="">`Choose an active Site Administrator`</option>
-          <~run_as_users select="run_as_users_id">
-        </select>
-      </div>
-    </~delivery>
     <~/common/form/actions_std>
   </fieldset>
 </form>

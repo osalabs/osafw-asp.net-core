@@ -37,6 +37,14 @@ The framework organizes pages with a small set of reusable primitives so dashboa
   - Keep save/cancel actions in shared header/action slots.
   - Put advanced or secondary fields in fieldsets or tabs instead of adding local spacing one-offs.
 
+## Forms
+
+Use the demo controller templates as the starting point for new forms, including custom subforms. Use `.row.form-row`, a `.col-form-label.col-md-3` label with `for` pointing to the control ID, and a `.col` control container. Existing framework styles right-align labels at desktop widths and stack them above controls on small screens. Keep help and validation text inside the control container.
+
+For edit screens with several fields, use a Bootstrap `.row` with two `.col-lg-6` columns. Put the main business fields on the left, ordered from most important to secondary. Put ID, status, ownership and added/updated metadata on the right. Reuse `common/form/id`, `added`, `updated`, and shared action fragments where applicable; retain module-specific status choices. Small forms need not create an empty second column.
+
+Follow `admin/demos/showform/form.html` and its `form_left.html` / `form_right.html` partials, or the dynamic demo's configured equivalents. Reuse this structure rather than introducing stacked desktop labels, custom alignment CSS, or a new layout component.
+
 ## CRUD Page Header
 
 CRUD screens share a standard header structure to make actions and navigation consistent.
@@ -86,3 +94,5 @@ Use [design_system.html](design_system.html#tokens) for token categories and [de
   - Use `.fw-card`, shared form fragments, fieldsets, and tabs before creating local layout structures.
 - **Theme overrides**
   - Override Bootstrap and framework custom properties in a theme file while keeping shared markup intact.
+
+The shared view header keeps Edit on the left and Delete on the right. Set page state `is_hide_delete` to hide Delete when a record cannot be deleted; other callers keep the existing default.

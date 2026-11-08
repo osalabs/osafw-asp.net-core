@@ -38,13 +38,17 @@
     const zone = find('zone');
     const day = find('day');
     const weekdays = Array.from(root.querySelectorAll('[data-cron-weekday]'));
-    const message = find('preview-message');
-    const occurrences = find('preview');
+    const previewRoot = document.getElementById(root.dataset.previewId) || root;
+    const message = previewRoot.querySelector('[data-cron-preview-message]');
+    const occurrences = previewRoot.querySelector('[data-cron-preview]');
+    const editors = Array.from(root.querySelectorAll('[data-cron-edit-mode]'));
+    let isAdvanced;
     const form = root.closest('form');
     let pending;
     let debounce;
 
     const initial = preset(expression.value);
+    isAdvanced = !initial;
     if (initial) {
       mode.value = initial.mode;
       time.value = initial.time;
@@ -54,17 +58,22 @@
 
     function updateExpression() {
       const kind = mode.value;
-      const isAdvanced = kind === 'advanced';
+      find('presets').hidden = isAdvanced;
+      editors.forEach(button => {
+        const active = (button.dataset.cronEditMode === 'expression') === isAdvanced;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
       find('expression-group').hidden = !isAdvanced;
       find('time-group').hidden = isAdvanced;
-      find('week-group').hidden = kind !== 'weekly';
-      find('month-group').hidden = kind !== 'monthly';
+      find('week-group').hidden = isAdvanced || kind !== 'weekly';
+      find('month-group').hidden = isAdvanced || kind !== 'monthly';
       expression.required = isAdvanced;
       time.required = !isAdvanced;
-      day.disabled = kind !== 'monthly';
-      day.required = kind === 'monthly';
+      day.disabled = isAdvanced || kind !== 'monthly';
+      day.required = !isAdvanced && kind === 'monthly';
       const days = weekdays.filter(box => box.checked).map(box => box.value);
-      mode.setCustomValidity(kind === 'weekly' && !days.length ? 'Select at least one weekday.' : '');
+      mode.setCustomValidity(!isAdvanced && kind === 'weekly' && !days.length ? 'Select at least one weekday.' : '');
       if (isAdvanced) return;
 
       const [hour, minute] = time.value.split(':').map(Number);
@@ -132,7 +141,20 @@
       debounce = setTimeout(preview, 150);
     }
 
-    find('presets').hidden = false;
+    find('editor-modes').hidden = false;
+    editors.forEach(button => button.addEventListener('click', () => {
+      isAdvanced = button.dataset.cronEditMode === 'expression';
+      if (!isAdvanced) {
+        const current = preset(expression.value);
+        if (current) {
+          mode.value = current.mode;
+          time.value = current.time;
+          day.value = current.day || '1';
+          weekdays.forEach(box => box.checked = (current.days || []).includes(box.value));
+        }
+      }
+      refresh();
+    }));
     root.addEventListener('input', refresh);
     root.addEventListener('change', refresh);
     if (form) {
@@ -170,7 +192,7 @@
       for (const entry of selectedFilters()) {
         if (entry.name === 'sortby' || entry.name === 'sortdir') continue;
         const field = filter.elements.namedItem(entry.key);
-        const label = field?.labels?.[0]?.textContent.trim();
+        const label = field?.getAttribute('aria-label') || field?.labels?.[0]?.textContent.trim();
         const value = entry.value ? field?.selectedOptions?.[0]?.textContent.trim() || entry.value : '(blank)';
 
         const row = document.createElement('li');
@@ -199,7 +221,10 @@
       });
       open.addEventListener('click', () => {
         setOpen(panel.hidden);
-        if (!panel.hidden) panel.querySelector('input:not([type="hidden"])')?.focus();
+        if (!panel.hidden) {
+          panel.scrollIntoView({block: 'start'});
+          panel.querySelector('input:not([type="hidden"])')?.focus({preventScroll: true});
+        }
       });
     }
     if (cancel) cancel.addEventListener('click', () => {

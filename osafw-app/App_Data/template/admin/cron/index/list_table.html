@@ -1,0 +1,7 @@
+<~/common/list/form_list>
+<~/common/list/form_delete>
+<~list_rows repeat inline>
+  <form id="cron-action-<~id>" method="post" action="<~../url>/<~id>">
+    <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  </form>
+</~list_rows>

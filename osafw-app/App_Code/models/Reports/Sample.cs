@@ -25,6 +25,25 @@ public class SampleReport : FwReportsBase
     public override string schedulingCode => "Sample";
     public override string schedulingTitle => "Sample Report (Activity Log)";
 
+    public override FwList describeScheduledFilters(FwList saved)
+    {
+        var result = base.describeScheduledFilters(saved);
+        foreach (var parameter in result)
+        {
+            var id = parameter["value"].toInt();
+            if (id <= 0)
+                continue;
+            parameter["value"] = parameter["name"].toStr() switch
+            {
+                "events_id" => fw.model<FwLogTypes>().iname(id),
+                "fwentities_id" => fw.model<FwEntities>().iname(id),
+                "users_id" => fw.model<Users>().iname(id),
+                _ => parameter["value"]
+            };
+        }
+        return result;
+    }
+
     protected override FwList schedulingParameters() =>
     [
         new()

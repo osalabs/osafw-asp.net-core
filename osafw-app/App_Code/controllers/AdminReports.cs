@@ -466,7 +466,7 @@ public class AdminReportsController : FwController
         var root = fw.config("ROOT_URL").toStr();
         var code = Uri.EscapeDataString(report.schedulingCode);
         ps["is_schedule_available"] = true;
-        ps["report_schedules_url"] = root + "/Admin/Cron?dofilter=1&f[report]=" + code;
+        ps["report_schedules_url"] = root + "/Admin/Cron?dofilter=1&f[s]=" + Uri.EscapeDataString(FwCron.REPORT_PREFIX + report.schedulingCode + ":");
         ps["schedule_create_url"] = root + base_url + "/(ScheduleEmail)/" + code;
         ps["schedule_update_url"] = root + base_url + "/(UpdateScheduleFilters)/" + code;
         ps["schedule_error"] = fw.G["report_schedule_error"];
@@ -491,7 +491,7 @@ public class AdminReportsController : FwController
 
             ps["schedule_item"] = item;
             ps["schedule_run_as"] = fw.Session("user_name");
-            ps["cron_editor"] = AdminCronController.cronEditor(fw, item, "report-cron");
+            ps["cron_editor"] = AdminCronController.cronEditor(fw, item, "report-cron", isExternalPreview: true);
         }
 
         if (fw.flash("report_schedule") is FwDict saved && saved["code"].toStr() == report.schedulingCode)

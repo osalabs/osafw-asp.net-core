@@ -1,19 +1,23 @@
 <~report_context if="report_code" inline>
   <h2 class="h5">`Report`</h2>
   <p><a href="<~/admin/reports/url>/<~report_path>"><~report_code></a>
-    <~filter_link unless="is_report_payload_unavailable" inline>
+    <~filter_link if="can_edit_report_filters" inline>
       <a class="ms-2" href="<~/admin/reports/url>/<~report_path>?schedule_id=<~id>">`Edit schedule filters`</a>
     </~filter_link>
   </p>
   <~report_unavailable if="is_report_payload_unavailable" inline>
     <p class="text-danger">`Saved report settings are unavailable.`</p>
   </~report_unavailable>
+  <~definition_unavailable if="is_report_unavailable" inline>
+    <p class="text-warning">`The report definition is unavailable. Saved filters are shown below; delivery settings can still be edited.`</p>
+  </~definition_unavailable>
   <~params if="report_params" inline>
     <h3 class="h6">`Saved filters`</h3>
-    <dl class="row mb-3">
-      <~report_params repeat inline>
-        <dt class="col-sm-4"><~name></dt><dd class="col-sm-8"><~value default="(blank)"></dd>
-      </~report_params>
-    </dl>
+    <~report_params repeat inline>
+      <div class="row form-row">
+        <label class="col-form-label col-md-3"><~label></label>
+        <div class="col"><p class="form-control-plaintext"><~value default="(blank)"></p></div>
+      </div>
+    </~report_params>
   </~params>
 </~report_context>

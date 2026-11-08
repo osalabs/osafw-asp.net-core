@@ -2,26 +2,22 @@
   <~run if="can_run" inline>
     <form method="post" action="<~/admin/cron/url>/(RunNow)/<~id>" onsubmit="return confirm(this.dataset.message)" data-message="`Run this task now?` <~email_confirm if="report_code" inline>`This sends the report to the saved recipients.`</~email_confirm>">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button type="submit" class="btn btn-sm btn-outline-primary">`Run now`</button>
+      <button type="submit" class="btn btn-warning">`Run now`</button>
     </form>
   </~run>
   <~run_disabled if="is_run_disabled" inline>
-    <button type="button" class="btn btn-sm btn-outline-primary" disabled>`Run now`</button>
+    <button type="button" class="btn btn-warning" disabled>`Run now`</button>
   </~run_disabled>
   <~pause if="can_pause" inline>
     <form method="post" action="<~/admin/cron/url>/(Pause)/<~id>">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button type="submit" class="btn btn-sm btn-outline-secondary">`Pause`</button>
+      <button type="submit" class="btn btn-default">`Pause`</button>
     </form>
   </~pause>
   <~resume if="can_resume" inline>
     <form method="post" action="<~/admin/cron/url>/(Resume)/<~id>">
       <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
-      <button type="submit" class="btn btn-sm btn-outline-secondary">`Resume`</button>
+      <button type="submit" class="btn btn-default">`Resume`</button>
     </form>
   </~resume>
-  <~edit if="can_edit" inline>
-    <a class="btn btn-sm btn-outline-secondary" href="<~/admin/cron/url>/<~id>/edit">`Edit`</a>
-    <a class="btn btn-sm btn-outline-danger" href="<~/admin/cron/url>/<~id>/delete">`Delete`</a>
-  </~edit>
 </div>

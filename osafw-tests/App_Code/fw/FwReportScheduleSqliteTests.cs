@@ -32,7 +32,7 @@ public class FwReportScheduleSqliteTests
         var reportId = db.insert("fwreports", DB.h(
             "icode", reportCode, "iname", "Case Report", "access_level", Users.ACL_SITEADMIN,
             "sql_template", "SELECT @selected_date AS selected_date, @account_id AS account_id",
-            "params_json", """{"selected_date":{"type":"date","required":true},"account_id":{"type":"int"}}"""));
+            "params_json", """{"selected_date":{"type":"date","required":true},"account_id":{"type":"int","label":"Account <number>"}}"""));
         fw.model<Users>().reloadSession(1);
         fw.Session("XSS", "schedule-test-token");
         fw.G["date_format"] = DateUtils.DATE_FORMAT_DMY;
@@ -89,6 +89,16 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual("second@example.test", second["recipients"]);
         Assert.AreEqual("pdf", second["format"]);
         Assert.HasCount(2, (FwList)first["params"]!);
+        var report = FwReportsBase.createInstance(fw, reportCode, new FwDict());
+        var descriptions = report.describeScheduledFilters((FwList)first["params"]!);
+        Assert.AreEqual("Account <number>", descriptions.Single(row => row["name"].toStr() == "account_id")["label"]);
+        Assert.AreEqual("0", descriptions.Single(row => row["name"].toStr() == "account_id")["value"]);
+        var sample = FwReportsBase.createInstance(fw, "Sample", new FwDict());
+        var loginType = fw.model<FwLogTypes>().oneByIcode(FwLogTypes.ICODE_USERS_LOGIN);
+        var labels = sample.describeScheduledFilters(new FwList { new FwDict { ["name"] = "events_id", ["type"] = "int", ["value"] = loginType["id"].toStr() } });
+        Assert.AreEqual("Event", labels[0]["label"]);
+        Assert.AreEqual(loginType["iname"], labels[0]["value"]);
+
         Assert.AreEqual("1/2/2026", ((FwList)first["params"]!)[0]["value"]);
         Assert.AreEqual("3/4/2026", ((FwList)second["params"]!)[0]["value"]);
 
@@ -114,6 +124,25 @@ public class FwReportScheduleSqliteTests
         Assert.AreEqual(first["recipients"], updated["recipients"]);
         Assert.AreEqual(records[0].next_run_utc, reviewed[0].next_run_utc);
         Assert.AreEqual(records[1].payload, reviewed[1].payload);
+
+        db.update("fwreports", DB.h("status", FwModel.STATUS_INACTIVE), DB.h("id", reportId));
+        fw.FORM.Clear();
+        request.Request.Method = "GET";
+        var cron = new AdminCronController();
+        cron.init(fw);
+        var edit = cron.ShowFormAction(records[0].id)!;
+        Assert.IsTrue(edit["is_report_unavailable"].toBool());
+        Assert.AreEqual("first@example.test", edit["recipients"]);
+        Assert.AreEqual("html", edit["delivery_format"]);
+        Assert.IsNotNull(edit["run_as_users"]);
+        Assert.HasCount(2, (FwList)edit["report_params"]!);
+        db.update("fwreports", DB.h("status", FwModel.STATUS_ACTIVE, "params_json",
+            """{"selected_date":{"type":"date"},"currency":{"type":"lookup_sql","source":"SELECT id, iname FROM missing_lookup_table"}}"""), DB.h("id", reportId));
+        var brokenLookup = cron.ShowFormAction(records[0].id)!;
+        Assert.IsTrue(brokenLookup["is_report_unavailable"].toBool());
+        Assert.AreEqual("first@example.test", brokenLookup["recipients"]);
+
+
     }
 }
 #endif

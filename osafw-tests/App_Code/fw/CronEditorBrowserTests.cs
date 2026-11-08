@@ -22,8 +22,10 @@ public class CronEditorBrowserTests
 
         string Editor(string prefix, string cron)
         {
-            var state = AdminCronController.cronEditor(fw, new FwDict { ["cron"] = cron, ["timezone"] = "UTC" }, prefix);
+            var state = AdminCronController.cronEditor(fw, new FwDict { ["cron"] = cron, ["timezone"] = "UTC" }, prefix, isExternalPreview: prefix == "report-cron");
             var html = parser.parse_page("", "common/cron_editor.html", state);
+            if (prefix == "report-cron")
+                html += parser.parse_page("", "common/cron_preview.html", state);
             return Regex.Replace(html, "<script>.*?</script>", "", RegexOptions.Singleline);
         }
 
@@ -55,8 +57,11 @@ public class CronEditorBrowserTests
             """);
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-cron-preview] li').length === 2");
         Assert.AreEqual(2, await page.EvaluateAsync<int>("previewRequests"));
+        Assert.AreEqual(1, await page.Locator("#report [data-cron-preview]").CountAsync());
+        Assert.AreEqual(0, await page.Locator("#report [data-cron-editor] [data-cron-preview]").CountAsync());
         Assert.AreEqual("weekdays", await page.Locator("#task-cron-mode").InputValueAsync());
-        Assert.AreEqual("advanced", await page.Locator("#report-cron-mode").InputValueAsync());
+        Assert.AreEqual("true", await page.Locator("#report [data-cron-edit-mode=expression]").GetAttributeAsync("aria-pressed"));
+        Assert.IsFalse(await page.Locator("#report [data-cron-presets]").IsVisibleAsync());
         Assert.AreEqual("0 7 L * *", await page.Locator("#report-cron-expression").InputValueAsync());
 
         await page.Locator("#task-cron-mode").SelectOptionAsync("monthly");
@@ -65,6 +70,13 @@ public class CronEditorBrowserTests
         Assert.AreEqual("0 7 L * *", await page.Locator("#report-cron-expression").InputValueAsync());
         var values = await page.EvaluateAsync<string[]>("Array.from(new FormData(document.querySelector('#task')).keys())");
         CollectionAssert.AreEquivalent(new[] { "item[cron]", "item[timezone]" }, values);
+        await page.Locator("#task [data-cron-edit-mode=expression]").ClickAsync();
+        Assert.IsTrue(await page.Locator("#task-cron-expression").IsVisibleAsync());
+        await page.Locator("#task-cron-expression").FillAsync("15 8 * * *");
+        await page.Locator("#task [data-cron-edit-mode=simple]").ClickAsync();
+        Assert.AreEqual("daily", await page.Locator("#task-cron-mode").InputValueAsync());
+        Assert.AreEqual("08:15", await page.Locator("#task-cron-time").InputValueAsync());
+        Assert.AreEqual("15 8 * * *", await page.Locator("#task-cron-expression").InputValueAsync());
         Assert.IsEmpty(errors, string.Join(", ", errors));
     }
 }

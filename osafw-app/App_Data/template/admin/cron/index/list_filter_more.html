@@ -1,0 +1,11 @@
+<div class="row form-row">
+  <label class="col-form-label col-md-2 col-xl-1" for="fstatus">`Status`</label>
+  <div class="col-md-3 col-lg-2">
+    <select id="fstatus" name="f[status]" class="form-select">
+      <option value="">`- all -`</option>
+      <~/admin/cron/status.sel select="f[status]">
+    </select>
+  </div>
+  <~/common/list/fuserlists if="is_userlists">
+  <~/common/list/filter_table_buttons>
+</div>

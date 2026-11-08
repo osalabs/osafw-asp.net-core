@@ -157,6 +157,31 @@ public class FwReportsBase
         checkAccess();
     }
 
+    /// <summary>Describes saved inputs using current report labels and lookup options without running the report query.</summary>
+    public virtual FwList describeScheduledFilters(FwList saved)
+    {
+        var definitions = schedulingParameters();
+        var result = new FwList();
+        foreach (var parameter in saved)
+        {
+            var name = parameter["name"].toStr();
+            var definition = definitions.FirstOrDefault(def => def["name"].toStr() == name);
+            var value = parameter["value"].toStr();
+            if (definition != null && value.Length > 0 && FwReports.isLookupParamType(definition["type"].toStr()))
+            {
+                var options = fw.model<FwReports>().listParamOptions(definition, db);
+                value = options.FirstOrDefault(option => option["id"].toStr() == value)?["iname"].toStr() ?? value;
+            }
+            result.Add(new FwDict
+            {
+                ["name"] = name,
+                ["label"] = definition?["label"].toStr(name) ?? name,
+                ["value"] = value
+            });
+        }
+        return result;
+    }
+
     private FwList checkedSchedulingParameters()
     {
         var definitions = schedulingParameters();

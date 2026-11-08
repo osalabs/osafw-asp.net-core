@@ -1,6 +1,8 @@
 # Scheduled Tasks
 
-Site Admins manage recurring application jobs and report emails at `/Admin/Cron`. Reports that support scheduling offer **Schedule email** beside **Email To**, and **Report schedules** opens the same task list filtered to that report.
+Site Admins manage recurring application jobs and report emails at `/Admin/Cron`. Reports that support scheduling offer **Schedule email** after **Email To**, and **Report schedules** opens the standard task list with `report_REPORTCODE:` in its search box. This uses normal search across task name, description and job code, not an authorization boundary.
+
+The list uses the Dynamic controller's status filter, My List, export/print, column filters, column customization and density controls. Bulk deletion uses the same guarded task deletion as the detail screen; running tasks are retained. Activity defaults to All, and History includes separate task lifecycle events.
 
 ## Enabling the runner
 
@@ -10,15 +12,17 @@ SQL Server is the primary provider. SQLite has matching fresh and additive schem
 
 ## Creating a report schedule
 
-Choose the report filters, then select **Schedule email**. Enter a name, recipient addresses, format, recurrence, and timezone. Recipients default to your email. PDF attachment is the default; HTML body is also available. Multiple schedules may use the same report with different filters and recipients.
+Choose the report filters, then select **Schedule email**. Enter a name, recipient addresses, format, recurrence, and timezone. Recipients default to your email. PDF attachment is the default; HTML body is also available. Multiple schedules may use the same report with different filters and recipients. Choose Active or Paused; a paused task can be reviewed or run manually before enabling its recurrence.
 
 Site Admins authorize distribution of one shared report. Recipients do not need application accounts; all addresses in the To list are visible to the recipients. Addresses are saved literally and do not follow user-profile email changes. Rendering uses the saved active Site Admin identity and normal report authorization. Reassign the rendering user explicitly if that account becomes unavailable.
 
 Selected dates stay fixed. The scheduler never infers a relative period from a date range. Reports needing previous week/month should expose an explicit period selector and resolve it in their own filter logic. Saved parameters use the custom-report `name`, `type`, `value` shape; definitions/defaults remain with the report. Changing a parameter contract requires reviewing affected schedules. Sample preserves its declared sort fields. Custom reports use their report-defined SQL order; interactive column sorting is not part of their saved schedule.
 
+The compact editor separates **Simple** (repeat, time and optional weekday/month day) from **Cron expression**. Existing expressions outside the simple presets open in expression mode and are preserved. Switching to Simple deliberately replaces a non-representable expression with the visible simple settings. Both modes use the same **Time zone** and preview. Saved filter labels and lookup values come from current report definitions; copied reports can override `describeScheduledFilters()` for their own display.
+
 ## Time and execution
 
-The recurrence uses its saved timezone. New schedules default to the current admin's resolved zone; old schedules retain UTC. List timestamps show the viewing admin's local time alongside UTC. Changing a user's preferences does not change a recurrence. Start is inclusive and end is exclusive.
+The recurrence uses its saved timezone. New schedules default to the current admin's resolved zone; old schedules retain UTC. The next scheduled time uses the zone shown in the Schedule column, with UTC underneath when different. Execution timestamps and Start/End bounds use the viewing admin's local time alongside UTC. Preview occurrences omit the repeated schedule zone; a different viewer zone remains explicitly labeled. Changing a user's preferences does not change a recurrence. Start is inclusive and end is exclusive.
 
 All scheduling and execution instants are stored as UTC: `start_date_utc`, `end_date_utc`, `next_run_utc`, `run_requested_utc`, `last_started_utc`, and `last_finished_utc`. The `_utc` names use the framework's existing UTC field handling, independently of the database timezone. Raw SQL datetime parameters must also use `_utc` names (for example, `@now_utc`); see [date/time handling](datetime.md). Standard `add_time`/`upd_time` audit fields retain the shared framework convention.
 

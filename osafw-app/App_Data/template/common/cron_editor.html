@@ -1,50 +1,64 @@
-<div data-cron-editor data-fw-component-scope data-preview-url="<~preview_url>" data-task-id="<~task_id>" class="border rounded p-3 mb-3">
-  <h2 class="h5">`Schedule`</h2>
-  <div class="row g-3">
-    <div class="col-md-4" data-cron-presets hidden>
-      <label class="form-label" for="<~prefix>-mode">`Repeat`</label>
-      <select id="<~prefix>-mode" class="form-select" data-cron-mode>
-        <option value="daily">`Daily`</option>
-        <option value="weekdays">`Weekdays`</option>
-        <option value="weekly">`Weekly`</option>
-        <option value="monthly">`Monthly`</option>
-        <option value="advanced" selected>`Advanced`</option>
-      </select>
+<div data-cron-editor data-fw-component-scope data-preview-url="<~preview_url>" data-task-id="<~task_id>" data-preview-id="<~prefix>-preview" class="mb-3">
+  <div class="d-flex align-items-center gap-3 mb-2">
+    <h2 class="h6 mb-0">`Schedule`</h2>
+    <div class="btn-group btn-group-sm" role="group" aria-label="`Schedule editor`" data-cron-editor-modes hidden>
+      <button type="button" class="btn btn-outline-secondary" data-cron-edit-mode="simple" aria-pressed="false">`Simple`</button>
+      <button type="button" class="btn btn-outline-secondary" data-cron-edit-mode="expression" aria-pressed="true">`Cron expression`</button>
     </div>
-    <div class="col-md-3" data-cron-time-group hidden>
-      <label class="form-label" for="<~prefix>-time">`Time`</label>
-      <input id="<~prefix>-time" class="form-control" type="time" data-cron-time value="07:00">
+  </div>
+  <div class="row form-row" data-cron-presets hidden>
+    <label class="col-form-label col-md-3" for="<~prefix>-mode">`Repeat`</label>
+    <div class="col">
+      <div class="row g-2">
+        <div class="col-7">
+          <select id="<~prefix>-mode" class="form-select" data-cron-mode>
+            <option value="daily">`Daily`</option>
+            <option value="weekdays">`Weekdays`</option>
+            <option value="weekly">`Weekly`</option>
+            <option value="monthly">`Monthly`</option>
+          </select>
+        </div>
+        <div class="col-5" data-cron-time-group>
+          <label class="visually-hidden" for="<~prefix>-time">`Time`</label>
+          <input id="<~prefix>-time" class="form-control" type="time" data-cron-time value="07:00">
+        </div>
+      </div>
     </div>
-    <div class="col-md">
-      <label class="form-label" for="<~prefix>-zone">`Recurrence timezone`</label>
+  </div>
+  <div class="row form-row">
+    <label class="col-form-label col-md-3 required" for="<~prefix>-zone">`Time zone`</label>
+    <div class="col">
       <select id="<~prefix>-zone" class="form-select" name="<~timezone_field>" data-cron-zone required>
         <~zones select="timezone">
       </select>
     </div>
   </div>
-  <div class="mt-3" data-cron-expression-group>
-    <label class="form-label" for="<~prefix>-expression">`Cron expression`</label>
-    <input id="<~prefix>-expression" class="form-control font-monospace" name="<~cron_field>" data-cron-expression value="<~cron>" maxlength="255" required>
-    <div class="form-text">`Minute, hour, day of month, month, day of week.`</div>
+  <div class="row form-row" data-cron-expression-group>
+    <label class="col-form-label col-md-3 required" for="<~prefix>-expression">`Expression`</label>
+    <div class="col">
+      <input id="<~prefix>-expression" class="form-control font-monospace" name="<~cron_field>" data-cron-expression value="<~cron>" maxlength="255" required>
+      <div class="form-text">`Minute, hour, day of month, month, day of week.`</div>
+    </div>
   </div>
-  <fieldset class="mt-3" data-cron-week-group hidden>
-    <legend class="h6">`Days of the week`</legend>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="0" data-cron-weekday> `Sun`</label>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="1" data-cron-weekday> `Mon`</label>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="2" data-cron-weekday> `Tue`</label>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="3" data-cron-weekday> `Wed`</label>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="4" data-cron-weekday> `Thu`</label>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="5" data-cron-weekday> `Fri`</label>
-    <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="6" data-cron-weekday> `Sat`</label>
+  <fieldset class="row form-row" data-cron-week-group hidden>
+    <legend class="col-form-label col-md-3">`Days`</legend>
+    <div class="col pt-2">
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="0" data-cron-weekday> `Sun`</label>
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="1" data-cron-weekday> `Mon`</label>
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="2" data-cron-weekday> `Tue`</label>
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="3" data-cron-weekday> `Wed`</label>
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="4" data-cron-weekday> `Thu`</label>
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="5" data-cron-weekday> `Fri`</label>
+      <label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="6" data-cron-weekday> `Sat`</label>
+    </div>
   </fieldset>
-  <div class="mt-3" data-cron-month-group hidden>
-    <label class="form-label" for="<~prefix>-day">`Day of the month`</label>
-    <input id="<~prefix>-day" type="number" class="form-control w-auto" min="1" max="31" step="1" data-cron-day value="1">
-    <div class="form-text">`Months without this day are skipped.`</div>
+  <div class="row form-row" data-cron-month-group hidden>
+    <label class="col-form-label col-md-3" for="<~prefix>-day">`Day`</label>
+    <div class="col">
+      <input id="<~prefix>-day" type="number" class="form-control w-auto" min="1" max="31" step="1" data-cron-day value="1">
+      <div class="form-text">`Months without this day are skipped.`</div>
+    </div>
   </div>
-  <div class="mt-3" aria-live="polite">
-    <p class="mb-1" data-cron-preview-message>`Next occurrences`</p>
-    <ol class="small mb-0" data-cron-preview></ol>
-  </div>
+  <~/common/cron_preview unless="is_external_preview">
   <~/common/cron_editor_script>
 </div>

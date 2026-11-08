@@ -1,6 +1,8 @@
 using Cronos;
 using System;
 using System.Globalization;
+using System.Collections;
+using System.Data.Common;
 using System.Linq;
 
 namespace osafw;
@@ -21,8 +23,9 @@ public class AdminCronController : FwDynamicController
         model = model0 as FwCron ?? throw new FwConfigUndefinedModelException();
         db = model.getDB();
         is_activity_logs = true;
-        list_fields = "id, icode, iname, cron, timezone, status, start_date_utc, end_date_utc, next_run_utc, "
-            + "run_requested_utc, run_token, last_started_utc, last_finished_utc, last_result";
+        is_userlists = true;
+        list_fields = "id, icode, iname, idesc, cron, timezone, status, start_date_utc, end_date_utc, next_run_utc, "
+            + "run_requested_utc, run_token, last_started_utc, last_finished_utc, last_result, add_time, add_users_id, upd_time, upd_users_id";
     }
 
     public override void checkAccess()
@@ -36,26 +39,24 @@ public class AdminCronController : FwDynamicController
         base.checkAccess();
     }
 
-    public override void setListSearch()
+    public override FwDict initFilter(string? session_key = null)
     {
-        base.setListSearch();
-        var report = list_filter["report"].toStr();
-        if (report.Length > 0)
-            list_where += " and " + model.reportFilterSql(report, list_where_params);
+        var filter = base.initFilter(session_key);
+        if (fw.route.action == FW.ACTION_SHOW && Utils.isEmpty(filter["tab_activity"]))
+            filter["tab_activity"] = FwActivityLogs.TAB_ALL;
+        return filter;
+    }
+
+    public override void getListRows()
+    {
+        base.getListRows();
+        foreach (var row in list_rows)
+            row["task"] = taskDisplay(row);
     }
 
     public override FwDict IndexAction()
     {
         var ps = base.IndexAction();
-        if (ps["list_rows"] is FwList rows)
-        {
-            var tasks = new FwList();
-            foreach (var row in rows)
-                tasks.Add(taskDisplay(row));
-
-            ps["tasks"] = tasks;
-        }
-
         ps["is_runner_disabled"] = !isRunnerEnabled();
         return ps;
     }
@@ -69,6 +70,8 @@ public class AdminCronController : FwDynamicController
 
         var row = (FwDict)ps["i"]!;
         ps["task"] = taskDisplay(row);
+        ps["is_readonly"] = is_readonly || !string.IsNullOrEmpty(task.run_token);
+        ps["is_hide_delete"] = ps["is_readonly"];
         ps["is_runner_disabled"] = !isRunnerEnabled();
         if (!is_readonly)
             ps["run_token"] = task.run_token;
@@ -109,7 +112,7 @@ public class AdminCronController : FwDynamicController
         item["end_date_utc"] = posted.ContainsKey("end_date_utc") ? posted["end_date_utc"] : boundInput(fw, task?.end_date_utc);
         ps["is_paused"] = item["status"].toStr() == FwModel.STATUS_INACTIVE.ToString();
         ps["is_completed"] = task?.status == FwCron.STATUS_COMPLETED;
-        ps["cron_editor"] = cronEditor(fw, item, "task-cron", taskId: id);
+        ps["cron_editor"] = cronEditor(fw, item, "task-cron", taskId: id, isExternalPreview: true);
         if (task != null)
         {
             var payload = addReportDisplay(ps, task);
@@ -204,11 +207,44 @@ public class AdminCronController : FwDynamicController
         return afterSave(true);
     }
 
-    // Generic Dynamic mutation paths would bypass the scheduler's compare-and-set operations.
-    public override FwDict? SaveMultiAction() => throw new NotFoundException();
+    // Keep standard bulk/list workflows while routing task deletion through its concurrency guard.
+    public override FwDict? SaveMultiAction()
+    {
+        // The standard list form POSTs with the framework's PUT method override.
+        if (!string.Equals(fw.request.Method, "POST", StringComparison.OrdinalIgnoreCase))
+            throw new AuthException("POST required");
+
+        if (string.Equals(fw.route.method, "PUT", StringComparison.OrdinalIgnoreCase))
+            checkXSS();
+        else
+            enforcePost();
+
+        checkSiteAdmin();
+        checkReadOnly();
+        return base.SaveMultiAction();
+    }
+
+    protected override int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
+    {
+        foreach (string key in keys)
+            taskOrFail(key.toInt());
+
+        if (!is_delete)
+            return base.saveMultiRows(keys, false, user_lists_id, remove_user_lists_id);
+
+        var deleted = 0;
+        foreach (string key in keys)
+        {
+            if (model.deleteTask(key.toInt()))
+                deleted++;
+        }
+        if (deleted != keys.Count)
+            fw.flash("error", "Running or changed tasks were not deleted. Reload and try again.");
+        return deleted;
+    }
+
     public override FwDict? RestoreDeletedAction(int id) => throw new NotFoundException();
     public override FwDict SaveAttFilesAction(int id) => throw new NotFoundException();
-    public override FwDict? SaveUserViewsAction() => throw new NotFoundException();
 
     public void PreviewAction()
     {
@@ -228,7 +264,7 @@ public class AdminCronController : FwDynamicController
                     break;
 
                 next = occurrence.Value;
-                var recurrence = zonedTime(fw, next, zone);
+                var recurrence = zonedTime(fw, next, zone, includeZone: false);
                 var viewer = zone.Id != viewerZone.Id && viewerZone.Id != DateUtils.TZ_UTC
                     ? zonedTime(fw, next, viewerZone)
                     : "";
@@ -303,7 +339,7 @@ public class AdminCronController : FwDynamicController
 
     /// <summary>Builds template data for the shared editor. The caller supplies a unique prefix for each instance.</summary>
     internal static FwDict cronEditor(FW fw, FwDict values, string prefix,
-        string cronField = "item[cron]", string timezoneField = "item[timezone]", int taskId = 0)
+        string cronField = "item[cron]", string timezoneField = "item[timezone]", int taskId = 0, bool isExternalPreview = false)
     {
         var timezone = values["timezone"].toStr(fw.userTimezone);
         var choices = TimeZoneInfo.GetSystemTimeZones().Select(zone => zone.Id)
@@ -320,6 +356,7 @@ public class AdminCronController : FwDynamicController
         return new FwDict
         {
             ["prefix"] = prefix,
+            ["is_external_preview"] = isExternalPreview,
             ["task_id"] = taskId,
             ["cron_field"] = cronField,
             ["timezone_field"] = timezoneField,
@@ -436,6 +473,15 @@ public class AdminCronController : FwDynamicController
         task["result_status"] = result["status"];
         task["result_message"] = result.Count > 0 ? result["message"] : resultJson.Length > 0 ? "Result details unavailable" : "";
         addTimestamp(task, row, "next_run_utc", "next");
+        if (!Utils.isEmpty(row["next_run_utc"]))
+        {
+            var next = row["next_run_utc"].toDate();
+            var scheduleZone = findZone(row["timezone"].toStr());
+            task["next_time"] = zonedTime(fw, next, scheduleZone, includeZone: false);
+            task["next_utc"] = scheduleZone.Id == DateUtils.TZ_UTC ? "" : utcTime(next);
+        }
+        addTimestamp(task, row, "start_date_utc", "start");
+        addTimestamp(task, row, "end_date_utc", "end");
         addTimestamp(task, row, "last_started_utc", "last");
         addTimestamp(task, row, "last_finished_utc", "finished");
         return task;
@@ -453,7 +499,26 @@ public class AdminCronController : FwDynamicController
         {
             var payload = fw.model<FwScheduledReports>().payload(task.icode, task.payload ?? "");
             var user = fw.model<Users>().iname(payload["run_as_users_id"]);
-            ps["report_params"] = payload["params"];
+            var parameters = (FwList)payload["params"]!;
+            ps["report_params"] = new FwList(parameters.Select(parameter => new FwDict
+            {
+                ["label"] = parameter["name"],
+                ["value"] = parameter["value"]
+            }));
+            try
+            {
+                var filters = new FwDict();
+                foreach (var parameter in parameters)
+                    filters[parameter["name"].toStr()] = parameter["value"];
+                var instance = FwReportsBase.createInstance(fw, report, filters);
+                FwScheduledReports.checkTarget(instance, report, payload);
+                ps["report_params"] = instance.describeScheduledFilters(parameters);
+                ps["can_edit_report_filters"] = true;
+            }
+            catch (Exception ex) when (ex is UserException or AuthException or DbException or ApplicationException)
+            {
+                ps["is_report_unavailable"] = true;
+            }
             ps["report_run_as"] = user.Length > 0 ? user : "Unavailable";
             ps["report_recipients"] = payload["recipients"];
             ps["report_format"] = payload["format"];
@@ -478,11 +543,12 @@ public class AdminCronController : FwDynamicController
             task[prefix + "_utc"] = utcTime(value);
     }
 
-    private static string zonedTime(FW fw, DateTime value, TimeZoneInfo zone)
+    private static string zonedTime(FW fw, DateTime value, TimeZoneInfo zone, bool includeZone = true)
     {
         var local = TimeZoneInfo.ConvertTime(new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)), zone);
         var format = DateUtils.mapDateFormat(fw.userDateFormat) + " " + DateUtils.mapTimeFormat(fw.userTimeFormat);
-        return local.ToString(format, CultureInfo.InvariantCulture) + " " + zone.Id + " (" + local.ToString("zzz") + ")";
+        return local.ToString(format, CultureInfo.InvariantCulture)
+            + (includeZone ? " " + zone.Id + " (" + local.ToString("zzz") + ")" : "");
     }
 
     private static string utcTime(DateTime value) =>

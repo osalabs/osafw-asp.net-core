@@ -2,45 +2,5 @@
 <~runner_disabled if="is_runner_disabled" inline>
   <div class="alert alert-warning" role="status">`The task runner is disabled in this build. Scheduled and manual runs are unavailable.`</div>
 </~runner_disabled>
-<~report_filter if="f[report]" inline>
-  <p>`Report schedules for` <strong><~f[report]></strong> <a class="ms-2" href="<~../url>?dofilter=1">`Show all tasks`</a></p>
-</~report_filter>
 <~/common/list/filter_std>
-<div class="fw-list-card">
-  <div class="table-list-wrapper">
-    <table class="table table-sm table-hover list">
-      <thead>
-        <tr>
-          <th data-sort="iname">`Task`</th>
-          <th>`Schedule`</th>
-          <th data-sort="next_run_utc">`Next scheduled time`</th>
-          <th data-sort="status">`State`</th>
-          <th data-sort="last_started_utc">`Last attempt`</th>
-          <th>`Actions`</th>
-        </tr>
-      </thead>
-      <tbody>
-        <~tasks repeat inline>
-          <tr>
-            <td>
-              <a href="<~/admin/cron/url>/<~id>"><~iname></a>
-              <~report_link if="report_code" inline>
-                <a class="d-block small" href="<~/admin/reports/url>/<~report_path>"><~report_code></a>
-              </~report_link>
-            </td>
-            <td><~schedule_description><small class="d-block text-muted"><~timezone></small></td>
-            <td><~next_local><small class="d-block text-muted"><~next_utc></small></td>
-            <td><~/admin/cron/task_state></td>
-            <td>
-              <~last_local><small class="d-block text-muted"><~last_utc></small>
-              <~result_status><small class="d-block"><~result_message></small>
-            </td>
-            <td><~/admin/cron/task_actions></td>
-          </tr>
-        </~tasks>
-      </tbody>
-    </table>
-  </div>
-  <~/common/list/empty unless="tasks">
-  <div class="d-flex justify-content-end"><~/common/list/pagination></div>
-</div>
+<~list_table>

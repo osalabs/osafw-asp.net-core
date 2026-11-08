@@ -1,0 +1,44 @@
+<div class="row form-row">
+  <label for="task-name" class="col-form-label col-md-3 required">`Task name`</label>
+  <div class="col">
+    <input id="task-name" class="form-control" name="item[iname]" maxlength="255" value="<~i[iname]>" required>
+  </div>
+</div>
+<~job_new unless="id" inline>
+  <div class="row form-row">
+    <label for="job-code" class="col-form-label col-md-3 required">`Application job`</label>
+    <div class="col">
+      <select id="job-code" class="form-select" name="item[icode]" required>
+        <option value="">`Choose a job`</option>
+        <~job_codes select="i[icode]">
+      </select>
+      <p class="form-text">`Create report email schedules from the report.`</p>
+    </div>
+  </div>
+</~job_new>
+
+<~/common/cron_editor sub="cron_editor">
+
+<~delivery if="run_as_users" inline>
+  <div class="row form-row">
+    <label for="task-recipients" class="col-form-label col-md-3 required">`Recipients`</label>
+    <div class="col">
+      <input id="task-recipients" class="form-control" name="item[recipients]" value="<~recipients>" required>
+      <div class="form-text">`Separate addresses with commas or semicolons. Recipients see the To list and receive the same report. The saved addresses do not track user profiles.`</div>
+    </div>
+  </div>
+  <fieldset class="row form-row">
+    <legend class="col-form-label col-md-3">`Format`</legend>
+    <div class="col pt-2">
+      <label class="form-check form-check-inline"><input type="radio" class="form-check-input" name="item[format]" value="pdf" <~/common/attr/checked ifeq="delivery_format" value="pdf">> `PDF attachment`</label>
+      <label class="form-check form-check-inline"><input type="radio" class="form-check-input" name="item[format]" value="html" <~/common/attr/checked ifeq="delivery_format" value="html">> `HTML body`</label>
+    </div>
+  </fieldset>
+</~delivery>
+
+<div class="row form-row">
+  <label for="task-desc" class="col-form-label col-md-3">`Description`</label>
+  <div class="col">
+    <textarea id="task-desc" class="form-control" name="item[idesc]" rows="5"><~i[idesc]></textarea>
+  </div>
+</div>
