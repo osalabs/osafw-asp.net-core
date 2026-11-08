@@ -18,8 +18,8 @@ The framework organizes pages with a small set of reusable primitives so dashboa
   - List screens use filters plus `.fw-list-card` table wrappers, especially `common/list/filter_compact.html` and `common/list/form_list.html`.
   - View/edit screens use `.fw-card`, form rows, fieldsets, tabs, and shared form fragments under `common/form/show/` and `common/form/showform/`.
 - **Panels and cards**
-  - Use `.fw-card` for forms, filters, and detail panels.
-  - Use `.fw-list-card` for list-table wrappers.
+  - Use `.fw-card` for forms, filters, and detail panels. Cards supply padding on all four sides; do not add bottom spacing just to keep content away from the border. Shared form layouts trim only their terminal row spacing, including responsive action footers, while retaining gaps between rows and sections.
+  - Use `.fw-list-card` for list-table wrappers. Its separate `--fw-list-card-padding` token keeps list spacing independent of form cards.
   - Dashboard cards use Bootstrap `.card` plus `.dashboard-card`.
 
 ## Screen Guidance
