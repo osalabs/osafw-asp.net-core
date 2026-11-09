@@ -12,6 +12,55 @@ namespace osafw.Tests;
 public class FwReportScheduleSqliteTests
 {
     [TestMethod]
+    [DataRow("Sample", "recipients", "Enter at least one valid recipient address.")]
+    [DataRow("Feedback_Report", "recipients", "Enter at least one valid recipient address.")]
+    [DataRow("Sample", "cron", "Enter a valid five-field cron expression")]
+    [DataRow("Feedback_Report", "cron", "Enter a valid five-field cron expression")]
+    [DataRow("Sample", "iname", "Please review and update your input.")]
+    [DataRow("Feedback_Report", "iname", "Please review and update your input.")]
+    public void ScheduleEmail_RejectedPostRendersFeedbackAndPreservesInput(string code, string invalidField, string message)
+    {
+        using var file = new SqliteFile();
+        var request = TestHelpers.CreateHttpContext("");
+        var appPath = Path.Combine(TestHelpers.RepoRoot(), "osafw-app");
+        using var scope = new FwTestScope(file.CreateDb, new Dictionary<string, string?>
+        {
+            ["appSettings:site_root"] = appPath,
+            ["appSettings:template"] = TestHelpers.TemplateRoot(),
+            ["appSettings:route_prefixes:/Admin"] = "true",
+        }, request);
+        var fw = scope.Fw;
+        var sqlPath = Path.Combine(appPath, "App_Data", "sql", "sqlite");
+        fw.db.execMultipleSQL(File.ReadAllText(Path.Combine(sqlPath, "fwdatabase.sql")));
+        fw.db.execMultipleSQL(File.ReadAllText(Path.Combine(sqlPath, "lookups.sql")));
+        fw.db.insert("fwreports", DB.h("icode", "Feedback_Report", "iname", "Feedback Report",
+            "access_level", Users.ACL_SITEADMIN, "sql_template", "SELECT 42 AS amount", "params_json", "{}"));
+        fw.model<Users>().reloadSession(1);
+        fw.Session("XSS", "feedback-token");
+        fw.FORM["XSS"] = "feedback-token";
+        var item = DB.h("iname", "Retained schedule name", "format", "html", "recipients", "recipient@example.test",
+            "cron", "0 7 * * *", "timezone", "UTC", "status", "10");
+        item[invalidField] = invalidField == "iname" ? "" : "invalid-value";
+        fw.FORM["item"] = item;
+        request.Request.Method = "POST";
+        request.Request.Path = $"/Admin/Reports/(ScheduleEmail)/{code}";
+        using var page = new MemoryStream();
+        request.Response.Body = page;
+        fw.setRoute(fw.getRoute());
+
+        fw.callRoute();
+
+        var html = System.Text.Encoding.UTF8.GetString(page.ToArray());
+        StringAssert.Contains(html, "role=\"alert\"");
+        StringAssert.Contains(html, message);
+        Assert.IsFalse(html.Contains("Review the report filters and delivery options.", StringComparison.Ordinal));
+        StringAssert.Contains(html, "value=\"" + item["recipients"] + "\"");
+        if (invalidField != "iname")
+            StringAssert.Contains(html, "Retained schedule name");
+        Assert.HasCount(0, fw.db.array("fwcron", []));
+    }
+
+    [TestMethod]
     public void ReportRoutes_CreateIndependentSchedulesAndReplaceReviewedFiltersOnly()
     {
         using var file = new SqliteFile();

@@ -610,9 +610,11 @@ public class FwEmailTests
     }
 
     [TestMethod]
-    public void ReportEmailTo_UsesConfiguredSender()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ReportEmailTo_UsesConfiguredSenderAndRendersDeliveryFeedback(bool is_rejected)
     {
-        using var server = new FakeSmtpServer();
+        using var server = new FakeSmtpServer(rejectConnection: is_rejected);
         using var scope = CreateScheduledScope(server, new ScheduledDeliveryDb(), isOffline: false);
         var fw = scope.Fw;
         fw.model<Users>().reloadSession(7);
@@ -633,11 +635,27 @@ public class FwEmailTests
 
         Assert.AreEqual(302, fw.response.StatusCode);
         Assert.AreEqual("/Admin/Reports/scheduled_sales", fw.response.Headers.Location.ToString());
-        StringAssert.Contains(server.MessageData, "From: sender@example.test");
-        StringAssert.Contains(server.MessageData, "Subject: Report scheduled_sales");
-        StringAssert.Contains(server.MessageData, "Report marker");
-        StringAssert.Contains(server.MessageData, "Content-Type: text/html");
-        CollectionAssert.AreEqual(new[] { "<alpha@example.test>", "<ALPHA@example.test>", "<o'connor@example.test>", "<a@b>" }, server.Recipients);
+        if (!is_rejected)
+        {
+            StringAssert.Contains(server.MessageData, "From: sender@example.test");
+            StringAssert.Contains(server.MessageData, "Subject: Report scheduled_sales");
+            StringAssert.Contains(server.MessageData, "Report marker");
+            StringAssert.Contains(server.MessageData, "Content-Type: text/html");
+            CollectionAssert.AreEqual(new[] { "<alpha@example.test>", "<ALPHA@example.test>", "<o'connor@example.test>", "<a@b>" }, server.Recipients);
+        }
+
+        fw.request.Method = "GET";
+        using var page = new MemoryStream();
+        fw.response.Body = page;
+        using var nextScope = CreateScheduledScope(server, new ScheduledDeliveryDb(), isOffline: false, context: fw.context);
+        var next = nextScope.Fw;
+        next.setRoute(new FwRoute { controller = "AdminReports", action = "Show", method = "GET", id = "scheduled_sales" });
+        next.callRoute();
+        var html = Encoding.UTF8.GetString(page.ToArray());
+        StringAssert.Contains(html, "role=\"status\"");
+        StringAssert.Contains(html, is_rejected ? "alert-danger" : "alert-success");
+        StringAssert.Contains(html, is_rejected ? "The report email could not be sent." : "Mail server accepted the report.");
+        Assert.IsFalse(html.Contains(is_rejected ? "REPORT_SEND_FAILED" : "REPORT_SENT", StringComparison.Ordinal));
     }
 
     [TestMethod]
@@ -782,14 +800,14 @@ public class FwEmailTests
         };
     }
 
-    private static FwTestScope CreateScheduledScope(FakeSmtpServer server, ScheduledDeliveryDb db, bool isTest = false, bool isOffline = true)
+    private static FwTestScope CreateScheduledScope(FakeSmtpServer server, ScheduledDeliveryDb db, bool isTest = false, bool isOffline = true, Microsoft.AspNetCore.Http.HttpContext? context = null)
     {
         var scope = new FwTestScope(_ => db, new Dictionary<string, string?>
         {
             ["appSettings:is_test"] = isTest.ToString(),
             ["appSettings:site_root"] = Path.Combine(TestHelpers.RepoRoot(), "osafw-app"),
             ["appSettings:template"] = TestHelpers.TemplateRoot(),
-        }, context: isOffline ? null : TestHelpers.CreateHttpContext("email-tests"));
+        }, context: isOffline ? null : context ?? TestHelpers.CreateHttpContext("email-tests"));
         TestHelpers.RegisterModel(scope.Fw, (Settings)new StubSettings
         {
             Host = "127.0.0.1",
