@@ -708,14 +708,15 @@ public class FwReportsBase
     /// <summary>Returns valid plain addresses separated by semicolons, or an empty string.</summary>
     internal static string normalizeRecipients(string recipients, bool is_scheduled = false)
     {
-        if (!is_scheduled)
-            return string.Join(";", Utils.splitEmails(recipients).Where(FormUtils.isEmail));
+        // Validate a scheduled entry as a whole before checking how the mail transport splits it.
+        IEnumerable<string> candidates = is_scheduled
+            ? recipients.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            : Utils.splitEmails(recipients);
 
-        var emails = recipients.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Where(email => MailAddress.TryCreate(email, out var address) && address.Address == email && address.DisplayName.Length == 0
-                && Utils.splitEmails(email).SequenceEqual([email]))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-        return string.Join(";", emails);
+        var emails = candidates.Where(email => MailAddress.TryCreate(email, out var address)
+            && address.Address == email && address.DisplayName.Length == 0
+            && Utils.splitEmails(email).SequenceEqual([email]));
+        return string.Join(";", is_scheduled ? emails.Distinct(StringComparer.OrdinalIgnoreCase) : emails);
     }
 
     /// <summary>Renders an initialized report once and delivers it, deleting only the generated attachment.</summary>

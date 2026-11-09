@@ -452,8 +452,13 @@ public class FwEmailTests
         var db = new ScheduledDeliveryDb();
         using var scope = CreateScheduledScope(server, db, isTest);
         var job = ScheduledJob("html");
+        var reports = scope.Fw.model<FwReports>();
+        var payload = reports.parseSchedulePayload(job.icode, job.payload!);
+        payload["recipients"] = "alpha@example.test, ALPHA@example.test; beta@example.test; o'connor@example.test, a@b; "
+            + "invalid-address; prefix hidden@example.test; \"mary jane\"@example.test";
+        job.payload = FwReports.encodeSchedulePayload(payload);
 
-        var result = scope.Fw.model<FwReports>().runScheduledReport(job);
+        var result = reports.runScheduledReport(job);
 
         Assert.AreEqual("REPORT_SENT", result["message"]);
         Assert.AreEqual(1, db.RenderQueryCount);
@@ -467,7 +472,7 @@ public class FwEmailTests
         StringAssert.Contains(server.MessageData, "From: sender@example.test");
         CollectionAssert.AreEqual(isTest
             ? new[] { "<sink@example.test>" }
-            : new[] { "<alpha@example.test>", "<beta@example.test>" }, server.Recipients);
+            : new[] { "<alpha@example.test>", "<beta@example.test>", "<o'connor@example.test>", "<a@b>" }, server.Recipients);
     }
 
     [TestMethod]
@@ -613,7 +618,8 @@ public class FwEmailTests
         fw.model<Users>().reloadSession(7);
         fw.Session("XSS", "form-token");
         fw.FORM["XSS"] = "form-token";
-        fw.FORM["f"] = DB.h("to_emails", "alpha@example.test");
+        fw.FORM["f"] = DB.h("to_emails", "alpha@example.test, ALPHA@example.test; o'connor@example.test a@b\r\n"
+            + "invalid-address <hidden@example.test>");
         fw.request.Method = "POST";
         fw.setRoute(new FwRoute
         {
@@ -631,6 +637,7 @@ public class FwEmailTests
         StringAssert.Contains(server.MessageData, "Subject: Report scheduled_sales");
         StringAssert.Contains(server.MessageData, "Report marker");
         StringAssert.Contains(server.MessageData, "Content-Type: text/html");
+        CollectionAssert.AreEqual(new[] { "<alpha@example.test>", "<ALPHA@example.test>", "<o'connor@example.test>", "<a@b>" }, server.Recipients);
     }
 
     [TestMethod]

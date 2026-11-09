@@ -12,7 +12,11 @@ SQL Server is the primary provider. SQLite has matching fresh and additive schem
 
 ## Creating a report schedule
 
-Choose the report filters, then select **Schedule email**. Enter a name, recipient addresses, format, recurrence, and timezone. Recipients default to your email. PDF attachment is the default; HTML body is also available. Invalid recipient entries are dropped during normalization; at least one valid address is required. Multiple schedules may use the same report with different filters and recipients. Choose Active or Paused; a paused task can be reviewed or run manually before enabling its recurrence.
+Choose the report filters, then select **Schedule email**. Enter a name, recipient addresses, format, recurrence, and timezone. Recipients default to your email. PDF attachment is the default; HTML body is also available.
+
+Separate scheduled recipients with commas or semicolons. Both report email forms accept plain addresses understood by the mail transport, including apostrophes in the local part and single-label domains. Invalid entries are dropped and at least one valid address is required. Email To also accepts spaces and line breaks as separators. Scheduled delivery removes duplicates ignoring case.
+
+Multiple schedules may use the same report with different filters and recipients. Choose Active or Paused; a paused task can be reviewed or run manually before enabling its recurrence.
 
 Site Admins authorize distribution of one shared report. Recipients do not need application accounts; all addresses in the To list are visible to the recipients. Addresses are saved literally and do not follow user-profile email changes. Rendering uses the saved active Site Admin identity and normal report authorization. Reassign the rendering user explicitly if that account becomes unavailable.
 
@@ -47,6 +51,66 @@ Keep existing application job codes and dispatch in `FwCron.runJobAction(FwCron.
 Hardcoded reports opt in through `isSchedulingSupported`; their scheduling parameter definitions live beside their templates in `schedule.json`, using the existing custom-report metadata shape with `name`, `type`, and optional `label`/`required`. Names must be nonempty and unique ignoring case; omitted types use the existing name-based inference. Invalid types or duplicate names are rejected when the schedule is captured, before it can be saved. Scheduling captures the effective values after normal validation. During replay, `is_scheduled_snapshot` distinguishes explicit blanks from ordinary interactive defaults; `scheduled_run_utc` provides the execution instant for report-owned relative periods. Custom reports use their existing parameter metadata. Preserve normal report validation, query limits, rendering templates, and access checks. Scheduling must not capture browser sessions, tokens, SQL definitions, result rows, or arbitrary request fields.
 
 Report emails, including interactive Email To, use the configured sender and the subject-first template `emails/report.html` through `FW.sendEmailTpl()`. Use existing PDF/email layouts. HTML email links/images need recipient-accessible application URLs; PDF-only local file URLs are unsuitable for email images. Test mail routing continues through the framework mail API. Do not enable real sends during development verification.
+
+### Enable scheduling for a hardcoded report
+
+In an existing report class, opt in and apply interactive defaults only to missing inputs. This example uses `region` as an optional filter. Add the region predicate in `getData()` only when `f["region"]` is nonempty.
+
+```csharp
+public override bool isSchedulingSupported => true;
+
+public override void setFilters()
+{
+    base.setFilters();
+
+    if (!is_scheduled_snapshot && !f.ContainsKey("region"))
+        f["region"] = "West";
+}
+```
+
+Add `schedule.json` beside the report's templates in `osafw-app/App_Data/template/admin/reports/{code}`. Use the exact field name from the filter form.
+
+```json
+[
+    { "name": "region", "label": "Region", "type": "text" }
+]
+```
+
+In `main.html`, place the filter form and the shared scheduling panel inside the same component scope. Keep the report's result and print markup below this screen-only block.
+
+```html
+<~report_ui unless="IS_PRINT_MODE" inline>
+  <~/admin/reports/common/page_header>
+  <div data-fw-component-scope data-report-schedule-scope>
+    <~list_filter>
+    <~/admin/reports/common/schedule_email>
+  </div>
+</~report_ui>
+```
+
+In `list_filter.html`, mark the form with `data-schedule-filter` and include the shared buttons inside it. The `fwcron_id` field keeps the current schedule selected when an admin applies filters during review.
+
+```html
+<form method="GET" id="FFilter" name="FFilter" class="fw-card form-horizontal d-print-none"
+      data-list-filter data-autosubmit data-schedule-filter>
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <~schedule_edit if="fwcron_id" inline>
+    <input type="hidden" name="fwcron_id" value="<~fwcron_id>">
+  </~schedule_edit>
+  <input type="hidden" name="dofilter" value="1">
+  <div class="row form-row">
+    <label class="col-form-label col-md-3 col-lg-2" for="fregion">`Region`</label>
+    <div class="col col-lg-4">
+      <input type="text" name="f[region]" value="<~f[region]>" id="fregion" class="form-control">
+    </div>
+  </div>
+  <~/admin/reports/common/filter_buttons>
+</form>
+```
+
+`filter_buttons.html` includes **Schedule email** and **Email To**. Keep `<~/admin/reports/common/onload.js>` in the report's `onload.js` for the ordinary report buttons. The `schedule_email` include loads `fw-cron-editor.js` through `common/cron_editor_script` inside the component scope.
+
+As a Site Admin, clear Region and save a paused schedule. The browser submits `f[region]` with an empty value, so the saved filter stays blank even though a fresh interactive report defaults to West. Reopen **Edit schedule filters** to verify the blank and check that the report preview omits the region predicate.
 
 ## Upgrading existing tasks
 
