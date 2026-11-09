@@ -1,0 +1,158 @@
+{
+    "model": "FwCron",
+    "required_fields": "iname",
+    "save_fields": [
+        "iname",
+        "idesc",
+        "cron",
+        "timezone",
+        "start_date_utc",
+        "end_date_utc",
+        "status"
+    ],
+    "search_fields": "iname idesc icode",
+    "list_sortdef": "iname asc",
+    "list_sortmap": {
+        "iname": "iname",
+        "next_run_utc": "next_run_utc",
+        "status": "status",
+        "last_started_utc": "last_started_utc"
+    },
+    "form_new_defaults": {
+        "status": 0
+    },
+    "is_dynamic_index": true,
+    "view_list_defaults": "iname cron next_run_utc status last_started_utc last_result",
+    "view_list_map": {
+        "id": "ID",
+        "iname": "Task",
+        "icode": "Job code",
+        "cron": "Schedule",
+        "timezone": "Time zone",
+        "next_run_utc": "Next scheduled time",
+        "status": "Status",
+        "last_started_utc": "Last attempt",
+        "last_finished_utc": "Last finished",
+        "last_result": "Latest result",
+        "add_time": "Added on",
+        "add_users_id": "Added by",
+        "upd_time": "Updated on",
+        "upd_users_id": "Updated by",
+        "idesc": "Description"
+    },
+    "view_list_custom": "cron next_run_utc status last_started_utc last_finished_utc last_result",
+    "list_column_filters": {
+        "enabled": true,
+        "fields": {
+            "iname": {
+                "type": "text"
+            },
+            "icode": {
+                "type": "text"
+            },
+            "cron": {
+                "type": "text"
+            },
+            "timezone": {
+                "type": "text"
+            },
+            "status": {
+                "type": "multi_select",
+                "lookup_tpl": "/admin/cron/status.sel"
+            }
+        }
+    },
+    "is_dynamic_show": true,
+    "show_fields": [
+        {
+            "type": "row"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
+            "field": "iname",
+            "label": "Task name",
+            "type": "plaintext"
+        },
+        {
+            "field": "cron",
+            "label": "Schedule",
+            "is_custom": true
+        },
+        {
+            "field": "next_run_utc",
+            "label": "Next run",
+            "is_custom": true
+        },
+        {
+            "field": "idesc",
+            "label": "Description",
+            "type": "plaintext"
+        },
+        {
+            "field": "last_result",
+            "label": "Latest result",
+            "is_custom": true
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "col",
+            "class": "col-lg-6"
+        },
+        {
+            "field": "id",
+            "label": "ID",
+            "type": "plaintext"
+        },
+        {
+            "field": "icode",
+            "label": "Job code",
+            "type": "plaintext"
+        },
+        {
+            "field": "status",
+            "label": "Status",
+            "is_custom": true
+        },
+        {
+            "field": "start_date_utc",
+            "label": "Start",
+            "is_custom": true
+        },
+        {
+            "field": "end_date_utc",
+            "label": "End",
+            "is_custom": true
+        },
+        {
+            "field": "last_started_utc",
+            "label": "Last attempt",
+            "is_custom": true
+        },
+        {
+            "field": "last_finished_utc",
+            "label": "Last finished",
+            "is_custom": true
+        },
+        {
+            "field": "add_time",
+            "label": "Added on",
+            "type": "added"
+        },
+        {
+            "field": "upd_time",
+            "label": "Updated on",
+            "type": "updated"
+        },
+        {
+            "type": "col_end"
+        },
+        {
+            "type": "row_end"
+        }
+    ]
+}

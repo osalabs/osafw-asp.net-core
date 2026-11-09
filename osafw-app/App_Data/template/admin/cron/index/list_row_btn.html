@@ -1,0 +1,5 @@
+<~/common/list/row_btn_view>
+<~editable if="task[can_edit]" inline><~/common/dot><~/common/list/row_btn_edit></~editable>
+<~run if="task[can_run]" inline>
+  <button type="submit" class="btn btn-sm btn-warning" form="cron-action-<~id>" formaction="<~../url>/(RunNow)/<~id>" onclick="return confirm(this.dataset.message)" data-message="`Run this task now? Report tasks email the saved recipients.`"><~/common/icons/play-fill>`Run now`</button>
+</~run>

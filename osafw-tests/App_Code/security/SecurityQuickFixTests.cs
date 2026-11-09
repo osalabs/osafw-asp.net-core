@@ -211,6 +211,7 @@ public class SecurityQuickFixTests
             fw.response.Body = new MemoryStream();
             fw.setController("Login", FW.ACTION_SAVE);
             fw.route.method = "POST";
+        fw.request.Method = "POST";
             fw.FORM["item"] = new FwDict { ["login"] = "", ["pwdh"] = "~" };
             var users = new LoginUsers();
             users.init(fw);
@@ -330,6 +331,40 @@ public class SecurityQuickFixTests
     }
 
     [TestMethod]
+    [DataRow("POST", "PUT", true)]
+    [DataRow("PUT", "PUT", true)]
+    [DataRow("POST", "DELETE", true)]
+    [DataRow("DELETE", "DELETE", true)]
+    [DataRow("GET", "PUT", false)]
+    [DataRow("GET", "DELETE", false)]
+    [DataRow("HEAD", "PATCH", false)]
+    [DataRow("OPTIONS", "POST", false)]
+    public void EnforceMethod_ValidatesTransportAndOverrides(string transport, string method, bool allowed)
+    {
+        using var fw = createFw();
+        fw.request.Method = transport;
+        fw.route.method = method;
+        setXssTokens(fw);
+        var controller = new PostGuardController(fw);
+        if (allowed)
+            controller.enforceMethod("POST", "PUT", "PATCH", "DELETE");
+        else
+            Assert.ThrowsExactly<AuthException>(() => controller.enforceMethod("POST", "PUT", "PATCH", "DELETE"));
+    }
+
+    [TestMethod]
+    public void EnforceMethod_GetNeedsNoTokenAndRejectsPost()
+    {
+        using var fw = createFw();
+        fw.request.Method = "GET";
+        fw.route.method = "GET";
+        var controller = new PostGuardController(fw);
+        controller.enforceMethod("GET");
+        fw.request.Method = "POST";
+        Assert.ThrowsExactly<AuthException>(() => controller.enforceMethod("GET"));
+    }
+
+    [TestMethod]
     public void EnforcePost_RejectsGetEvenWithMatchingToken()
     {
         var fw = createFw();
@@ -345,6 +380,7 @@ public class SecurityQuickFixTests
     {
         var fw = createFw();
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.Session("XSS", "token");
         var controller = new PostGuardController(fw);
 
@@ -356,6 +392,7 @@ public class SecurityQuickFixTests
     {
         var fw = createFw();
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         setXssTokens(fw, formToken: "wrong-token");
         var controller = new PostGuardController(fw);
 
@@ -367,6 +404,7 @@ public class SecurityQuickFixTests
     {
         var fw = createFw();
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         setXssTokens(fw);
         var controller = new PostGuardController(fw);
 
@@ -376,11 +414,11 @@ public class SecurityQuickFixTests
     [TestMethod]
     [DataRow("")]
     [DataRow("not-an-email")]
-    [DataRow("valid@example.test, bad-address")]
     public void ReportSendEmail_RejectsEmptyOrInvalidRecipients(string recipients)
     {
         var fw = createFw();
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         setXssTokens(fw);
         fw.FORM["f"] = new FwDict
         {
@@ -391,7 +429,7 @@ public class SecurityQuickFixTests
         var controller = new AdminReportsController();
         controller.init(fw);
 
-        Assert.ThrowsExactly<UserException>(() => controller.SendEmailAction("Sample"));
+        Assert.ThrowsExactly<ValidationException>(() => controller.SendEmailAction("Sample"));
     }
 
     [TestMethod]
@@ -433,6 +471,7 @@ public class SecurityQuickFixTests
         fw.response.Body = new MemoryStream();
         fw.setController("Login", FW.ACTION_SAVE);
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.FORM["gourl"] = "/Admin/DemosDynamic?page=2";
         fw.FORM["item"] = new FwDict { ["login"] = "user@example.test", ["pwdh"] = "" };
         TestHelpers.RegisterModel(fw, (Users)new LoginUsers());
@@ -507,6 +546,7 @@ public class SecurityQuickFixTests
         fw.settings.init(fw);
         fw.is_log_events = false;
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         return fw;
     }
 

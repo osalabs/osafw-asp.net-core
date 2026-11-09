@@ -587,8 +587,12 @@ public abstract class FwModel : IDisposable
         return id;
     }
 
-    // update exising record
-    public virtual bool update(int id, FwDict item)
+    // update existing record
+    public virtual bool update(int id, FwDict item) => update(id, item, []);
+
+    /// <summary>Updates one record only when the additional conditions still match, retaining normal audit and cache handling.</summary>
+    /// <remarks>The ID always limits the update. Returns false without logging or invalidating caches when no row matches; database errors propagate.</remarks>
+    protected virtual bool update(int id, FwDict item, FwDict conditions)
     {
         FwDict item_changes = [];
         if (is_log_changes)
@@ -610,8 +614,8 @@ public abstract class FwModel : IDisposable
         if (!string.IsNullOrEmpty(field_upd_users_id) && !item.ContainsKey(field_upd_users_id) && fw.isLogged)
             item[field_upd_users_id] = fw.userId;
 
-        FwDict where = [];
-        where[this.field_id] = id;
+        var where = new FwDict(conditions);
+        where[field_id] = id;
         int affected = db.update(table_name, item, where);
         if (affected <= 0)
             return false;

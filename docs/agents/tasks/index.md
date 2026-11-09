@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-11-07-scheduled-tasks.md` - Scheduled Tasks and recurring report emails with shared claims, local-time previews, captured parameters, and structured results.
 - `summary-2026-11-05-client-handover.md` - Integrated User and Administrator Guide with a dated cover, six linked sections, endpoint-specific recovery instructions, reusable role grants and guidance for maintaining the shared Markdown.
 - `summary-2026-11-05-fpf-adoption.md` - Adopted the latest FPF on an isolated master checkout and refined partial-result and whole-subject reasoning routes in instruction pack 1.13.7.
 - `summary-2026-11-04-edge-pdf.md` - Replaced production Playwright with Edge CLI; benchmarked, consolidated print rules, verified report pagination and restored Markdown section bodies in Developer Docs.

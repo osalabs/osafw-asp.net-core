@@ -20,6 +20,7 @@ public class FwLogTypes : FwModel
     public const string ICODE_UPDATED = "updated";
     public const string ICODE_DELETED = "deleted";
     public const string ICODE_COMMENT = "comment";
+    public const string ICODE_CRON_EVENT = "cron_event";
     //users login audit realted
     public const string ICODE_USERS_SIMULATE = "simulate";
     public const string ICODE_USERS_LOGIN = "login";

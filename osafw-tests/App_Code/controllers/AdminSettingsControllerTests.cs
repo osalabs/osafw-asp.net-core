@@ -91,6 +91,7 @@ public class AdminSettingsControllerTests
         var fw = TestHelpers.CreateFw();
         fw.request.Headers.Accept = "application/json";
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.Session("access_level", accessLevel.ToString());
         fw.Session("XSS", "token");
 
@@ -163,6 +164,7 @@ public class AdminSettingsControllerTests
             Setting(Settings.INPUT_CREDENTIAL, "submitted-secret", code: "OPENAI_API_KEY"),
             new FwDict { ["ivalue"] = "submitted-secret" });
         fw.route.method = "POST";
+        fw.request.Method = "POST";
 
         var ps = controller.ShowFormAction(1);
         var item = (FwDict)ps["i"]!;
@@ -178,6 +180,7 @@ public class AdminSettingsControllerTests
             Setting(Settings.INPUT_TEXT, "private-value", mask: Settings.MASK_SUFFIX),
             []);
         fw.route.method = "GET";
+        fw.request.Method = "GET";
 
         var ps = controller.ShowFormAction(1);
         var item = (FwDict)ps["i"]!;
@@ -195,6 +198,7 @@ public class AdminSettingsControllerTests
         var (fw, _, controller) = BuildController(
             Setting(input, "", basis: Settings.BASIS_INHERIT), []);
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         fw.config()["template"] = TestHelpers.TemplateRoot();
 
         var ps = controller.ShowFormAction(1);
@@ -231,6 +235,7 @@ public class AdminSettingsControllerTests
             Setting(Settings.INPUT_TEXT, "", basis: Settings.BASIS_INHERIT, mask: Settings.MASK_SUFFIX), []);
         fw.config()["test_setting"] = "private-default-1234";
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         var ps = controller.ShowFormAction(1);
         Assert.AreEqual("***1234", ps["default_display"]);
         Assert.AreEqual("", ((FwDict)ps["i"]!)["ivalue"]);
@@ -270,6 +275,7 @@ public class AdminSettingsControllerTests
             Setting(Settings.INPUT_TEXT, "old"),
             new FwDict { ["ivalue"] = "new" });
         fw.route.method = "GET";
+        fw.request.Method = "GET";
 
         Assert.ThrowsExactly<AuthException>(() => controller.SaveAction(1));
         Assert.AreEqual(0, model.UpdateCalls);
@@ -409,6 +415,7 @@ public class AdminSettingsControllerTests
     {
         var (fw, _, controller) = BuildController(Setting(Settings.INPUT_TEXT), []);
         fw.route.method = "GET";
+        fw.request.Method = "GET";
 
         Assert.ThrowsExactly<AuthException>(() => controller.ImportAction());
     }
@@ -525,6 +532,7 @@ public class AdminSettingsControllerTests
         fixture.Fw.route.controller = "AdminSettings";
         fixture.Fw.route.action = "Reveal";
         fixture.Fw.route.method = "POST";
+        fixture.Fw.request.Method = "POST";
         fixture.Fw.route.id = secretId.ToString();
         fixture.Fw.request.Headers.Accept = "application/json";
         var action = typeof(AdminSettingsController).GetMethod(nameof(AdminSettingsController.RevealAction))!;
@@ -797,6 +805,7 @@ public class AdminSettingsControllerTests
         int secret = fixture.Seed("secret", Settings.INPUT_CREDENTIAL);
         fixture.Model.update(secret, DB.h("ivalue", "never-in-inline-html"));
         fixture.Fw.route.method = "GET";
+        fixture.Fw.request.Method = "GET";
 
         var ps = fixture.Controller.IndexAction()!;
         var rows = (FwList)ps["list_rows"]!;
@@ -866,6 +875,7 @@ public class AdminSettingsControllerTests
         fixture.Fw.route.controller = "AdminSettings";
         fixture.Fw.route.action = FW.ACTION_INDEX;
         fixture.Fw.route.method = "GET";
+        fixture.Fw.request.Method = "GET";
 
         var pageState = fixture.Controller.IndexAction()!;
 
@@ -941,6 +951,7 @@ public class AdminSettingsControllerTests
                 },
                 context);
             Fw.route.method = "POST";
+            Fw.request.Method = "POST";
             Fw.Session("user_id", "1");
             Fw.Session("access_level", Users.ACL_SITEADMIN.ToString());
             Fw.Session("XSS", "token");

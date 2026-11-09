@@ -1,0 +1,15 @@
+<div class="row form-row">
+  <label class="col-form-label col-md-3">`<~label>`</label>
+  <div class="col">
+    <div class="form-control-plaintext">
+      <~schedule ifeq="field" value="cron" inline><~/admin/cron/schedule_description sub="PARSEPAGE.TOP[task]"><small class="d-block text-muted"><~i[timezone]></small></~schedule>
+      <~next ifeq="field" value="next_run_utc" inline><~PARSEPAGE.TOP[task][next_time] default="—"><small class="d-block text-muted"><~PARSEPAGE.TOP[task][next_utc]></small></~next>
+      <~state ifeq="field" value="status" inline><~/admin/cron/task_state sub="PARSEPAGE.TOP[task]"></~state>
+      <~start ifeq="field" value="start_date_utc" inline><~PARSEPAGE.TOP[task][start_local] date="short" default="—"> <~PARSEPAGE.TOP[task][start_zone]><small class="d-block text-muted"><~PARSEPAGE.TOP[task][start_utc]></small></~start>
+      <~end ifeq="field" value="end_date_utc" inline><~PARSEPAGE.TOP[task][end_local] date="short" default="—"> <~PARSEPAGE.TOP[task][end_zone]><small class="d-block text-muted"><~PARSEPAGE.TOP[task][end_utc]></small></~end>
+      <~last ifeq="field" value="last_started_utc" inline><~PARSEPAGE.TOP[task][last_local] date="short" default="—"> <~PARSEPAGE.TOP[task][last_zone]><small class="d-block text-muted"><~PARSEPAGE.TOP[task][last_utc]></small></~last>
+      <~finished ifeq="field" value="last_finished_utc" inline><~PARSEPAGE.TOP[task][finished_local] date="short" default="—"> <~PARSEPAGE.TOP[task][finished_zone]><small class="d-block text-muted"><~PARSEPAGE.TOP[task][finished_utc]></small></~finished>
+      <~result ifeq="field" value="last_result" inline><~/admin/cron/task_result sub="PARSEPAGE.TOP[task]"></~result>
+    </div>
+  </div>
+</div>

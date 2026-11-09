@@ -102,6 +102,7 @@ public class FwActivityLogs : FwModel
                 log_types_icodes.Add(FwLogTypes.ICODE_ADDED);
                 log_types_icodes.Add(FwLogTypes.ICODE_UPDATED);
                 log_types_icodes.Add(FwLogTypes.ICODE_DELETED);
+                log_types_icodes.Add(FwLogTypes.ICODE_CRON_EVENT);
                 break;
         }
 
@@ -123,7 +124,9 @@ public class FwActivityLogs : FwModel
 
             //for system types - fill fields from payload
             var is_merged = false;
-            if (log_type["itype"].toInt() == FwLogTypes.ITYPE_SYSTEM)
+            var payload = Utils.jsonDecode(row["payload"]) as FwDict ?? [];
+            var fields = payload["fields"] as FwDict;
+            if (log_type["itype"].toInt() == FwLogTypes.ITYPE_SYSTEM && fields?.Count > 0)
             {
                 if (last_fields != null
                     && last_log_types_id == log_types_id
@@ -140,22 +143,16 @@ public class FwActivityLogs : FwModel
                     last_fields = [];
                 }
 
-            var payloadObj = Utils.jsonDecode(row["payload"]);
-            var payload = payloadObj as FwDict ?? [];
-            FwDict? fields = payload["fields"] as FwDict;
-            if (fields != null)
-            {
                 foreach (string key in fields.Keys)
-                    {
-                        //if key is password, pass, pwd - hide value
-                        var value = fields[key];
-                        if (key.Contains("pass") || key.Contains("pwd"))
-                            value = "********";
+                {
+                    //if key is password, pass, pwd - hide value
+                    var value = fields[key];
+                    if (key.Contains("pass") || key.Contains("pwd"))
+                        value = "********";
 
-                        // deduplicate - if key already exists - skip, because we merging older row into newer
-                        if (!last_fields.ContainsKey(key))
-                            last_fields[key] = value;
-                    }
+                    // deduplicate - if key already exists - skip, because we merging older row into newer
+                    if (!last_fields.ContainsKey(key))
+                        last_fields[key] = value;
                 }
             }
             else

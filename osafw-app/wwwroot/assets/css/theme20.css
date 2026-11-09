@@ -33,7 +33,8 @@
     --fw-card-border: 0;
     --fw-card-radius: 0.25rem;
     --fw-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
-    --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+    --fw-card-padding: 1.5rem;
+    --fw-list-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
     --fw-fieldset-legend-bg: var(--fw-card-bg);
     --fw-dashboard-card-radius: 0.25rem;
     --fw-dashboard-card-shadow: 0px 0px 35px 0px rgba(154, 161, 171, 0.15);
@@ -108,7 +109,7 @@
   background-color: var(--fw-card-bg);
   border: var(--fw-card-border);
   border-radius: var(--fw-card-radius);
-  padding: var(--fw-card-padding);
+  padding: var(--fw-list-card-padding);
   margin-bottom: var(--fw-card-margin-bottom);
   box-shadow: var(--fw-card-shadow);
 }

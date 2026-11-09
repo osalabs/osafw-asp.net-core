@@ -1,0 +1,13 @@
+<script>
+(function (script) {
+  function init() {
+    fw.initComponent('cron-editor', {
+      scope: fw.scopeFromScript(script),
+      assetsUrls: ['<~GLOBAL[ASSETS_URL]>/js/fw-cron-editor.js?v<~GLOBAL[SITE_VERSION]>-4'],
+      init: function (scope) { window.fwCronEditor.init(scope); }
+    });
+  }
+  if (window.fw) init();
+  else document.addEventListener('DOMContentLoaded', init, {once: true});
+})(document.currentScript);
+</script>

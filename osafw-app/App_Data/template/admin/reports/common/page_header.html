@@ -12,9 +12,23 @@
       </h1>
     </div>
     <div class="page-header-meta d-flex flex-wrap align-items-center gap-2">
+      <~schedule_list if="is_schedule_available" inline>
+        <a href="<~/admin/cron/url>?dofilter=1&amp;f[s]=<~schedule_search urlencode>" class="btn btn-default d-print-none"><~/common/icons/calendar3>`Report schedules`</a>
+      </~schedule_list>
       <~page_header_meta>
     </div>
   </div>
 </div>
 
 <~/common/form/msg>
+
+<~email_status_notice if="report_email_status" inline>
+  <div class="alert <~mail_sent ifeq="report_email_status" value="REPORT_SENT" inline>alert-success</~mail_sent><~mail_failed ifne="report_email_status" value="REPORT_SENT" inline>alert-danger</~mail_failed>" role="status">
+    <~/admin/reports/common/schedule_messages.sel selvalue="report_email_status">
+  </div>
+</~email_status_notice>
+<~email_error_notice if="report_email_error" inline>
+  <div class="alert alert-danger" role="alert">
+    <~/admin/reports/common/schedule_messages.sel selvalue="report_email_error" default="`The report email could not be sent.`">
+  </div>
+</~email_error_notice>

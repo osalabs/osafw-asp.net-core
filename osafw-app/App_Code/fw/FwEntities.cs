@@ -12,6 +12,7 @@ public class FwEntities : FwModel
 {
     //constants for standard entities
     public const string ICODE_USERS = "users";
+    public const string ICODE_CRON = "fwcron";
     public const string ICODE_ASSISTANT = "assistant";
     public const string ICODE_ASSISTANT_MESSAGE = "assistant_message";
     public const string ICODE_ATT = "att";

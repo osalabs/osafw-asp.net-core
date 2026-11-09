@@ -690,11 +690,12 @@ public partial class FwDynamicController : FwController
 
     public virtual FwDict? DeleteAction(int id)
     {
+        enforceMethod("POST", "DELETE");
         checkReadOnly();
 
         try
         {
-            model0.deleteWithPermanentCheck(id);
+            modelDelete(id);
             fw.flash("onedelete", 1);
         }
         catch (Exception ex)
@@ -732,6 +733,7 @@ public partial class FwDynamicController : FwController
     #region Bulk Actions
     public virtual FwDict? SaveMultiAction()
     {
+        enforceMethod("POST", "PUT", "PATCH");
         route_onerror = FW.ACTION_INDEX;
 
         FwDict cbses = reqh("cb");

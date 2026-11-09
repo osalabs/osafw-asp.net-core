@@ -57,6 +57,7 @@ public class SigninSecurityTests
         var fw = scope.Fw;
         fw.route.controller = "Login";
         fw.route.method = method;
+        fw.request.Method = method;
         fw.config()["template"] = TestHelpers.TemplateRoot();
         fw.config()["is_lang_update"] = false;
         fw.is_log_events = false;
@@ -172,6 +173,7 @@ public class SigninSecurityTests
         controller.init(fw);
         Assert.ThrowsExactly<AuthException>(() => controller.ShowFormAction());
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.Session("XSS", "token");
         fw.FORM["XSS"] = "token";
         fw.Session("mfa_secret", "attacker-factor");

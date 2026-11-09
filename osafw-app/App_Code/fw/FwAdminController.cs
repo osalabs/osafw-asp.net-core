@@ -198,9 +198,10 @@ public class FwAdminController : FwController
 
     public virtual FwDict? DeleteAction(int id)
     {
+        enforceMethod("POST", "DELETE");
         checkReadOnly();
 
-        model0.deleteWithPermanentCheck(id);
+        modelDelete(id);
         fw.flash("onedelete", 1);
         return this.afterSave(true);
     }
@@ -217,6 +218,7 @@ public class FwAdminController : FwController
 
     public virtual FwDict? SaveMultiAction()
     {
+        enforceMethod("POST", "PUT", "PATCH");
         route_onerror = FW.ACTION_INDEX;
 
         FwDict cbses = reqh("cb");

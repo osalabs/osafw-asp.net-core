@@ -1,0 +1,19 @@
+REPORT_INPUT_INVALID|`Please review and update your input.`
+REPORT_RECIPIENTS|`Enter at least one valid recipient address.`
+REPORT_FORMAT|`Choose PDF or HTML for the report email.`
+REPORT_RUN_AS|`Choose an active Site Administrator to run the report.`
+REPORT_SCHEDULE_INVALID|`The saved report, delivery options, or filters are invalid. Review the task.`
+REPORT_SCHEDULE_SIZE|`The saved report filters and delivery options are too large.`
+REPORT_SCHEDULE_UNAVAILABLE|`The scheduled report is unavailable or no longer supports scheduling.`
+REPORT_SCHEDULE_CHANGED|`The task changed or started running. Reload and try again.`
+REPORT_FILTER_INVALID|`Review the report filter values.`
+REPORT_FILTER_MISSING|`A schedule filter is missing.`
+REPORT_FILTER_CHANGED|`A saved report filter no longer matches its definition.`
+REPORT_SORT_CHANGED|`The saved report sort no longer matches its definition.`
+REPORT_UNAUTHORIZED|`The rendering user is no longer authorized to run this report.`
+REPORT_OFFLINE_REQUIRED|`A scheduled report requires a background worker.`
+REPORT_DELIVERY_UNCERTAIN|`Report delivery outcome is uncertain. Check the mail server before retrying.`
+REPORT_PDF_EMPTY|`The report did not produce a PDF attachment.`
+REPORT_BODY_EMPTY|`The report did not produce email content.`
+REPORT_SENT|`Mail server accepted the report.`
+REPORT_SEND_FAILED|`The report email could not be sent.`

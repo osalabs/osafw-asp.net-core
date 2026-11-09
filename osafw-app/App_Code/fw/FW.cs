@@ -103,7 +103,7 @@ public class FW : IDisposable
     public HttpRequest request = null!;
     public HttpResponse response = null!;
     private readonly ISession? session;
-    private readonly bool isOffline;
+    internal readonly bool isOffline;
     private readonly Dictionary<string, string> offlineSession = new(StringComparer.Ordinal);
 
     public string request_url = ""; // current request url (relative to application url)
@@ -114,6 +114,9 @@ public class FW : IDisposable
     public bool is_log_events = true; // can be set temporarly to false to prevent event logging (for batch process for ex)
 
     public string last_error_send_email = "";
+
+    /// <summary>True once the latest mail call entered SMTP submission; a failure may then have delivered to some recipients.</summary>
+    internal bool is_email_send_attempted { get; private set; }
     private static readonly char path_separator = Path.DirectorySeparatorChar;
 
     private readonly DateTime start_time = DateTime.Now; //to track request time
@@ -1416,17 +1419,16 @@ public class FW : IDisposable
                     iex = iex.InnerException;
             }
 
+            if (iex is RedirectException)
+                return;
+
             if (iex != null && iex is not ApplicationException)
             {
                 throw; //throw if not an ApplicationException happened - this keeps stack, also see http://weblogs.asp.net/fmarguerie/rethrowing-exceptions-and-preserving-the-full-call-stack-trace
             }
 
-            // ignore redirect exception
-            if (iex == null || iex is not RedirectException)
-            {
-                //if got ApplicationException - call error action handler
-                ps = controller.actionError(iex, args);
-            }
+            // Application errors return through the controller's validation/error route.
+            ps = controller.actionError(iex, args);
         }
         if (ps != null)
             parser(ps);
@@ -1552,12 +1554,15 @@ public class FW : IDisposable
     public bool sendEmail(string mail_from, string mail_to, string mail_subject, string mail_body, IDictionary? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
         bool result = true;
+        bool is_log_pii = false;
         MailMessage? message = null;
         options ??= [];
         last_error_send_email = "";
+        is_email_send_attempted = false;
 
         try
         {
+            is_log_pii = config("log_pii").toBool();
             if (mail_from.Length == 0)
                 mail_from = settings.read("mail_from");
             mail_subject = Regex.Replace(mail_subject, @"[\r\n]+", " ");
@@ -1569,11 +1574,18 @@ public class FW : IDisposable
 
                 mail_body = mail_body + System.Environment.NewLine + "TEST SEND. PASSED MAIL_TO=[" + mail_to + "]"; //add to the end of the body to preserve html
                 mail_to = test_email;
-                logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
+                if (is_log_pii)
+                    logger(LogLevel.INFO, "EMAIL SENT TO TEST EMAIL [", mail_to, "] - TEST ENABLED IN web.config");
+                else
+                    logger(LogLevel.INFO, "Test email routing enabled.");
             }
 
-            logger(LogLevel.INFO, "Sending email. From=[", mail_from, "], ReplyTo=[", reply_to, "], To=[", mail_to, "], Subj=[", mail_subject, "]");
-            logger(LogLevel.DEBUG, "Email body:", config("log_pii").toBool() ? mail_body : "length=" + mail_body.Length);
+            if (is_log_pii)
+                logger(LogLevel.INFO, "Sending email. From=[", mail_from, "], ReplyTo=[", reply_to, "], To=[", mail_to, "], Subj=[", mail_subject, "]");
+            else
+                logger(LogLevel.INFO, "Sending email.");
+
+            logger(LogLevel.DEBUG, "Email body:", is_log_pii ? mail_body : "length=" + mail_body.Length);
 
             if (string.IsNullOrWhiteSpace(mail_to))
                 throw new InvalidOperationException("Email recipient is required.");
@@ -1613,7 +1625,8 @@ public class FW : IDisposable
                 {
                     foreach (string cc in aCC)
                     {
-                        logger(LogLevel.INFO, "TEST SEND. PASSED CC=[", cc, "]");
+                        if (is_log_pii)
+                            logger(LogLevel.INFO, "TEST SEND. PASSED CC=[", cc, "]");
                         foreach (string email1 in amail_to)
                         {
                             string email = email1.Trim();
@@ -1660,7 +1673,8 @@ public class FW : IDisposable
                         NameEncoding = System.Text.Encoding.UTF8
                     };
                     // att.ContentDisposition.FileName = human_filename
-                    logger(LogLevel.DEBUG, "attachment ", human_filename, " => ", filename);
+                    if (is_log_pii)
+                        logger(LogLevel.DEBUG, "attachment ", human_filename, " => ", filename);
                     message.Attachments.Add(att);
                 }
             }
@@ -1693,6 +1707,7 @@ public class FW : IDisposable
                 EnableSsl = mailSettings["is_ssl"].toBool(),
                 Credentials = new System.Net.NetworkCredential(mailSettings["username"].toStr(), mailSettings["password"].toStr())
             };
+            is_email_send_attempted = true;
             client.Send(message);
         }
         catch (Exception ex)
@@ -1728,6 +1743,7 @@ public class FW : IDisposable
     // shortcut for send_email from template from the /emails template dir
     public bool sendEmailTpl(string mail_to, string tpl, FwDict hf, FwDict? filenames = null, IList? aCC = null, string reply_to = "", FwDict? options = null)
     {
+        is_email_send_attempted = false;
         Regex r = new(@"[\n\r]+");
         string subj_body = parsePage("/emails", tpl, hf);
         if (subj_body.Length == 0)
@@ -1998,13 +2014,26 @@ public class FW : IDisposable
         if (!is_log_events)
             return;
 
-        FwDict? payload = null;
-        if (changed_fields != null)
-            payload = new FwDict()
+        try
+        {
+            FwDict? payload = null;
+            if (changed_fields != null)
+                payload = new FwDict { ["fields"] = changed_fields };
+
+            model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
+        }
+        catch (Exception ex)
+        {
+            // Activity history is best effort; it must not fail an already completed operation.
+            try
             {
-                {"fields", changed_fields}
-            };
-        this.model<FwActivityLogs>().addSimple(log_types_icode, entity_icode, item_id, iname, payload);
+                logger(LogLevel.WARN, "Activity could not be recorded:", log_types_icode, entity_icode, item_id, ex.GetType().Name);
+            }
+            catch (Exception)
+            {
+                // A logging failure must not escape this boundary either.
+            }
+        }
     }
 
     public void rw(string str)

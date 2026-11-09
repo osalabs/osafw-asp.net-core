@@ -261,6 +261,7 @@ public class SecurityGroup1DevConfigureTests
     {
         var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         fw.response.Body = new MemoryStream();
         var updates = new SpyFwUpdates([
             new DBRow(new FwDict { ["iname"] = "upd<script>.sql" })
@@ -287,6 +288,7 @@ public class SecurityGroup1DevConfigureTests
     {
         var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
         fw.route.method = "GET";
+        fw.request.Method = "GET";
         setXssTokens(fw);
         var updates = registerSpyFwUpdates(fw);
         var controller = createDevManageController(fw);
@@ -300,6 +302,7 @@ public class SecurityGroup1DevConfigureTests
     {
         var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         fw.Session("XSS", "token");
         var updates = registerSpyFwUpdates(fw);
         var controller = createDevManageController(fw);
@@ -313,6 +316,7 @@ public class SecurityGroup1DevConfigureTests
     {
         var fw = createFw(configWithRootAndDevelopmentOverride(), "localhost");
         fw.route.method = "POST";
+        fw.request.Method = "POST";
         setXssTokens(fw);
         var updates = registerSpyFwUpdates(fw);
         var controller = createDevManageController(fw);

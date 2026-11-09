@@ -1,4 +1,4 @@
-<div class="row form-row g-3 align-items-center" id="emailto" style="display: none">
+<div class="row form-row g-3 align-items-center pt-3" id="emailto" style="display: none">
    <div class="col-auto offset-md-3 offset-lg-2">
       <label for="to_emails" class="col-form-label">`Email To`</label>
    </div>
@@ -20,7 +20,7 @@
       </div>
    </div>
    <div class="col-auto">
-      <button type="submit" name="send_email" class="btn btn-primary on-email-send"><~/common/icons/send>`Send`</button>
+      <button type="submit" name="send_email" class="btn btn-primary on-email-send" formmethod="post" formaction="<~/admin/reports/url>/(SendEmail)/<~report_code>"><~/common/icons/send>`Send`</button>
       <button type="button" class="btn btn-outline-secondary on-email-cancel"><~/common/icons/x>`Cancel`</button>
    </div>
 </div>

@@ -13,6 +13,8 @@ public class FwCronServiceTests
     {
         private readonly CancellationTokenSource cancellation;
         public int Calls;
+        public bool IsFailFirstPoll { get; set; }
+        protected override TimeSpan PollingInterval => TimeSpan.Zero;
 
         public TestCronService(CancellationTokenSource cancellation) : base(new ConfigurationBuilder().Build())
         {
@@ -22,6 +24,8 @@ public class FwCronServiceTests
         protected override void ProcessJobs(CancellationToken ct)
         {
             Calls++;
+            if (IsFailFirstPoll && Calls == 1)
+                throw new InvalidOperationException("Poll failed.");
             cancellation.Cancel();
         }
 
@@ -29,14 +33,16 @@ public class FwCronServiceTests
     }
 
     [TestMethod]
-    public async Task ExecuteAsync_StopsOnCancellation()
+    [DataRow(false, 1)]
+    [DataRow(true, 2)]
+    public async Task ExecuteAsync_StopsOnCancellationAndRetriesFailedPoll(bool is_fail_first_poll, int expected_calls)
     {
         using var cts = new CancellationTokenSource();
-        using var service = new TestCronService(cts);
+        using var service = new TestCronService(cts) { IsFailFirstPoll = is_fail_first_poll };
 
         var error = await Assert.ThrowsAsync<OperationCanceledException>(
             () => service.RunAsync(cts.Token));
         Assert.AreEqual(cts.Token, error.CancellationToken);
-        Assert.AreEqual(1, service.Calls);
+        Assert.AreEqual(expected_calls, service.Calls);
     }
 }

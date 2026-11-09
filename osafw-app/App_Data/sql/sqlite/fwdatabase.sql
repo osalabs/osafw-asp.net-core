@@ -70,10 +70,18 @@ CREATE TABLE fwcron (
   idesc                 TEXT,
 
   cron                  TEXT NOT NULL,
-  next_run              DATETIME NULL,
+  next_run_utc          DATETIME NULL,
 
-  start_date            DATETIME NULL,
-  end_date              DATETIME NULL,
+  start_date_utc        DATETIME NULL,
+  end_date_utc          DATETIME NULL,
+
+  timezone              TEXT NOT NULL DEFAULT 'UTC',
+  payload               TEXT NULL,
+  run_requested_utc     DATETIME NULL,
+  run_token             TEXT NULL,
+  last_started_utc      DATETIME NULL,
+  last_finished_utc     DATETIME NULL,
+  last_result           TEXT NULL,
 
   status                INTEGER NOT NULL DEFAULT 0,
   add_time              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,7 +90,7 @@ CREATE TABLE fwcron (
   upd_users_id          INTEGER DEFAULT 0
 );
 CREATE UNIQUE INDEX UX_fwcron_icode ON fwcron (icode);
-CREATE INDEX IX_fwcron_next_run ON fwcron (next_run);
+CREATE INDEX IX_fwcron_next_run_utc ON fwcron (next_run_utc);
 
 -- virtual controllers
 CREATE TABLE fwcontrollers (

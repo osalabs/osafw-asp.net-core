@@ -209,3 +209,10 @@ Run focused verification with `pwsh -NoProfile -File scripts/test.ps1 -Profile B
 ## Viewer-safe report metadata
 
 Custom report `custom_report` page state contains only `id`, `icode`, `iname`, `idesc`, and `icon`. SQL templates, stored parameter/render definitions, and future administrative fields never enter that object, including JSON exports. Both outward parameter collections expose only rendered field metadata (`name`, `label`, `type`, `required`, `value`, and normalized `id`/`iname` options); lookup SQL/source and arbitrary stored properties stay internal. The normal result rows and generated filter controls remain available. Custom templates must not depend on administrative definitions in viewer page state.
+## Scheduled report emails
+
+Site Admins can save recurring PDF/HTML email delivery from a report's **Schedule email** control and manage its tasks through **Report schedules**. See [Scheduled Tasks](cron.md) for enabling the hosted worker, timezone and missed-run behavior, permissions, execution results, and interrupted-send recovery.
+
+Scheduled values use parameter rows with `name`, `type`, and `value`, matching the existing custom-report metadata/runtime shape. Current definitions remain authoritative for validation. Captured values preserve their selected meaning: fixed dates stay fixed, and only explicit report-owned period selectors are recalculated. Recipient addresses are saved literally and receive one shared report generated as the selected Site Admin.
+
+Hardcoded reports must opt into unattended scheduling and declare the inputs they can persist. Custom reports reuse their parameter definitions. Review schedules when changing a report's code, parameter contract, or data scope; do not infer recipient-specific permissions from the address list.

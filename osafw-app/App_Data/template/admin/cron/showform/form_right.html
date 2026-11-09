@@ -1,0 +1,59 @@
+<~/common/form/id>
+
+<~job_edit if="id" inline>
+  <div class="row form-row">
+    <label class="col-form-label col-md-3">`Job code`</label>
+    <div class="col"><p class="form-control-plaintext text-break"><code><~i[icode]></code></p></div>
+  </div>
+</~job_edit>
+
+<div class="row form-row">
+  <label for="task-status" class="col-form-label col-md-3">`Status`</label>
+  <div class="col col-md-4">
+    <select id="task-status" class="form-select" name="item[status]">
+      <option value="0" <~/common/attr/selected ifeq="i[status]" value="0">>`Active`</option>
+      <option value="10" <~/common/attr/selected ifeq="i[status]" value="10">>`Paused`</option>
+      <~completed if="is_completed" inline>
+        <option value="20" <~/common/attr/selected ifeq="i[status]" value="20">>`Completed`</option>
+      </~completed>
+    </select>
+  </div>
+</div>
+
+<~delivery if="run_as_users" inline>
+  <div class="row form-row">
+    <label for="task-run-as" class="col-form-label col-md-3 required">`Runs as`</label>
+    <div class="col">
+      <select id="task-run-as" class="form-select" name="item[run_as_users_id]" required>
+        <option value="">`Choose an active Site Administrator`</option>
+        <~run_as_users select="run_as_users_id">
+      </select>
+    </div>
+  </div>
+</~delivery>
+
+<div class="row form-row">
+  <label for="task-start" class="col-form-label col-md-3">`Start`</label>
+  <div class="col col-md-6">
+    <input id="task-start" type="datetime-local" step="1" class="form-control" name="item[start_date_utc]" value="<~i[start_date_utc]>" data-cron-bound="start_date_utc">
+    <div class="form-text">`Optional. Runs at or after this time.`</div>
+  </div>
+</div>
+<div class="row form-row">
+  <label for="task-end" class="col-form-label col-md-3">`End`</label>
+  <div class="col col-md-6">
+    <input id="task-end" type="datetime-local" step="1" class="form-control" name="item[end_date_utc]" value="<~i[end_date_utc]>" data-cron-bound="end_date_utc">
+    <div class="form-text">`Optional. No runs at or after this time.`</div>
+  </div>
+</div>
+<div class="row form-row">
+  <div class="col-md-9 offset-md-3">
+    <p class="form-text mb-0">`Start/End use your time zone:` <~cron_editor[viewer_zone]></p>
+  </div>
+</div>
+<~/common/cron_preview sub="cron_editor">
+
+<~/common/form/added if="id">
+<~/common/form/updated if="i[upd_time]">
+
+<~/admin/cron/report_details>

@@ -66,8 +66,9 @@
   --fw-card-border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
   --fw-card-radius: var(--bs-border-radius);
   --fw-card-shadow: none;
-  --fw-card-padding: var(--fw-spacer) var(--fw-spacer) 0 var(--fw-spacer);
+  --fw-card-padding: var(--fw-spacer);
   --fw-card-margin-bottom: var(--fw-spacer);
+  --fw-list-card-padding: 0;
 
   /* dashboard cards (.card.dashboard-card) */
   --fw-dashboard-card-radius: var(--bs-card-border-radius, var(--bs-border-radius));
@@ -511,7 +512,7 @@ h1 .badge {
   background-color: transparent;
   border: 0;
   border-radius: 0;
-  padding: 0;
+  padding: var(--fw-list-card-padding);
   margin-bottom: var(--fw-card-margin-bottom);
   box-shadow: none;
 }
@@ -1299,6 +1300,32 @@ table.list-edit.table-dense tbody td > div.ro {
 .form-row {
   padding-bottom: var(--fw-spacer);
 }
+
+/* Cards own their outer inset. Trim only terminal rows in the shared form layouts,
+   not the last row of every nested section. Keep inter-section spacing intact. */
+:is(.fw-card, .fw-card > fieldset:last-child) > :last-child {
+  margin-bottom: 0;
+}
+
+:is(.fw-card, .fw-card > fieldset:last-child) > .form-row:last-child,
+:is(.fw-card, .fw-card > fieldset:last-child) > .row:last-child > :is(.col, [class*="col-"]):last-child > .form-row:last-child,
+:is(.fw-card, .fw-card > fieldset:last-child) > .fw-card-actions:last-child > .form-row {
+  padding-bottom: 0;
+}
+
+/* Desktop forms put their actions in the header; the mobile footer remains in
+   the DOM but must not prevent trimming the final content row. */
+@media (min-width: 992px) {
+  .fw-form-fields > .form-row:last-child,
+  :is(.fw-card, .fw-card > fieldset:last-child) > .row:last-child > :is(.col, [class*="col-"]) > .form-row:last-child,
+  :is(.fw-card, .fw-card > fieldset:last-child) > .form-row:has(+ .fw-card-actions:last-child),
+  :is(.fw-card, .fw-card > fieldset:last-child) > .row:has(+ .fw-card-actions:last-child) > :is(.col, [class*="col-"]) > .form-row:last-child,
+  .fw-card > fieldset:has(+ .fw-card-actions:last-child) > .form-row:last-child,
+  .fw-card > fieldset:has(+ .fw-card-actions:last-child) > .row:last-child > :is(.col, [class*="col-"]) > .form-row:last-child {
+    padding-bottom: 0;
+  }
+}
+
 
 .hr-header {
   display: grid;

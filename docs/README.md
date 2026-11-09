@@ -4,6 +4,8 @@ Open only the canonical documentation needed for the task. This map identifies t
 
 ## Framework Docs
 
+- [architecture.md](architecture.md): framework intent, request lifecycle, responsibility boundaries and application extension choices.
+
 - [authentication.md](authentication.md): login POST/token, persistent-cookie policy, and Windows identity migration.
 
 - [templates.md](templates.md): ParsePage syntax, template composition, shared fragments, parser rules, and frontend component conventions.
@@ -18,6 +20,7 @@ Open only the canonical documentation needed for the task. This map identifies t
 - [assistant.md](assistant.md): optional read-only RAG assistant, configuration, indexing, retrieval, and vector backends.
 - [deploy.md](deploy.md): Windows/IIS deployment prerequisites, scripts, verification, and recovery.
 - [reports.md](reports.md): hardcoded and Site Admin-managed reports.
+- [cron.md](cron.md): Scheduled Tasks, recurring report emails, execution results, and recovery.
 - [handover.md](handover.md): preparing the integrated client handover guide and verifying the delivered PDF.
 - [datetime.md](datetime.md): per-user date/time formats, timezone conversion, and save normalization.
 - [feature_modules.md](feature_modules.md): module scaffolding through Developer Tools or manual setup.

@@ -1,0 +1,85 @@
+<~schedule_controls if="is_schedule_available" inline>
+  <~schedule_feedback if="schedule_success" inline>
+    <div class="alert alert-success" role="status">
+      `Schedule saved.`
+      <~schedule_next if="schedule_next_run" inline> `Next scheduled time` <strong><~schedule_next_run date="short"></strong>.</~schedule_next>
+      <a class="alert-link ms-2" href="<~/admin/cron/url>/<~saved_fwcron_id>">`Manage task`</a>
+    </div>
+  </~schedule_feedback>
+  <~create unless="fwcron_id" inline>
+    <form method="post" action="<~/admin/reports/url>/(ScheduleEmail)/<~schedule_report_code urlencode>" class="fw-card" id="report-schedule" data-report-schedule data-schedule-blank="`(blank)`" data-schedule-empty="`This report has no filter fields.`" <~hide unless="is_schedule_error" inline>hidden</~hide>>
+      <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+      <h2 class="h5">`Schedule email`</h2>
+      <~/admin/reports/common/schedule_error>
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="row form-row">
+            <label class="col-form-label col-md-3 required" for="report-schedule-name">`Task name`</label>
+            <div class="col">
+              <input id="report-schedule-name" class="form-control" name="item[iname]" value="<~schedule_item[iname]><~initial_suffix if="is_schedule_initial" inline> - `email`</~initial_suffix>" maxlength="255" required>
+            </div>
+          </div>
+          <div class="row form-row">
+            <label class="col-form-label col-md-3 required" for="report-schedule-recipients">`Recipients`</label>
+            <div class="col">
+              <input id="report-schedule-recipients" class="form-control" name="item[recipients]" value="<~schedule_item[recipients]>" required>
+              <div class="form-text">`Separate addresses with commas or semicolons.`</div>
+            </div>
+          </div>
+          <fieldset class="row form-row">
+            <legend class="col-form-label col-md-3">`Format`</legend>
+            <div class="col pt-2">
+              <label class="form-check form-check-inline"><input type="radio" class="form-check-input" name="item[format]" value="pdf" <~/common/attr/checked ifeq="schedule_item[format]" value="pdf">> `PDF attachment`</label>
+              <label class="form-check form-check-inline"><input type="radio" class="form-check-input" name="item[format]" value="html" <~/common/attr/checked ifeq="schedule_item[format]" value="html">> `HTML body`</label>
+            </div>
+          </fieldset>
+          <~/common/cron_editor sub="cron_editor">
+        </div>
+        <div class="col-lg-6">
+          <div class="row form-row">
+            <label class="col-form-label col-md-3" for="report-schedule-status">`Status`</label>
+            <div class="col col-md-4">
+              <select id="report-schedule-status" class="form-select" name="item[status]">
+                <option value="0">`Active`</option>
+                <option value="10" <~/common/attr/selected ifeq="schedule_item[status]" value="10">>`Paused`</option>
+              </select>
+            </div>
+          </div>
+          <~/common/cron_preview sub="cron_editor">
+          <p>`Runs as` <strong><~schedule_run_as></strong>. `All recipients receive the same report.`</p>
+          <details>
+            <summary>`Filters from the current form`</summary>
+            <ul class="small" data-schedule-summary></ul>
+            <p class="form-text">`The report validates the current values when you save. Selected dates stay fixed.`</p>
+          </details>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="row form-row mb-0">
+            <div class="col-md-9 offset-md-3">
+              <button type="submit" class="btn btn-primary" disabled>`Save schedule`</button>
+              <button type="button" class="btn btn-default" data-schedule-cancel>`Cancel`</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </~create>
+  <~update if="fwcron_id" inline>
+    <form method="post" action="<~/admin/reports/url>/(UpdateScheduleFilters)/<~schedule_report_code urlencode>" class="fw-card" data-report-schedule data-schedule-blank="`(blank)`" data-schedule-empty="`This report has no filter fields.`">
+      <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+      <input type="hidden" name="fwcron_id" value="<~fwcron_id>">
+      <h2 class="h5">`Edit schedule filters`</h2>
+      <~review if="schedule_review_required" inline>
+        <p class="alert alert-warning" role="status">`This report's filters have changed. Review the current values before updating the schedule.`</p>
+      </~review>
+      <~/admin/reports/common/schedule_error>
+      <p>`Applying or viewing a report leaves the schedule unchanged. Use Update schedule filters to save the current values.`</p>
+      <ul class="small" data-schedule-summary></ul>
+      <button type="submit" class="btn btn-primary" disabled>`Update schedule filters`</button>
+      <a class="btn btn-outline-secondary" href="<~/admin/cron/url>/<~fwcron_id>">`Back to scheduled task`</a>
+    </form>
+  </~update>
+  <~/common/cron_editor_script>
+</~schedule_controls>

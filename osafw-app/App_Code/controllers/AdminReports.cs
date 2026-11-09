@@ -45,6 +45,7 @@ public class AdminReportsController : FwController
 
     public void ShowAction(string id)
     {
+        route_onerror = string.Empty;
         var repcode = FwReportsBase.cleanupRepcode(id);
         var filter_session_key = FwReportsBase.filterSessionKey(fw, repcode);
 
@@ -57,8 +58,19 @@ public class AdminReportsController : FwController
         var is_send_email = reqb("send_email");
         var is_run = (reqb("dofilter") || reqb("is_run")) && !is_send_email;
 
-        // report filters (options)
-        initFilter(filter_session_key);
+        var fwcron_id = reqi("fwcron_id");
+        FwCron.Row? task = null;
+        FwDict? saved = null;
+        if (fwcron_id > 0)
+        {
+            checkSiteAdmin();
+            task = getReportTask(fwcron_id);
+            list_filter = new FwDict(reqh("f"));
+        }
+        else
+        {
+            initFilter(filter_session_key);
+        }
 
         // get format directly form request as we don't need to remember format
         var requested_format = reqh("f")["format"].toStr().ToLowerInvariant();
@@ -69,16 +81,45 @@ public class AdminReportsController : FwController
         if (requested_format == "json" && !is_send_email)
             is_run = true;
 
-        var report = FwReportsBase.createInstance(fw, repcode, list_filter);
+        var report = task == null
+            ? FwReportsBase.createInstance(fw, repcode, list_filter)
+            : loadScheduledReport(task, repcode, list_filter, out saved);
+
         var customReport = report as FwCustomReport;
+        var is_review_required = false;
         try
         {
-            report.setFilters(); // set filters data like select/lookups
+            if (saved == null)
+            {
+                report.setFilters();
+            }
+            else if (!Utils.isEmpty(fw.G["report_schedule_error"]))
+            {
+                report.showScheduledFormFilters(list_filter);
+            }
+            else if (reqb("dofilter"))
+            {
+                report.captureScheduledFilters(list_filter, true);
+            }
+            else
+            {
+                try
+                {
+                    report.applyScheduledFilters(saved);
+                }
+                catch (UserException)
+                {
+                    // A changed filter contract needs explicit review and a new submitted snapshot.
+                    is_review_required = true;
+                    report.showScheduledFilterReview(saved);
+                }
+            }
 
-            if (is_run)
+            report.f["format"] = requested_format;
+            if (is_run && !is_review_required)
                 report.getData();
         }
-        catch (Exception ex) when (customReport != null)
+        catch (Exception ex) when (customReport != null && ex is not AuthException)
         {
             customReport.setExecutionError(ex, fw.model<Users>().isSiteAdmin());
             customReport.format = "html";
@@ -88,6 +129,10 @@ public class AdminReportsController : FwController
         // show or output report according format
         FwDict ps = [];
         ps["return_url"] = return_url;
+        ps["report_email_status"] = fw.flash("report_email_status");
+        ps["report_email_error"] = fw.G["report_email_error"];
+        if (report.format == "html" && report.isSchedulingSupported && fw.model<Users>().isSiteAdmin())
+            addSchedulePageState(ps, report, task, is_review_required);
 
         report.render(ps);
     }
@@ -325,6 +370,155 @@ public class AdminReportsController : FwController
             throw new AuthException("Bad access - Site Administrator required");
     }
 
+    /// <summary>Creates one report-email schedule from the current submitted report filters.</summary>
+    public void ScheduleEmailAction(string id)
+    {
+        enforcePost();
+        checkSiteAdmin();
+        checkReadOnly();
+        route_onerror = FW.ACTION_SHOW;
+
+        var report = FwReportsBase.createScheduledInstance(fw, FwReportsBase.cleanupRepcode(id), []);
+        var item = reqh("item");
+        var itemdb = FormUtils.filter(item, "iname cron timezone start_date_utc end_date_utc status");
+        validateRequired(0, itemdb, "iname");
+        validateCheckResult();
+        var name = itemdb["iname"].toStr().Trim();
+        itemdb["iname"] = name.Length > 255 ? name[..255] : name;
+
+        fw.model<FwCron>().prepareSchedule(itemdb);
+        var reports = fw.model<FwReports>();
+        var payload = reports.captureSchedulePayload(report, reqh("f"), item);
+        itemdb["payload"] = FwReports.encodeSchedulePayload(payload);
+
+        var fwcron_id = reports.addSchedule(report.schedulingCode, itemdb);
+        saveScheduleFeedback(report, fwcron_id, (DateTime?)itemdb["next_run_utc"]);
+        fw.redirect(base_url + "/" + report.schedulingCode, is_exception: false);
+    }
+
+    /// <summary>Replaces only the selected report schedule's filter snapshot after validating current input.</summary>
+    public void UpdateScheduleFiltersAction(string id)
+    {
+        enforcePost();
+        checkSiteAdmin();
+        checkReadOnly();
+        route_onerror = FW.ACTION_SHOW;
+
+        var task = getReportTask(reqi("fwcron_id"));
+        var report = loadScheduledReport(task, FwReportsBase.cleanupRepcode(id), [], out var saved);
+
+        saved["params"] = report.captureScheduledFilters(reqh("f"), true);
+        saved.Remove("sortby");
+        saved.Remove("sortdir");
+        report.saveScheduledSort(saved);
+
+        if (!fw.model<FwCron>().updateDefinition(task.id, task, new FwDict { ["payload"] = FwReports.encodeSchedulePayload(saved) }))
+            throw new UserException("REPORT_SCHEDULE_CHANGED");
+
+        saveScheduleFeedback(report, task.id, task.next_run_utc);
+        fw.redirect(base_url + "/" + report.schedulingCode + "?fwcron_id=" + task.id, is_exception: false);
+    }
+
+    /// <summary>Preserves the submitted schedule form across the normal report error reroute.</summary>
+    public override FwDict? actionError(Exception? ex, object[] args)
+    {
+        if (route_onerror == FW.ACTION_SHOW && !fw.isJsonExpected() && ex is UserException and not NotFoundException)
+        {
+            if (fw.route.action is "ScheduleEmail" or "UpdateScheduleFilters")
+            {
+                fw.G["report_schedule_error"] = ex is ValidationException ? "REPORT_INPUT_INVALID" : ex.Message;
+                return base.actionError(new ValidationException(), args);
+            }
+
+            if (fw.route.action == "SendEmail" && ex is not ValidationException)
+            {
+                fw.G["report_email_error"] = ex.Message;
+                return base.actionError(new ValidationException(), args);
+            }
+        }
+
+        if (fw.route.action == FW.ACTION_SHOW && !fw.isJsonExpected() && ex is UserException)
+        {
+            var message = FormUtils.selectTplName("/admin/reports/common/schedule_messages.sel", ex.Message);
+            if (message.Length > 0)
+                ex = new UserException(fw.parsePageInstance().langMap(message));
+        }
+
+        return base.actionError(ex, args);
+    }
+
+    /// <summary>Restores a schedule's input conventions and verifies its original report before interpreting filters.</summary>
+    private FwReportsBase loadScheduledReport(FwCron.Row task, string code, FwDict filters, out FwDict saved)
+    {
+        var reports = fw.model<FwReports>();
+        saved = reports.parseSchedulePayload(task.icode, task.payload.toStr());
+        reports.applyScheduleInputContext(saved);
+        var report = FwReportsBase.createScheduledInstance(fw, code, filters);
+        FwReports.checkScheduleTarget(report, FwReports.reportCode(task.icode), saved);
+        return report;
+    }
+
+    private FwCron.Row getReportTask(int id)
+    {
+        var task = fw.model<FwCron>().oneT(id);
+        if (task == null || task.status == FwModel.STATUS_DELETED || FwReports.reportCode(task.icode).Length == 0)
+            throw new NotFoundException();
+
+        return task;
+    }
+
+    private void saveScheduleFeedback(FwReportsBase report, int fwcron_id, DateTime? next_run)
+    {
+        fw.flash("report_schedule", new FwDict
+        {
+            ["code"] = report.schedulingCode,
+            ["fwcron_id"] = fwcron_id,
+            ["next_run"] = next_run.HasValue ? DateUtils.Date2SQL(next_run.Value, is_include_time: true) : null
+        });
+    }
+
+    private void addSchedulePageState(FwDict ps, FwReportsBase report, FwCron.Row? task, bool is_review_required)
+    {
+        ps["is_schedule_available"] = true;
+        ps["schedule_report_code"] = report.schedulingCode;
+        ps["schedule_search"] = FwReports.REPORT_PREFIX + report.schedulingCode + ":";
+        var error = fw.G["report_schedule_error"].toStr();
+        var is_cron_error = error.StartsWith("CRON_", StringComparison.Ordinal);
+        ps["is_schedule_error"] = error.Length > 0;
+        ps["schedule_error"] = is_cron_error ? "" : error;
+        ps["schedule_cron_error"] = is_cron_error ? error : "";
+
+        if (task != null)
+        {
+            ps["fwcron_id"] = task.id;
+            ps["schedule_review_required"] = is_review_required;
+        }
+        else
+        {
+            var item = new FwDict
+            {
+                ["iname"] = report.schedulingTitle,
+                ["recipients"] = fw.model<Users>().one(fw.userId)["email"],
+                ["format"] = "pdf",
+                ["status"] = FwModel.STATUS_ACTIVE
+            };
+            if (!isGet())
+                Utils.mergeHash(item, FormUtils.filter(reqh("item"), "iname recipients format cron timezone start_date_utc end_date_utc status"));
+
+            ps["is_schedule_initial"] = isGet();
+            ps["schedule_item"] = item;
+            ps["schedule_run_as"] = fw.Session("user_name");
+            ps["cron_editor"] = fw.model<FwCron>().cronEditor(item, "report-cron", is_external_preview: true);
+        }
+
+        if (fw.flash("report_schedule") is FwDict saved && saved["code"].toStr() == report.schedulingCode)
+        {
+            ps["schedule_success"] = true;
+            ps["saved_fwcron_id"] = saved["fwcron_id"];
+            ps["schedule_next_run"] = saved["next_run"];
+        }
+    }
+
     /// <summary>
     /// Generates the requested report output and emails it to validated recipients.
     /// </summary>
@@ -340,35 +534,29 @@ public class AdminReportsController : FwController
         var f = reqh("f");
         var to_emails = validateReportRecipients(f["to_emails"].toStr());
 
-        string mail_subject = "Report " + repcode;
-        FwDict filenames = [];
-
         var email_as = f["email_as"].toStr();
-        string mail_body;
         if (email_as == "pdf")
+            f["format"] = "pdf";
+
+        var fwcron_id = reqi("fwcron_id");
+        FwReportsBase report;
+        if (fwcron_id > 0)
         {
-            var filepath = FwReportsBase.createFile(fw, repcode, "pdf", f);
-            filenames[repcode + ".pdf"] = filepath;
-            mail_body = "Report pdf attached";
+            checkSiteAdmin();
+            report = loadScheduledReport(getReportTask(fwcron_id), repcode, f, out _);
+            report.captureScheduledFilters(f, is_frozen: true);
         }
         else
         {
-            var ps = new FwDict {
-                { "_layout", fw.config("PAGE_LAYOUT_EMAIL") }
-            };
-            var html = FwReportsBase.createHtml(fw, repcode, f, ps);
-            mail_body = html;
+            report = FwReportsBase.createInstance(fw, repcode, f);
+            report.setFilters();
         }
+        report.getData();
 
-        //sending from logged user
-        var user = fw.model<Users>().one(fw.userId);
-        var res = fw.sendEmail(user["email"], to_emails, mail_subject, mail_body, filenames);
-        if (res)
-            fw.flash("success", "Report sent");
-        else
-            fw.flash("error", "Error sending email:" + fw.last_error_send_email);
+        var res = report.sendReportEmail(to_emails, email_as);
+        fw.flash("report_email_status", res ? "REPORT_SENT" : "REPORT_SEND_FAILED");
 
-        fw.redirect(base_url + "/" + repcode);
+        fw.redirect(base_url + "/" + repcode + (fwcron_id > 0 ? "?fwcron_id=" + fwcron_id : ""));
     }
 
     /// <summary>
@@ -376,17 +564,12 @@ public class AdminReportsController : FwController
     /// </summary>
     /// <param name="recipients">Raw recipient list submitted from the report email form.</param>
     /// <returns>Semicolon-delimited recipient addresses normalized for <see cref="FW.sendEmail" />.</returns>
-    /// <exception cref="UserException">Thrown when the request has no recipients or contains an invalid address.</exception>
+    /// <exception cref="ValidationException">Thrown when the request contains no valid recipients.</exception>
     protected virtual string validateReportRecipients(string recipients)
     {
-        var emails = Utils.splitEmails(recipients);
-        if (emails.Count == 0)
-            throw new UserException("Email recipient is required");
-
-        foreach (string email in emails)
-            if (!FormUtils.isEmail(email))
-                throw new UserException("Invalid email recipient");
-
-        return string.Join(";", emails);
+        var normalized = FwReportsBase.normalizeRecipients(recipients);
+        validateRequired(0, new FwDict { ["to_emails"] = normalized }, "to_emails");
+        validateCheckResult();
+        return normalized;
     }
 }

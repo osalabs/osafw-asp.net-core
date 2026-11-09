@@ -1,6 +1,9 @@
 <form method="GET" id="FFilter" name="FFilter" class="fw-card form-horizontal d-print-none"
- data-list-filter data-autosubmit data-url-email="<~../url>/(SendEmail)/<~report_code>">
+ data-list-filter data-autosubmit data-schedule-filter>
   <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <~schedule_edit if="fwcron_id" inline>
+    <input type="hidden" name="fwcron_id" value="<~fwcron_id>">
+  </~schedule_edit>
   <input type="hidden" name="dofilter" value="1">
   <input type="hidden" name="f[pagesize]" value="<~f[pagesize]>">
   <input type="hidden" name="f[sortby]" value="<~f[sortby]>">
@@ -10,7 +13,7 @@
         <~/admin/reports/common/filter_dates>
     </div>
     <div class="row form-row">
-        <label class="col-form-label col-md-3 col-lg-2" for="fevents_id">`Search`</label>
+        <label class="col-form-label col-md-3 col-lg-2" for="fs">`Search`</label>
         <div class="col col-lg-4">
             <input type="text" name="f[s]" value="<~f[s]>" id="fs" class="form-control" placeholder="Related ID, Note, Fields">
         </div>

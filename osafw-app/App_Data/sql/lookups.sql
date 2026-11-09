@@ -30,8 +30,11 @@ INSERT INTO log_types (itype, icode, iname) VALUES (0, 'login_fail', 'Login Fail
 INSERT INTO log_types (itype, icode, iname) VALUES (0, 'chpwd', 'User changed login/pwd');
 -- user selectable types
 INSERT INTO log_types (itype, icode, iname) VALUES (10, 'comment', 'Comment');
+INSERT INTO log_types (itype, icode, iname) VALUES (0, 'cron_event', 'Scheduled Task Event');
 
 update log_types set prio=id; -- set default priority
+
+INSERT INTO fwentities (icode, iname) VALUES ('fwcron', 'Scheduled Tasks');
 
 -- fwcron tasks
 -- insert into fwcron(icode, cron) values ('example_sleep', '* * * * *') - example task to run every minute

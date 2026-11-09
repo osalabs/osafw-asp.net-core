@@ -60,7 +60,8 @@
   --fw-card-border: 0;
   --fw-card-radius: 0.75rem;
   --fw-card-shadow: 0 8px 40px rgba(231, 91, 152, 0.12);
-  --fw-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+  --fw-card-padding: 1.5rem;
+  --fw-list-card-padding: 1.5rem 1.5rem 0.5rem 1.5rem;
 
   --fw-dashboard-card-radius: 0.9rem;
   --fw-dashboard-card-shadow: 0 20px 45px rgba(231, 91, 152, 0.18);
@@ -167,7 +168,7 @@
   background-color: var(--fw-card-bg);
   border: var(--fw-card-border);
   border-radius: var(--fw-card-radius);
-  padding: var(--fw-card-padding);
+  padding: var(--fw-list-card-padding);
   margin-bottom: var(--fw-card-margin-bottom);
   box-shadow: var(--fw-card-shadow);
 }

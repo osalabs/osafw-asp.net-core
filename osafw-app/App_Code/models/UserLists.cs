@@ -114,6 +114,23 @@ public class UserLists : FwModel<UserLists.Row>
         base.delete(id, is_perm);
     }
 
+    /// <summary>Removes links across all owners after a record was permanently deleted from the given controller entity.</summary>
+    internal void deleteLinksForEntityItem(string entity, int item_id)
+    {
+        var affected = db.exec($@"
+            DELETE FROM {db.qid(table_items)}
+            WHERE item_id = @item_id
+                AND user_lists_id IN (
+                    SELECT id
+                    FROM {qTable()}
+                    WHERE entity = @entity
+                )",
+            DB.h("@item_id", item_id, "@entity", entity));
+
+        if (affected != 0)
+            fw.cache.requestRemoveWithPrefix($"{cache_prefix}itemmine:");
+    }
+
     public int countItems(int id)
     {
         return db.value(table_items, new FwDict() { { "user_lists_id", id } }, "count(*)").toInt();

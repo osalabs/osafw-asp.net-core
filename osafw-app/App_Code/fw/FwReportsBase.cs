@@ -23,7 +23,11 @@
 
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
 
 namespace osafw;
 
@@ -65,6 +69,266 @@ public class FwReportsBase
     protected FwDict list_sortmap = []; // = Utils.qh("id|id iname|iname add_time|add_time status|status");
     protected string list_orderby = "1"; // sql for order by clause, set in getData() via setListSorting(), default by first column if no other sorting set
 
+    /// <summary>Opt in only after verifying offline rendering and the report's data-sharing scope.</summary>
+    public virtual bool isSchedulingSupported => false;
+
+    /// <summary>Uses the compiled report's casing for direct routes while preserving legacy dashed codes.</summary>
+    public virtual string schedulingCode
+    {
+        get
+        {
+            var name = GetType().Name;
+            return name.Equals(report_code + "Report", StringComparison.OrdinalIgnoreCase) ? name[..^6] : report_code;
+        }
+    }
+
+    /// <summary>Uses the existing report title template as plain text for schedule names.</summary>
+    public virtual string schedulingTitle
+    {
+        get
+        {
+            var title = fw.parsePageInstance().parse_page(templateBaseDir(), "title.html", ps);
+            var plain = WebUtility.HtmlDecode(Utils.html2text(title)).Trim();
+            return plain.Length > 0 ? plain : schedulingCode;
+        }
+    }
+
+    private FwList? scheduling_parameters;
+
+    /// <summary>Reads the optional scheduling filter definitions once per initialized report instance.</summary>
+    protected virtual FwList schedulingParameters()
+    {
+        if (scheduling_parameters != null)
+            return scheduling_parameters;
+
+        var path = Path.Combine(fw.config("template").toStr(), templateBaseDir().TrimStart('/'), "schedule.json");
+        if (!File.Exists(path))
+            return scheduling_parameters = [];
+
+        var json = Utils.getFileContent(path, out var error);
+        if (error != null || Utils.jsonDecodeList(json) is not { } definitions)
+            throw new UserException("REPORT_FILTER_INVALID");
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new FwList(definitions.Count);
+        foreach (var item in definitions)
+        {
+            if (item is not FwDict def || def["name"] is not string name
+                || string.IsNullOrWhiteSpace(name) || !names.Add(name)
+                || def["type"] is not (null or string))
+            {
+                throw new UserException("REPORT_FILTER_INVALID");
+            }
+
+            try
+            {
+                FwReports.normalizeParamDefinition(def);
+            }
+            catch (UserException)
+            {
+                throw new UserException("REPORT_FILTER_INVALID");
+            }
+            result.Add(def);
+        }
+
+        return scheduling_parameters = result;
+    }
+
+    // A report-owned relative selector may resolve from this instant and fw.userTimezone during execution.
+    protected DateTime? scheduled_run_utc { get; private set; }
+    protected bool is_scheduled_snapshot { get; private set; }
+
+    /// <summary>Captures only declared filter inputs after applying and validating normal report defaults.</summary>
+    internal FwList captureScheduledFilters(FwDict submitted, bool is_frozen)
+    {
+        var definitions = checkedSchedulingParameters();
+        var filters = new FwDict();
+        foreach (var def in definitions)
+        {
+            var name = def["name"].toStr();
+            if (submitted[name] is string submittedValue)
+                filters[name] = submittedValue;
+            else if (submitted.ContainsKey(name))
+                throw new UserException("REPORT_FILTER_INVALID");
+            else if (is_frozen)
+                throw new UserException("REPORT_FILTER_MISSING");
+        }
+        readScheduledSort(submitted, filters);
+
+        f = filters;
+        f["format"] = format;
+        is_scheduled_snapshot = is_frozen;
+        prepareScheduledFilters(definitions);
+
+        var rows = new FwList();
+        foreach (var def in definitions)
+        {
+            var name = def["name"].toStr();
+            rows.Add(new FwDict
+            {
+                ["name"] = name,
+                ["type"] = def["type"].toStr(),
+                ["value"] = f[name].toStr()
+            });
+        }
+        return rows;
+    }
+
+    /// <summary>Applies a complete saved filter snapshot without resolving defaults again.</summary>
+    internal void applyScheduledFilters(FwDict payload, DateTime? executionUtc = null)
+    {
+        var definitions = checkedSchedulingParameters();
+        var filters = new FwDict();
+        var saved = (FwList)payload["params"]!;
+        foreach (var row in saved)
+        {
+            var name = row["name"].toStr();
+            if (filters.ContainsKey(name) || !definitions.Any(def => matchesScheduledFilter(def, row)))
+                throw new UserException("REPORT_FILTER_CHANGED");
+
+            filters[name] = row["value"];
+        }
+        if (filters.Count != definitions.Count)
+            throw new UserException("REPORT_FILTER_MISSING");
+
+        if (!isScheduledSortValid(payload))
+            throw new UserException("REPORT_SORT_CHANGED");
+
+        readScheduledSort(payload, filters);
+
+        f = filters;
+        f["format"] = format;
+        scheduled_run_utc = executionUtc;
+        is_scheduled_snapshot = true;
+        prepareScheduledFilters(definitions);
+    }
+
+    /// <summary>Seeds the schedule review form from compatible saved inputs and defaults for new definitions.</summary>
+    internal void showScheduledFilterReview(FwDict payload)
+    {
+        var saved = (FwList)payload["params"]!;
+        var filters = new FwDict { ["format"] = format };
+        foreach (var def in checkedSchedulingParameters())
+        {
+            var name = def["name"].toStr();
+            var row = saved.FirstOrDefault(row => matchesScheduledFilter(def, row));
+            if (row != null)
+            {
+                filters[name] = row["value"];
+                continue;
+            }
+
+            var default_value = FwReports.resolveParamDefault(def, fw.userDateFormat);
+            if (default_value.Length > 0)
+                filters[name] = default_value;
+        }
+
+        if (isScheduledSortValid(payload))
+            readScheduledSort(payload, filters);
+
+        showScheduledFormFilters(filters);
+    }
+
+    /// <summary>Redisplays attempted values after a rejected filter update without applying changed defaults.</summary>
+    internal void showScheduledFormFilters(FwDict submitted)
+    {
+        f = submitted;
+        is_scheduled_snapshot = true;
+        setFilters();
+        checkAccess();
+    }
+
+    /// <summary>Describes saved inputs using current report labels and lookup options without running the report query.</summary>
+    public virtual FwList describeScheduledFilters(FwList saved)
+    {
+        var definitions = schedulingParameters();
+        var result = new FwList();
+        foreach (var parameter in saved)
+        {
+            var name = parameter["name"].toStr();
+            var definition = definitions.FirstOrDefault(def => def["name"].toStr() == name);
+            var value = parameter["value"].toStr();
+            if (definition != null && value.Length > 0 && FwReports.isLookupParamType(definition["type"].toStr()))
+            {
+                var options = fw.model<FwReports>().listParamOptions(definition, db);
+                value = options.FirstOrDefault(option => option["id"].toStr() == value)?["iname"].toStr() ?? value;
+            }
+            result.Add(new FwDict
+            {
+                ["name"] = name,
+                ["label"] = fw.parsePageInstance().langMap(definition?["label"].toStr(name) ?? name),
+                ["value"] = value
+            });
+        }
+        return result;
+    }
+
+    private FwList checkedSchedulingParameters()
+    {
+        var definitions = schedulingParameters();
+        foreach (var def in definitions)
+        {
+            var name = def["name"].toStr().ToLowerInvariant();
+            if (name is "format" or "sortby" or "sortdir" or "is_preview" or "edit" or "xss"
+                or "email_as" or "to_emails" or "pagenum" or "pagesize" or "send_email" or "is_run")
+            {
+                throw new UserException("REPORT_FILTER_INVALID");
+            }
+        }
+
+        return definitions;
+    }
+
+    private void prepareScheduledFilters(FwList definitions)
+    {
+        setFilters();
+        fw.model<FwReports>().buildSqlParams(definitions, f, fw.userDateFormat, fw.userTimeFormat, is_scheduled_snapshot);
+        foreach (var def in definitions)
+        {
+            var name = def["name"].toStr();
+            f[name] = f[name].toStr();
+        }
+        if (list_sortmap.Count > 0)
+            setListSorting();
+
+        checkAccess();
+    }
+
+    private static bool matchesScheduledFilter(FwDict definition, FwDict row)
+    {
+        return definition["name"].toStr() == row["name"].toStr()
+            && definition["type"].toStr() == row["type"].toStr().Trim().ToLowerInvariant();
+    }
+
+    private bool isScheduledSortValid(FwDict source)
+    {
+        if (list_sortmap.Count == 0)
+            return !source.ContainsKey("sortby") && !source.ContainsKey("sortdir");
+
+        var sort = source["sortby"].toStr();
+        var direction = source["sortdir"].toStr();
+        return (sort.Length == 0 || list_sortmap[sort].toStr().Length > 0)
+            && direction is ("" or "asc" or "desc");
+    }
+
+    private void readScheduledSort(FwDict source, FwDict filters)
+    {
+        if (list_sortmap.Count == 0)
+            return;
+
+        filters["sortby"] = source["sortby"].toStr();
+        filters["sortdir"] = source["sortdir"].toStr();
+    }
+
+    internal void saveScheduledSort(FwDict payload)
+    {
+        if (list_sortmap.Count == 0)
+            return;
+
+        payload["sortby"] = f["sortby"].toStr();
+        payload["sortdir"] = f["sortdir"].toStr();
+    }
+
     public static string cleanupRepcode(string repcode)
     {
         return Utils.routeFixChars(repcode);
@@ -103,21 +367,41 @@ public class FwReportsBase
     /// <param name="f">Submitted report filters.</param>
     public static FwReportsBase createInstance(FW fw, string repcode, FwDict f)
     {
-        var report = createHardcodedInstance(fw, repcode, f);
-        if (report == null)
-        {
-            var custom = fw.model<FwReports>().oneActiveByIcode(repcode);
-            if (custom.Count > 0)
-            {
-                report = new FwCustomReport(custom.toFwDict());
-                report.init(fw, repcode, f);
-                report.checkAccess();
-            }
-        }
+        var report = initializeReport(fw, repcode, f);
+        report.checkAccess();
+        return report;
+    }
 
-        if (report == null)
+    /// <summary>Creates an opted-in report whose access check follows filter validation.</summary>
+    /// <remarks>Use captureScheduledFilters or applyScheduledFilters before running a scheduled report.</remarks>
+    internal static FwReportsBase createScheduledInstance(FW fw, string repcode, FwDict f, bool is_hardcoded_only = false)
+    {
+        var report = is_hardcoded_only
+            ? initializeHardcodedReport(fw, repcode, f) ?? throw new UserException("REPORT_SCHEDULE_UNAVAILABLE")
+            : initializeReport(fw, repcode, f);
+
+        if (!report.isSchedulingSupported)
+            throw new UserException("REPORT_SCHEDULE_UNAVAILABLE");
+
+        // Stored-report access is independent of filters and protects its SQL-backed filter metadata.
+        if (report is FwCustomReport)
+            report.checkAccess();
+
+        return report;
+    }
+
+    private static FwReportsBase initializeReport(FW fw, string repcode, FwDict f)
+    {
+        var report = initializeHardcodedReport(fw, repcode, f);
+        if (report != null)
+            return report;
+
+        var custom = fw.model<FwReports>().oneActiveByIcode(repcode);
+        if (custom.Count == 0)
             throw new UserException("Report not found");
 
+        report = new FwCustomReport(custom.toFwDict());
+        report.init(fw, repcode, f);
         return report;
     }
 
@@ -140,6 +424,13 @@ public class FwReportsBase
     /// <returns>Initialized report instance or null when no compiled report class exists.</returns>
     protected static FwReportsBase? createHardcodedInstance(FW fw, string repcode, FwDict f)
     {
+        var report = initializeHardcodedReport(fw, repcode, f);
+        report?.checkAccess();
+        return report;
+    }
+
+    private static FwReportsBase? initializeHardcodedReport(FW fw, string repcode, FwDict f)
+    {
         var reportType = resolveReportType(repcode);
         if (reportType == null)
             return null;
@@ -149,7 +440,6 @@ public class FwReportsBase
             throw new UserException("Report initialization failed");
 
         instance.init(fw, repcode, f);
-        instance.checkAccess();
         return instance;
     }
 
@@ -216,6 +506,7 @@ public class FwReportsBase
 
     public virtual void init(FW fw, string report_code, FwDict f)
     {
+        scheduling_parameters = null;
         this.fw = fw;
         if (!string.IsNullOrEmpty(this.db_config))
         {
@@ -412,6 +703,70 @@ public class FwReportsBase
         }
 
         return result;
+    }
+
+    /// <summary>Returns valid plain addresses separated by semicolons, or an empty string.</summary>
+    internal static string normalizeRecipients(string recipients, bool is_scheduled = false)
+    {
+        // Validate a scheduled entry as a whole before checking how the mail transport splits it.
+        IEnumerable<string> candidates = is_scheduled
+            ? recipients.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            : Utils.splitEmails(recipients);
+
+        var emails = candidates.Where(email => MailAddress.TryCreate(email, out var address)
+            && address.Address == email && address.DisplayName.Length == 0
+            && Utils.splitEmails(email).SequenceEqual([email]));
+        return string.Join(";", is_scheduled ? emails.Distinct(StringComparer.OrdinalIgnoreCase) : emails);
+    }
+
+    /// <summary>Renders an initialized report once and delivers it, deleting only the generated attachment.</summary>
+    internal bool sendReportEmail(string recipients, string emailFormat, bool is_scheduled = false)
+    {
+        string? pdf = null;
+        try
+        {
+            string body;
+            FwDict attachments = [];
+            if (emailFormat == "pdf")
+            {
+                pdf = Utils.getTmpFilename() + ".pdf";
+                format = "pdf";
+                f["format"] = "pdf";
+                render_to = pdf;
+                render();
+                if (!File.Exists(pdf) || new FileInfo(pdf).Length == 0)
+                    throw new UserException("REPORT_PDF_EMPTY");
+
+                attachments[report_code + ".pdf"] = pdf;
+                body = "";
+            }
+            else
+            {
+                render_to = TO_STRING;
+                body = render(new FwDict { ["_layout"] = fw.config("PAGE_LAYOUT_EMAIL") });
+                if (is_scheduled && string.IsNullOrWhiteSpace(body))
+                    throw new UserException("REPORT_BODY_EMPTY");
+            }
+
+            try
+            {
+                // The HTML body comes from the server-rendered report, not submitted markup.
+                return fw.sendEmailTpl(recipients, "report.html", new FwDict
+                {
+                    ["report_code"] = report_code,
+                    ["is_pdf"] = emailFormat == "pdf",
+                    ["body"] = body
+                }, attachments);
+            }
+            catch (Exception) when (is_scheduled && fw.is_email_send_attempted)
+            {
+                throw new FwCronUncertainException("REPORT_DELIVERY_UNCERTAIN");
+            }
+        }
+        finally
+        {
+            Utils.deleteFile(pdf);
+        }
     }
 
     protected bool isFileRender()

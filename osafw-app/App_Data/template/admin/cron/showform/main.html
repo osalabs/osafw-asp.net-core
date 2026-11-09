@@ -1,0 +1,15 @@
+<~/common/form/page_header_edit>
+<~read_only if="is_readonly" inline>
+  <div class="alert alert-warning" role="status">`This task cannot be edited while a run is in progress.`</div>
+</~read_only>
+<form class="fw-card" id="FEdit" method="post" data-check-changes action="<~../url><~existing if="id" inline>/<~id></~existing>">
+  <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+  <~/common/list/return_inputs if="return_url">
+  <fieldset <~/common/attr/disabled if="is_readonly">>
+    <div class="row">
+      <div class="col-lg-6"><~form_left></div>
+      <div class="col-lg-6"><~form_right></div>
+    </div>
+    <~/common/form/actions_std>
+  </fieldset>
+</form>

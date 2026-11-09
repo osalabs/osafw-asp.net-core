@@ -1,0 +1,17 @@
+  <~recovery if="run_token" inline>
+    <details>
+      <summary>`Recover an interrupted run`</summary>
+      <form method="post" action="<~/admin/cron/url>/(Recover)/<~id>" class="mt-2">
+        <input type="hidden" name="XSS" value="<~SESSION[XSS]>">
+        <input type="hidden" name="run_token" value="<~run_token>">
+        <div class="form-check mb-2">
+          <label class="form-check-label">
+            <input type="checkbox" class="form-check-input" name="confirm_recovery" value="1" required>
+            `I have verified that the worker owning this run has stopped.`
+          </label>
+        </div>
+        <p class="small text-muted">`Recovery records the run as uncertain and pauses the task. Check delivery before requesting another run.`</p>
+        <button type="submit" class="btn btn-outline-danger">`Record interrupted run`</button>
+      </form>
+    </details>
+  </~recovery>

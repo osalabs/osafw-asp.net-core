@@ -676,6 +676,7 @@ public class FormUtils
     /// <summary>
     /// leave in only those item keys, which are absent/different from itemold
     /// </summary>
+    /// <remarks>Submitted timestamps include the time in the comparison. Date-only submissions compare calendar dates.</remarks>
     /// TODO: if itemold has a bit field, it returned from db as "True", but item from the form as "1" - so it's always different
     public static FwDict changesOnly(FwDict item, FwDict itemold)
     {
@@ -686,12 +687,32 @@ public class FormUtils
             object? vnew = item[key];
             object? vold = itemold.TryGetValue(key, out object? value) ? value : null;
 
-            // If both are dates, compare only the date part.
-            var dtNew = vnew.toDate();
-            var dtOld = vold.toDate();
+            var is_timestamp = vnew switch
+            {
+                DateTime submitted => !DateUtils.isDateOnlyDisplayValue(submitted),
+                DateTimeOffset => true,
+                string submitted => submitted.Contains(':'),
+                _ => false
+            };
+            var dtNew = vnew is DateTimeOffset submittedOffset ? submittedOffset.UtcDateTime : vnew.toDate();
+            var dtOld = is_timestamp && vold is DateTimeOffset storedOffset ? storedOffset.UtcDateTime : vold.toDate();
             if (Utils.isDate(dtNew) && Utils.isDate(dtOld))
             {
-                if (dtNew.Date != dtOld.Date)
+                if (is_timestamp)
+                {
+                    // Unspecified timestamps include the UTC wall time returned in database rows.
+                    if (dtNew.Kind == DateTimeKind.Local)
+                        dtNew = dtNew.ToUniversalTime();
+                    if (dtOld.Kind == DateTimeKind.Local)
+                        dtOld = dtOld.ToUniversalTime();
+                }
+                else
+                {
+                    dtNew = dtNew.Date;
+                    dtOld = dtOld.Date;
+                }
+
+                if (dtNew != dtOld)
                     result[key] = vnew;
             }
             // Handle non-date values and the case where one value is a date and the other is not.

@@ -1,0 +1,35 @@
+<~/common/form/page_header>
+<~runner_disabled if="is_runner_disabled" inline>
+  <div class="alert alert-warning" role="status">`The task runner is disabled in this build.`</div>
+</~runner_disabled>
+<form id="FView" class="fw-card">
+  <fieldset>
+    <~form>
+    <~details if="result_details" inline>
+      <details class="mb-3"><summary>`Result details`</summary><pre class="text-wrap"><~result_details></pre></details>
+    </~details>
+    <~report if="report_code" inline>
+      <div class="row">
+        <div class="col-lg-6"><~/admin/cron/report_details></div>
+        <div class="col-lg-6">
+          <~delivery if="report_recipients" inline>
+            <div class="row form-row">
+              <label class="col-form-label col-md-3">`Recipients`</label>
+              <div class="col"><p class="form-control-plaintext"><~report_recipients></p></div>
+            </div>
+            <div class="row form-row">
+              <label class="col-form-label col-md-3">`Format`</label>
+              <div class="col"><p class="form-control-plaintext"><~report_format></p></div>
+            </div>
+            <div class="row form-row">
+              <label class="col-form-label col-md-3">`Runs as`</label>
+              <div class="col"><p class="form-control-plaintext"><~report_run_as default="`Unavailable`"></p></div>
+            </div>
+          </~delivery>
+        </div>
+      </div>
+    </~report>
+  </fieldset>
+</form>
+<~recovery if="run_token">
+<~/common/activitylogs/main if="is_activity_logs">

@@ -398,12 +398,22 @@ public abstract partial class FwController
     /// Custom action routes can otherwise be reached with GET, so callers should use this before performing side effects.
     /// </remarks>
     /// <exception cref="AuthException">Thrown when the request method is not POST or the XSS token is invalid.</exception>
-    public virtual void enforcePost()
-    {
-        if (!string.Equals(fw.route.method, "POST", StringComparison.OrdinalIgnoreCase))
-            throw new AuthException("POST required");
+    public virtual void enforcePost() => enforceMethod("POST");
 
-        checkXSS();
+    /// <summary>Enforces an allowed route method and validates the XSS token for write methods.</summary>
+    /// <remarks>POST forms may override their method to PUT, PATCH or DELETE. Safe HTTP requests cannot use a write override.</remarks>
+    public virtual void enforceMethod(params string[] methods)
+    {
+        var method = fw.route.method.ToUpperInvariant();
+        var transport = fw.request.Method.ToUpperInvariant();
+        var is_allowed = methods.Any(value => string.Equals(value, method, StringComparison.OrdinalIgnoreCase));
+        var is_write = method is "POST" or "PUT" or "PATCH" or "DELETE";
+        var is_override = transport == "POST" && (method == "PUT" || method == "PATCH" || method == "DELETE");
+        if (!is_allowed || (transport != method && !is_override))
+            throw new AuthException();
+
+        if (is_write)
+            checkXSS();
     }
 
     // return hashtable of filter values
@@ -1739,6 +1749,21 @@ public abstract partial class FwController
         }
     }
 
+    /// <summary>Preserves model-specific delete behavior and removes My List links when the record is physically removed.</summary>
+    protected void modelDelete(int id)
+    {
+        model0.deleteWithPermanentCheck(id);
+        cleanupDeletedUserListItem(id);
+    }
+
+    /// <summary>Removes links for a deleted record under this controller's My Lists entity key.</summary>
+    protected void cleanupDeletedUserListItem(int id)
+    {
+        // The uncached primary key distinguishes a physical delete from a soft delete or a guarded no-op.
+        if (is_userlists && !string.IsNullOrEmpty(base_url) && id > 0 && model0.oneField(id, model0.field_id) == null)
+            fw.model<UserLists>().deleteLinksForEntityItem(base_url, id);
+    }
+
     protected virtual int saveMultiRows(ICollection keys, bool is_delete, int user_lists_id, int remove_user_lists_id)
     {
         int ctr = 0;
@@ -1750,7 +1775,7 @@ public abstract partial class FwController
             var id = id1.toInt();
             if (is_delete)
             {
-                model0.deleteWithPermanentCheck(id);
+                modelDelete(id);
                 ctr += 1;
             }
             else if (user_lists_id > 0)
