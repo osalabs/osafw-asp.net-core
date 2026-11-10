@@ -2,6 +2,7 @@
 
 Search this compact index before opening full historical task summaries. Each entry uses the first useful note from the summary; open the full file only when the entry is relevant.
 
+- `summary-2026-11-10-agent-verification-scope.md` - Closed the text-check gap for new task files with a read-only Git recipe verified in both supported shells; retained adequate source-reading guidance.
 - `summary-2026-11-10-fpf-pattern-audit.md` - Updated FPF guidance and instruction pack 1.13.10; reviewed 36 practical FPF references and refined compression, alternative comparison and worthwhile workflow improvement.
 - `summary-2026-11-07-scheduled-tasks.md` - Scheduled Tasks and recurring report emails with shared claims, local-time previews, captured parameters, and structured results.
 - `summary-2026-11-05-client-handover.md` - Integrated User and Administrator Guide with a dated cover, six linked sections, endpoint-specific recovery instructions, reusable role grants and guidance for maintaining the shared Markdown.

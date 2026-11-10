@@ -72,6 +72,21 @@ Windows with IIS is the primary real-application development/deployment path. Li
 
 Instruction-validator changes also require `Test-AgentInstructionFixtures.ps1` in both Windows shells. It exercises managed-file coverage, private-path exclusions, preserved application customizations and safe fixture isolation. Pure instruction/helper changes need no application build or database. Run actual-shell pinned reads and record platform coverage; portable code alone does not establish Unix behavior.
 
+### Text checks and diff scope
+
+Include task-owned new files in the applicable text and link checks. The default instruction validator deliberately excludes unrelated untracked summaries. `Normalize-TextFiles.ps1 -Check` checks encoding and line endings; it does not check trailing whitespace or extra blank lines at EOF.
+
+On Windows, make whitespace rules explicit so local Git defaults cannot reject valid CRLF or disable these checks. Scope each command to the task's paths:
+
+```powershell
+$textWhitespace = 'blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol'
+git -c "core.whitespace=$textWhitespace" diff --check -- 'path/to/changed-file.md'
+git -c "core.whitespace=$textWhitespace" diff --cached --check -- 'path/to/staged-file.md'
+git -c "core.whitespace=$textWhitespace" diff --no-index --check -- NUL 'path/to/new-file.md'
+```
+
+The first two checks cover unstaged and staged tracked edits and require exit 0 without diagnostics. The last checks each new file without staging it. It returns 1 for a clean added file, but a missing file can also return 1 with an error. Accept only exit 0 or 1 with no diagnostics for that check. Resolve whitespace or access errors before claiming success; keep unrelated files, Git settings and the index unchanged.
+
 ## Common commands
 
 The instruction pack's `validation` and fallback arrays list available portable commands. Select the applicable checks from the change-surface table above:
