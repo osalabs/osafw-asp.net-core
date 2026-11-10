@@ -17,7 +17,7 @@ The read-only audit covered all live instruction families and task prompts; help
 
 ## Source review
 
-FPF source: [Anatoly Levenchuk's Library at e2c6ac1](https://github.com/ailev/FPF/tree/e2c6ac1e97dae9b9f54f707477f7d86a12d91852), full SHA `e2c6ac1e97dae9b9f54f707477f7d86a12d91852`, fetched on 2026-10-10. Actual prior accepted state was `181b9e798f6ebae07c0eb871c0a91e6c9b1fbce8`; current state, not a historical summary, establishes this comparison.
+FPF source: [FPF Library at e2c6ac1](https://github.com/ailev/FPF/tree/e2c6ac1e97dae9b9f54f707477f7d86a12d91852), full SHA `e2c6ac1e97dae9b9f54f707477f7d86a12d91852`, fetched on 2026-10-10. Actual prior accepted state was `181b9e798f6ebae07c0eb871c0a91e6c9b1fbce8`; current state, not a historical summary, establishes this comparison. See [author attribution](../fpf.md#attribution-and-verification).
 
 Reviewed complete candidate `USING-FPF.md`, licensing notices (unchanged), 43/44-publication inventories, selected suite navigation changes, Core `C.39:4.1` and `F.1:4.4`, and complete Method Engineering `ME.14` with relevant old/new differences. Verified 25 existing profile pattern roots plus `F.1` resolve uniquely. The change report lists 34 files and 383 patterns and truncates its pattern list; this was selective semantic review, not review of every changed body.
 

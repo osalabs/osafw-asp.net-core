@@ -19,7 +19,7 @@ A bounded `discovery_fast` packet inspected the remaining prompts, domain/glossa
 
 ## FPF source basis
 
-Used accepted revision `083cdb15580906da7b94c36f613bf57358550b53` of [Anatoly Levenchuk's FPF](https://github.com/ailev/FPF/tree/083cdb15580906da7b94c36f613bf57358550b53), including `USING-FPF.md` and bounded applicability/solution sections of the [Method Engineering DPF](https://github.com/ailev/FPF/blob/083cdb15580906da7b94c36f613bf57358550b53/Engineering%20DPF%20Suite/METHOD-ENGINEERING-PRINCIPLES-FRAMEWORK.md):
+Used accepted revision `083cdb15580906da7b94c36f613bf57358550b53` of [FPF Library](https://github.com/ailev/FPF/tree/083cdb15580906da7b94c36f613bf57358550b53), including `USING-FPF.md` and bounded applicability/solution sections of the [Method Engineering DPF](https://github.com/ailev/FPF/blob/083cdb15580906da7b94c36f613bf57358550b53/Engineering%20DPF%20Suite/METHOD-ENGINEERING-PRINCIPLES-FRAMEWORK.md) (see [author attribution](../fpf.md#attribution-and-verification)):
 
 - ME.12: locate a contradicted claim and repair its owner; applied to validation, adoption wording, and duplicate policy.
 - ME.14: compare practical benefit and burden while retaining protective constraints; supported scoped simplification rather than new ceremony or wholesale redesign.

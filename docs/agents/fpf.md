@@ -72,8 +72,10 @@ Cleanup holds the source lock, verifies survivors and every deletion target, ref
 
 ## Attribution and verification
 
+Use FPF Library in repository prose. For adapted text, link this section for author credit and retain the source edition, license and change notice.
+
 Translate useful distinctions into ordinary repository language. When a method materially changes a decision or verification boundary, record its full revision, publication and PatternID/heading with actual supporting evidence in the existing task summary. Empty lookups need no citation log. Do not claim improved productivity from shorter text, coherent guidance or passing structural checks.
 
-This guide adapts Anatoly Levenchuk's [FPF Library usage guidance, edition 70518df35a8b876c2700e60e847406df4903c4a7](https://github.com/ailev/FPF/blob/70518df35a8b876c2700e60e847406df4903c4a7/USING-FPF.md), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: condensed retrieval/application guidance and .NET framework evidence, authority and cache contracts. Retain source licensing and notices for copied/adapted expression; no endorsement is implied. This provenance pin is not automatic adoption or an application runtime dependency.
+This guide adapts Anatoly Levenchuk's [FPF Library usage guidance, edition b223469ecafb9735c1d9bac220671e3336618339](https://github.com/ailev/FPF/blob/b223469ecafb9735c1d9bac220671e3336618339/USING-FPF.md), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: condensed retrieval/application guidance and .NET framework evidence, authority and cache contracts. Retain source licensing and notices for copied/adapted expression; no endorsement is implied. This provenance pin is not automatic adoption or an application runtime dependency.
 
 [verification.md](verification.md) owns check selection. Wording changes need affected routing/read walkthroughs; helper/cache changes require `docs/agents/tools/Test-Fpf.ps1` in both supported Windows shells. Keep source files, indexes, fingerprints, review notes, machine paths and diagnostic artifacts ignored.
