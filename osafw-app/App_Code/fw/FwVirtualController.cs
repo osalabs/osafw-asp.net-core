@@ -4,7 +4,9 @@
 // (c) 2009-2025 Oleg Savchuk www.osalabs.com
 
 using osafw;
+using System;
 using System.IO;
+using System.Linq;
 
 public class FwVirtualController : FwVueController
 {
@@ -92,6 +94,37 @@ public class FwVirtualController : FwVueController
         loadControllerConfig(con_config);
         if (!is_edit_allowed)
             is_readonly = true;
+    }
+
+    /// <summary>
+    /// Applies the lookup code default to the effective form configuration, including tabs.
+    /// </summary>
+    public override void loadControllerConfig(FwDict config)
+    {
+        base.loadControllerConfig(config);
+
+        if (config["is_lookup_icode_editable"].toBool())
+            return;
+
+        foreach (FwDict def in collectFormFields("showform_fields"))
+        {
+            if (string.Equals(def["field"].toStr(), "icode", StringComparison.OrdinalIgnoreCase))
+                def["is_edit_readonly"] = true;
+        }
+    }
+
+    /// <summary>
+    /// Protects the existing lookup code even when a custom form omits its field definition.
+    /// </summary>
+    protected override void removeEditReadonlyFields(int id, FwDict item)
+    {
+        base.removeEditReadonlyFields(id, item);
+
+        if (id == 0 || config["is_lookup_icode_editable"].toBool())
+            return;
+
+        foreach (var field in item.Keys.Where(field => string.Equals(field, "icode", StringComparison.OrdinalIgnoreCase)).ToArray())
+            item.Remove(field);
     }
 
 }

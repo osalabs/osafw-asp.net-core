@@ -1695,6 +1695,20 @@ Quick-edit context retention is opt-in (`is_quick_edit_keep_context` replaces th
 
 After a successful quick edit, the client fetches current list rows, count, paging, filtering and ordering from the server while preserving the open pane, input focus and selection. The server remains responsible for whether an edited row still matches the list. A refresh failure reports that the save succeeded but the list needs reloading. Existing save triggers remain unchanged; this option adds no new autosave trigger. Identical simultaneous saves of the same form are suppressed, while newer requests for the same form and tab are coalesced into one followup. Explicitly requested tabs retain their first-request order; delayed autosaves keep the tab where they originated. Requests for different forms are tracked separately. Reconciliation uses only subtables processed for the requested tab, preserves child edits, additions and removals made after a request starts, and applies assigned IDs before a queued save. Navigation alone does not request a save; newer unsaved edits prevent a response from reloading or leaving their form. Explicit failed deletions do not clear selection or reload the list.
 
+## Lookup codes in virtual controllers
+
+Virtual controllers used by Lookup Manager treat the `icode` field as read-only when editing an existing row, including inline list edits. Add New still accepts the code when the form and save configuration include it. Standard saves ignore changes to an existing code even if the field is omitted from a custom form.
+
+If a lookup code is safe to rename, add this top-level setting to the lookup's controller-specific `config.json` under its template directory, for example `App_Data/template/admin/mylookup/config.json`.
+
+```json
+{
+  "is_lookup_icode_editable": true
+}
+```
+
+The setting disables the virtual-controller default. An explicit `is_edit_readonly: true` on a form field still applies. Custom C# controllers can use that field setting directly.
+
 ## Virtual module lifecycle
 
 Virtual-controller routes and navigation require `status=0` (active). Inactive and deleted module definitions cannot be opened by direct URL. Management/code-generation lookup remains status-neutral so existing disabled definitions can be updated without duplicate keys. Updating a definition through `FwControllers` invalidates its lookup cache; reactivating it restores access subject to the existing access and edit thresholds.
