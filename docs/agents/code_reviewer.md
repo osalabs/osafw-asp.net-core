@@ -29,6 +29,17 @@ For documentation or other non-code artifacts within the selected review scope, 
 
 Consult the canonical specialist document rather than copying its rules: `docs/naming.md`, `crud.md`, `db.md`, `templates.md`, `dynamic.md`, `datetime.md`, `deploy.md`, and `assistant.md` as relevant.
 
+## Simplicity of the complete change
+
+Within the existing review, assess the task's cumulative change from its original baseline through task commits and uncommitted work. Disclose an unavailable baseline rather than claiming complete coverage. Repair reviews remain focused; when ownership or design changes, trace the affected flow through its owners and callers again for machinery the new design no longer needs.
+
+- Check state scope and lifetime before accepting coordination across layers. An extra owner, callback chain, flag, fallback or retry path needs a current purpose that a simpler complete flow cannot serve. Prior existence alone is insufficient.
+- Check a helper's actual owner and callers. Domain behavior, meaningful branching, authorization/transaction responsibility, production reuse or variation, and framework extension points can justify a boundary. Table ownership alone does not make a generic persistence model the owner of a caller's business policy. Avoid pass-through layers or production seams whose only consumer is a test; preserve cohesive methods even with one caller.
+- Look for duplicated rules, unnecessary normal-path diagnostics, repeated reads/conversions and unchanged writes. Trace representation changes through persistence, response, template/client state and input before removing adapters. Keep required authorization, atomicity, idempotency, recovery, provider behavior and copied-app compatibility; removing their guarantee is a contract change, not a simplification.
+- Read changed methods and fixtures in their final files. Preserve visible logical phases and ordinary formatting; fewer lines or files does not by itself mean fewer concepts or a clearer flow.
+
+For a useful simplification, identify its location, concrete burden removed, smallest correction, preserved invariant and proportional check. Use the existing severity rules: optional cleanup stays Low; a blocking complexity finding needs demonstrated correctness or maintenance harm. An explicit simplification request is acceptance scope, not permission for unrelated cleanup. Mention material simplifications or justified remaining complexity in the existing review evidence when useful; require no extra reviewer, round or report merely for this pass.
+
 ## Adjudication
 
 - Report one root defect once at the highest-impact location; summarize dependent effects.
